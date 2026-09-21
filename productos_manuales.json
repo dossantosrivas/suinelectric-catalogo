@@ -10299,9 +10299,9 @@
       "modelo": "KINCO GL070E",
       "sku": "KINCO GL070E",
       "marca": "KINCO",
-      "categoria_principal": "KINCO",
+      "categoria_principal": "Paneles de Visualización HMI",
       "subcategorias": [
-        "Paneles de Visualización HMI"
+        "KINCO"
       ],
       "precio": 280.0,
       "precio_lista": null,
@@ -10312,10 +10312,10 @@
       "imagen": "https://www.nexinstrument.com/assets/images/GL070editphoto.jpg",
       "url": null,
       "actualizado": "2026-09-21T16:49:03.615884+00:00",
-      "categoria": "KINCO > Paneles de Visualización HMI > KINCO GL070E",
+      "categoria": "Paneles de Visualización HMI > KINCO > KINCO GL070E",
       "categorias": [
-        "KINCO",
         "Paneles de Visualización HMI",
+        "KINCO",
         "KINCO GL070E"
       ]
     },
@@ -10323,9 +10323,9 @@
       "modelo": "KINCO GL100E",
       "sku": "KINCO GL100E",
       "marca": "KINCO",
-      "categoria_principal": "KINCO",
+      "categoria_principal": "Paneles de Visualización HMI",
       "subcategorias": [
-        "Paneles de Visualización HMI"
+        "KINCO"
       ],
       "precio": 300.0,
       "precio_lista": null,
@@ -10336,10 +10336,10 @@
       "imagen": "https://encrypted-tbn0.gstatic.com/images?q=tbn:ANd9GcROOqwK5p2V5JZ3-IVX7fDzlWmGlLRNe-_qefNn3lJrUF8gzHXnh77uZ54U&s=10",
       "url": null,
       "actualizado": "2026-09-21T16:49:03.615884+00:00",
-      "categoria": "KINCO > Paneles de Visualización HMI > KINCO GL100E",
+      "categoria": "Paneles de Visualización HMI > KINCO > KINCO GL100E",
       "categorias": [
-        "KINCO",
         "Paneles de Visualización HMI",
+        "KINCO",
         "KINCO GL100E"
       ]
     },
