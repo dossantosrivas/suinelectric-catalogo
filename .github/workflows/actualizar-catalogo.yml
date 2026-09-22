@@ -1,46 +1,73 @@
 name: Actualizar catálogo diario
- 
+
 on:
   schedule:
     - cron: "0 9 * * *"
   workflow_dispatch: {}
- 
+
 permissions:
   contents: write
- 
-# Evita que dos corridas de este mismo workflow se pisen entre sí (por
-# ejemplo, si lo corres manualmente justo cuando también dispara el cron).
-# La segunda corrida espera a que termine la primera, en vez de competir
-# por el mismo push al mismo tiempo.
+
 concurrency:
   group: actualizar-catalogo
   cancel-in-progress: false
- 
+
 jobs:
   actualizar:
     runs-on: ubuntu-latest
     steps:
       - name: Descargar el repositorio
         uses: actions/checkout@v4
- 
+
       - name: Configurar Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "20"
- 
+
       - name: Instalar dependencias
         run: npm install
- 
+
       - name: Correr el scraper (catálogo completo)
         run: node scraper.js
- 
-      - name: Guardar productos.json y categorias.json si cambiaron
+
+      - name: Guardar productos.json y categorias.json (con reintentos)
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add productos.json categorias.json
-          git diff --staged --quiet || git commit -m "Actualización automática del catálogo $(date -u +'%Y-%m-%d %H:%M UTC')"
-          # Por si alguien subió cambios mientras el scraper trabajaba:
-          # traemos lo nuevo y reacomodamos nuestro commit encima.
-          git pull --rebase origin main
-          git push
+
+          # Guardamos los archivos recién generados aparte. Sin importar qué
+          # haya cambiado en el repo mientras el scraper trabajaba, siempre
+          # vamos a partir de la versión más reciente de GitHub y pegar estos
+          # dos archivos encima — así no hay nada que "mezclar" ni que pueda
+          # generar un conflicto real.
+          cp productos.json /tmp/productos.json
+          cp categorias.json /tmp/categorias.json
+
+          intentos=0
+          maximo=5
+          while [ $intentos -lt $maximo ]; do
+            intentos=$((intentos + 1))
+
+            git fetch origin main
+            git reset --hard origin/main
+
+            cp /tmp/productos.json productos.json
+            cp /tmp/categorias.json categorias.json
+
+            git add productos.json categorias.json
+
+            if git diff --staged --quiet; then
+              echo "Sin cambios que subir."
+              break
+            fi
+
+            git commit -m "Actualización automática del catálogo $(date -u +'%Y-%m-%d %H:%M UTC')"
+
+            if git push origin HEAD:main; then
+              echo "Subido correctamente en el intento $intentos."
+              break
+            fi
+
+            echo "Push rechazado (intento $intentos de $maximo). Reintentando..."
+            sleep 5
+          done
