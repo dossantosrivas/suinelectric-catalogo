@@ -1,42 +1,46 @@
 name: Actualizar catálogo diario
-
+ 
 on:
   schedule:
-    # 09:00 UTC = 05:00 hora de Venezuela (UTC-4). Ajusta la hora si quieres otra.
     - cron: "0 9 * * *"
-  workflow_dispatch: {} # permite correrlo manualmente desde la pestaña "Actions" de GitHub
-
+  workflow_dispatch: {}
+ 
 permissions:
-  contents: write # necesario para que el workflow pueda hacer commit y push
-
+  contents: write
+ 
+# Evita que dos corridas de este mismo workflow se pisen entre sí (por
+# ejemplo, si lo corres manualmente justo cuando también dispara el cron).
+# La segunda corrida espera a que termine la primera, en vez de competir
+# por el mismo push al mismo tiempo.
+concurrency:
+  group: actualizar-catalogo
+  cancel-in-progress: false
+ 
 jobs:
   actualizar:
     runs-on: ubuntu-latest
     steps:
       - name: Descargar el repositorio
         uses: actions/checkout@v4
-
+ 
       - name: Configurar Node.js
         uses: actions/setup-node@v4
         with:
           node-version: "20"
-
+ 
       - name: Instalar dependencias
         run: npm install
-
+ 
       - name: Correr el scraper (catálogo completo)
         run: node scraper.js
-        # Si quieres capturar "Tú Precio" (requiere sesión iniciada), agrega
-        # un secreto GE_COOKIE en GitHub (Settings > Secrets and variables >
-        # Actions) y descomenta la línea "env" de abajo:
-        # env:
-        #   GE_COOKIE: ${{ secrets.GE_COOKIE }}
-
+ 
       - name: Guardar productos.json y categorias.json si cambiaron
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
           git add productos.json categorias.json
           git diff --staged --quiet || git commit -m "Actualización automática del catálogo $(date -u +'%Y-%m-%d %H:%M UTC')"
-           git pull --rebase origin main git push Respeta la sangría
+          # Por si alguien subió cambios mientras el scraper trabajaba:
+          # traemos lo nuevo y reacomodamos nuestro commit encima.
+          git pull --rebase origin main
           git push
