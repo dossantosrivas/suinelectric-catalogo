@@ -397,7 +397,7 @@
   .footer-contacto a:hover{ text-decoration:underline; }
 
   /* ---------- Modales ---------- */
-  .overlay{ display:none; position:fixed; inset:0; background:rgba(9,24,34,0.7); z-index:50; align-items:center; justify-content:center; padding:20px; }
+  .overlay{ display:none; position:fixed; inset:0; background:rgba(9,24,34,0.7); z-index:80; align-items:center; justify-content:center; padding:20px; }
   .overlay.abierto{ display:flex; animation:fadeIn .15s ease; }
   @keyframes fadeIn{ from{opacity:0;} to{opacity:1;} }
   .overlay .panel{ animation:popIn .2s ease; }
@@ -414,7 +414,7 @@
     background:#fff; color:var(--texto); max-width:920px; width:100%; max-height:90vh;
     border-radius:8px; position:relative; padding:32px; display:flex; flex-direction:column;
   }
-  .panel-scroll{ overflow-y:auto; flex:1; min-height:0; }
+  .panel-scroll{ overflow-y:auto; flex:1; min-height:0; -webkit-overflow-scrolling:touch; overscroll-behavior:contain; }
   .btn-volver{ display:none; background:none; border:none; color:var(--azul-texto); font-weight:600; font-size:15px; cursor:pointer; padding:0 0 12px; text-align:left; }
   .det-layout{ display:grid; grid-template-columns:minmax(0, 1fr) minmax(0, 1.1fr); gap:32px; }
   #modal-detalle .det-imagen{
@@ -436,8 +436,8 @@
   #modal-detalle .det-grid strong{ display:block; font-size:12.5px; color:var(--texto-3); font-weight:600; }
   .det-agregar{ display:flex; gap:10px; margin-bottom:4px; }
   .det-agregar .btn-cart-add{ padding:13px 14px; font-size:15.5px; }
-  #modal-detalle .det-desc-label{ display:block; font-family:var(--display); font-size:20px; font-weight:700; color:var(--tinta); margin:26px 0 6px; }
-  #modal-detalle .det-desc{ font-size:15px; line-height:1.6; color:var(--texto); max-width:75ch; }
+  #modal-detalle .det-desc-label{ display:block; font-family:var(--display); font-size:20px; font-weight:700; color:var(--tinta); margin:0 0 4px; }
+  #modal-detalle .det-desc{ font-size:15px; line-height:1.6; color:var(--texto); max-width:75ch; white-space:pre-line; overflow-wrap:anywhere; margin-bottom:16px; padding-bottom:16px; border-bottom:1px solid var(--linea-suave); }
   .btn-copiar{
     display:block; width:100%; background:#fff; color:var(--tinta); border:1px solid var(--linea);
     padding:11px 12px; font-size:14px; font-weight:600; border-radius:var(--radio); cursor:pointer; margin-top:10px;
@@ -587,7 +587,7 @@
     .pdf-cards{ grid-template-columns:1fr; }
 
     #modal-detalle{ align-items:flex-end; padding:0; }
-    #modal-detalle .panel{ max-width:100%; height:94vh; max-height:94vh; border-radius:14px 14px 0 0; padding:18px 16px calc(18px + env(safe-area-inset-bottom, 0px)); }
+    #modal-detalle .panel{ max-width:100%; height:94vh; max-height:94vh; height:94dvh; max-height:94dvh; border-radius:14px 14px 0 0; padding:18px 16px calc(18px + env(safe-area-inset-bottom, 0px)); }
     .btn-volver{ display:block; }
     #modal-detalle h2{ font-size:26px; }
     .det-precio{ font-size:28px; }
@@ -623,7 +623,9 @@
   }
 
   @media (prefers-reduced-motion: reduce){
-    *, *::before, *::after{ animation-duration:0.01ms !important; animation-iteration-count:1 !important; transition-duration:0.01ms !important; }
+    *:not(.carrusel-track), *::before, *::after{ animation-duration:0.01ms !important; animation-iteration-count:1 !important; transition-duration:0.01ms !important; }
+    /* El carrusel de Inicio se mantiene en movimiento, pero más lento */
+    .carrusel-track{ animation-duration:80s !important; }
   }
 </style>
 
@@ -1535,6 +1537,8 @@ function abrirDetalle(modelo){
           (esManual(p) && precioFinal != null ? '<span class="precio-nota">precio de catálogo</span>' : '') +
           '<div><span class="estado ' + (p.disponible ? 'ok' : 'off') + '">' + (p.disponible ? estadoTexto : 'Agotado') + '</span></div>' +
         '</div>' +
+        '<span class="det-desc-label">Descripción</span>' +
+        '<div class="det-desc">' + (p.descripcion || 'Sin descripción disponible para este producto.') + '</div>' +
         '<div class="det-grid">' +
           '<div><strong>SKU</strong>' + (p.sku || '—') + '</div>' +
           '<div><strong>Marca</strong>' + (p.marca || '—') + '</div>' +
@@ -1545,8 +1549,7 @@ function abrirDetalle(modelo){
         '<button class="btn btn-copiar" id="btn-copiar-datos" onclick="copiarDatosProducto(\'' + modeloJs + '\')">Copiar datos del producto</button>' +
       '</div>' +
     '</div>' +
-    '<span class="det-desc-label">Descripción</span>' +
-    '<div class="det-desc">' + (p.descripcion || 'Sin descripción disponible para este producto.') + '</div>';
+    '';
   document.getElementById('modal-detalle').classList.add('abierto');
 }
 
