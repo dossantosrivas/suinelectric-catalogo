@@ -1783,5 +1783,247 @@ renderCarrito();
 cargar();
 </script>
 
+<script>
+/* =====================================================================
+   Botón "ATRÁS" del teléfono / navegador
+   ---------------------------------------------------------------------
+   La tienda es una sola página: cambiar de pantalla o abrir un panel no
+   crea historial, así que "atrás" salía de la web. Este bloque registra
+   cada pantalla (Inicio, Catálogos, categoría, marca, búsqueda) y cada
+   panel (detalle, imagen, carrito, menú lateral en móvil) en el historial
+   del navegador, para que "atrás" vuelva al lugar anterior (con su scroll).
+   En Inicio, el primer "atrás" avisa y el segundo sale de la web.
+   ===================================================================== */
+(function(){
+  if (!window.history || !history.pushState) return;
+  try { history.scrollRestoration = 'manual'; } catch(e){}
+
+  const $ = id => document.getElementById(id);
+  // Paneles, del que queda más "arriba" al de más abajo.
+  const PANELES = ['modal-imagen', 'modal-detalle', 'cart-drawer', 'sidebar'];
+  // El menú lateral solo es un panel flotante en pantallas pequeñas.
+  const sidebarFlotante = () => window.matchMedia('(max-width: 860px)').matches;
+
+  let aplicando = false;     // true mientras restauramos un estado (no registrar)
+  let ignorarPop = false;    // true cuando nosotros mismos llamamos history.back()
+  let pendiente = false;     // hay una sincronización programada
+  let yAntes = 0;            // scroll justo antes del cambio de pantalla
+  let detalleModelo = null;  // producto abierto en el detalle
+  let enGuardia = false;     // estamos en la entrada "presiona otra vez para salir"
+  const pila = [];           // copia en memoria de nuestras entradas del historial
+
+  /* ---------- Foto del estado actual ---------- */
+  function navActual(){
+    return {
+      vista: vista,
+      seleccion: seleccion.slice(),
+      filtroMarca: filtroMarca,
+      q: $('buscador').value,
+      disp: $('filtro-disponibilidad').value,
+      orden: $('filtro-orden') ? $('filtro-orden').value : ''
+    };
+  }
+  function panelesAbiertos(){
+    return PANELES.filter(id => {
+      const el = $(id);
+      if (!el || !el.classList.contains('abierto')) return false;
+      return id !== 'sidebar' || sidebarFlotante();
+    });
+  }
+  function estadoActual(idx){
+    const ov = panelesAbiertos();
+    const img = $('modal-imagen-img').getAttribute('src') || '';
+    return {
+      suin: true, idx: idx,
+      nav: navActual(),
+      ov: ov,
+      det: ov.includes('modal-detalle') ? detalleModelo : null,
+      img: (ov.includes('modal-imagen') && img.length < 4000) ? img : null,
+      y: window.scrollY
+    };
+  }
+  // ¿Es "otra pantalla"? (el texto exacto de búsqueda y los filtros no cuentan,
+  // para no crear una entrada por cada letra que se escribe)
+  function mismaPantalla(a, b){
+    return a.vista === b.vista &&
+           a.filtroMarca === b.filtroMarca &&
+           a.seleccion.join('|||') === b.seleccion.join('|||') &&
+           (a.q.trim() !== '') === (b.q.trim() !== '');
+  }
+  const mismaNav = (a, b) => JSON.stringify(a) === JSON.stringify(b);
+  const mismosPaneles = (a, b) => a.ov.join(',') === b.ov.join(',') && a.det === b.det;
+
+  function guardar(estado, nuevo){
+    pila[estado.idx] = estado;
+    if (nuevo){
+      pila.length = estado.idx + 1; // lo que había "adelante" se descarta
+      history.pushState(estado, '');
+    } else {
+      history.replaceState(estado, '');
+    }
+  }
+
+  /* ---------- Registrar cambios ---------- */
+  function programar(){
+    if (aplicando || pendiente) return;
+    pendiente = true;
+    yAntes = window.scrollY; // aún no se ha movido el scroll de la nueva pantalla
+    setTimeout(sincronizar, 0);
+  }
+
+  function sincronizar(){
+    pendiente = false;
+    if (aplicando) return;
+    const actual = history.state;
+    if (!actual || !actual.suin || actual.guardia){
+      // Estábamos en la entrada de guardia: lo nuevo va encima.
+      const base = (actual && actual.idx != null) ? actual.idx : 0;
+      guardar(estadoActual(base + 1), true);
+      enGuardia = false;
+      return;
+    }
+    const nuevo = estadoActual(actual.idx);
+
+    const cambioPantalla = !mismaPantalla(actual.nav, nuevo.nav);
+    const abrioPanel = nuevo.ov.some(id => !actual.ov.includes(id)) ||
+                       (nuevo.det && nuevo.det !== actual.det);
+    const cerroPanel = actual.ov.some(id => !nuevo.ov.includes(id));
+
+    if (cambioPantalla || abrioPanel){
+      // Guarda dónde estaba el scroll en la pantalla que dejamos y avanza.
+      guardar(Object.assign({}, actual, { y: yAntes }), false);
+      nuevo.idx = actual.idx + 1;
+      guardar(nuevo, true);
+    } else if (cerroPanel){
+      // Se cerró un panel con la X / "Volver" / tocando fuera: si la entrada
+      // anterior es exactamente esta misma pantalla, retrocedemos en silencio
+      // para no dejar un "atrás" que no hace nada.
+      const previo = pila[actual.idx - 1];
+      if (previo && mismaNav(previo.nav, nuevo.nav) && mismosPaneles(previo, nuevo)){
+        ignorarPop = true;
+        history.back();
+      } else {
+        guardar(nuevo, false);
+      }
+    } else {
+      guardar(nuevo, false); // ej. escribir en el buscador, cambiar un filtro
+    }
+  }
+
+  // Engancha las funciones que dibujan pantallas o abren el detalle.
+  ['aplicarFiltros', 'renderInicio', 'renderCatalogos'].forEach(nombre => {
+    const original = window[nombre];
+    window[nombre] = function(){ const r = original.apply(this, arguments); programar(); return r; };
+  });
+  const abrirDetalleOriginal = window.abrirDetalle;
+  window.abrirDetalle = function(modelo){
+    detalleModelo = modelo;
+    return abrirDetalleOriginal.apply(this, arguments);
+  };
+  // Detecta cuando un panel se abre o se cierra (por cualquier botón).
+  const observador = new MutationObserver(programar);
+  PANELES.forEach(id => { const el = $(id); if (el) observador.observe(el, { attributes: true, attributeFilter: ['class'] }); });
+
+  // Guarda el scroll de la pantalla actual mientras el usuario se desplaza.
+  let timerScroll = null;
+  window.addEventListener('scroll', () => {
+    clearTimeout(timerScroll);
+    timerScroll = setTimeout(() => {
+      const st = history.state;
+      if (aplicando || pendiente || !st || !st.suin || st.guardia) return;
+      guardar(Object.assign({}, st, { y: window.scrollY }), false);
+    }, 200);
+  }, { passive: true });
+
+  /* ---------- Restaurar al pulsar "atrás" ---------- */
+  function restaurar(st){
+    aplicando = true;
+    try {
+      const n = st.nav;
+      const cambioNav = !mismaNav(navActual(), n);
+      if (cambioNav){
+        vista = n.vista;
+        seleccion = n.seleccion.slice();
+        filtroMarca = n.filtroMarca;
+        $('buscador').value = n.q;
+        $('filtro-disponibilidad').value = n.disp;
+        if ($('filtro-orden') && n.orden != null) $('filtro-orden').value = n.orden;
+        $('sugerencias').style.display = 'none';
+        for (let i = 1; i <= seleccion.length; i++) expandidos.add(seleccion.slice(0, i).join('|||'));
+        renderSidebar();
+        mostrarVista();
+      }
+
+      // Cierra los paneles que no estaban abiertos en ese punto…
+      PANELES.forEach(id => {
+        if (st.ov.includes(id)) return;
+        if (id === 'sidebar') cerrarSidebar();
+        else $(id).classList.remove('abierto');
+      });
+      // …y reabre los que sí estaban.
+      if (st.ov.includes('sidebar') && !$('sidebar').classList.contains('abierto')) abrirSidebar();
+      if (st.ov.includes('cart-drawer')) $('cart-drawer').classList.add('abierto');
+      if (st.ov.includes('modal-detalle') && st.det &&
+          (!$('modal-detalle').classList.contains('abierto') || detalleModelo !== st.det)) abrirDetalle(st.det);
+      if (st.ov.includes('modal-imagen') && st.img){
+        $('modal-imagen-img').src = st.img;
+        $('modal-imagen').classList.add('abierto');
+      }
+
+      if (cambioNav){
+        const y = st.y || 0;
+        window.scrollTo(0, y);
+        requestAnimationFrame(() => window.scrollTo(0, y)); // por si la página tardó en crecer
+      }
+    } finally {
+      // Los MutationObserver avisan en una microtarea: esperamos a que pasen.
+      setTimeout(() => { aplicando = false; }, 0);
+    }
+  }
+
+  window.addEventListener('popstate', (e) => {
+    const st = e.state;
+    if (ignorarPop){ ignorarPop = false; return; }
+    if (st && st.guardia){
+      // Llegamos al fondo (pantalla inicial): avisamos antes de salir.
+      enGuardia = true;
+      mostrarToast('Presiona atrás otra vez para salir');
+      return;
+    }
+    if (st && st.suin){
+      enGuardia = false;
+      pila[st.idx] = st;
+      restaurar(st);
+    }
+  });
+
+  /* ---------- Arranque ---------- */
+  guardar(estadoActual(0), false);
+
+  // Chrome en Android ignora las entradas del historial creadas sin que el
+  // usuario haya tocado la página. Por eso la "guardia" de salida se arma
+  // (y se rearma) en el primer toque del usuario.
+  function armarGuardia(){
+    const st = history.state;
+    if (st && st.guardia){
+      // Volvió a tocar la página estando en la guardia: vuelve a poner la pantalla encima.
+      guardar(estadoActual(st.idx + 1), true);
+      enGuardia = false;
+      return;
+    }
+    if (armarGuardia.hecho) return;
+    armarGuardia.hecho = true;
+    if (st && st.suin && st.idx === 0){
+      history.replaceState({ suin: true, guardia: true, idx: 0 }, '');
+      pila[0] = history.state;
+      const actual = Object.assign({}, st, { idx: 1 });
+      guardar(actual, true);
+    }
+  }
+  document.addEventListener('pointerdown', armarGuardia, true);
+  document.addEventListener('keydown', armarGuardia, true);
+})();
+</script>
+
 </body>
 </html>
