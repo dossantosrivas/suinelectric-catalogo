@@ -340,6 +340,58 @@
   }
   .filtro-chip-x:hover{ background:var(--off); color:#fff; }
 
+  /* ---------- Links de categoría (migas de pan) ---------- */
+  a.cat-item{ text-decoration:none; }
+  a.enlace-cat{ color:var(--azul-texto); text-decoration:none; }
+  a.enlace-cat:hover{ text-decoration:underline; }
+  .migas{ display:flex; flex-wrap:wrap; align-items:baseline; gap:2px 0; font-size:13.5px; color:var(--texto-3); line-height:1.5; }
+  .miga-sep{ margin:0 7px; color:var(--texto-3); }
+  .miga-txt{ color:var(--texto-2); }
+  .cab-cat{ margin:0 0 24px; }
+  .cab-cat-fila{ display:flex; flex-wrap:wrap; align-items:center; gap:6px 12px; margin:4px 0 12px; }
+  .cab-cat-titulo{ font-family:var(--display); font-weight:700; font-size:32px; line-height:1.1; color:var(--tinta); margin:0; }
+  .cab-cat-conteo{ font-size:13px; font-weight:600; color:var(--texto-2); background:var(--linea-suave); border-radius:12px; padding:2px 10px; }
+  .btn-enlace{
+    margin-left:auto; height:36px; padding:0 14px; font:inherit; font-size:13.5px; font-weight:600; color:var(--azul-texto);
+    background:#fff; border:1px solid var(--linea); border-radius:var(--radio); cursor:pointer;
+  }
+  .btn-enlace:hover{ border-color:var(--azul); }
+  .subcat-chips{ display:flex; flex-wrap:wrap; gap:8px; }
+  a.enlace-cat.chip{
+    display:inline-flex; align-items:center; gap:8px; padding:7px 14px; background:#fff; color:var(--texto);
+    border:1px solid var(--linea); border-radius:20px; font-size:14px; line-height:1.2;
+  }
+  a.enlace-cat.chip:hover{ border-color:var(--azul); color:var(--azul-texto); text-decoration:none; }
+  .chip-cnt{ font-size:12px; color:var(--texto-3); }
+  .grupo-categoria h2 a.grupo-titulo{ color:inherit; }
+  .grupo-categoria h2 a.grupo-titulo:hover{ color:var(--azul-texto); }
+  .grupo-categoria h2 .ruta-prev a.enlace-cat{ color:var(--texto-3); }
+  .grupo-categoria h2 .ruta-prev a.enlace-cat:hover{ color:var(--azul-texto); }
+  .grupo-categoria h2 .ruta-prev .miga-sep{ margin:0 5px; }
+  .sug-ruta{ font-size:12px; margin-top:3px; }
+  .sug-ruta .miga-sep{ margin:0 4px; }
+
+  /* ---------- Familias en Inicio ---------- */
+  .fam-cards{ display:grid; grid-template-columns:repeat(auto-fill, minmax(250px,1fr)); gap:14px; }
+  .fam-card{
+    background:#fff; border:1px solid var(--linea); border-radius:var(--radio); overflow:hidden;
+    display:flex; flex-direction:column; transition:border-color .15s, box-shadow .15s;
+  }
+  .fam-card:hover{ border-color:var(--azul); box-shadow:0 8px 22px rgba(14,42,59,0.10); }
+  a.enlace-cat.fam-card-img{ height:130px; display:flex; align-items:center; justify-content:center; padding:16px; background:#fff; }
+  .fam-card-img img{ max-width:100%; max-height:100%; object-fit:contain; }
+  a.enlace-cat.fam-card-nombre{
+    font-family:var(--display); font-weight:700; font-size:19px; padding:12px 16px 8px; line-height:1.2;
+    color:var(--tinta); border-top:1px solid var(--linea-suave);
+    display:flex; justify-content:space-between; align-items:center; gap:8px;
+  }
+  a.enlace-cat.fam-card-nombre:hover{ color:var(--azul-texto); text-decoration:none; }
+  .fam-card:hover .cat-card-flecha{ transform:translateX(3px); }
+  .fam-cats{ list-style:none; margin:0; padding:0 16px 14px; }
+  .fam-cats li{ display:flex; justify-content:space-between; gap:10px; padding:4px 0; font-size:14px; border-top:1px dashed var(--linea-suave); }
+  .fam-cats li:first-child{ border-top:none; }
+  .fam-cnt{ color:var(--texto-3); font-size:12.5px; }
+
   /* ---------- Catálogos PDF ---------- */
   .pagina-titulo{ font-family:var(--display); font-weight:700; font-size:34px; color:var(--tinta); margin:4px 0 4px; }
   .pagina-sub{ color:var(--texto-2); margin:0 0 22px; font-size:16px; }
@@ -584,6 +636,10 @@
     .hero-datos{ gap:20px; }
     .inicio-h2{ font-size:22px; margin-top:26px; }
     .cat-cards{ grid-template-columns:repeat(2, minmax(0,1fr)); gap:10px; }
+    .fam-cards{ grid-template-columns:1fr; gap:10px; }
+    a.enlace-cat.fam-card-img{ height:100px; }
+    .cab-cat-titulo{ font-size:26px; }
+    .btn-enlace{ margin-left:0; }
     .cat-card-img{ height:110px; }
     .cat-card-nombre{ font-size:16px; padding:10px 12px; }
     .carrusel-card{ width:150px; }
@@ -824,8 +880,209 @@ function precioMostrado(p){
 }
 function formatoMoneda(p){ if (p === null || p === undefined) return "Consultar"; return "$" + Math.ceil(p).toLocaleString('en-US'); }
 
-// Ruta completa de un producto: [categoria_principal, ...subcategorias]
-function rutaDe(p){
+/* =====================================================================
+   ORGANIZACIÓN DE CATEGORÍAS
+   El proveedor y los productos manuales traen sus propias categorías
+   (35 raíces mezclando tipos de producto y marcas). Aquí se reordenan en
+   FAMILIAS pensadas para el cliente, sin tocar productos.json: el scraper
+   sigue igual y cada actualización diaria se reorganiza sola.
+
+   Para mover algo:
+   - Categoría del proveedor  → edita MAPA_CATEGORIAS.
+   - Productos de una marca cargados a mano (Schneider, Hyundai…)
+                              → edita MAPA_MARCAS.
+   - Orden dentro de un nivel → edita ORDEN_PREFERIDO.
+   - Nombres mal escritos     → edita RENOMBRAR / ACENTOS.
+   Lo que no aparezca en los mapas cae en la familia "Otros Productos".
+   ===================================================================== */
+
+// Familias en el orden en que se muestran, cada una con sus categorías en orden.
+const FAMILIAS = [
+  { nombre: 'Variadores y Arrancadores', categorias: ['Variadores de Frecuencia', 'Arrancadores Suaves', 'Arrancadores de Motor'] },
+  { nombre: 'Control de Motores', categorias: ['Contactores', 'Guardamotores', 'Relés de Sobrecarga', 'Relés de Supervisión y Control'] },
+  { nombre: 'Protección Eléctrica', categorias: ['Breakers Automáticos', 'Breakers en Caja Moldeada', 'Breakers en Aire', 'Breakers para Transferencia', 'Fusibles Ultrarrápidos', 'Seccionadores', 'Media Tensión y Transformadores'] },
+  { nombre: 'Automatización y PLC', categorias: ['PLC Básicos', 'PLC Avanzados', 'PLC Allen Bradley', 'Paneles HMI', 'Periferia Descentralizada', 'Fuentes de Alimentación', 'Software y Programación'] },
+  { nombre: 'Redes Industriales', categorias: ['SIMATIC NET', 'SCALANCE'] },
+  { nombre: 'Sensores e Instrumentación', categorias: ['Sensores de Proximidad', 'Encoders', 'Finales de Carrera', 'Instrumentación', 'Medidores de Energía'] },
+  { nombre: 'Mando y Señalización', categorias: ['Pulsadores y Pilotos', 'Balizas Luminosas y Acústicas', 'Iluminación'] },
+  { nombre: 'Tableros, Cableado y Neumática', categorias: ['Bornes de Conexión', 'Cableado y Accesorios para Tableros', 'Neumática', 'Hidroneumáticos'] },
+];
+const FAMILIA_OTROS = 'Otros Productos';
+
+// Categoría principal del proveedor → [familia, categoría, ...niveles extra antes de sus subcategorías]
+const MAPA_CATEGORIAS = {
+  'Variadores de Frecuencia':              ['Variadores y Arrancadores', 'Variadores de Frecuencia'],
+  'Arrancadores Suaves':                   ['Variadores y Arrancadores', 'Arrancadores Suaves'],
+  'Arrancadores':                          ['Variadores y Arrancadores', 'Arrancadores de Motor'],
+  'Contactores':                           ['Control de Motores', 'Contactores'],
+  'Guardamotores':                         ['Control de Motores', 'Guardamotores'],
+  'Reles de Sobrecarga':                   ['Control de Motores', 'Relés de Sobrecarga'],
+  'Rele de Supervisión y Control':         ['Control de Motores', 'Relés de Supervisión y Control'],
+  'Breakers Automaticos':                  ['Protección Eléctrica', 'Breakers Automáticos'],
+  'Breakers en Caja Moldeada':             ['Protección Eléctrica', 'Breakers en Caja Moldeada'],
+  'Breakers en Aire 3WT8':                 ['Protección Eléctrica', 'Breakers en Aire', 'Siemens 3WT8'],
+  'Breakers en Configuracion de transferencia': ['Protección Eléctrica', 'Breakers para Transferencia'],
+  'Fusibles Ultrarapidos':                 ['Protección Eléctrica', 'Fusibles Ultrarrápidos'],
+  'Seccionadores 3LD 3P IP65':             ['Protección Eléctrica', 'Seccionadores', 'Siemens 3LD IP65'],
+  'Automatizacion Basica':                 ['Automatización y PLC', 'PLC Básicos'],
+  'Automatizacion Avanzada':               ['Automatización y PLC', 'PLC Avanzados'],
+  'Paneles de Visualizacion HMI':          ['Automatización y PLC', 'Paneles HMI'],
+  'Paneles de Visualización HMI':          ['Automatización y PLC', 'Paneles HMI'],
+  'Periferia Descentralizada':             ['Automatización y PLC', 'Periferia Descentralizada'],
+  'Fuentes de Alimentacion':               ['Automatización y PLC', 'Fuentes de Alimentación'],
+  'Software y Equipos de Programacion':    ['Automatización y PLC', 'Software y Programación'],
+  'SIMATIC NET Componentes de Red':        ['Redes Industriales', 'SIMATIC NET'],
+  'SCALANCE Comunicación Industrial':      ['Redes Industriales', 'SCALANCE'],
+  'Sensores de Proximidad':                ['Sensores e Instrumentación', 'Sensores de Proximidad'],
+  'Encoders':                              ['Sensores e Instrumentación', 'Encoders'],
+  'Interruptores de posición finales de carrera': ['Sensores e Instrumentación', 'Finales de Carrera'],
+  'Instrumentacion':                       ['Sensores e Instrumentación', 'Instrumentación'],
+  'SENTRON PAC Medidores':                 ['Sensores e Instrumentación', 'Medidores de Energía', 'SENTRON PAC'],
+  'Mando y Señalización':                  ['Mando y Señalización', 'Pulsadores y Pilotos'],
+  'Balizas Luminosas / Acústicas':         ['Mando y Señalización', 'Balizas Luminosas y Acústicas'],
+  'Iluminacion y Aire acondicionado':      ['Mando y Señalización', 'Iluminación'],
+  'Bornes de Conexión':                    ['Tableros, Cableado y Neumática', 'Bornes de Conexión'],
+  'Cableado y Accesorios para tableros':   ['Tableros, Cableado y Neumática', 'Cableado y Accesorios para Tableros'],
+  'Conectores Pneumaticos':                ['Tableros, Cableado y Neumática', 'Neumática', 'Conectores y Racores'],
+  'Festo':                                 ['Tableros, Cableado y Neumática', 'Neumática', 'Festo'],
+  'Hidroneumaticos':                       ['Tableros, Cableado y Neumática', 'Hidroneumáticos'],
+};
+
+// Raíces que son una MARCA (productos manuales o del proveedor): se decide
+// por su primera subcategoría. Resultado: [familia, categoría, ...niveles],
+// y luego se agregan las subcategorías restantes del producto.
+const MAPA_MARCAS = {
+  'Schneider': {
+    'Variadores de Velocidad':                     ['Variadores y Arrancadores', 'Variadores de Frecuencia', 'Schneider'],
+    'Arrancadores Suaves':                         ['Variadores y Arrancadores', 'Arrancadores Suaves', 'Schneider'],
+    'Contactores':                                 ['Control de Motores', 'Contactores', 'Schneider'],
+    'Contactores Auxiliares':                      ['Control de Motores', 'Contactores', 'Schneider', 'Contactores Auxiliares'],
+    'Accesorios para Contactores':                 ['Control de Motores', 'Contactores', 'Schneider', 'Accesorios'],
+    'Guardamotores Termomagnéticos':               ['Control de Motores', 'Guardamotores', 'Schneider'],
+    'Accesorios para Guardamotores':               ['Control de Motores', 'Guardamotores', 'Schneider', 'Accesorios'],
+    'Relés Térmicos de Sobrecarga':                ['Control de Motores', 'Relés de Sobrecarga', 'Schneider'],
+    'Relés de Control':                            ['Control de Motores', 'Relés de Supervisión y Control', 'Schneider'],
+    'Interruptores en Caja Moldeada':              ['Protección Eléctrica', 'Breakers en Caja Moldeada', 'Schneider'],
+    'Accesorios para Interruptores Caja Moldeada': ['Protección Eléctrica', 'Breakers en Caja Moldeada', 'Schneider', 'Accesorios'],
+    'Mando y Señalización':                        ['Mando y Señalización', 'Pulsadores y Pilotos', 'Schneider'],
+    'Balizas y Sirenas':                           ['Mando y Señalización', 'Balizas Luminosas y Acústicas', 'Schneider'],
+  },
+  'Hyundai': {
+    'Contactores':                                 ['Control de Motores', 'Contactores', 'Hyundai'],
+    'Accesorios para Contactores':                 ['Control de Motores', 'Contactores', 'Hyundai', 'Accesorios'],
+    'Guardamotores Termomagnéticos':               ['Control de Motores', 'Guardamotores', 'Hyundai'],
+    'Accesorios para Guardamotores':               ['Control de Motores', 'Guardamotores', 'Hyundai', 'Accesorios'],
+    'Relés Térmicos de Sobrecarga':                ['Control de Motores', 'Relés de Sobrecarga', 'Hyundai'],
+    'Relés de Control':                            ['Control de Motores', 'Relés de Supervisión y Control', 'Hyundai'],
+    'Cajas para Arrancadores':                     ['Variadores y Arrancadores', 'Arrancadores de Motor', 'Hyundai'],
+    'Automáticos de Riel DIN':                     ['Protección Eléctrica', 'Breakers Automáticos', 'Hyundai'],
+    'Diferenciales de Riel DIN':                   ['Protección Eléctrica', 'Breakers Automáticos', 'Hyundai', 'Diferenciales'],
+    'Accesorios para Automáticos':                 ['Protección Eléctrica', 'Breakers Automáticos', 'Hyundai', 'Accesorios'],
+    'Interruptores en Caja Moldeada':              ['Protección Eléctrica', 'Breakers en Caja Moldeada', 'Hyundai'],
+    'Accesorios para Interruptores Caja Moldeada': ['Protección Eléctrica', 'Breakers en Caja Moldeada', 'Hyundai', 'Accesorios'],
+    'Interruptores de Potencia en Aire':           ['Protección Eléctrica', 'Breakers en Aire', 'Hyundai'],
+    'Accesorios para Interruptores de Aire':       ['Protección Eléctrica', 'Breakers en Aire', 'Hyundai', 'Accesorios'],
+    // "Otros Productos" se reparte por modelo (ver rutaEspecial)
+  },
+  'ALLEN BRADLEY': {
+    'CONTROL-LOGIX':    ['Automatización y PLC', 'PLC Allen Bradley', 'ControlLogix'],
+    'FLEX I/O':         ['Automatización y PLC', 'PLC Allen Bradley', 'FLEX I/O'],
+    'Sensores Opticos': ['Sensores e Instrumentación', 'Sensores de Proximidad', 'Ópticos', 'Allen Bradley'],
+  },
+};
+
+// Casos puntuales que no se pueden decidir solo por la categoría.
+function rutaEspecial(p, raiz, subs){
+  if (raiz === 'Hyundai' && subs[0] === 'Otros Productos'){
+    if (/^HGP/i.test(p.modelo || '')) return ['Protección Eléctrica', 'Breakers en Caja Moldeada', 'Hyundai', 'Especiales HGP'];
+    return ['Protección Eléctrica', 'Media Tensión y Transformadores', 'Hyundai'];
+  }
+  return null;
+}
+
+// Nombres que se reemplazan completos.
+const RENOMBRAR = {
+  'Amperimetros / Voltimetros AMPERIMETROS / VOLTIMETROS': 'Amperímetros / Voltímetros',
+  'Amperimetros / Voltimetros Pilotos luminosos 22 mm': 'Pilotos Luminosos 22 mm',
+  'Rele de Supervisión monofasico de tension monofasico': 'Relé de Supervisión de Tensión Monofásico',
+  'Rele de Supervisión de tension / corriente monofasico': 'Relé de Supervisión de Tensión / Corriente Monofásico',
+  'LOGO': 'LOGO!',
+  'MICRO MASTER': 'MICROMASTER',
+  'DANFOSS': 'Danfoss',
+  'KINCO': 'Kinco',
+  'NORDIC': 'Nordic',
+  'Terminales De Punta': 'Terminales de Punta',
+  // Series casi repetidas del proveedor → una sola
+  'SIRIUS 3RT1 / 3RT2 / 3RT5': 'SIRIUS 3RT',
+  'SIRIUS 3RT1 / 3RT2 / 3RT6': 'SIRIUS 3RT',
+  'SIRIUS 3RT1 / 3RT5': 'SIRIUS 3RT',
+  'Termomagnéticos SIRIUS 3RV1 / 3RV2': 'Termomagnéticos SIRIUS 3RV',
+  'Termomagnéticos SIRIUS 3RV1 / 3RV2 / 3RV5 / 3RV6': 'Termomagnéticos SIRIUS 3RV',
+};
+
+// Palabras sin acento (o mal escritas) que se corrigen donde aparezcan.
+const ACENTOS = {
+  basico:'básico', basicos:'básicos', estandar:'estándar', opticos:'ópticos', optico:'óptico',
+  magneticos:'magnéticos', magnetico:'magnético', ultrasonicos:'ultrasónicos', electroneumaticos:'electroneumáticos',
+  presion:'presión', marcacion:'marcación', conexion:'conexión', diametro:'diámetro', alimentacion:'alimentación',
+  analogicas:'analógicas', analogica:'analógica', analogicos:'analógicos', analogico:'analógico',
+  tempertura:'temperatura', termicos:'térmicos', termico:'térmico', reles:'relés', rele:'relé',
+  generacion:'generación', programacion:'programación', comunicacion:'comunicación', instrumentacion:'instrumentación',
+  iluminacion:'iluminación', automatizacion:'automatización', visualizacion:'visualización', configuracion:'configuración',
+  lamparas:'lámparas', lampara:'lámpara', plasticas:'plásticas', plastica:'plástica', multiples:'múltiples',
+  tension:'tensión', solido:'sólido', monofasico:'monofásico', monofasicos:'monofásicos', trifasico:'trifásico',
+  trifasicos:'trifásicos', pneumaticos:'neumáticos', neumaticos:'neumáticos', expansion:'expansión',
+  supervision:'supervisión', proteccion:'protección', camara:'cámara', inversion:'inversión', minima:'mínima',
+  electronicos:'electrónicos', bimetalicos:'bimetálicos', amperimetros:'amperímetros', voltimetros:'voltímetros',
+  ultrarapidos:'ultrarrápidos', acusticas:'acústicas', logica:'lógica', logicos:'lógicos', modulos:'módulos',
+  modulo:'módulo', electricos:'eléctricos', bateria:'batería', baterias:'baterías', maxima:'máxima', version:'versión',
+};
+
+// Orden preferido dentro de un nivel (clave = nombre del nivel padre ya limpio).
+// Lo que no esté en la lista va después, en orden natural. "Accesorios" y "Otros" siempre al final.
+const ORDEN_PREFERIDO = {
+  'Variadores de Frecuencia': ['INVT', 'Schneider', 'SINAMICS G120X', 'SINAMICS G120C', 'SINAMICS G120', 'SINAMICS G110', 'MICROMASTER', 'SIMODRIVE', 'Danfoss', 'Resistencias de Frenado'],
+  'INVT': ['Uso General', 'Bombas de Agua', 'Control de Bombas', 'Bombeo Solar'],
+  'Arrancadores Suaves': ['Nordic', 'Schneider', 'Arrancador Básico', 'Arrancador Estándar', 'Arranque Pesado'],
+  'PLC Básicos': ['LOGO!', 'PLC S7-200', 'PLC S7-1200'],
+  'PLC Avanzados': ['PLC S5', 'PLC S7-300', 'PLC S7-400', 'PLC S7-1500', 'Software'],
+  'Paneles HMI': ['Basico 1ra Generación', 'Básico 1ra Generación', 'Básico 2da Generación', 'Paneles Confort', 'Simatic Panel', 'Kinco'],
+  'Breakers en Aire': ['Siemens 3WT8', 'Hyundai'],
+  'Contactores': ['SIRIUS 3RT', 'SIRIUS 3RH1 / 3RH2 / 3RH6 Contactores Auxiliares S00', 'Contactores 3TF', 'Estado Sólido Carga Resistiva / Inductiva'],
+  'Guardamotores': ['Termomagnéticos SIRIUS 3RV', 'Magnéticos SIRIUS 3RV1', 'Guardamotores 3VE'],
+  'SIRIUS 3RT': ['Tamaño S00', 'Tamaño S0', 'Tamaño S2', 'Tamaño S3', 'Tamaño S6', 'Tamaño S10', 'Tamaño S12'],
+};
+// Niveles que son una marca: van después de las series y antes de "Accesorios".
+const NODOS_MARCA = new Set(['Schneider', 'Hyundai', 'Nordic', 'Danfoss', 'Kinco', 'Allen Bradley', 'Phoenix Contact', 'Festo', 'INVT']);
+
+/* ---------- Limpieza de nombres ---------- */
+const _cacheNombre = new Map();
+function limpiarNombre(s){
+  if (s == null) return '';
+  const orig = String(s);
+  if (_cacheNombre.has(orig)) return _cacheNombre.get(orig);
+  let t = orig.trim().replace(/\s+/g, ' ');
+  t = t.replace(/^\d+\s*\.-\s*/, '');           // "1.- LOGO" -> "LOGO"
+  t = t.replace(/(\d)(Amp)\b/g, '$1 $2');         // "90Amp" -> "90 Amp"
+  if (RENOMBRAR[t]) t = RENOMBRAR[t];
+  t = t.replace(/[A-Za-z]+/g, w => {
+    const r = ACENTOS[w.toLowerCase()];
+    if (!r) return w;
+    if (w === w.toUpperCase() && w.length > 1) return r.toUpperCase();
+    return w[0] === w[0].toUpperCase() ? r[0].toUpperCase() + r.slice(1) : r;
+  });
+  if (RENOMBRAR[t]) t = RENOMBRAR[t];
+  _cacheNombre.set(orig, t);
+  return t;
+}
+
+/* ---------- Ruta de un producto dentro de la nueva organización ---------- */
+// Niveles navegables (con link propio): Familia › Categoría › 2 niveles más.
+// Lo más profundo (ej. "Bobina AC › 25 Amp") se muestra como subgrupo en el listado.
+const MAX_NIVELES = 4;
+
+const _cacheRuta = new WeakMap();
+function rutaOriginalDe(p){
   const cat = p.categoria_principal || p.marca || 'OTROS';
   let subs = Array.isArray(p.subcategorias) ? p.subcategorias.slice() : null;
   if (!subs){ // compat con JSON viejo (subcategoria string)
@@ -833,7 +1090,260 @@ function rutaDe(p){
   }
   return [cat, ...subs.filter(Boolean)];
 }
+// Ruta completa (todas las subcategorías), ya reorganizada y con nombres limpios.
+function rutaDe(p){
+  const hit = _cacheRuta.get(p);
+  if (hit) return hit;
+  const orig = rutaOriginalDe(p);
+  const raiz = orig[0], subs = orig.slice(1);
+  let base, resto;
+  const esp = rutaEspecial(p, raiz, subs);
+  if (esp){ base = esp; resto = subs.slice(2); }
+  else if (MAPA_MARCAS[raiz] && subs.length && MAPA_MARCAS[raiz][subs[0]]){
+    base = MAPA_MARCAS[raiz][subs[0]]; resto = subs.slice(1);
+  } else if (MAPA_CATEGORIAS[raiz]){
+    base = MAPA_CATEGORIAS[raiz]; resto = subs;
+  } else {
+    base = [FAMILIA_OTROS, raiz]; resto = subs;
+  }
+  const ruta = [];
+  for (const seg of base.concat(resto)){
+    const n = limpiarNombre(seg);
+    if (n && ruta[ruta.length - 1] !== n) ruta.push(n); // sin niveles repetidos seguidos
+  }
+  _cacheRuta.set(p, ruta);
+  return ruta;
+}
+// Ruta hasta donde llega la navegación (lo que tiene link y aparece en el menú).
+function rutaNavDe(p){ return rutaDe(p).slice(0, MAX_NIVELES); }
 function claveDe(ruta){ return ruta.join('|||'); }
+
+/* ---------- Orden ---------- */
+const _familiaIdx = {};
+FAMILIAS.forEach((f, i) => { _familiaIdx[f.nombre] = i; });
+const _colator = new Intl.Collator('es', { numeric: true, sensitivity: 'base' });
+function pesoFinal(nombre){
+  if (NODOS_MARCA.has(nombre)) return 1;
+  if (/^accesorios\b/i.test(nombre)) return 2;
+  if (/^(otros|repuestos)\b/i.test(nombre)) return 3;
+  return 0;
+}
+// Compara dos hermanos (a, b) que cuelgan de rutaPadre.
+function compararHermanos(rutaPadre, a, b){
+  if (rutaPadre.length === 0){
+    const ia = a in _familiaIdx ? _familiaIdx[a] : 99, ib = b in _familiaIdx ? _familiaIdx[b] : 99;
+    if (ia !== ib) return ia - ib;
+    return _colator.compare(a, b);
+  }
+  if (rutaPadre.length === 1){
+    const fam = FAMILIAS[_familiaIdx[rutaPadre[0]]];
+    if (fam){
+      const ia = fam.categorias.indexOf(a), ib = fam.categorias.indexOf(b);
+      const xa = ia < 0 ? 99 : ia, xb = ib < 0 ? 99 : ib;
+      if (xa !== xb) return xa - xb;
+    }
+  }
+  const pref = ORDEN_PREFERIDO[rutaPadre[rutaPadre.length - 1]];
+  if (pref){
+    const ia = pref.indexOf(a), ib = pref.indexOf(b);
+    if (ia >= 0 || ib >= 0){
+      if (ia < 0) return 1;
+      if (ib < 0) return -1;
+      return ia - ib;
+    }
+  }
+  const pa = pesoFinal(a), pb = pesoFinal(b);
+  if (pa !== pb) return pa - pb;
+  return _colator.compare(a, b);
+}
+// Compara dos rutas completas, nivel por nivel (para ordenar los grupos del listado).
+function compararRutas(ra, rb){
+  const n = Math.min(ra.length, rb.length);
+  for (let i = 0; i < n; i++){
+    if (ra[i] !== rb[i]) return compararHermanos(ra.slice(0, i), ra[i], rb[i]);
+  }
+  return ra.length - rb.length;
+}
+
+/* ---------- Links (URL de cada categoría) ---------- */
+function slugDe(s){
+  return String(s).normalize('NFD').replace(/[̀-ͯ]/g, '')
+    .toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'x';
+}
+function hashDeRuta(ruta){
+  return ruta.length ? '#/c/' + ruta.slice(0, MAX_NIVELES).map(slugDe).join('/') : '#/todo';
+}
+function escHtml(s){
+  return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+}
+// <a> a una categoría. Funciona con clic normal (navega sin recargar) y con
+// clic derecho / Ctrl+clic (abrir en otra pestaña, copiar enlace).
+function enlaceCat(ruta, texto, clase, extraHtml){
+  const r = ruta.slice(0, MAX_NIVELES);
+  return '<a class="enlace-cat' + (clase ? ' ' + clase : '') + '" href="' + hashDeRuta(r) + '" data-ruta="' +
+         encodeURIComponent(claveDe(r)) + '">' + escHtml(texto == null ? r[r.length - 1] : texto) + (extraHtml || '') + '</a>';
+}
+
+/* ---------- Dirección (URL) de cada pantalla ----------
+   #/                      Inicio
+   #/catalogos             Catálogos en PDF
+   #/todo                  Todo el catálogo
+   #/c/familia/categoria/… Una categoría (cada nivel es un link)
+   #/marca/siemens         Productos de una marca
+   #/buscar?q=3RT2026      Búsqueda
+   Parámetros extra: ?marca=siemens (filtro de marca), ?p=MODELO (ficha abierta) */
+function hashDeNav(n, det){
+  let base;
+  const params = [];
+  const q = (n.q || '').trim();
+  if (n.vista === 'inicio') base = '#/';
+  else if (n.vista === 'catalogos') base = '#/catalogos';
+  else if (q){ base = '#/buscar'; params.push('q=' + encodeURIComponent(q)); }
+  else if (n.seleccion && n.seleccion.length) base = hashDeRuta(n.seleccion);
+  else if (n.filtroMarca) base = '#/marca/' + slugDe(n.filtroMarca);
+  else base = '#/todo';
+  if (n.filtroMarca && n.vista === 'catalogo' && base.indexOf('#/marca/') !== 0) params.push('marca=' + slugDe(n.filtroMarca));
+  if (det) params.push('p=' + encodeURIComponent(det));
+  return base + (params.length ? '?' + params.join('&') : '');
+}
+function navActualBasica(){
+  return { vista: vista, seleccion: seleccion.slice(), filtroMarca: filtroMarca, q: document.getElementById('buscador').value };
+}
+function marcaDeSlug(sl){
+  const marcas = new Set(Object.keys(LOGOS_MARCAS));
+  productos.forEach(p => { if (p.marca) marcas.add(p.marca.toUpperCase()); });
+  for (const m of marcas) if (slugDe(m) === sl) return m;
+  return null;
+}
+// Convierte una dirección (#/c/…) en la pantalla que representa.
+function navDeHash(hash){
+  const h = String(hash || '').replace(/^#/, '');
+  const [camino, qs] = h.split('?');
+  const params = new URLSearchParams(qs || '');
+  const partes = (camino || '').split('/').filter(Boolean).map(x => { try { return decodeURIComponent(x); } catch(e){ return x; } });
+  const n = { vista: 'inicio', seleccion: [], filtroMarca: null, q: '' };
+  if (partes[0] === 'catalogos') n.vista = 'catalogos';
+  else if (partes[0] === 'todo') n.vista = 'catalogo';
+  else if (partes[0] === 'buscar'){ n.vista = 'catalogo'; n.q = params.get('q') || ''; }
+  else if (partes[0] === 'marca'){ n.vista = 'catalogo'; n.filtroMarca = marcaDeSlug(partes[1] || ''); }
+  else if (partes[0] === 'c'){
+    n.vista = 'catalogo';
+    let nodo = construirArbol();
+    for (const sl of partes.slice(1, 1 + MAX_NIVELES)){
+      const nombre = Object.keys(nodo.hijos).find(k => slugDe(k) === slugDe(sl));
+      if (!nombre) break; // categoría que ya no existe: nos quedamos en el nivel anterior
+      n.seleccion.push(nombre);
+      nodo = nodo.hijos[nombre];
+    }
+  }
+  if (params.get('marca')) n.filtroMarca = marcaDeSlug(params.get('marca'));
+  return { nav: n, det: params.get('p') || null };
+}
+// Muestra la pantalla de una dirección (se usa al abrir un link compartido).
+function aplicarHash(hash){
+  const { nav: n, det } = navDeHash(hash);
+  vista = n.vista;
+  seleccion = n.seleccion;
+  filtroMarca = n.filtroMarca;
+  document.getElementById('buscador').value = n.q;
+  for (let i = 1; i <= seleccion.length; i++) expandidos.add(seleccion.slice(0, i).join('|||'));
+  renderSidebar();
+  mostrarVista();
+  if (det && productos.some(p => p.modelo === det)) abrirDetalle(det);
+}
+// Navega a una categoría (la usan todos los links .enlace-cat de la página).
+function irARuta(ruta){
+  ['modal-detalle', 'modal-imagen'].forEach(id => document.getElementById(id).classList.remove('abierto'));
+  document.getElementById('sugerencias').style.display = 'none';
+  document.getElementById('buscador').value = '';
+  filtroMarca = null;
+  vista = 'catalogo';
+  seleccion = ruta.slice(0, MAX_NIVELES);
+  for (let i = 1; i <= seleccion.length; i++) expandidos.add(seleccion.slice(0, i).join('|||'));
+  cerrarSidebar();
+  renderSidebar();
+  aplicarFiltros();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+document.addEventListener('click', (e) => {
+  const a = e.target.closest && e.target.closest('a.enlace-cat');
+  if (!a) return;
+  if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey || e.button !== 0) return; // otra pestaña
+  e.preventDefault();
+  if (a.getAttribute('data-vista-ir') === 'inicio'){
+    ['modal-detalle', 'modal-imagen'].forEach(id => document.getElementById(id).classList.remove('abierto'));
+    vista = 'inicio'; filtroMarca = null; seleccion = [];
+    document.getElementById('buscador').value = '';
+    renderSidebar(); mostrarVista();
+    window.scrollTo({ top: 0, behavior: 'smooth' });
+    return;
+  }
+  const clave = decodeURIComponent(a.getAttribute('data-ruta') || '');
+  irARuta(clave ? clave.split('|||') : []);
+});
+
+/* ---------- Cabecera de la categoría actual ---------- */
+function cabeceraCategoriaHTML(lista){
+  const ruta = seleccion.slice(0, MAX_NIVELES);
+  // Subcategorías del nivel actual (con cuántos productos hay en cada una, según los filtros)
+  const hijos = {};
+  if (ruta.length < MAX_NIVELES){
+    for (const p of lista){
+      const r = rutaNavDe(p);
+      if (r.length > ruta.length) hijos[r[ruta.length]] = (hijos[r[ruta.length]] || 0) + 1;
+    }
+  }
+  const nombres = Object.keys(hijos).sort((a, b) => compararHermanos(ruta, a, b));
+  const titulo = ruta.length ? ruta[ruta.length - 1] : (filtroMarca ? 'Productos ' + nombreMarca(filtroMarca) : 'Todo el catálogo');
+  ponerTitulo(titulo);
+  let html = '<div class="cab-cat">';
+  html += '<nav class="migas" aria-label="Ruta de la categoría">' +
+            (ruta.length ? migasHTML(ruta, { inicio: true, ultimoSinLink: true })
+                         : '<a class="enlace-cat" href="#/" data-vista-ir="inicio">Inicio</a><span class="miga-sep">›</span><span class="miga-txt">' + escHtml(titulo) + '</span>') +
+          '</nav>';
+  html += '<div class="cab-cat-fila"><h1 class="cab-cat-titulo">' + escHtml(titulo) + '</h1>' +
+          '<span class="cab-cat-conteo">' + lista.length + (lista.length === 1 ? ' producto' : ' productos') + '</span>' +
+          '<button type="button" class="btn-enlace" id="btn-copiar-enlace" title="Copiar el link de esta categoría">🔗 Copiar enlace</button></div>';
+  if (nombres.length){
+    html += '<div class="subcat-chips">' +
+            nombres.map(c => enlaceCat(ruta.concat(c), c, 'chip', '<span class="chip-cnt">' + hijos[c] + '</span>')).join('') +
+            '</div>';
+  }
+  html += '</div>';
+  return html;
+}
+const TITULO_BASE = document.title;
+// Título de la pestaña (y del link al compartirlo) según la pantalla.
+function ponerTitulo(t){ document.title = t ? t + ' | Suinelectric' : TITULO_BASE; }
+function nombreMarca(m){
+  if (!m) return '';
+  return m.length <= 4 ? m : m.toLowerCase().replace(/(^|[\s-])\S/g, x => x.toUpperCase());
+}
+function urlParaCompartir(){
+  return location.href.split('#')[0] + hashDeNav(navActualBasica(), null);
+}
+async function copiarEnlaceActual(){
+  const url = urlParaCompartir();
+  try { await navigator.clipboard.writeText(url); }
+  catch (e){
+    const area = document.createElement('textarea');
+    area.value = url; document.body.appendChild(area); area.select();
+    try { document.execCommand('copy'); } catch(_){}
+    document.body.removeChild(area);
+  }
+  mostrarToast('Enlace copiado');
+}
+// Migas de pan: cada nivel con su link; los niveles más profundos, como texto.
+function migasHTML(ruta, opts){
+  opts = opts || {};
+  const partes = [];
+  if (opts.inicio) partes.push('<a class="enlace-cat" href="#/" data-vista-ir="inicio">Inicio</a>');
+  ruta.forEach((seg, i) => {
+    if (i < MAX_NIVELES && !(opts.ultimoSinLink && i === ruta.length - 1)) partes.push(enlaceCat(ruta.slice(0, i + 1), seg));
+    else partes.push('<span class="miga-txt">' + escHtml(seg) + '</span>');
+  });
+  return partes.join('<span class="miga-sep">›</span>');
+}
 
 /* ---------- Árbol de categorías de profundidad variable ---------- */
 function construirArbol(){
@@ -841,7 +1351,7 @@ function construirArbol(){
   for (const p of productos){
     let nodo = raiz;
     raiz.total++;
-    for (const seg of rutaDe(p)){
+    for (const seg of rutaNavDe(p)){
       if (!nodo.hijos[seg]) nodo.hijos[seg] = { total: 0, hijos: {} };
       nodo = nodo.hijos[seg];
       nodo.total++;
@@ -852,7 +1362,7 @@ function construirArbol(){
 
 /* ---------- Sidebar recursivo ---------- */
 function renderNodo(nodo, rutaPadre, nivel, out){
-  const nombres = Object.keys(nodo.hijos).sort((a,b)=>a.localeCompare(b,'es'));
+  const nombres = Object.keys(nodo.hijos).sort((a,b)=>compararHermanos(rutaPadre, a, b));
   for (const nombre of nombres){
     const hijo = nodo.hijos[nombre];
     const ruta = rutaPadre.concat(nombre);
@@ -864,9 +1374,10 @@ function renderNodo(nodo, rutaPadre, nivel, out){
     const claseNivel = nivel === 0 ? 'cat-marca' : 'cat-sub';
     const pad = 18 + nivel * 16;
     out.push(
-      '<div class="cat-item ' + claseNivel + ' ' + activa + '" data-clave="' + encodeURIComponent(clave) + '" data-tiene-hijos="' + (tieneHijos ? '1' : '0') + '" style="padding-left:' + pad + 'px">' +
-        '<span class="cat-marca-nombre">' + (flecha ? '<span class="flecha">' + flecha + '</span> ' : '') + nombre + '</span>' +
-      '</div>'
+      '<a class="cat-item ' + claseNivel + ' ' + activa + '" href="' + hashDeRuta(ruta) + '" data-clave="' + encodeURIComponent(clave) + '" data-tiene-hijos="' + (tieneHijos ? '1' : '0') + '" style="padding-left:' + pad + 'px">' +
+        '<span class="cat-marca-nombre">' + (flecha ? '<span class="flecha">' + flecha + '</span> ' : '') + escHtml(nombre) + '</span>' +
+        '<span class="conteo">' + hijo.total + '</span>' +
+      '</a>'
     );
     if (abierto && tieneHijos) renderNodo(hijo, ruta, nivel + 1, out);
   }
@@ -879,25 +1390,28 @@ function renderSidebar(){
   const activaTodas = (vista === 'catalogo' && seleccion.length === 0) ? 'activa' : '';
   const out = [];
   out.push(
-    '<div class="cat-item cat-inicio ' + (vista === 'inicio' ? 'activa' : '') + '" data-vista="inicio">' +
+    '<a class="cat-item cat-inicio ' + (vista === 'inicio' ? 'activa' : '') + '" href="#/" data-vista="inicio">' +
       '<span>Inicio</span>' +
-    '</div>'
+    '</a>'
   );
   out.push(
-    '<div class="cat-item cat-inicio ' + (vista === 'catalogos' ? 'activa' : '') + '" data-vista="catalogos">' +
+    '<a class="cat-item cat-inicio ' + (vista === 'catalogos' ? 'activa' : '') + '" href="#/catalogos" data-vista="catalogos">' +
       '<span>Catálogos en PDF</span>' +
-    '</div>'
+    '</a>'
   );
   out.push(
-    '<div class="cat-item cat-todas ' + activaTodas + '" data-clave="">' +
+    '<a class="cat-item cat-todas ' + activaTodas + '" href="#/todo" data-clave="">' +
       '<span>Ver todo el catálogo</span>' +
-    '</div>'
+    '</a>'
   );
   renderNodo(arbol, [], 0, out);
   cont.innerHTML = out.join('');
 
   cont.querySelectorAll('.cat-item').forEach(el => {
-    el.addEventListener('click', () => {
+    el.addEventListener('click', (e) => {
+      // Ctrl/Cmd/Shift + clic: que el navegador abra el link en otra pestaña.
+      if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+      e.preventDefault();
       const v = el.getAttribute('data-vista');
       if (v){
         vista = v;
@@ -920,6 +1434,7 @@ function renderSidebar(){
         else expandidos.add(clave);
         for (let i = 1; i < ruta.length; i++) expandidos.add(ruta.slice(0, i).join('|||'));
         seleccion = ruta;
+        document.getElementById('buscador').value = '';
         // Solo cerramos si es una categoría "hoja" (sin subcategorías) —
         // así el panel se queda abierto mientras se exploran varias ramas.
         if (!tieneHijos) cerrarSidebar();
@@ -942,11 +1457,13 @@ function mostrarVista(){
   else aplicarFiltros();
 }
 
-// Imagen representativa de una categoría: la primera imagen de un producto
-// de esa categoría (si existe).
-function imagenDeCategoria(cat){
+// Imagen representativa de una categoría (ruta): la primera imagen de un
+// producto que esté dentro de esa ruta (si existe).
+function imagenDeRuta(ruta){
   for (const p of productos){
-    if ((p.categoria_principal || p.marca || 'OTROS') === cat && p.imagen) return p.imagen;
+    if (!p.imagen) continue;
+    const r = rutaDe(p);
+    if (ruta.every((seg, i) => r[i] === seg)) return p.imagen;
   }
   return null;
 }
@@ -997,11 +1514,13 @@ function productosAleatorios(cantidad){
 /* ---------- Página de inicio (categorías con imágenes, sin conteos) ---------- */
 function renderInicio(){
   actualizarControles();
+  ponerTitulo(null);
   const cont = document.getElementById('contenido');
   document.getElementById('empty').style.display = 'none';
 
-  const cats = [...new Set(productos.map(p => p.categoria_principal || p.marca || 'OTROS'))]
-    .sort((a,b)=>a.localeCompare(b,'es'));
+  const arbolInicio = construirArbol();
+  const familias = Object.keys(arbolInicio.hijos).sort((a,b)=>compararHermanos([], a, b));
+  const totalCategorias = familias.reduce((n, f) => n + Object.keys(arbolInicio.hijos[f].hijos).length, 0);
   const marcasPresentes = Object.keys(LOGOS_MARCAS).filter(m => productos.some(p => (p.marca||'').toUpperCase() === m));
 
   const disponibles = productos.filter(p => p.disponible).length;
@@ -1020,15 +1539,15 @@ function renderInicio(){
               '<div class="hero-datos">' +
                 '<div class="hero-dato"><strong>' + productos.length.toLocaleString('es-VE') + '</strong><span>productos en catálogo</span></div>' +
                 '<div class="hero-dato"><strong>' + disponibles.toLocaleString('es-VE') + '</strong><span>disponibles hoy</span></div>' +
-                '<div class="hero-dato"><strong>' + cats.length + '</strong><span>categorías</span></div>' +
+                '<div class="hero-dato"><strong>' + totalCategorias + '</strong><span>categorías</span></div>' +
               '</div>' +
             '</div>';
   if (marcasPresentes.length){
     html += '<div class="hero-marcas"><p class="hero-marcas-titulo">Compra por marca</p><div class="marcas-strip">';
     for (const m of marcasPresentes){
-      html += '<div class="marca-logo-card" data-marca="' + m + '" title="Ver productos ' + m + '">' +
+      html += '<a class="marca-logo-card" href="#/marca/' + slugDe(m) + '" data-marca="' + m + '" title="Ver productos ' + m + '">' +
                 '<img src="' + LOGOS_MARCAS[m] + '" alt="' + m + '">' +
-              '</div>';
+              '</a>';
     }
     html += '</div></div>';
   }
@@ -1057,15 +1576,23 @@ function renderInicio(){
   }
 
   html += '<h2 class="inicio-h2">Compra por categoría</h2>';
-  html += '<div class="cat-cards">';
-  let i = 0;
-  for (const c of cats){
-    const img = imagenDeCategoria(c);
-    html += '<div class="cat-card" data-ir="' + encodeURIComponent(c) + '">' +
-              '<div class="cat-card-img">' + (img ? '<img src="' + img + '" alt="' + c + '" loading="lazy">' : '<span class="cat-card-noimg">⚡</span>') + '</div>' +
-              '<span class="cat-card-nombre">' + c + '<span class="cat-card-flecha">→</span></span>' +
+  html += '<div class="fam-cards">';
+  for (const fam of familias){
+    const nodoFam = arbolInicio.hijos[fam];
+    const cats = Object.keys(nodoFam.hijos).sort((a,b)=>compararHermanos([fam], a, b));
+    const img = (cats.length && imagenDeRuta([fam, cats[0]])) || imagenDeRuta([fam]);
+    const hrefFam = hashDeRuta([fam]);
+    const dataFam = encodeURIComponent(claveDe([fam]));
+    html += '<div class="fam-card">' +
+              '<a class="enlace-cat fam-card-img" href="' + hrefFam + '" data-ruta="' + dataFam + '" aria-hidden="true" tabindex="-1">' +
+                (img ? '<img src="' + img + '" alt="" loading="lazy">' : '<span class="cat-card-noimg">⚡</span>') +
+              '</a>' +
+              '<a class="enlace-cat fam-card-nombre" href="' + hrefFam + '" data-ruta="' + dataFam + '">' +
+                escHtml(fam) + '<span class="cat-card-flecha">→</span></a>' +
+              '<ul class="fam-cats">' +
+                cats.map(c => '<li>' + enlaceCat([fam, c]) + '<span class="fam-cnt">' + nodoFam.hijos[c].total + '</span></li>').join('') +
+              '</ul>' +
             '</div>';
-    i++;
   }
   html += '</div></div>';
   cont.innerHTML = html;
@@ -1082,7 +1609,9 @@ function renderInicio(){
   });
 
   cont.querySelectorAll('.marca-logo-card').forEach(el => {
-    el.addEventListener('click', () => {
+    el.addEventListener('click', (e) => {
+      if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
+      e.preventDefault();
       filtroMarca = el.getAttribute('data-marca');
       seleccion = [];
       vista = 'catalogo';
@@ -1092,23 +1621,13 @@ function renderInicio(){
     });
   });
 
-  cont.querySelectorAll('.cat-card').forEach(el => {
-    el.addEventListener('click', () => {
-      const cat = decodeURIComponent(el.getAttribute('data-ir'));
-      vista = 'catalogo';
-      filtroMarca = null;
-      seleccion = [cat];
-      expandidos.add(cat);
-      renderSidebar();
-      aplicarFiltros();
-      window.scrollTo({ top: 0, behavior: 'smooth' });
-    });
-  });
+  // Los links de familia/categoría (.enlace-cat) los maneja el clic global.
 }
 
 /* ---------- Sección de Catálogos PDF ---------- */
 function renderCatalogos(){
   actualizarControles();
+  ponerTitulo('Catálogos en PDF');
   const cont = document.getElementById('contenido');
   document.getElementById('empty').style.display = 'none';
 
@@ -1289,27 +1808,39 @@ function render(lista){
     cont.appendChild(chip);
   }
 
+  // Cabecera con migas de pan (cada nivel es un link) y subcategorías.
+  const textoBusqueda = document.getElementById('buscador').value.trim();
+  if (textoBusqueda) ponerTitulo('Buscar: ' + textoBusqueda);
+  else {
+    const cab = document.createElement('div');
+    cab.innerHTML = cabeceraCategoriaHTML(lista);
+    cont.appendChild(cab.firstChild);
+    const btnEnlace = document.getElementById('btn-copiar-enlace');
+    if (btnEnlace) btnEnlace.addEventListener('click', copiarEnlaceActual);
+  }
+
   if (lista.length === 0){ empty.style.display = "block"; return; }
   empty.style.display = "none";
 
-  // Agrupar por la RUTA COMPLETA de categorías, en orden alfabético
-  const grupos = {}; // ruta.join(' > ') -> productos[]
+  // Agrupar por la RUTA COMPLETA de categorías, en el orden de la tienda
+  const grupos = {}; // claveDe(ruta) -> productos[]
   for (const p of lista){
-    const clave = rutaDe(p).join(' > ');
+    const clave = claveDe(rutaDe(p));
     if (!grupos[clave]) grupos[clave] = [];
     grupos[clave].push(p);
   }
-  const claves = Object.keys(grupos).sort((a,b)=>a.localeCompare(b,'es'));
+  const claves = Object.keys(grupos).sort((a,b)=>compararRutas(a.split('|||'), b.split('|||')));
 
   let i = 0;
   for (const clave of claves){
     const seccion = document.createElement('div');
     seccion.className = 'grupo-categoria';
-    const partes = clave.split(' > ');
-    const ultimo = partes.pop();
+    const rutaG = clave.split('|||');
+    const partes = rutaG.slice(0, -1);
+    const ultimo = rutaG[rutaG.length - 1];
     const ordenados = ordenarGrupo(grupos[clave]);
-    seccion.innerHTML = '<h2>' + (partes.length ? '<span class="ruta-prev">' + partes.join(' › ') + '</span>' : '') +
-                        '<span>' + ultimo + '</span>' +
+    seccion.innerHTML = '<h2>' + (partes.length ? '<span class="ruta-prev">' + migasHTML(partes) + '</span>' : '') +
+                        (rutaG.length <= MAX_NIVELES ? enlaceCat(rutaG, ultimo, 'grupo-titulo') : '<span>' + escHtml(ultimo) + '</span>') +
                         '<span class="conteo-badge">' + ordenados.length + (ordenados.length === 1 ? ' producto' : ' productos') + '</span></h2>' +
                         '<div class="grid">' + ordenados.map(tarjetaHTML).join('') + '</div>';
     cont.appendChild(seccion);
@@ -1376,7 +1907,7 @@ function aplicarFiltros(){
     const coincideMarca = !filtroMarca || (p.marca || '').toUpperCase() === filtroMarca;
 
     const subsTexto = Array.isArray(p.subcategorias) ? p.subcategorias.join(' ') : (p.subcategoria || '');
-    const coincideTexto = !texto || [p.modelo, p.marca, p.categoria_principal, subsTexto, p.descripcion, p.categoria]
+    const coincideTexto = !texto || [p.modelo, p.marca, p.categoria_principal, subsTexto, rutaDe(p).join(' '), p.descripcion, p.categoria]
       .filter(Boolean).join(' ').toLowerCase().includes(texto);
     const coincideDisp = !disponibilidad ||
       (disponibilidad === 'si' && p.disponible) ||
@@ -1416,6 +1947,7 @@ function renderSugerencias(){
           (logo ? '<img class="sug-marca-logo" src="' + logo + '" alt="' + p.marca + '">' : '') +
         '</div>' +
         (p.descripcion ? '<div class="sug-desc">' + p.descripcion + '</div>' : '') +
+        '<div class="sug-ruta">' + migasHTML(rutaNavDe(p)) + '</div>' +
         '<div class="sug-fila-datos">' +
           '<span class="sug-precio">' + formatoMoneda(precioMostrado(p)) + '</span>' +
           '<span class="sug-stock ' + (p.disponible ? 'ok' : 'off') + '">' +
@@ -1439,7 +1971,8 @@ function renderSugerencias(){
   });
   // Clic en el resto de la fila -> abre la ficha del producto
   cont.querySelectorAll('.sug-item').forEach(el => {
-    el.addEventListener('click', () => {
+    el.addEventListener('click', (e) => {
+      if (e.target.closest('.enlace-cat')) return; // link de categoría: lo maneja el clic global
       const p = lista[parseInt(el.getAttribute('data-idx'), 10)];
       cont.style.display = 'none';
       abrirDetalle(p.modelo);
@@ -1449,7 +1982,7 @@ function renderSugerencias(){
 
 // Navega a la subcategoría (o categoría) donde vive un producto, y limpia la búsqueda.
 function irASubcategoriaDe(p){
-  const ruta = rutaDe(p);
+  const ruta = rutaNavDe(p);
   document.getElementById('buscador').value = '';
   document.getElementById('sugerencias').style.display = 'none';
   filtroMarca = null;
@@ -1539,7 +2072,7 @@ function abrirDetalle(modelo){
           '</div>' +
           (logoMarca ? '<img class="det-marca-logo" src="' + logoMarca + '" alt="' + p.marca + '">' : '') +
         '</div>' +
-        '<div class="det-categoria">' + (rutaDe(p).join(' › ') || 'Sin categoría') + '</div>' +
+        '<nav class="det-categoria migas">' + (migasHTML(rutaDe(p)) || 'Sin categoría') + '</nav>' +
         '<div class="det-precio-bloque">' +
           '<div class="det-precio">' + formatoMoneda(precioFinal) +
             (muestraAntes ? '<span class="det-precio-antes">' + formatoMoneda(p.precio_lista || p.precio) + '</span>' : '') +
@@ -1668,6 +2201,7 @@ function renderCarrito(){
 }
 
 /* ---------- Carga ---------- */
+let cargaInicialHecha = false;
 let ultimoEstado = null; // "generado|total" para detectar cambios entre recargas
 
 // Trae productos_manuales.json (opcional). Si no existe o está vacío, no pasa nada:
@@ -1716,6 +2250,13 @@ async function cargar(silencioso){
     }
     metaBar.textContent = estado;
 
+    // Primera carga: si se abrió un link (#/c/…), mostrar esa pantalla.
+    if (!cargaInicialHecha){
+      cargaInicialHecha = true;
+      window.__suinReemplazar = true;
+      const h = location.hash;
+      if (h && h !== '#' && h !== '#/'){ aplicarHash(h); return; }
+    }
     // Re-render conservando la vista actual (inicio o catálogo), selección y carrito.
     renderSidebar();
     mostrarVista();
@@ -1868,13 +2409,22 @@ cargar();
   const mismaNav = (a, b) => JSON.stringify(a) === JSON.stringify(b);
   const mismosPaneles = (a, b) => a.ov.join(',') === b.ov.join(',') && a.det === b.det;
 
+  // Dirección visible en la barra del navegador para cada estado, así cada
+  // pantalla (categoría, marca, búsqueda, ficha) tiene un link que se puede
+  // copiar y compartir. Mientras no han cargado los productos se deja la que
+  // venía (por si alguien abrió un link compartido).
+  function urlDe(estado){
+    if (!productos.length || !estado.nav) return undefined;
+    const h = hashDeNav(estado.nav, estado.det);
+    return h === '#/' ? location.pathname + location.search : h;
+  }
   function guardar(estado, nuevo){
     pila[estado.idx] = estado;
     if (nuevo){
       pila.length = estado.idx + 1; // lo que había "adelante" se descarta
-      history.pushState(estado, '');
+      history.pushState(estado, '', urlDe(estado));
     } else {
-      history.replaceState(estado, '');
+      history.replaceState(estado, '', urlDe(estado));
     }
   }
 
@@ -1890,6 +2440,14 @@ cargar();
     pendiente = false;
     if (aplicando) return;
     const actual = history.state;
+    if (window.__suinReemplazar){
+      // Pantalla abierta desde un link (carga inicial o dirección escrita a
+      // mano): reemplaza la entrada actual en vez de crear otra.
+      window.__suinReemplazar = false;
+      const idx = (actual && actual.suin && actual.idx != null) ? actual.idx : pila.length;
+      guardar(estadoActual(idx), false);
+      return;
+    }
     if (!actual || !actual.suin || actual.guardia){
       // Estábamos en la entrada de guardia: lo nuevo va encima.
       const base = (actual && actual.idx != null) ? actual.idx : 0;
@@ -1995,6 +2553,15 @@ cargar();
       setTimeout(() => { aplicando = false; }, 0);
     }
   }
+
+  // Dirección cambiada a mano (o un link #/… sin interceptar): mostrarla.
+  window.addEventListener('hashchange', () => {
+    const st = history.state;
+    if (st && st.suin) return; // es una entrada nuestra: la maneja popstate
+    if (!productos.length) return;
+    window.__suinReemplazar = true;
+    aplicarHash(location.hash);
+  });
 
   window.addEventListener('popstate', (e) => {
     const st = e.state;
