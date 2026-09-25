@@ -422,6 +422,10 @@
     display:flex; align-items:center; justify-content:center; padding:20px;
   }
   #modal-detalle .det-imagen img{ max-width:100%; max-height:100%; object-fit:contain; }
+  .det-galeria{ display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
+  .det-mini{ width:60px; height:60px; padding:4px; background:#fff; border:1px solid var(--linea-suave); border-radius:var(--radio); cursor:pointer; display:flex; align-items:center; justify-content:center; }
+  .det-mini img{ max-width:100%; max-height:100%; object-fit:contain; }
+  .det-mini.activa, .det-mini:hover{ border-color:var(--amarillo); }
   .det-imagen.vacia{ background:var(--fondo) !important; color:var(--texto-3); font-size:14px; }
   .det-header{ display:flex; justify-content:space-between; align-items:flex-start; gap:14px; padding-right:40px; }
   #modal-detalle h2{ font-family:var(--display); font-weight:700; font-size:32px; line-height:1.1; color:var(--tinta); margin:0; word-break:break-word; }
@@ -1519,8 +1523,13 @@ function abrirDetalle(modelo){
   cont.innerHTML =
     '<div class="det-layout">' +
       '<div class="det-col-img">' +
-        (p.imagen ? '<div class="det-imagen"><img src="' + p.imagen + '" alt="' + p.modelo + '"></div>'
+        (p.imagen ? '<div class="det-imagen"><img id="det-img-principal" src="' + p.imagen + '" alt="' + p.modelo + '"></div>'
                   : '<div class="det-imagen vacia">Sin imagen</div>') +
+        (Array.isArray(p.imagenes) && p.imagenes.length > 1
+          ? '<div class="det-galeria">' + p.imagenes.map((src, i) =>
+              '<button type="button" class="det-mini' + (src === p.imagen ? ' activa' : '') + '" data-src="' + src + '" aria-label="Foto ' + (i + 1) + '">' +
+                '<img src="' + src + '" alt="" loading="lazy"></button>').join('') + '</div>'
+          : '') +
       '</div>' +
       '<div class="det-col-info">' +
         '<div class="det-header">' +
@@ -1551,6 +1560,11 @@ function abrirDetalle(modelo){
       '</div>' +
     '</div>' +
     '';
+  cont.querySelectorAll('.det-mini').forEach(b => b.addEventListener('click', () => {
+    const principal = document.getElementById('det-img-principal');
+    if (principal) principal.src = b.dataset.src;
+    cont.querySelectorAll('.det-mini').forEach(x => x.classList.toggle('activa', x === b));
+  }));
   document.getElementById('modal-detalle').classList.add('abierto');
 }
 
