@@ -340,6 +340,10 @@
   }
   .filtro-chip-x:hover{ background:var(--off); color:#fff; }
 
+  .cargar-mas{ display:flex; justify-content:center; padding:10px 0 30px; }
+  .btn-cargar-mas{ height:42px; padding:0 22px; font:inherit; font-weight:600; color:var(--azul-texto); background:#fff; border:1px solid var(--linea); border-radius:var(--radio); cursor:pointer; }
+  .btn-cargar-mas:hover{ border-color:var(--azul); }
+
   /* ---------- Links de categoría (migas de pan) ---------- */
   a.cat-item{ text-decoration:none; }
   a.enlace-cat{ color:var(--azul-texto); text-decoration:none; }
@@ -1759,11 +1763,17 @@ function extraerMagnitud(p){
   return null;
 }
 
+const _cacheMagnitud = new WeakMap();
+function magnitudDe(p){
+  if (!_cacheMagnitud.has(p)) _cacheMagnitud.set(p, extraerMagnitud(p));
+  return _cacheMagnitud.get(p);
+}
+
 /** Ordena un grupo de productos de la misma categoría: mayor a menor magnitud
  * detectada (amperaje/potencia/voltaje); sin magnitud, van al final por modelo. */
 function ordenarPorJerarquia(lista){
   return lista
-    .map((p) => ({ p, m: extraerMagnitud(p) }))
+    .map((p) => ({ p, m: magnitudDe(p) }))
     .sort((x, y) => {
       if (x.m !== null && y.m !== null) return y.m - x.m; // mayor a menor
       if (x.m !== null) return -1; // los que tienen magnitud van primero
@@ -1843,68 +1853,153 @@ function render(lista){
   }
   const claves = Object.keys(grupos).sort((a,b)=>compararRutas(a.split('|||'), b.split('|||')));
 
-  let i = 0;
-  for (const clave of claves){
-    const seccion = document.createElement('div');
-    seccion.className = 'grupo-categoria';
-    const rutaG = clave.split('|||');
-    const partes = rutaG.slice(0, -1);
-    const ultimo = rutaG[rutaG.length - 1];
-    const ordenados = ordenarGrupo(grupos[clave]);
-    seccion.innerHTML = '<h2>' + (partes.length ? '<span class="ruta-prev">' + migasHTML(partes) + '</span>' : '') +
-                        (rutaG.length <= MAX_NIVELES ? enlaceCat(rutaG, ultimo, 'grupo-titulo') : '<span>' + escHtml(ultimo) + '</span>') +
-                        '<span class="conteo-badge">' + ordenados.length + (ordenados.length === 1 ? ' producto' : ' productos') + '</span></h2>' +
-                        '<div class="grid">' + ordenados.map(tarjetaHTML).join('') + '</div>';
-    cont.appendChild(seccion);
-    i++;
+  // Se pintan por tandas: primero lo que se ve y el resto a medida que se
+  // baja. Así la búsqueda y "Ver todo" responden al instante aunque haya
+  // miles de productos.
+  const cola = claves.map(clave => ({ ruta: clave.split('|||'), productos: ordenarGrupo(grupos[clave]) }));
+  const sentinela = document.createElement('div');
+  sentinela.className = 'cargar-mas';
+  sentinela.innerHTML = '<button type="button" class="btn-cargar-mas">Ver más productos</button>';
+  cont.appendChild(sentinela);
+  estadoRender = { id: ++idRender, cola, gi: 0, pi: 0, grid: null, cont, sentinela };
+  sentinela.querySelector('button').addEventListener('click', () => pintarTanda(TANDA_TARJETAS));
+  pintarTanda(TANDA_TARJETAS);
+  if (observadorTandas) observadorTandas.disconnect();
+  if ('IntersectionObserver' in window){
+    observadorTandas = new IntersectionObserver((ents) => {
+      if (ents.some(e => e.isIntersecting)) pintarTanda(TANDA_TARJETAS);
+    }, { rootMargin: '1500px 0px' });
+    observadorTandas.observe(sentinela);
   }
-  vincularEventos();
 }
 
-function vincularEventos(){
-  document.querySelectorAll('.thumb').forEach(el => {
-    el.addEventListener('click', () => {
-      const src = el.getAttribute('data-img');
+const TANDA_TARJETAS = 48;
+let estadoRender = null, idRender = 0, observadorTandas = null;
+
+// Pinta hasta n tarjetas más del listado actual.
+function pintarTanda(n){
+  const st = estadoRender;
+  if (!st || !st.sentinela.isConnected) return;
+  let quedan = n;
+  while (quedan > 0 && st.gi < st.cola.length){
+    const g = st.cola[st.gi];
+    if (st.pi === 0){
+      const rutaG = g.ruta;
+      const partes = rutaG.slice(0, -1);
+      const ultimo = rutaG[rutaG.length - 1];
+      const seccion = document.createElement('div');
+      seccion.className = 'grupo-categoria';
+      seccion.innerHTML = '<h2>' + (partes.length ? '<span class="ruta-prev">' + migasHTML(partes) + '</span>' : '') +
+                          (rutaG.length <= MAX_NIVELES ? enlaceCat(rutaG, ultimo, 'grupo-titulo') : '<span>' + escHtml(ultimo) + '</span>') +
+                          '<span class="conteo-badge">' + g.productos.length + (g.productos.length === 1 ? ' producto' : ' productos') + '</span></h2>' +
+                          '<div class="grid"></div>';
+      st.cont.insertBefore(seccion, st.sentinela);
+      st.grid = seccion.querySelector('.grid');
+    }
+    const trozo = g.productos.slice(st.pi, st.pi + quedan);
+    st.grid.insertAdjacentHTML('beforeend', trozo.map(tarjetaHTML).join(''));
+    st.pi += trozo.length;
+    quedan -= trozo.length;
+    if (st.pi >= g.productos.length){ st.gi++; st.pi = 0; }
+  }
+  if (st.gi >= st.cola.length){
+    st.sentinela.remove();
+    if (observadorTandas) observadorTandas.disconnect();
+    return;
+  }
+  // Si la tanda no alcanzó a llenar la pantalla, seguimos en el próximo cuadro.
+  const id = st.id;
+  requestAnimationFrame(() => {
+    if (estadoRender && estadoRender.id === id && st.sentinela.isConnected &&
+        st.sentinela.getBoundingClientRect().top < window.innerHeight + 1500) pintarTanda(TANDA_TARJETAS);
+  });
+}
+// Pinta lo necesario para poder volver a una posición de scroll (botón "atrás").
+function cargarHastaAltura(y){
+  let guard = 0;
+  while (estadoRender && estadoRender.sentinela.isConnected &&
+         document.documentElement.scrollHeight < y + window.innerHeight * 2 && guard++ < 200){
+    pintarTanda(TANDA_TARJETAS);
+  }
+}
+
+// Los botones de las tarjetas se manejan con un solo "escuchador" en el
+// contenedor (sirve también para las tarjetas que se pintan después).
+function vincularEventos(){}
+(function(){
+  const cont = document.getElementById('contenido');
+  cont.addEventListener('click', (e) => {
+    const card = e.target.closest('.card');
+    if (!card) return;
+    const thumb = e.target.closest('.thumb');
+    if (thumb){
+      const src = thumb.getAttribute('data-img');
       if (!src) return;
       document.getElementById('modal-imagen-img').src = src;
       document.getElementById('modal-imagen').classList.add('abierto');
-    });
-  });
-  document.querySelectorAll('.modelo').forEach(el => {
-    el.addEventListener('click', () => abrirDetalle(el.getAttribute('data-modelo')));
-  });
-  document.querySelectorAll('.btn-cart-add').forEach(el => {
-    el.addEventListener('click', () => {
-      const modelo = el.getAttribute('data-modelo');
+      return;
+    }
+    const mod = e.target.closest('.modelo');
+    if (mod){ abrirDetalle(mod.getAttribute('data-modelo')); return; }
+    const add = e.target.closest('.btn-cart-add');
+    if (add){
+      const modelo = add.getAttribute('data-modelo');
       const input = document.getElementById('qty-' + modelo);
       const cant = input ? Math.max(1, parseInt(input.value, 10) || 1) : 1;
       agregarAlCarrito(modelo, cant);
       if (input) input.value = 1; // reinicia el selector tras agregar
-    });
-  });
-  document.querySelectorAll('.qty-menos').forEach(el => {
-    el.addEventListener('click', () => {
-      const input = document.getElementById('qty-' + el.getAttribute('data-qm'));
+      return;
+    }
+    const menos = e.target.closest('.qty-menos');
+    if (menos){
+      const input = document.getElementById('qty-' + menos.getAttribute('data-qm'));
       input.value = Math.max(1, (parseInt(input.value, 10) || 1) - 1);
-    });
-  });
-  document.querySelectorAll('.qty-mas').forEach(el => {
-    el.addEventListener('click', () => {
-      const input = document.getElementById('qty-' + el.getAttribute('data-qp'));
+      return;
+    }
+    const mas = e.target.closest('.qty-mas');
+    if (mas){
+      const input = document.getElementById('qty-' + mas.getAttribute('data-qp'));
       input.value = (parseInt(input.value, 10) || 1) + 1;
-    });
+    }
   });
-  document.querySelectorAll('.qty-input').forEach(el => {
-    el.addEventListener('input', () => {
+  cont.addEventListener('input', (e) => {
+    const el = e.target;
+    if (el.classList && el.classList.contains('qty-input')){
       if (!el.value || parseInt(el.value, 10) < 1) el.value = 1;
-    });
-    el.addEventListener('click', (e) => e.stopPropagation());
+    }
   });
+})();
+
+/* ---------- Búsqueda rápida ----------
+   El texto de cada producto se prepara una sola vez (sin acentos, en
+   minúsculas). Se buscan TODAS las palabras escritas, en cualquier orden:
+   "contactor 9 a", "estandar 3rw" o "siemens logo" funcionan. */
+const _cacheBusqueda = new WeakMap();
+function normalizarBusqueda(s){
+  return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase();
+}
+function textoBuscableDe(p){
+  let t = _cacheBusqueda.get(p);
+  if (t === undefined){
+    const subsTexto = Array.isArray(p.subcategorias) ? p.subcategorias.join(' ') : (p.subcategoria || '');
+    t = normalizarBusqueda([p.modelo, p.sku, p.marca, p.categoria_principal, subsTexto, rutaDe(p).join(' '), p.descripcion, p.categoria]
+      .filter(Boolean).join(' '));
+    _cacheBusqueda.set(p, t);
+  }
+  return t;
+}
+function palabrasDe(texto){ return normalizarBusqueda(texto).split(/\s+/).filter(Boolean); }
+function coincideBusqueda(p, palabras){
+  if (!palabras.length) return true;
+  const t = textoBuscableDe(p);
+  for (const w of palabras) if (t.indexOf(w) === -1) return false;
+  return true;
 }
 
 /* ---------- Filtros ---------- */
 function aplicarFiltros(){
   const texto = document.getElementById('buscador').value.trim().toLowerCase();
+  const palabras = palabrasDe(texto);
   const disponibilidad = document.getElementById('filtro-disponibilidad').value;
   const hayBusqueda = texto.length > 0;
 
@@ -1918,9 +2013,7 @@ function aplicarFiltros(){
     }
     const coincideMarca = !filtroMarca || (p.marca || '').toUpperCase() === filtroMarca;
 
-    const subsTexto = Array.isArray(p.subcategorias) ? p.subcategorias.join(' ') : (p.subcategoria || '');
-    const coincideTexto = !texto || [p.modelo, p.marca, p.categoria_principal, subsTexto, rutaDe(p).join(' '), p.descripcion, p.categoria]
-      .filter(Boolean).join(' ').toLowerCase().includes(texto);
+    const coincideTexto = coincideBusqueda(p, palabras);
     const coincideDisp = !disponibilidad ||
       (disponibilidad === 'si' && p.disponible) ||
       (disponibilidad === 'no' && !p.disponible);
@@ -1937,14 +2030,18 @@ function renderSugerencias(){
   if (!texto){ cont.style.display = 'none'; cont.innerHTML = ''; return; }
 
   // Priorizar coincidencias en el modelo, luego en marca/descripción.
-  const coincide = (p) => {
-    const subsTexto = Array.isArray(p.subcategorias) ? p.subcategorias.join(' ') : (p.subcategoria || '');
-    return [p.modelo, p.marca, subsTexto, p.descripcion, p.categoria_principal]
-      .filter(Boolean).join(' ').toLowerCase().includes(texto);
-  };
-  const empiezaModelo = productos.filter(p => (p.modelo || '').toLowerCase().includes(texto));
-  const resto = productos.filter(p => !((p.modelo || '').toLowerCase().includes(texto)) && coincide(p));
-  const lista = empiezaModelo.concat(resto).slice(0, 8);
+  // Se detiene apenas tiene suficientes (no recorre todo el catálogo).
+  const palabras = palabrasDe(texto);
+  const textoModelo = normalizarBusqueda(texto).replace(/\s+/g, '');
+  const enModelo = [], resto = [];
+  for (const p of productos){
+    if (!coincideBusqueda(p, palabras)) continue;
+    if (normalizarBusqueda(p.modelo).replace(/\s+/g, '').includes(textoModelo)){
+      enModelo.push(p);
+      if (enModelo.length >= 8) break;
+    } else if (resto.length < 8) resto.push(p);
+  }
+  const lista = enModelo.concat(resto).slice(0, 8);
 
   if (lista.length === 0){ cont.style.display = 'none'; cont.innerHTML = ''; return; }
 
@@ -2284,12 +2381,17 @@ async function cargar(silencioso){
 // Revisa el archivo cada 4 segundos y solo re-renderiza si cambió.
 setInterval(() => cargar(true), 4000);
 
+// Las sugerencias salen al instante; el listado completo se actualiza
+// cuando se hace una pausa al escribir (150 ms), no con cada letra.
+let timerBusqueda = null;
 document.getElementById('buscador').addEventListener('input', () => {
-  const hay = document.getElementById('buscador').value.trim() !== '';
-  if (hay) vista = 'catalogo'; // al buscar, salimos de inicio/catálogos
   renderSugerencias();
-  renderSidebar();
-  mostrarVista();
+  clearTimeout(timerBusqueda);
+  timerBusqueda = setTimeout(() => {
+    const hay = document.getElementById('buscador').value.trim() !== '';
+    if (hay && vista !== 'catalogo'){ vista = 'catalogo'; renderSidebar(); } // al buscar, salimos de inicio/catálogos
+    mostrarVista();
+  }, 150);
 });
 document.getElementById('buscador').addEventListener('focus', renderSugerencias);
 document.addEventListener('click', (e) => {
@@ -2559,6 +2661,7 @@ cargar();
 
       if (cambioNav){
         const y = st.y || 0;
+        if (typeof cargarHastaAltura === 'function') cargarHastaAltura(y);
         window.scrollTo(0, y);
         requestAnimationFrame(() => window.scrollTo(0, y)); // por si la página tardó en crecer
       }
