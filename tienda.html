@@ -108,6 +108,54 @@
     width:58px; height:30px; padding:0 6px; border:1px solid var(--linea); border-radius:4px;
     font-size:15px; font-weight:600; color:var(--texto); text-align:right;
   }
+  #btn-cuenta{
+    height:48px; padding:0 14px; border:1px solid var(--linea); border-radius:var(--radio); cursor:pointer;
+    background:#fff; color:var(--tinta); font-size:14.5px; font-weight:600; display:flex; align-items:center; gap:8px;
+    max-width:180px;
+  }
+  #btn-cuenta svg{ width:20px; height:20px; flex:none; }
+  #btn-cuenta .cuenta-txt{ overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  #btn-cuenta:hover{ border-color:var(--azul); color:var(--azul-texto); }
+  #btn-cuenta.conectado{ background:var(--azul-suave); border-color:var(--azul); color:var(--azul-texto); }
+  #modal-cuenta .panel{
+    background:#fff; color:var(--texto); max-width:620px; width:100%; max-height:90vh; border-radius:var(--radio);
+    position:relative; display:flex; flex-direction:column; overflow:hidden;
+  }
+  #modal-cuenta .panel-scroll{ overflow-y:auto; padding:28px 28px 24px; }
+  .cta-titulo{ font-family:var(--display); font-weight:700; font-size:28px; color:var(--tinta); margin:0 0 4px; }
+  .cta-sub{ color:var(--texto-2); font-size:14px; margin:0 0 16px; }
+  .cta-cabecera{ display:flex; justify-content:space-between; align-items:flex-start; gap:12px; padding-right:40px; }
+  .cta-cabecera .btn-enlace{ margin-left:0; flex:none; }
+  .cta-admin{ display:inline-block; margin:4px 0 8px; font-weight:600; color:var(--azul-texto); }
+  .cta-nota{ font-size:13.5px; color:var(--ok); background:var(--ok-suave); border-radius:var(--radio); padding:8px 12px; margin:8px 0 14px; }
+  .cta-tabs{ display:flex; gap:4px; border-bottom:1px solid var(--linea); margin-bottom:14px; }
+  .cta-tabs button{ font:inherit; font-weight:600; font-size:14.5px; padding:10px 14px; border:none; background:none; color:var(--texto-2); border-bottom:3px solid transparent; cursor:pointer; }
+  .cta-tabs button.activa{ color:var(--azul-texto); border-bottom-color:var(--azul); }
+  .cta-form{ display:flex; flex-direction:column; gap:12px; }
+  .cta-form label{ display:flex; flex-direction:column; gap:5px; font-size:13.5px; font-weight:600; color:var(--texto-2); }
+  .cta-form input{ height:44px; padding:0 12px; font:inherit; font-size:16px; border:1px solid var(--linea); border-radius:var(--radio); color:var(--texto); }
+  .cta-form input:focus{ outline:none; border-color:var(--azul); }
+  .cta-form .btn{ height:46px; }
+  .cta-grid{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .cta-grid .cta-ancho{ grid-column:1 / -1; }
+  .cta-aviso{ background:var(--azul-suave); border-radius:var(--radio); padding:12px 14px; font-size:14.5px; margin-bottom:14px; }
+  .cta-otro{ margin:12px 0 0; }
+  .cta-error{ color:var(--off); font-size:14px; min-height:1em; margin:10px 0 0; }
+  .cta-vacio, .cta-cargando{ color:var(--texto-2); font-size:14.5px; }
+  .pedido-card{ border:1px solid var(--linea); border-radius:var(--radio); padding:12px 14px; margin-bottom:10px; }
+  .pedido-top{ display:flex; align-items:center; gap:10px; flex-wrap:wrap; }
+  .pedido-fecha{ color:var(--texto-3); font-size:13px; }
+  .pedido-estado{ margin-left:auto; font-size:12.5px; font-weight:700; border-radius:12px; padding:3px 10px; background:var(--linea-suave); color:var(--texto-2); }
+  .est-cotizado{ background:var(--azul-suave); color:var(--azul-texto); }
+  .est-aprobado, .est-pagado{ background:#fff4d6; color:#8a5a00; }
+  .est-entregado{ background:var(--ok-suave); color:var(--ok); }
+  .est-cancelado{ background:var(--off-suave); color:var(--off); }
+  .pedido-items{ list-style:none; margin:8px 0; padding:0; font-size:14px; }
+  .pedido-items li{ display:flex; justify-content:space-between; gap:10px; padding:3px 0; border-top:1px dashed var(--linea-suave); }
+  .pedido-nota{ font-size:13.5px; background:var(--fondo); border-radius:4px; padding:6px 10px; margin-bottom:8px; }
+  .pedido-pie{ display:flex; justify-content:space-between; align-items:center; gap:10px; }
+  .pedido-pie .btn-enlace{ margin-left:0; }
+
   #btn-cart{
     height:48px; padding:0 18px; border:none; border-radius:var(--radio); cursor:pointer;
     background:var(--tinta); color:#fff; font-size:15px; font-weight:600;
@@ -609,6 +657,9 @@
     .descuento-box{ height:38px; font-size:12px; padding:0 8px; }
     .descuento-box input{ width:50px; height:28px; font-size:14px; }
     #btn-cart{ display:none; }
+    #btn-cuenta{ display:none !important; }
+    .cta-grid{ grid-template-columns:1fr; }
+    #modal-cuenta .panel-scroll{ padding:22px 16px 18px; }
     .buscador-wrap input[type=search]{ height:48px; font-size:16px; } /* 16px evita zoom en iOS */
 
     .layout{ padding:12px 12px 0; }
@@ -726,6 +777,10 @@
     </div>
     <div class="header-right">
       <label class="descuento-box" title="Descuento aplicado a los precios del catálogo">Dto. <input type="number" id="descuento" min="0" max="90" value="60" step="0.5"> %</label>
+      <button id="btn-cuenta" type="button" aria-label="Mi cuenta" style="display:none">
+        <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>
+        <span class="cuenta-txt">Ingresar</span>
+      </button>
       <button id="btn-cart" aria-label="Abrir carrito">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="9" cy="20" r="1.4"/><circle cx="18" cy="20" r="1.4"/><path d="M2 3h3l2.6 12.2a1.5 1.5 0 0 0 1.5 1.2h8.6a1.5 1.5 0 0 0 1.5-1.2L21 7H6"/></svg>
         Carrito <span id="cart-count">0</span>
@@ -797,6 +852,13 @@
   </div>
 </div>
 
+<div class="overlay" id="modal-cuenta">
+  <div class="panel">
+    <button class="overlay-cerrar" data-cerrar="modal-cuenta" aria-label="Cerrar">✕</button>
+    <div id="cuenta-contenido" class="panel-scroll"></div>
+  </div>
+</div>
+
 <div id="cart-drawer">
   <div id="cart-header">
     <h3>Tu pedido</h3>
@@ -807,7 +869,7 @@
     <div id="cart-resumen">
       <div class="cart-linea"><span>Artículos</span><span id="cart-items-count">0</span></div>
       <div class="cart-linea"><span>Subtotal (precio lista)</span><span id="cart-subtotal-lista">$0.00</span></div>
-      <div class="cart-linea cart-descuento"><span>Descuento (<span id="cart-descuento-pct">0</span>%)</span><span id="cart-descuento-monto">-$0.00</span></div>
+      <div class="cart-linea cart-descuento"><span>Descuento<span id="cart-descuento-pct" hidden>0</span></span><span id="cart-descuento-monto">-$0.00</span></div>
       <div class="cart-linea cart-total-linea"><span>Total</span><strong id="cart-total">$0.00</strong></div>
     </div>
     <a class="btn btn-wa" style="display:block;margin-bottom:8px;" id="btn-wa-carrito" href="#" target="_blank" rel="noopener">Enviar pedido por WhatsApp (0412)</a>
@@ -821,9 +883,11 @@
   <button id="barra-inicio">⌂<span>Inicio</span></button>
   <button id="barra-menu">☰<span>Categorías</span></button>
   <button id="barra-buscar">🔍&#xFE0E;<span>Buscar</span></button>
+  <button id="barra-cuenta" style="display:none">👤&#xFE0E;<span>Ingresar</span></button>
   <button id="barra-cart">🛒<span>Pedido</span><span class="barra-cart-count" id="barra-cart-count">0</span></button>
 </div>
 
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 const WHATSAPP_PRIORITARIO = "584124111319"; // 0412-4111319 (principal)
 const WHATSAPP_SECUNDARIO  = "584244561921"; // 0424-4561921 (secundario)
@@ -891,8 +955,17 @@ function precioConDescuento(p){ if (p === null || p === undefined) return null; 
 // catálogo tal cual, sin descuento.
 function esManual(p){ return p && p._manual === true; }
 function precioMostrado(p){
+  // Precio según las reglas de descuento de quien está viendo (ver CUENTAS DE CLIENTES).
+  const r = (typeof reglaPara === 'function') ? reglaPara(p) : null;
+  if (r && r.precio_fijo != null) return Number(r.precio_fijo);
   if (p.precio == null) return null;
-  return esManual(p) ? Number(p.precio) : precioConDescuento(p.precio);
+  const n = Number(p.precio);
+  if (isNaN(n)) return null;
+  if (r && r.descuento_pct != null){
+    const esGeneral = !r.cliente_email && !r.tipo_id && !r.marca && !r.modelo;
+    return n * (1 - (esGeneral ? descuentoPct : Number(r.descuento_pct)) / 100);
+  }
+  return esManual(p) ? n : precioConDescuento(n);
 }
 function formatoMoneda(p){ if (p === null || p === undefined) return "Consultar"; return "$" + Math.ceil(p).toLocaleString('en-US'); }
 
@@ -1546,7 +1619,8 @@ function renderInicio(){
             '<div class="hero-texto">' +
               '<h1 class="inicio-titulo">Automatización y control eléctrico, listo para cotizar</h1>' +
               '<p class="inicio-sub">Variadores, contactores, breakers, arrancadores y control industrial. ' +
-                (descuentoPct > 0 ? 'Los precios del catálogo ya incluyen ' + Math.round(descuentoPct) + '% de descuento. ' : '') +
+                ((typeof sesion !== 'undefined' && sesion.email) ? 'Estás viendo tus precios de cliente. '
+                  : (descuentoPct > 0 ? 'Los precios del catálogo ya incluyen ' + Math.round(descuentoPct) + '% de descuento. ' : '')) +
                 'Arma tu pedido y envíalo por WhatsApp.</p>' +
               '<div class="hero-acciones">' +
                 '<button class="hero-btn" id="hero-ver-todo">Ver todo el catálogo</button>' +
@@ -1679,10 +1753,8 @@ function tarjetaHTML(p){
   const links = waLinks("Hola, quiero consultar disponibilidad y precio de: " + p.modelo);
   const precioFinal = precioMostrado(p);
   let precioTachado = null;
-  if (!esManual(p)){
-    if (descuentoPct > 0 && p.precio != null) precioTachado = p.precio;
-    else if (p.precio_lista != null) precioTachado = p.precio_lista;
-  }
+  if (p.precio != null && precioFinal != null && Math.ceil(precioFinal) < Math.ceil(Number(p.precio))) precioTachado = p.precio;
+  else if (!esManual(p) && p.precio_lista != null) precioTachado = p.precio_lista;
   const estadoTexto = (p.existencias != null)
     ? (p.disponible ? p.existencias + " disponible" + (p.existencias === 1 ? '' : 's') : 'Agotado')
     : (p.disponible ? 'Disponible' : 'Agotado');
@@ -2159,7 +2231,7 @@ function abrirDetalle(modelo){
     : (p.disponible ? 'Disponible' : 'No disponible');
   const rutaCat = rutaDe(p).join(' > ');
   const logoMarca = logoDeMarca(p.marca);
-  const muestraAntes = !esManual(p) && (p.precio_lista || descuentoPct > 0);
+  const muestraAntes = p.precio != null && precioFinal != null && Math.ceil(precioFinal) < Math.ceil(Number(p.precio));
 
   const modeloJs = modelo.replace(/\\/g, '\\\\').replace(/'/g, "\\'");
   const l = waLinks("Hola, quiero consultar disponibilidad y precio de: " + p.modelo);
@@ -2185,7 +2257,7 @@ function abrirDetalle(modelo){
         '<nav class="det-categoria migas">' + (migasHTML(rutaDe(p)) || 'Sin categoría') + '</nav>' +
         '<div class="det-precio-bloque">' +
           '<div class="det-precio">' + formatoMoneda(precioFinal) +
-            (muestraAntes ? '<span class="det-precio-antes">' + formatoMoneda(p.precio_lista || p.precio) + '</span>' : '') +
+            (muestraAntes ? '<span class="det-precio-antes">' + formatoMoneda(p.precio) + '</span>' : '') +
           '</div>' +
           (esManual(p) && precioFinal != null ? '<span class="precio-nota">precio de catálogo</span>' : '') +
           '<div><span class="estado ' + (p.disponible ? 'ok' : 'off') + '">' + (p.disponible ? estadoTexto : 'Agotado') + '</span></div>' +
@@ -2267,9 +2339,9 @@ function renderCarrito(){
   let totalLista = 0, totalFinal = 0, cantidadTotal = 0, lineas = [];
 
   for (const { producto, cantidad } of items){
-    const precioUnitLista = producto.precio || 0;
+    const precioUnitLista = Number(producto.precio) || 0;
     const precioUnitFinal = precioMostrado(producto) || 0;
-    const tieneDescuento = !esManual(producto) && descuentoPct > 0;
+    const tieneDescuento = Math.ceil(precioUnitFinal) < Math.ceil(precioUnitLista);
     totalLista += precioUnitLista * cantidad;
     totalFinal += precioUnitFinal * cantidad;
     cantidadTotal += cantidad;
@@ -2306,7 +2378,7 @@ function renderCarrito(){
   document.getElementById('cart-descuento-monto').textContent = '-' + formatoMoneda(totalLista - totalFinal);
   document.getElementById('cart-total').textContent = formatoMoneda(totalFinal);
 
-  const links = waLinks("Hola, quiero hacer el siguiente pedido:\n\n" + lineas.join('\n') + "\n\nTotal estimado (" + Math.round(descuentoPct) + "% dto.): " + formatoMoneda(totalFinal));
+  const links = waLinks("Hola, quiero hacer el siguiente pedido:\n\n" + lineas.join('\n') + "\n\nTotal estimado: " + formatoMoneda(totalFinal));
   document.getElementById('btn-wa-carrito').setAttribute('href', links.prioritario);
   document.getElementById('btn-wa-carrito-2').setAttribute('href', links.secundario);
 }
@@ -2451,6 +2523,347 @@ document.getElementById('barra-cart').addEventListener('click', () => {
   document.getElementById('cart-drawer').classList.add('abierto');
 });
 
+
+/* =====================================================================
+   CUENTAS DE CLIENTES (Supabase)
+   - Cada cliente entra con su correo (código o enlace que le llega).
+   - Sus precios salen de las reglas de descuento guardadas en Supabase.
+   - Los pedidos que envía por WhatsApp quedan registrados en su cuenta.
+   Si Supabase no está disponible, la tienda funciona igual que antes
+   (precios con el descuento general y sin cuentas).
+   ===================================================================== */
+const SUPABASE_URL = 'https://yqnlxhbjassrkudnhvpr.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_LOYjM5sqvQbBLIkH4KJTKQ_UfxrpTeC'; // clave pública (es segura en la página)
+
+let sb = null;
+try {
+  if (window.supabase && window.supabase.createClient){
+    sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+      auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, flowType: 'implicit' }
+    });
+  }
+} catch (e){ console.warn('Supabase no disponible', e); sb = null; }
+
+const sesion = { email: null, cliente: null, admin: false };
+let reglasDescuento = [];     // solo las que le aplican a quien está viendo (lo filtra Supabase)
+let tiposCliente = {};        // id -> nombre
+let emailPendiente = '';      // correo al que se envió el código
+let accesoEnCurso = /access_token=/.test(location.hash); // se está entrando (enlace del correo o código)
+
+const ESTADOS_PEDIDO = {
+  enviado:   { txt: 'Enviado',   cls: 'est-enviado' },
+  cotizado:  { txt: 'Cotizado',  cls: 'est-cotizado' },
+  aprobado:  { txt: 'Aprobado',  cls: 'est-aprobado' },
+  pagado:    { txt: 'Pagado',    cls: 'est-pagado' },
+  entregado: { txt: 'Entregado', cls: 'est-entregado' },
+  cancelado: { txt: 'Cancelado', cls: 'est-cancelado' },
+};
+
+/* ---------- Carga de sesión y reglas ---------- */
+async function cargarSesionYReglas(){
+  if (!sb) return;
+  try {
+    const { data: { session } } = await sb.auth.getSession();
+    sesion.email = session && session.user ? String(session.user.email || '').toLowerCase() : null;
+    sesion.cliente = null; sesion.admin = false;
+    if (sesion.email){
+      const { data: cli } = await sb.from('clientes').select('*').eq('email', sesion.email).maybeSingle();
+      sesion.cliente = cli || null;
+      sesion.admin = !!(cli && cli.es_admin && cli.activo);
+    }
+    const [{ data: reglas, error: errR }, { data: tipos }] = await Promise.all([
+      sb.from('reglas_descuento').select('*').eq('activo', true),
+      sb.from('tipos_cliente').select('*'),
+    ]);
+    if (!errR && Array.isArray(reglas)) reglasDescuento = reglas;
+    tiposCliente = {};
+    (tipos || []).forEach(t => { tiposCliente[t.id] = t.nombre; });
+    // El descuento general (regla sin cliente, tipo, marca ni modelo) es el de la casilla "Dto."
+    const general = reglasDescuento.find(r => !r.cliente_email && !r.tipo_id && !r.marca && !r.modelo && r.descuento_pct != null);
+    if (general){
+      descuentoPct = Number(general.descuento_pct);
+      const inp = document.getElementById('descuento');
+      if (inp) inp.value = descuentoPct;
+    }
+  } catch (e){
+    console.warn('No se pudieron cargar las reglas de descuento', e);
+  }
+  actualizarUICuenta();
+  refrescarPrecios();
+}
+function refrescarPrecios(){
+  if (!productos.length) return;
+  mostrarVista();
+  renderCarrito();
+}
+
+/* ---------- Motor de precios ----------
+   Gana la regla más específica (no se suman):
+   modelo+cliente > modelo+tipo > modelo (todos) > marca+cliente > cliente >
+   marca+tipo > tipo > marca (todos) > descuento general. */
+const RANGO_REGLA = { '00': 1, '01': 2, '02': 3, '10': 4, '20': 5, '11': 6, '21': 7, '12': 8, '22': 9 };
+function reglaPara(p){
+  if (!reglasDescuento.length) return null;
+  const marca = String(p.marca || '').toUpperCase().trim();
+  const modelo = String(p.modelo || '').toUpperCase().trim();
+  const tipo = sesion.cliente ? sesion.cliente.tipo_id : null;
+  let mejor = null, mejorRango = 99;
+  for (const r of reglasDescuento){
+    let quien, que;
+    if (r.cliente_email){ if (!sesion.email || r.cliente_email !== sesion.email) continue; quien = 0; }
+    else if (r.tipo_id){ if (!tipo || r.tipo_id !== tipo) continue; quien = 1; }
+    else quien = 2;
+    if (r.modelo){ if (String(r.modelo).toUpperCase().trim() !== modelo) continue; que = 0; }
+    else if (r.marca){ if (String(r.marca).toUpperCase().trim() !== marca) continue; que = 1; }
+    else que = 2;
+    // Los productos cargados a mano ya traen precio de catálogo: solo les
+    // aplican reglas de su marca o modelo.
+    if (esManual(p) && que === 2) continue;
+    const rango = RANGO_REGLA['' + que + quien];
+    if (rango < mejorRango){ mejor = r; mejorRango = rango; }
+  }
+  return mejor;
+}
+// Descripción corta de la regla (para el panel de administrador y la ficha).
+function textoRegla(r){
+  if (!r) return '';
+  const quien = r.cliente_email ? 'tu cuenta' : r.tipo_id ? (tiposCliente[r.tipo_id] || r.tipo_id) : 'general';
+  const que = r.modelo ? r.modelo : r.marca ? r.marca : 'todo';
+  return (r.precio_fijo != null ? 'precio especial' : Number(r.descuento_pct) + '%') + ' · ' + quien + (que !== 'todo' ? ' · ' + que : '');
+}
+
+/* ---------- Botón y panel de cuenta ---------- */
+function nombreCorto(){
+  const c = sesion.cliente;
+  const n = (c && (c.nombre || c.empresa)) || sesion.email || '';
+  return n.split(/[ @]/)[0];
+}
+function actualizarUICuenta(){
+  const btn = document.getElementById('btn-cuenta');
+  if (btn){
+    btn.style.display = sb ? '' : 'none';
+    btn.querySelector('.cuenta-txt').textContent = sesion.email ? nombreCorto() : 'Ingresar';
+    btn.classList.toggle('conectado', !!sesion.email);
+  }
+  const barra = document.getElementById('barra-cuenta');
+  if (barra){
+    barra.style.display = sb ? '' : 'none';
+    barra.querySelector('span').textContent = sesion.email ? 'Mi cuenta' : 'Ingresar';
+  }
+  // La casilla "Dto." solo la ve el administrador.
+  const dto = document.querySelector('.descuento-box');
+  if (dto) dto.style.display = (!sb || sesion.admin) ? '' : 'none';
+}
+function abrirCuenta(pestana){
+  renderCuenta(pestana || 'pedidos');
+  document.getElementById('modal-cuenta').classList.add('abierto');
+}
+async function renderCuenta(pestana){
+  const cont = document.getElementById('cuenta-contenido');
+  if (!sb){
+    cont.innerHTML = '<h2 class="cta-titulo">Mi cuenta</h2><p>Las cuentas no están disponibles en este momento. Puedes seguir cotizando por WhatsApp.</p>';
+    return;
+  }
+  if (!sesion.email){
+    renderLogin(cont);
+    return;
+  }
+  const c = sesion.cliente || {};
+  const tipo = c.tipo_id ? (tiposCliente[c.tipo_id] || c.tipo_id) : '';
+  cont.innerHTML =
+    '<div class="cta-cabecera">' +
+      '<div><h2 class="cta-titulo">Hola, ' + escHtml(c.nombre || nombreCorto()) + '</h2>' +
+      '<div class="cta-sub">' + escHtml(sesion.email) + (tipo ? ' · ' + escHtml(tipo) : '') + (c.empresa ? ' · ' + escHtml(c.empresa) : '') + '</div></div>' +
+      '<button type="button" class="btn-enlace" id="cta-salir">Cerrar sesión</button>' +
+    '</div>' +
+    (sesion.admin ? '<a class="cta-admin" href="admin.html" target="_blank" rel="noopener">⚙ Panel de administrador →</a>' : '') +
+    '<p class="cta-nota">Los precios de la tienda ya muestran tu descuento de cliente.</p>' +
+    '<div class="cta-tabs">' +
+      '<button type="button" data-tab="pedidos" class="' + (pestana === 'pedidos' ? 'activa' : '') + '">Mis pedidos</button>' +
+      '<button type="button" data-tab="datos" class="' + (pestana === 'datos' ? 'activa' : '') + '">Mis datos</button>' +
+    '</div>' +
+    '<div id="cta-cuerpo"><p class="cta-cargando">Cargando…</p></div>';
+  cont.querySelector('#cta-salir').addEventListener('click', async () => {
+    await sb.auth.signOut();
+    document.getElementById('modal-cuenta').classList.remove('abierto');
+    mostrarToast('Sesión cerrada');
+  });
+  cont.querySelectorAll('[data-tab]').forEach(b => b.addEventListener('click', () => renderCuenta(b.getAttribute('data-tab'))));
+  const cuerpo = cont.querySelector('#cta-cuerpo');
+  if (pestana === 'datos') renderMisDatos(cuerpo);
+  else renderMisPedidos(cuerpo);
+}
+
+function renderLogin(cont){
+  const paso2 = !!emailPendiente;
+  cont.innerHTML =
+    '<h2 class="cta-titulo">Ingresar</h2>' +
+    '<p class="cta-sub">Entra con tu correo para ver tus precios de cliente y el historial de tus pedidos. No necesitas contraseña.</p>' +
+    (!paso2
+      ? '<form id="cta-form-email" class="cta-form">' +
+          '<label>Correo electrónico<input type="email" id="cta-email" required autocomplete="email" placeholder="tucorreo@empresa.com"></label>' +
+          '<button type="submit" class="btn btn-cart-add">Enviarme el acceso</button>' +
+        '</form>'
+      : '<div class="cta-aviso">Te enviamos un correo a <strong>' + escHtml(emailPendiente) + '</strong>. Toca el enlace del correo, o escribe aquí el código si viene uno.</div>' +
+        '<form id="cta-form-codigo" class="cta-form">' +
+          '<label>Código<input type="text" id="cta-codigo" inputmode="numeric" autocomplete="one-time-code" maxlength="10" placeholder="123456"></label>' +
+          '<button type="submit" class="btn btn-cart-add">Entrar</button>' +
+        '</form>' +
+        '<button type="button" class="btn-enlace cta-otro" id="cta-otro-correo">Usar otro correo</button>') +
+    '<p class="cta-error" id="cta-error"></p>';
+  const err = cont.querySelector('#cta-error');
+  const fEmail = cont.querySelector('#cta-form-email');
+  if (fEmail) fEmail.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = cont.querySelector('#cta-email').value.trim().toLowerCase();
+    const b = fEmail.querySelector('button'); b.disabled = true; b.textContent = 'Enviando…';
+    const { error } = await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: location.href.split('#')[0] } });
+    if (error){
+      b.disabled = false; b.textContent = 'Enviarme el acceso';
+      err.textContent = /rate|limit|seconds/i.test(error.message)
+        ? 'Se enviaron demasiados correos. Espera unos minutos e intenta de nuevo.'
+        : 'No se pudo enviar el correo: ' + error.message;
+      return;
+    }
+    emailPendiente = email;
+    accesoEnCurso = true;
+    renderLogin(cont);
+  });
+  const fCod = cont.querySelector('#cta-form-codigo');
+  if (fCod) fCod.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const token = cont.querySelector('#cta-codigo').value.replace(/\s+/g, '');
+    if (!token) return;
+    const b = fCod.querySelector('button'); b.disabled = true; b.textContent = 'Verificando…';
+    const { error } = await sb.auth.verifyOtp({ email: emailPendiente, token, type: 'email' });
+    if (error){ b.disabled = false; b.textContent = 'Entrar'; err.textContent = 'El código no es válido o ya venció.'; return; }
+    emailPendiente = '';
+  });
+  const otro = cont.querySelector('#cta-otro-correo');
+  if (otro) otro.addEventListener('click', () => { emailPendiente = ''; renderLogin(cont); });
+}
+
+async function renderMisDatos(cuerpo){
+  const c = sesion.cliente || {};
+  const campo = (id, label, tipo) =>
+    '<label>' + label + '<input type="' + (tipo || 'text') + '" name="' + id + '" value="' + escHtml(c[id] || '') + '"></label>';
+  cuerpo.innerHTML =
+    '<form id="cta-form-datos" class="cta-form cta-grid">' +
+      campo('nombre', 'Nombre y apellido') + campo('empresa', 'Empresa') +
+      campo('rif', 'RIF / Cédula') + campo('telefono', 'Teléfono', 'tel') +
+      '<label class="cta-ancho">Dirección de entrega<input type="text" name="direccion" value="' + escHtml(c.direccion || '') + '"></label>' +
+      '<button type="submit" class="btn btn-cart-add cta-ancho">Guardar datos</button>' +
+    '</form><p class="cta-error" id="cta-error-datos"></p>';
+  const f = cuerpo.querySelector('form');
+  f.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const datos = {};
+    ['nombre', 'empresa', 'rif', 'telefono', 'direccion'].forEach(k => { datos[k] = f.elements[k].value.trim() || null; });
+    const { data, error } = await sb.from('clientes').update(datos).eq('email', sesion.email).select().maybeSingle();
+    if (error){ cuerpo.querySelector('#cta-error-datos').textContent = 'No se pudo guardar: ' + error.message; return; }
+    if (data) sesion.cliente = data;
+    actualizarUICuenta();
+    mostrarToast('✓ Datos guardados');
+  });
+}
+
+async function renderMisPedidos(cuerpo){
+  const { data, error } = await sb.from('pedidos').select('*').eq('cliente_email', sesion.email).order('creado', { ascending: false }).limit(100);
+  if (error){ cuerpo.innerHTML = '<p class="cta-error">No se pudieron cargar tus pedidos.</p>'; return; }
+  if (!data.length){
+    cuerpo.innerHTML = '<p class="cta-vacio">Todavía no tienes pedidos. Cuando envíes tu carrito por WhatsApp estando en tu cuenta, quedará guardado aquí.</p>';
+    return;
+  }
+  cuerpo.innerHTML = data.map(pd => {
+    const est = ESTADOS_PEDIDO[pd.estado] || { txt: pd.estado, cls: '' };
+    const items = Array.isArray(pd.items) ? pd.items : [];
+    const fecha = new Date(pd.creado).toLocaleDateString('es-VE', { day: '2-digit', month: 'short', year: 'numeric' });
+    return '<div class="pedido-card">' +
+      '<div class="pedido-top"><strong>Pedido #' + pd.id + '</strong><span class="pedido-fecha">' + fecha + '</span>' +
+        '<span class="pedido-estado ' + est.cls + '">' + est.txt + '</span></div>' +
+      '<ul class="pedido-items">' + items.map(it =>
+        '<li><span>' + escHtml(it.modelo) + ' × ' + it.cantidad + '</span><span>' + formatoMoneda((it.precio_unit || 0) * it.cantidad) + '</span></li>').join('') + '</ul>' +
+      (pd.nota_admin ? '<div class="pedido-nota"><strong>Suinelectric:</strong> ' + escHtml(pd.nota_admin) + '</div>' : '') +
+      '<div class="pedido-pie"><span>Total: <strong>' + formatoMoneda(pd.total) + '</strong></span>' +
+        '<button type="button" class="btn-enlace" data-repetir="' + pd.id + '">Repetir pedido</button></div>' +
+    '</div>';
+  }).join('');
+  cuerpo.querySelectorAll('[data-repetir]').forEach(b => b.addEventListener('click', () => {
+    const pd = data.find(x => String(x.id) === b.getAttribute('data-repetir'));
+    let n = 0, faltan = [];
+    (pd.items || []).forEach(it => {
+      if (productos.some(p => p.modelo === it.modelo)){ agregarAlCarrito(it.modelo, it.cantidad); n++; }
+      else faltan.push(it.modelo);
+    });
+    document.getElementById('modal-cuenta').classList.remove('abierto');
+    document.getElementById('cart-drawer').classList.add('abierto');
+    mostrarToast(n + ' producto(s) agregados' + (faltan.length ? ' · no disponibles: ' + faltan.join(', ') : ''));
+  }));
+}
+
+/* ---------- Registrar el pedido al enviarlo por WhatsApp ---------- */
+function itemsDelCarrito(){
+  return Object.values(carrito).map(({ producto, cantidad }) => ({
+    modelo: producto.modelo,
+    marca: producto.marca || null,
+    descripcion: String(producto.descripcion || '').slice(0, 160),
+    cantidad,
+    precio_lista: producto.precio != null ? Number(producto.precio) : null,
+    precio_unit: Math.ceil(precioMostrado(producto) || 0),
+  }));
+}
+async function registrarPedido(){
+  const items = itemsDelCarrito();
+  const total = items.reduce((s, it) => s + it.precio_unit * it.cantidad, 0);
+  const { data, error } = await sb.from('pedidos').insert({ cliente_email: sesion.email, items, total }).select('id').single();
+  if (error) throw error;
+  return data.id;
+}
+['btn-wa-carrito', 'btn-wa-carrito-2'].forEach(id => {
+  const a = document.getElementById(id);
+  if (!a) return;
+  a.addEventListener('click', async (e) => {
+    if (!sb || !sesion.email || !Object.keys(carrito).length) return; // sin cuenta: WhatsApp normal
+    e.preventDefault();
+    const urlBase = a.getAttribute('href');
+    const ventana = window.open('about:blank', '_blank'); // se abre ya (si no, el navegador la bloquea)
+    let url = urlBase;
+    try {
+      const idPedido = await Promise.race([registrarPedido(), new Promise((_, rej) => setTimeout(() => rej(new Error('tiempo')), 6000))]);
+      const c = sesion.cliente || {};
+      const quien = [c.nombre, c.empresa, c.rif].filter(Boolean).join(' · ') || sesion.email;
+      const texto = decodeURIComponent((urlBase.split('?text=')[1] || ''));
+      url = urlBase.split('?text=')[0] + '?text=' + encodeURIComponent('Pedido #' + idPedido + ' — ' + quien + '\n' + texto);
+      mostrarToast('✓ Pedido #' + idPedido + ' guardado en tu cuenta');
+    } catch (err){
+      console.warn('No se pudo registrar el pedido', err);
+    }
+    if (ventana) ventana.location.href = url; else location.href = url;
+  });
+});
+
+/* ---------- Arranque ---------- */
+document.getElementById('btn-cuenta').addEventListener('click', () => abrirCuenta());
+document.getElementById('barra-cuenta').addEventListener('click', () => abrirCuenta());
+actualizarUICuenta();
+if (sb){
+  sb.auth.onAuthStateChange((evento) => {
+    if (evento === 'SIGNED_IN' || evento === 'SIGNED_OUT' || evento === 'USER_UPDATED'){
+      // (fuera del callback, como recomienda Supabase)
+      setTimeout(async () => {
+        await cargarSesionYReglas();
+        if (evento === 'SIGNED_IN' && accesoEnCurso){
+          accesoEnCurso = false;
+          const modal = document.getElementById('modal-cuenta');
+          if (modal.classList.contains('abierto')) renderCuenta('pedidos');
+          mostrarToast('Bienvenido' + (sesion.cliente && sesion.cliente.nombre ? ', ' + sesion.cliente.nombre : ''));
+        }
+      }, 0);
+    }
+  });
+  cargarSesionYReglas();
+}
+
 renderCarrito();
 cargar();
 </script>
@@ -2472,7 +2885,7 @@ cargar();
 
   const $ = id => document.getElementById(id);
   // Paneles, del que queda más "arriba" al de más abajo.
-  const PANELES = ['modal-imagen', 'modal-detalle', 'cart-drawer', 'sidebar'];
+  const PANELES = ['modal-imagen', 'modal-detalle', 'modal-cuenta', 'cart-drawer', 'sidebar'];
   // El menú lateral solo es un panel flotante en pantallas pequeñas.
   const sidebarFlotante = () => window.matchMedia('(max-width: 860px)').matches;
 

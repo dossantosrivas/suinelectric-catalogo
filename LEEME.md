@@ -1,29 +1,53 @@
-# Catálogo sincronizado de grupo-electricos.com
+# Cuentas de clientes · Puesta en marcha
 
-## Archivos
-- `scraper.py` — lee el catálogo de grupo-electricos.com y genera `productos.json`.
-- `productos.json` — datos de ejemplo (8 productos reales tomados de la portada) para que puedas probar `tienda.html` ya mismo. El scraper los reemplaza por el catálogo completo cuando lo corras.
-- `tienda.html` — la tienda web. Lee `productos.json` (debe estar en la misma carpeta) y muestra el catálogo con buscador, filtro por categoría/disponibilidad y botón de WhatsApp por producto.
+Archivos:
+- `supabase/01_esquema.sql`: crea las tablas, la seguridad y te deja como administrador (manolo1496@gmail.com).
+- `tienda.html`: tienda con el botón **Ingresar**, precios por cliente y pedidos guardados.
+- `admin.html`: panel de administrador (pedidos, clientes, descuentos y tipos de cliente).
 
-## Para probarlo ya
-1. Abre una terminal en esta carpeta.
-2. Levanta un servidor simple: `python3 -m http.server 8000`
-3. Abre `http://localhost:8000/tienda.html` en el navegador. Verás los 8 productos de ejemplo.
+## 1. Crear la base de datos (una sola vez)
+Supabase → **SQL Editor** → **New query** → pega todo `01_esquema.sql` → **Run**.
+Se puede volver a correr sin perder datos.
 
-## Para correr el scraper real
-1. Instala dependencias: `pip install requests beautifulsoup4 lxml`
-2. Corre: `python3 scraper.py`
-3. Esto sobrescribe `productos.json` con el catálogo completo real.
-4. Revisa el log en pantalla — si ves muy pocos productos o errores 403/429, es señal de que el sitio está bloqueando el scraping o cambió su estructura HTML; en ese caso lo ajustamos juntos.
+## 2. Direcciones permitidas
+Supabase → **Authentication → URL Configuration**
+- **Site URL**: la dirección de tu tienda en Cloudflare, ej. `https://TU-SITIO.pages.dev/tienda`
+- **Redirect URLs**: agrega `https://TU-SITIO.pages.dev/**` (y tu dominio propio si lo conectas, ej. `https://tienda.suinelectric.com/**`)
 
-## Para que corra solo, una vez al día
-Instrucciones de cron dentro del propio `scraper.py` (al final del archivo). En resumen:
+Sin esto, el enlace del correo lleva a `localhost` y no funciona.
+
+## 3. Correo propio (obligatorio para clientes)
+El correo que trae Supabase por defecto **solo envía a los miembros de tu equipo de Supabase** y máximo 2 por hora.
+Para que les llegue a tus clientes:
+Supabase → **Authentication → Emails → SMTP Settings** → activar **Custom SMTP**.
+
+Opción rápida con Gmail:
+1. En tu cuenta Google activa la verificación en 2 pasos y crea una **contraseña de aplicación** (myaccount.google.com → Seguridad → Contraseñas de aplicaciones).
+2. En Supabase: Host `smtp.gmail.com`, Port `587`, User = tu Gmail, Password = la contraseña de aplicación, Sender email = tu Gmail, Sender name = `Suinelectric`.
+
+(También sirven Brevo, Resend o Zoho, si prefieres un correo @suinelectric.)
+
+## 4. Código de 6 dígitos en el correo (recomendado)
+Así el cliente puede escribir el código en la tienda, aunque abra el correo en otro teléfono.
+Supabase → **Authentication → Emails → Templates** → en **Magic Link** y en **Confirm signup** reemplaza el contenido por:
+
+```html
+<h2>Tu acceso a Suinelectric</h2>
+<p>Tu código es: <strong style="font-size:22px">{{ .Token }}</strong></p>
+<p>O entra directo con este enlace: <a href="{{ .ConfirmationURL }}">Entrar a la tienda</a></p>
 ```
-0 5 * * * cd /ruta/a/esta/carpeta && /usr/bin/python3 scraper.py >> scraper.log 2>&1
-```
 
-## Antes de usarlo en producción
-1. **Reemplaza `WHATSAPP_NUMERO`** dentro de `tienda.html` por tu número real.
-2. **Verifica los selectores del scraper** contra una página de producto real (por ejemplo `https://grupo-electricos.com/shop/5st3010/`) — los nombres de clase de WooCommerce (`.sku`, `.price`, `.stock`, etc.) suelen ser estándar, pero cada tema los puede personalizar un poco.
-3. Sube ambos archivos (`tienda.html` y el `productos.json` que genera el scraper) a tu hosting, y corre el scraper en el mismo servidor (o en tu máquina, subiendo el JSON resultante por FTP/rsync/Drive cada día).
-4. Como ya usaste Google Drive como base de datos sincronizada para las notas de entrega, el mismo patrón sirve aquí: el scraper podría escribir `productos.json` directo a una carpeta de Drive, y `tienda.html` leerlo de ahí en vez de un archivo local — dímelo si quieres que lo arme así.
+## 5. Subir los archivos
+Sube `tienda.html` y `admin.html` al repo (o como `tienda-prueba.html` para probar primero).
+Cloudflare publica solo al detectar el cambio en GitHub. El panel queda en `https://TU-SITIO.pages.dev/admin`. Solo entran las cuentas marcadas como administrador.
+
+## Cómo se calculan los precios
+Gana la regla más específica (no se suman):
+
+1. Modelo + cliente → 2. Modelo + tipo → 3. Modelo (todos)
+4. Marca + cliente → 5. Cliente (todo)
+6. Marca + tipo → 7. Tipo (todo)
+8. Marca (todos) → 9. Descuento general (todos, todo el catálogo)
+
+Los productos cargados a mano (`productos_manuales.json`) mantienen su precio de catálogo salvo que tengan una regla de su marca o modelo.
+El precio fijo (en USD) solo se puede poner a un modelo.

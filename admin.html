@@ -1,0 +1,444 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<meta name="robots" content="noindex">
+<title>Panel de administrador | Suinelectric</title>
+<style>
+  :root{
+    --tinta:#0e2a3b; --azul:#0089af; --azul-texto:#006d8c; --azul-suave:#e6f4f8;
+    --amarillo:#ffc20e; --fondo:#f2f4f6; --superficie:#ffffff; --linea:#d9dfe4; --linea-suave:#eaeef1;
+    --texto:#16232d; --texto-2:#4a5a66; --texto-3:#6f7d88;
+    --ok:#1b7f3b; --ok-suave:#e5f4ea; --off:#b3261e; --off-suave:#fbe9e7; --radio:6px;
+    --sans:'IBM Plex Sans','Segoe UI',Roboto,Arial,sans-serif;
+  }
+  *{ box-sizing:border-box; }
+  body{ margin:0; font-family:var(--sans); background:var(--fondo); color:var(--texto); font-size:15px; }
+  header{ background:var(--tinta); color:#fff; }
+  .hd{ max-width:1240px; margin:0 auto; padding:14px 20px; display:flex; align-items:center; gap:16px; flex-wrap:wrap; }
+  .hd h1{ font-size:20px; margin:0; letter-spacing:.3px; }
+  .hd h1 small{ font-weight:400; opacity:.75; font-size:14px; margin-left:6px; }
+  .hd .yo{ margin-left:auto; font-size:13.5px; opacity:.85; }
+  .hd a, .hd button{ color:#fff; background:rgba(255,255,255,.12); border:none; border-radius:var(--radio); padding:8px 12px; font:inherit; font-size:13.5px; cursor:pointer; text-decoration:none; }
+  nav.tabs{ max-width:1240px; margin:0 auto; padding:0 20px; display:flex; gap:4px; overflow-x:auto; }
+  nav.tabs button{ font:inherit; font-weight:600; padding:12px 16px; border:none; background:none; color:rgba(255,255,255,.7); border-bottom:3px solid transparent; cursor:pointer; white-space:nowrap; }
+  nav.tabs button.activa{ color:#fff; border-bottom-color:var(--amarillo); }
+  main{ max-width:1240px; margin:0 auto; padding:20px; }
+  .caja{ background:#fff; border:1px solid var(--linea); border-radius:var(--radio); padding:16px; margin-bottom:16px; }
+  .caja h2{ font-size:18px; margin:0 0 12px; color:var(--tinta); }
+  .fila{ display:flex; gap:10px; flex-wrap:wrap; align-items:flex-end; }
+  label{ display:flex; flex-direction:column; gap:4px; font-size:12.5px; font-weight:600; color:var(--texto-2); }
+  input, select, textarea{ font:inherit; font-size:14.5px; height:38px; padding:0 10px; border:1px solid var(--linea); border-radius:var(--radio); background:#fff; color:var(--texto); min-width:0; }
+  textarea{ height:auto; padding:8px 10px; resize:vertical; }
+  input:focus, select:focus, textarea:focus{ outline:none; border-color:var(--azul); }
+  .btn{ font:inherit; font-weight:600; font-size:14px; height:38px; padding:0 14px; border-radius:var(--radio); border:1px solid var(--linea); background:#fff; color:var(--texto); cursor:pointer; }
+  .btn:hover{ border-color:var(--azul); }
+  .btn.prim{ background:var(--tinta); color:#fff; border-color:var(--tinta); }
+  .btn.peligro{ color:var(--off); }
+  .btn.chico{ height:30px; padding:0 10px; font-size:13px; }
+  table{ width:100%; border-collapse:collapse; font-size:14px; }
+  th{ text-align:left; font-size:12px; text-transform:uppercase; letter-spacing:.4px; color:var(--texto-3); padding:8px; border-bottom:1px solid var(--linea); white-space:nowrap; }
+  td{ padding:8px; border-bottom:1px solid var(--linea-suave); vertical-align:top; }
+  tr.inactivo td{ opacity:.5; }
+  .tabla-wrap{ overflow-x:auto; }
+  .muted{ color:var(--texto-3); font-size:13px; }
+  .pill{ display:inline-block; font-size:12px; font-weight:700; border-radius:12px; padding:2px 9px; background:var(--linea-suave); color:var(--texto-2); white-space:nowrap; }
+  .pill.azul{ background:var(--azul-suave); color:var(--azul-texto); }
+  .pill.verde{ background:var(--ok-suave); color:var(--ok); }
+  .pill.rojo{ background:var(--off-suave); color:var(--off); }
+  .pill.amar{ background:#fff4d6; color:#8a5a00; }
+  .items{ margin:6px 0 0; padding:0; list-style:none; font-size:13px; color:var(--texto-2); }
+  .centro{ max-width:420px; margin:60px auto; }
+  .aviso{ background:var(--azul-suave); border-radius:var(--radio); padding:10px 12px; font-size:14px; margin:10px 0; }
+  .error{ color:var(--off); font-size:14px; min-height:1em; }
+  #toast{ position:fixed; bottom:20px; left:50%; transform:translateX(-50%); background:var(--tinta); color:#fff; padding:10px 18px; border-radius:var(--radio); font-size:14px; opacity:0; transition:opacity .2s; pointer-events:none; z-index:9; }
+  #toast.ver{ opacity:1; }
+  .prueba-res{ font-size:15px; margin-top:10px; }
+  .prueba-res strong{ font-size:20px; color:var(--tinta); }
+  .ayuda{ font-size:13px; color:var(--texto-2); background:var(--fondo); border-radius:var(--radio); padding:10px 12px; margin:0 0 12px; line-height:1.5; }
+  @media (max-width:700px){ main{ padding:12px; } .fila > *{ flex:1 1 100%; } }
+</style>
+</head>
+<body>
+<header>
+  <div class="hd">
+    <h1>SUINELECTRIC <small>Panel de administrador</small></h1>
+    <span class="yo" id="yo"></span>
+    <a href="tienda.html" target="_blank" rel="noopener">Ver tienda ↗</a>
+    <button id="salir" style="display:none">Salir</button>
+  </div>
+  <nav class="tabs" id="tabs" style="display:none">
+    <button data-tab="pedidos" class="activa">Pedidos</button>
+    <button data-tab="clientes">Clientes</button>
+    <button data-tab="descuentos">Descuentos</button>
+    <button data-tab="tipos">Tipos de cliente</button>
+  </nav>
+</header>
+<main id="main"><p class="muted">Cargando…</p></main>
+<div id="toast"></div>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+const SUPABASE_URL = 'https://yqnlxhbjassrkudnhvpr.supabase.co';
+const SUPABASE_KEY = 'sb_publishable_LOYjM5sqvQbBLIkH4KJTKQ_UfxrpTeC';
+const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
+  auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, flowType: 'implicit' }
+});
+const $ = (id) => document.getElementById(id);
+const esc = (s) => String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
+const money = (n) => n == null ? '—' : '$' + Math.ceil(Number(n)).toLocaleString('en-US');
+function toast(t){ const el = $('toast'); el.textContent = t; el.classList.add('ver'); clearTimeout(toast.t); toast.t = setTimeout(() => el.classList.remove('ver'), 2200); }
+
+const ESTADOS = [['enviado','Enviado',''],['cotizado','Cotizado','azul'],['aprobado','Aprobado','amar'],['pagado','Pagado','amar'],['entregado','Entregado','verde'],['cancelado','Cancelado','rojo']];
+let yo = null, tab = 'pedidos';
+let tipos = [], clientes = [], reglas = [], productos = [];
+let emailPendiente = '';
+
+/* ---------- Productos (para marcas, modelos y probar precios) ---------- */
+async function cargarProductos(){
+  try {
+    const [a, b] = await Promise.all([
+      fetch('productos.json', { cache: 'no-store' }).then(r => r.json()).catch(() => ({ productos: [] })),
+      fetch('productos_manuales.json', { cache: 'no-store' }).then(r => r.json()).catch(() => ({ productos: [] })),
+    ]);
+    const man = (b.productos || []).filter(p => p.modelo !== 'EJEMPLO-BORRAR').map(p => Object.assign(p, { _manual: true }));
+    const set = new Set(man.map(p => p.modelo));
+    productos = man.concat((a.productos || []).filter(p => !set.has(p.modelo)));
+  } catch (e){ productos = []; }
+}
+const marcas = () => [...new Set(productos.map(p => (p.marca || '').toUpperCase()).filter(Boolean))].sort();
+
+/* ---------- Acceso ---------- */
+async function iniciar(){
+  const { data: { session } } = await sb.auth.getSession();
+  if (!session){ pantallaLogin(); return; }
+  const email = String(session.user.email || '').toLowerCase();
+  const { data: cli } = await sb.from('clientes').select('*').eq('email', email).maybeSingle();
+  if (!cli || !cli.es_admin){
+    $('main').innerHTML = '<div class="caja centro"><h2>Sin acceso</h2><p>La cuenta <strong>' + esc(email) + '</strong> no es administradora.</p><button class="btn" id="b-salir2">Cerrar sesión</button></div>';
+    $('b-salir2').onclick = async () => { await sb.auth.signOut(); location.reload(); };
+    return;
+  }
+  yo = cli;
+  $('yo').textContent = email;
+  $('salir').style.display = '';
+  $('tabs').style.display = '';
+  await Promise.all([cargarProductos(), recargarBase()]);
+  mostrar();
+}
+function pantallaLogin(){
+  $('main').innerHTML =
+    '<div class="caja centro"><h2>Entrar al panel</h2>' +
+    (!emailPendiente
+      ? '<form id="f-email" class="fila"><label style="flex:1">Correo del administrador<input type="email" id="l-email" required></label><button class="btn prim">Enviar acceso</button></form>'
+      : '<div class="aviso">Te enviamos un correo a <strong>' + esc(emailPendiente) + '</strong>. Toca el enlace o escribe el código.</div>' +
+        '<form id="f-cod" class="fila"><label style="flex:1">Código<input id="l-cod" inputmode="numeric" autocomplete="one-time-code"></label><button class="btn prim">Entrar</button></form>') +
+    '<p class="error" id="l-err"></p></div>';
+  const fe = $('f-email'), fc = $('f-cod');
+  if (fe) fe.onsubmit = async (e) => {
+    e.preventDefault();
+    const email = $('l-email').value.trim().toLowerCase();
+    const { error } = await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: location.href.split('#')[0] } });
+    if (error){ $('l-err').textContent = error.message; return; }
+    emailPendiente = email; pantallaLogin();
+  };
+  if (fc) fc.onsubmit = async (e) => {
+    e.preventDefault();
+    const { error } = await sb.auth.verifyOtp({ email: emailPendiente, token: $('l-cod').value.trim(), type: 'email' });
+    if (error){ $('l-err').textContent = 'Código no válido o vencido.'; return; }
+    iniciar();
+  };
+}
+$('salir').onclick = async () => { await sb.auth.signOut(); location.reload(); };
+sb.auth.onAuthStateChange((ev) => { if (ev === 'SIGNED_IN' && !yo) setTimeout(iniciar, 0); });
+
+async function recargarBase(){
+  const [t, c, r] = await Promise.all([
+    sb.from('tipos_cliente').select('*').order('orden'),
+    sb.from('clientes').select('*').order('creado', { ascending: false }),
+    sb.from('reglas_descuento').select('*').order('creado', { ascending: false }),
+  ]);
+  tipos = t.data || []; clientes = c.data || []; reglas = r.data || [];
+}
+const nombreTipo = (id) => (tipos.find(t => t.id === id) || {}).nombre || id || '—';
+const nombreCliente = (email) => { const c = clientes.find(x => x.email === email); return c ? (c.nombre || c.empresa || email) : email; };
+
+document.querySelectorAll('#tabs button').forEach(b => b.onclick = () => {
+  tab = b.dataset.tab;
+  document.querySelectorAll('#tabs button').forEach(x => x.classList.toggle('activa', x === b));
+  mostrar();
+});
+function mostrar(){
+  if (tab === 'pedidos') vistaPedidos();
+  else if (tab === 'clientes') vistaClientes();
+  else if (tab === 'descuentos') vistaDescuentos();
+  else vistaTipos();
+}
+
+/* ---------- Pedidos ---------- */
+let filtroEstado = '';
+async function vistaPedidos(){
+  $('main').innerHTML = '<div class="caja"><div class="fila" style="justify-content:space-between"><h2 style="margin:0">Pedidos</h2>' +
+    '<label>Estado<select id="p-filtro"><option value="">Todos</option>' + ESTADOS.map(e => '<option value="' + e[0] + '"' + (filtroEstado === e[0] ? ' selected' : '') + '>' + e[1] + '</option>').join('') + '</select></label></div>' +
+    '<div id="p-lista" class="tabla-wrap"><p class="muted">Cargando…</p></div></div>';
+  $('p-filtro').onchange = (e) => { filtroEstado = e.target.value; vistaPedidos(); };
+  let q = sb.from('pedidos').select('*').order('creado', { ascending: false }).limit(300);
+  if (filtroEstado) q = q.eq('estado', filtroEstado);
+  const { data, error } = await q;
+  if (error){ $('p-lista').innerHTML = '<p class="error">' + esc(error.message) + '</p>'; return; }
+  if (!data.length){ $('p-lista').innerHTML = '<p class="muted">No hay pedidos' + (filtroEstado ? ' en este estado' : ' todavía') + '.</p>'; return; }
+  $('p-lista').innerHTML = '<table><thead><tr><th>#</th><th>Fecha</th><th>Cliente</th><th>Productos</th><th>Total</th><th>Estado</th><th>Comentario para el cliente</th></tr></thead><tbody>' +
+    data.map(pd => {
+      const c = clientes.find(x => x.email === pd.cliente_email) || {};
+      const items = Array.isArray(pd.items) ? pd.items : [];
+      return '<tr><td><strong>' + pd.id + '</strong></td>' +
+        '<td class="muted">' + new Date(pd.creado).toLocaleString('es-VE', { dateStyle: 'short', timeStyle: 'short' }) + '</td>' +
+        '<td>' + esc(c.nombre || '—') + (c.empresa ? '<br><span class="muted">' + esc(c.empresa) + '</span>' : '') + '<br><span class="muted">' + esc(pd.cliente_email) + (c.telefono ? ' · ' + esc(c.telefono) : '') + '</span></td>' +
+        '<td><ul class="items">' + items.map(it => '<li>' + esc(it.modelo) + ' × ' + it.cantidad + ' · ' + money(it.precio_unit) + '</li>').join('') + '</ul></td>' +
+        '<td><strong>' + money(pd.total) + '</strong></td>' +
+        '<td><select data-estado="' + pd.id + '">' + ESTADOS.map(e => '<option value="' + e[0] + '"' + (pd.estado === e[0] ? ' selected' : '') + '>' + e[1] + '</option>').join('') + '</select></td>' +
+        '<td><textarea rows="2" data-nota="' + pd.id + '" placeholder="Ej. Listo para retirar">' + esc(pd.nota_admin || '') + '</textarea><button class="btn chico" data-guardar-nota="' + pd.id + '">Guardar</button></td></tr>';
+    }).join('') + '</tbody></table>';
+  document.querySelectorAll('[data-estado]').forEach(s => s.onchange = async () => {
+    const { error } = await sb.from('pedidos').update({ estado: s.value }).eq('id', s.dataset.estado);
+    toast(error ? 'Error: ' + error.message : 'Estado actualizado');
+  });
+  document.querySelectorAll('[data-guardar-nota]').forEach(b => b.onclick = async () => {
+    const id = b.dataset.guardarNota;
+    const nota = document.querySelector('[data-nota="' + id + '"]').value.trim() || null;
+    const { error } = await sb.from('pedidos').update({ nota_admin: nota }).eq('id', id);
+    toast(error ? 'Error: ' + error.message : 'Comentario guardado');
+  });
+}
+
+/* ---------- Clientes ---------- */
+let buscaCli = '';
+function formCliente(c){
+  c = c || {};
+  const nuevo = !c.email;
+  return '<form id="c-form" class="caja"><h2>' + (nuevo ? 'Nuevo cliente' : 'Editar ' + esc(c.email)) + '</h2>' +
+    '<p class="ayuda">Puedes crear el cliente antes de que entre. Cuando entre a la tienda con ese correo, verá sus precios automáticamente.</p>' +
+    '<div class="fila">' +
+      '<label style="flex:2 1 220px">Correo<input name="email" type="email" required value="' + esc(c.email || '') + '"' + (nuevo ? '' : ' readonly') + '></label>' +
+      '<label style="flex:2 1 200px">Nombre<input name="nombre" value="' + esc(c.nombre || '') + '"></label>' +
+      '<label style="flex:2 1 200px">Empresa<input name="empresa" value="' + esc(c.empresa || '') + '"></label>' +
+      '<label style="flex:1 1 140px">RIF<input name="rif" value="' + esc(c.rif || '') + '"></label>' +
+      '<label style="flex:1 1 150px">Teléfono<input name="telefono" value="' + esc(c.telefono || '') + '"></label>' +
+      '<label style="flex:3 1 260px">Dirección<input name="direccion" value="' + esc(c.direccion || '') + '"></label>' +
+      '<label style="flex:1 1 160px">Tipo de cliente<select name="tipo_id"><option value="">—</option>' + tipos.map(t => '<option value="' + t.id + '"' + (c.tipo_id === t.id || (nuevo && t.id === 'final') ? ' selected' : '') + '>' + esc(t.nombre) + '</option>').join('') + '</select></label>' +
+      '<label style="flex:0 0 auto">Activo<select name="activo"><option value="true"' + (c.activo !== false ? ' selected' : '') + '>Sí</option><option value="false"' + (c.activo === false ? ' selected' : '') + '>No</option></select></label>' +
+      '<label style="flex:0 0 auto">Administrador<select name="es_admin"><option value="false">No</option><option value="true"' + (c.es_admin ? ' selected' : '') + '>Sí</option></select></label>' +
+    '</div><div class="fila" style="margin-top:12px"><button class="btn prim">' + (nuevo ? 'Crear cliente' : 'Guardar cambios') + '</button>' +
+    '<button type="button" class="btn" id="c-cancelar">Cancelar</button>' +
+    (nuevo ? '' : '<button type="button" class="btn" id="c-reglas">Descuentos de este cliente →</button>') + '</div><p class="error" id="c-err"></p></form>';
+}
+function vistaClientes(editar){
+  const q = buscaCli.toLowerCase();
+  const lista = clientes.filter(c => !q || [c.email, c.nombre, c.empresa, c.rif].join(' ').toLowerCase().includes(q));
+  $('main').innerHTML = (editar !== undefined ? formCliente(editar) : '') +
+    '<div class="caja"><div class="fila" style="justify-content:space-between"><h2 style="margin:0">Clientes (' + clientes.length + ')</h2>' +
+    '<div class="fila"><input id="c-busca" placeholder="Buscar…" value="' + esc(buscaCli) + '"><button class="btn prim" id="c-nuevo">+ Nuevo cliente</button></div></div>' +
+    '<div class="tabla-wrap" style="margin-top:10px"><table><thead><tr><th>Cliente</th><th>Tipo</th><th>Contacto</th><th>Descuentos propios</th><th>Estado</th><th></th></tr></thead><tbody>' +
+    lista.map(c => {
+      const n = reglas.filter(r => r.cliente_email === c.email).length;
+      return '<tr class="' + (c.activo ? '' : 'inactivo') + '"><td><strong>' + esc(c.nombre || '—') + '</strong>' + (c.empresa ? '<br>' + esc(c.empresa) : '') + '<br><span class="muted">' + esc(c.email) + '</span></td>' +
+        '<td><span class="pill azul">' + esc(nombreTipo(c.tipo_id)) + '</span>' + (c.es_admin ? ' <span class="pill amar">Admin</span>' : '') + '</td>' +
+        '<td class="muted">' + esc([c.rif, c.telefono].filter(Boolean).join(' · ') || '—') + '</td>' +
+        '<td>' + (n ? n + ' regla' + (n > 1 ? 's' : '') : '<span class="muted">—</span>') + '</td>' +
+        '<td>' + (c.user_id ? '<span class="pill verde">Ya entró</span>' : '<span class="pill">Sin entrar</span>') + '</td>' +
+        '<td><button class="btn chico" data-edit="' + esc(c.email) + '">Editar</button></td></tr>';
+    }).join('') + '</tbody></table></div></div>';
+  $('c-busca').oninput = (e) => { buscaCli = e.target.value; const pos = e.target.selectionStart; vistaClientes(editar); const i = $('c-busca'); i.focus(); i.setSelectionRange(pos, pos); };
+  $('c-nuevo').onclick = () => vistaClientes({});
+  document.querySelectorAll('[data-edit]').forEach(b => b.onclick = () => { vistaClientes(clientes.find(c => c.email === b.dataset.edit)); window.scrollTo(0, 0); });
+  const f = $('c-form');
+  if (f){
+    $('c-cancelar').onclick = () => vistaClientes();
+    if ($('c-reglas')) $('c-reglas').onclick = () => { reglaDestinoInicial = 'c:' + editar.email; tab = 'descuentos'; document.querySelector('#tabs [data-tab=descuentos]').click(); };
+    f.onsubmit = async (e) => {
+      e.preventDefault();
+      const d = {};
+      ['email', 'nombre', 'empresa', 'rif', 'telefono', 'direccion', 'tipo_id'].forEach(k => d[k] = f.elements[k].value.trim() || null);
+      d.email = (d.email || '').toLowerCase();
+      d.activo = f.elements.activo.value === 'true';
+      d.es_admin = f.elements.es_admin.value === 'true';
+      const nuevo = !editar.email;
+      const res = nuevo ? await sb.from('clientes').insert(d) : await sb.from('clientes').update(d).eq('email', editar.email);
+      if (res.error){ $('c-err').textContent = res.error.code === '23505' ? 'Ya existe un cliente con ese correo.' : res.error.message; return; }
+      await recargarBase(); toast(nuevo ? 'Cliente creado' : 'Cambios guardados'); vistaClientes();
+    };
+  }
+}
+
+/* ---------- Descuentos ---------- */
+let reglaDestinoInicial = '';
+// Misma lógica que la tienda: gana la regla más específica.
+const RANGO = { '00': 1, '01': 2, '02': 3, '10': 4, '20': 5, '11': 6, '21': 7, '12': 8, '22': 9 };
+function reglaPara(p, email, tipo){
+  const marca = String(p.marca || '').toUpperCase().trim(), modelo = String(p.modelo || '').toUpperCase().trim();
+  let mejor = null, mr = 99;
+  for (const r of reglas){
+    if (!r.activo) continue;
+    let quien, que;
+    if (r.cliente_email){ if (r.cliente_email !== email) continue; quien = 0; }
+    else if (r.tipo_id){ if (r.tipo_id !== tipo) continue; quien = 1; }
+    else quien = 2;
+    if (r.modelo){ if (String(r.modelo).toUpperCase().trim() !== modelo) continue; que = 0; }
+    else if (r.marca){ if (String(r.marca).toUpperCase().trim() !== marca) continue; que = 1; }
+    else que = 2;
+    if (p._manual && que === 2) continue;
+    const k = RANGO['' + que + quien];
+    if (k < mr){ mejor = r; mr = k; }
+  }
+  return mejor;
+}
+function precioPara(p, email, tipo){
+  const r = reglaPara(p, email, tipo);
+  if (r && r.precio_fijo != null) return { precio: Number(r.precio_fijo), r };
+  if (p.precio == null) return { precio: null, r };
+  if (r) return { precio: Number(p.precio) * (1 - Number(r.descuento_pct) / 100), r };
+  return { precio: Number(p.precio), r: null };
+}
+function describirQuien(r){ return r.cliente_email ? '👤 ' + esc(nombreCliente(r.cliente_email)) + '<br><span class="muted">' + esc(r.cliente_email) + '</span>' : r.tipo_id ? '👥 ' + esc(nombreTipo(r.tipo_id)) : '🌐 Todos'; }
+function describirQue(r){ return r.modelo ? 'Modelo <strong>' + esc(r.modelo) + '</strong>' : r.marca ? 'Marca <strong>' + esc(r.marca) + '</strong>' : 'Todo el catálogo'; }
+function vistaDescuentos(){
+  const destinoOpts = '<option value="t:">🌐 Todos (visitantes y clientes)</option>' +
+    '<optgroup label="Tipo de cliente">' + tipos.map(t => '<option value="tp:' + t.id + '">👥 ' + esc(t.nombre) + '</option>').join('') + '</optgroup>' +
+    '<optgroup label="Cliente">' + clientes.map(c => '<option value="c:' + esc(c.email) + '">👤 ' + esc(c.nombre || c.empresa || c.email) + ' · ' + esc(c.email) + '</option>').join('') + '</optgroup>';
+  const filtro = reglaDestinoInicial;
+  $('main').innerHTML =
+    '<form id="r-form" class="caja"><h2>Nueva regla de descuento</h2>' +
+    '<p class="ayuda">Gana siempre la regla <strong>más específica</strong> (no se suman): modelo › marca › todo, y dentro de eso cliente › tipo de cliente › todos. ' +
+    'Ej.: si un distribuidor tiene 64% y además "Distribuidor + SIEMENS 66%", en Siemens paga con 66% y en lo demás con 64%. ' +
+    'La regla "Todos · Todo el catálogo" es el descuento general que ven los visitantes. Los productos cargados a mano solo cambian con reglas de su marca o modelo.</p>' +
+    '<div class="fila">' +
+      '<label style="flex:2 1 260px">A quién<select name="destino">' + destinoOpts + '</select></label>' +
+      '<label style="flex:1 1 150px">Aplica a<select name="alcance"><option value="todo">Todo el catálogo</option><option value="marca">Una marca</option><option value="modelo">Un modelo</option></select></label>' +
+      '<label style="flex:1 1 170px" id="r-marca-l" hidden>Marca<select name="marca">' + marcas().map(m => '<option>' + esc(m) + '</option>').join('') + '</select></label>' +
+      '<label style="flex:2 1 200px" id="r-modelo-l" hidden>Modelo<input name="modelo" list="dl-modelos" placeholder="Ej. GD20-2R2G-S2"></label>' +
+      '<label style="flex:1 1 150px">Tipo de precio<select name="forma"><option value="pct">% de descuento</option><option value="fijo">Precio fijo (USD)</option></select></label>' +
+      '<label style="flex:0 1 120px">Valor<input name="valor" type="number" step="0.01" min="0" required placeholder="60"></label>' +
+      '<label style="flex:2 1 200px">Nota (opcional)<input name="nota" placeholder="Ej. Acordado en septiembre"></label>' +
+    '</div><div class="fila" style="margin-top:12px"><button class="btn prim">Agregar regla</button></div><p class="error" id="r-err"></p>' +
+    '<datalist id="dl-modelos">' + productos.slice(0, 5000).map(p => '<option value="' + esc(p.modelo) + '">').join('') + '</datalist></form>' +
+
+    '<div class="caja"><h2>Probar un precio</h2><div class="fila">' +
+      '<label style="flex:2 1 240px">Como<select id="pr-quien"><option value="">Visitante sin cuenta</option>' + clientes.map(c => '<option value="' + esc(c.email) + '">' + esc(c.nombre || c.empresa || c.email) + ' (' + esc(nombreTipo(c.tipo_id)) + ')</option>').join('') + '</select></label>' +
+      '<label style="flex:2 1 220px">Modelo<input id="pr-modelo" list="dl-modelos" placeholder="Escribe un modelo"></label>' +
+    '</div><div class="prueba-res" id="pr-res"></div></div>' +
+
+    '<div class="caja"><div class="fila" style="justify-content:space-between"><h2 style="margin:0">Reglas (' + reglas.length + ')</h2>' +
+      '<label>Mostrar<select id="r-filtro"><option value="">Todas</option><option value="t:"' + (filtro === 't:' ? ' selected' : '') + '>Para todos</option>' +
+      tipos.map(t => '<option value="tp:' + t.id + '"' + (filtro === 'tp:' + t.id ? ' selected' : '') + '>' + esc(t.nombre) + '</option>').join('') +
+      clientes.filter(c => reglas.some(r => r.cliente_email === c.email)).map(c => '<option value="c:' + esc(c.email) + '"' + (filtro === 'c:' + c.email ? ' selected' : '') + '>' + esc(c.nombre || c.email) + '</option>').join('') +
+      '</select></label></div><div class="tabla-wrap" id="r-lista" style="margin-top:10px"></div></div>';
+
+  const f = $('r-form');
+  if (filtro) f.elements.destino.value = filtro.startsWith('c:') || filtro.startsWith('tp:') ? filtro : 't:';
+  const sync = () => {
+    $('r-marca-l').hidden = f.elements.alcance.value !== 'marca';
+    $('r-modelo-l').hidden = f.elements.alcance.value !== 'modelo';
+    if (f.elements.alcance.value !== 'modelo') f.elements.forma.value = 'pct';
+    f.elements.forma.querySelector('[value=fijo]').disabled = f.elements.alcance.value !== 'modelo';
+    f.elements.valor.placeholder = f.elements.forma.value === 'pct' ? '60' : '180.00';
+  };
+  f.elements.alcance.onchange = sync; f.elements.forma.onchange = sync; sync();
+  f.onsubmit = async (e) => {
+    e.preventDefault();
+    const [k, v] = f.elements.destino.value.split(/:(.*)/s);
+    const d = { cliente_email: k === 'c' ? v : null, tipo_id: k === 'tp' ? v : null, marca: null, modelo: null, descuento_pct: null, precio_fijo: null, nota: f.elements.nota.value.trim() || null };
+    if (f.elements.alcance.value === 'marca') d.marca = f.elements.marca.value.toUpperCase();
+    if (f.elements.alcance.value === 'modelo'){
+      d.modelo = f.elements.modelo.value.trim();
+      if (!d.modelo){ $('r-err').textContent = 'Escribe el modelo.'; return; }
+    }
+    const val = Number(f.elements.valor.value);
+    if (f.elements.forma.value === 'pct'){
+      if (!(val >= 0 && val <= 100)){ $('r-err').textContent = 'El descuento debe estar entre 0 y 100.'; return; }
+      d.descuento_pct = val;
+    } else d.precio_fijo = val;
+    // Si ya existe una regla para exactamente lo mismo, se reemplaza.
+    const igual = reglas.find(r => (r.cliente_email || null) === d.cliente_email && (r.tipo_id || null) === d.tipo_id &&
+      (r.marca || null) === d.marca && String(r.modelo || '').toUpperCase() === String(d.modelo || '').toUpperCase() && d.modelo !== null === (r.modelo !== null));
+    const res = igual ? await sb.from('reglas_descuento').update(Object.assign({ activo: true }, d)).eq('id', igual.id)
+                      : await sb.from('reglas_descuento').insert(d);
+    if (res.error){ $('r-err').textContent = res.error.message; return; }
+    await recargarBase(); toast(igual ? 'Regla actualizada' : 'Regla agregada');
+    reglaDestinoInicial = f.elements.destino.value; vistaDescuentos();
+  };
+
+  const pintarLista = () => {
+    const fil = $('r-filtro').value;
+    const lista = reglas.filter(r => !fil || (fil === 't:' ? (!r.cliente_email && !r.tipo_id) : fil.startsWith('tp:') ? r.tipo_id === fil.slice(3) : r.cliente_email === fil.slice(2)));
+    $('r-lista').innerHTML = !lista.length ? '<p class="muted">No hay reglas aquí.</p>' :
+      '<table><thead><tr><th>A quién</th><th>Aplica a</th><th>Precio</th><th>Nota</th><th>Activa</th><th></th></tr></thead><tbody>' +
+      lista.map(r => '<tr class="' + (r.activo ? '' : 'inactivo') + '"><td>' + describirQuien(r) + '</td><td>' + describirQue(r) + '</td>' +
+        '<td><strong>' + (r.precio_fijo != null ? money(r.precio_fijo) + ' fijo' : Number(r.descuento_pct) + '% dto.') + '</strong></td>' +
+        '<td class="muted">' + esc(r.nota || '') + '</td>' +
+        '<td><input type="checkbox" data-activa="' + r.id + '"' + (r.activo ? ' checked' : '') + ' style="height:18px;width:18px"></td>' +
+        '<td><button class="btn chico peligro" data-borrar="' + r.id + '">Eliminar</button></td></tr>').join('') + '</tbody></table>';
+    document.querySelectorAll('[data-activa]').forEach(ch => ch.onchange = async () => {
+      const { error } = await sb.from('reglas_descuento').update({ activo: ch.checked }).eq('id', ch.dataset.activa);
+      if (error) return toast('Error: ' + error.message);
+      await recargarBase(); pintarLista(); toast(ch.checked ? 'Regla activada' : 'Regla desactivada');
+    });
+    document.querySelectorAll('[data-borrar]').forEach(b => b.onclick = async () => {
+      if (!confirm('¿Eliminar esta regla?')) return;
+      const { error } = await sb.from('reglas_descuento').delete().eq('id', b.dataset.borrar);
+      if (error) return toast('Error: ' + error.message);
+      await recargarBase(); pintarLista(); toast('Regla eliminada');
+    });
+  };
+  $('r-filtro').onchange = () => { reglaDestinoInicial = $('r-filtro').value; pintarLista(); };
+  pintarLista();
+
+  const probar = () => {
+    const m = $('pr-modelo').value.trim().toUpperCase();
+    const p = productos.find(x => String(x.modelo || '').toUpperCase() === m);
+    if (!m){ $('pr-res').innerHTML = ''; return; }
+    if (!p){ $('pr-res').innerHTML = '<span class="muted">Modelo no encontrado en el catálogo.</span>'; return; }
+    const email = $('pr-quien').value || null;
+    const c = clientes.find(x => x.email === email);
+    const { precio, r } = precioPara(p, email, c ? c.tipo_id : null);
+    $('pr-res').innerHTML = esc(p.modelo) + ' · ' + esc(p.marca || '') + ' — lista ' + money(p.precio) + ' → <strong>' + money(precio) + '</strong><br><span class="muted">' +
+      (r ? 'Por la regla: ' + describirQuien(r).replace(/<br>.*$/, '') + ' · ' + describirQue(r).replace(/<[^>]+>/g, '') + ' · ' + (r.precio_fijo != null ? 'precio fijo' : Number(r.descuento_pct) + '%') : (p._manual ? 'Producto cargado a mano: precio de catálogo, sin regla.' : 'Sin regla: precio de lista.')) + '</span>';
+  };
+  $('pr-modelo').oninput = probar; $('pr-quien').onchange = probar;
+}
+
+/* ---------- Tipos de cliente ---------- */
+function vistaTipos(){
+  $('main').innerHTML = '<div class="caja"><h2>Tipos de cliente</h2>' +
+    '<p class="ayuda">Asigna un tipo a cada cliente y crea reglas de descuento por tipo en la pestaña Descuentos.</p>' +
+    '<table><thead><tr><th>Nombre</th><th>Clientes</th><th>Reglas</th><th></th></tr></thead><tbody>' +
+    tipos.map(t => '<tr><td><input data-nombre="' + t.id + '" value="' + esc(t.nombre) + '"></td>' +
+      '<td>' + clientes.filter(c => c.tipo_id === t.id).length + '</td><td>' + reglas.filter(r => r.tipo_id === t.id).length + '</td>' +
+      '<td><button class="btn chico" data-guardar="' + t.id + '">Guardar</button> <button class="btn chico peligro" data-borrar="' + t.id + '">Eliminar</button></td></tr>').join('') +
+    '</tbody></table><form id="t-form" class="fila" style="margin-top:14px"><label style="flex:1 1 220px">Nuevo tipo<input name="nombre" required placeholder="Ej. Integrador"></label><button class="btn prim">Agregar</button></form><p class="error" id="t-err"></p></div>';
+  document.querySelectorAll('[data-guardar]').forEach(b => b.onclick = async () => {
+    const nombre = document.querySelector('[data-nombre="' + b.dataset.guardar + '"]').value.trim();
+    const { error } = await sb.from('tipos_cliente').update({ nombre }).eq('id', b.dataset.guardar);
+    if (error) return toast('Error: ' + error.message);
+    await recargarBase(); toast('Guardado');
+  });
+  document.querySelectorAll('[data-borrar]').forEach(b => b.onclick = async () => {
+    if (!confirm('¿Eliminar este tipo? Sus reglas se borran y sus clientes quedan sin tipo.')) return;
+    const { error } = await sb.from('tipos_cliente').delete().eq('id', b.dataset.borrar);
+    if (error) return toast('Error: ' + error.message);
+    await recargarBase(); vistaTipos(); toast('Tipo eliminado');
+  });
+  $('t-form').onsubmit = async (e) => {
+    e.preventDefault();
+    const nombre = e.target.elements.nombre.value.trim();
+    const id = nombre.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+    const { error } = await sb.from('tipos_cliente').insert({ id, nombre, orden: tipos.length + 1 });
+    if (error){ $('t-err').textContent = error.code === '23505' ? 'Ese tipo ya existe.' : error.message; return; }
+    await recargarBase(); vistaTipos(); toast('Tipo agregado');
+  };
+}
+
+iniciar();
+</script>
+</body>
+</html>
