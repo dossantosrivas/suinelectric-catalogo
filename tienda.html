@@ -1187,9 +1187,9 @@ function limpiarNombre(s){
 }
 
 /* ---------- Ruta de un producto dentro de la nueva organización ---------- */
-// Niveles navegables (con link propio): Familia › Categoría › 2 niveles más.
-// Lo más profundo (ej. "Bobina AC › 25 Amp") se muestra como subgrupo en el listado.
-const MAX_NIVELES = 4;
+// Todos los niveles de categoría son navegables y tienen su propio link
+// (ej. Automatización y PLC › PLC Básicos › LOGO! › Versión 5/7 › CPU).
+const MAX_NIVELES = 10; // todos los niveles tienen su link (antes 4)
 
 const _cacheRuta = new WeakMap();
 function rutaOriginalDe(p){
