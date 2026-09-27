@@ -87,9 +87,11 @@
 const SUPABASE_URL = 'https://yqnlxhbjassrkudnhvpr.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_LOYjM5sqvQbBLIkH4KJTKQ_UfxrpTeC';
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
-  // Sesión propia del panel: así entrar como cliente en la tienda (mismo navegador) no cambia la del administrador.
-  auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, flowType: 'implicit', storageKey: 'suinelectric-admin-auth' }
+  // Misma sesión que la tienda: si ya entraste en la tienda con tu correo de administrador, el panel abre directo.
+  // (Si en este navegador entras a la tienda con otra cuenta, el panel se recarga y te pide entrar de nuevo.)
+  auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, flowType: 'implicit' }
 });
+try { localStorage.removeItem('suinelectric-admin-auth'); } catch (e) {}
 function mensajeError(err){
   const m = (err && err.message) || String(err);
   if (/row-level security|permission denied|JWT/i.test(m))
@@ -127,7 +129,7 @@ async function iniciar(){
   const email = String(session.user.email || '').toLowerCase();
   const { data: cli } = await sb.from('clientes').select('*').eq('email', email).maybeSingle();
   if (!cli || !cli.es_admin){
-    $('main').innerHTML = '<div class="caja centro"><h2>Sin acceso</h2><p>La cuenta <strong>' + esc(email) + '</strong> no es administradora.</p><button class="btn" id="b-salir2">Cerrar sesión</button></div>';
+    $('main').innerHTML = '<div class="caja centro"><h2>Sin acceso</h2><p>Estás conectado como <strong>' + esc(email) + '</strong>, que no es una cuenta de administrador.</p><button class="btn prim" id="b-salir2">Entrar con el correo de administrador</button></div>';
     $('b-salir2').onclick = async () => { await sb.auth.signOut(); location.reload(); };
     return;
   }
