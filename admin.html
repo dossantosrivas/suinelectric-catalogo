@@ -2,6 +2,14 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
+<script>
+// Una sola dirección para la tienda: la sesión se guarda por dominio, así que
+// www.suinelectric.com o la dirección vieja de Netlify serían "otra tienda" sin sesión.
+(function(){ var h = location.hostname;
+  if (h === 'www.suinelectric.com' || /\.netlify\.app$/.test(h))
+    location.replace('https://suinelectric.com' + location.pathname + location.search + location.hash);
+})();
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
 <title>Panel de administrador | Suinelectric</title>
@@ -130,7 +138,7 @@ async function iniciar(){
   const { data: cli } = await sb.from('clientes').select('*').eq('email', email).maybeSingle();
   if (!cli || !cli.es_admin){
     $('main').innerHTML = '<div class="caja centro"><h2>Sin acceso</h2><p>Estás conectado como <strong>' + esc(email) + '</strong>, que no es una cuenta de administrador.</p><button class="btn prim" id="b-salir2">Entrar con el correo de administrador</button></div>';
-    $('b-salir2').onclick = async () => { await sb.auth.signOut(); location.reload(); };
+    $('b-salir2').onclick = async () => { await sb.auth.signOut({ scope: 'local' }); location.reload(); };
     return;
   }
   yo = cli;
@@ -181,7 +189,7 @@ function pantallaLogin(){
     iniciar();
   };
 }
-$('salir').onclick = async () => { await sb.auth.signOut(); location.reload(); };
+$('salir').onclick = async () => { await sb.auth.signOut({ scope: 'local' }); location.reload(); };
 sb.auth.onAuthStateChange((ev, ses) => {
   if (ev === 'SIGNED_IN' && !yo) setTimeout(iniciar, 0);
   // Si la sesión cambia a otra cuenta (o se cierra), recargamos para no trabajar sin permisos.

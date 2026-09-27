@@ -2,6 +2,14 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
+<script>
+// Una sola dirección para la tienda: la sesión se guarda por dominio, así que
+// www.suinelectric.com o la dirección vieja de Netlify serían "otra tienda" sin sesión.
+(function(){ var h = location.hostname;
+  if (h === 'www.suinelectric.com' || /\.netlify\.app$/.test(h))
+    location.replace('https://suinelectric.com' + location.pathname + location.search + location.hash);
+})();
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1.0, viewport-fit=cover">
 <title>Suinelectric | Automatización y control eléctrico</title>
 <meta name="description" content="Variadores de frecuencia, arrancadores, contactores, breakers, PLC y control industrial en Venezuela. INVT, Siemens, Schneider, Hyundai y Nordic. Cotiza por WhatsApp.">
@@ -2767,7 +2775,7 @@ async function renderCuenta(pestana){
       '<p class="cta-sub">La cuenta <strong>' + escHtml(sesion.email) + '</strong> está suspendida. Mientras tanto verás los precios generales de la tienda. ' +
       'Si crees que es un error, escríbenos por WhatsApp.</p>' +
       '<button type="button" class="btn-enlace" id="cta-salir">Cerrar sesión</button>';
-    cont.querySelector('#cta-salir').addEventListener('click', async () => { await sb.auth.signOut(); document.getElementById('modal-cuenta').classList.remove('abierto'); });
+    cont.querySelector('#cta-salir').addEventListener('click', async () => { await sb.auth.signOut({ scope: 'local' }); document.getElementById('modal-cuenta').classList.remove('abierto'); });
     return;
   }
   if (faltanDatos()){
@@ -2790,7 +2798,7 @@ async function renderCuenta(pestana){
     '</div>' +
     '<div id="cta-cuerpo"><p class="cta-cargando">Cargando…</p></div>';
   cont.querySelector('#cta-salir').addEventListener('click', async () => {
-    await sb.auth.signOut();
+    await sb.auth.signOut({ scope: 'local' });
     document.getElementById('modal-cuenta').classList.remove('abierto');
     mostrarToast('Sesión cerrada');
   });
@@ -2841,7 +2849,7 @@ function renderRegistro(cont){
     renderCuenta('pedidos');
   });
   cont.querySelector('#cta-salir').addEventListener('click', async () => {
-    await sb.auth.signOut();
+    await sb.auth.signOut({ scope: 'local' });
     document.getElementById('modal-cuenta').classList.remove('abierto');
   });
 }
