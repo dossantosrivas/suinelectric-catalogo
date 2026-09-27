@@ -54,7 +54,11 @@ jobs:
             cp /tmp/productos.json productos.json
             cp /tmp/categorias.json categorias.json
 
-            git add productos.json categorias.json
+            # Vistas previas para WhatsApp y redes (/p/… y /c/…), con la
+            # tienda.html más reciente y los productos nuevos.
+            node generar-vistas-previas.js
+
+            git add productos.json categorias.json p c
 
             if git diff --staged --quiet; then
               echo "Sin cambios que subir."
