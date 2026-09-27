@@ -154,6 +154,10 @@
   .cta-grid .cta-ancho{ grid-column:1 / -1; }
   .cta-aviso{ background:var(--azul-suave); border-radius:var(--radio); padding:12px 14px; font-size:14.5px; margin-bottom:14px; }
   .cta-otro{ margin:12px 0 0; }
+  .cta-links{ display:flex; flex-wrap:wrap; gap:8px; margin-top:12px; }
+  .cta-links .btn-enlace{ margin-left:0; }
+  .cta-hint{ font-weight:400; color:var(--texto-3); }
+  .cta-sub-titulo{ font-size:17px; color:var(--tinta); margin:22px 0 4px; padding-top:16px; border-top:1px solid var(--linea); }
   .cta-error{ color:var(--off); font-size:14px; min-height:1em; margin:10px 0 0; }
   .cta-vacio, .cta-cargando{ color:var(--texto-2); font-size:14.5px; }
   .pedido-card{ border:1px solid var(--linea); border-radius:var(--radio); padding:12px 14px; margin-bottom:10px; }
@@ -2626,9 +2630,17 @@ async function cargarSesionYReglas(){
     sesion.cliente = null; sesion.admin = false; sesion.bloqueado = false;
     if (sesion.email){
       const { data: cli } = await sb.from('clientes').select('*').eq('email', sesion.email).maybeSingle();
-      sesion.cliente = cli || null;
-      sesion.admin = !!(cli && cli.es_admin && cli.activo);
-      sesion.bloqueado = !!(cli && cli.activo === false);
+      // Si creó la cuenta con clave, sus datos de registro vienen guardados en la cuenta: los pasamos a su ficha.
+      const meta = (session.user && session.user.user_metadata) || {};
+      let ficha = cli;
+      if (ficha && ficha.activo !== false && (!ficha.nombre || !ficha.rif) && meta.nombre && meta.rif){
+        const { data: act } = await sb.from('clientes').update({ nombre: ficha.nombre || meta.nombre, rif: ficha.rif || meta.rif, telefono: ficha.telefono || meta.telefono || null })
+          .eq('email', sesion.email).select().maybeSingle();
+        if (act) ficha = act;
+      }
+      sesion.cliente = ficha || null;
+      sesion.admin = !!(ficha && ficha.es_admin && ficha.activo);
+      sesion.bloqueado = !!(ficha && ficha.activo === false);
     }
     const [{ data: reglas, error: errR }, { data: tipos }] = await Promise.all([
       sb.from('reglas_descuento').select('*').eq('activo', true),
@@ -2811,51 +2823,156 @@ function renderRegistro(cont){
   });
 }
 
+// Formas de entrar: con clave (la normal), crear cuenta, o con un código al
+// correo (sirve también si olvidó la clave; luego la cambia en "Mis datos").
+let modoLogin = 'clave';          // 'clave' | 'crear' | 'codigo'
+let tipoPendiente = 'email';      // tipo de código enviado: 'email' (acceso) o 'signup' (confirmar cuenta nueva)
+let entroSinClave = false;        // entró con código: le sugerimos crear/cambiar su clave
+function mensajeAuth(error){
+  const m = (error && error.message) || '';
+  if (/invalid login credentials/i.test(m)) return 'Correo o clave incorrectos.';
+  if (/email not confirmed/i.test(m)) return 'Tu correo aún no está confirmado.';
+  if (/rate|limit|seconds/i.test(m)) return 'Demasiados intentos. Espera unos minutos e intenta de nuevo.';
+  if (/password.*(at least|characters|short)/i.test(m)) return 'La clave es muy corta.';
+  if (/weak|pwned|leaked/i.test(m)) return 'Esa clave es muy fácil de adivinar. Usa otra.';
+  return m || 'Ocurrió un error. Intenta de nuevo.';
+}
 function renderLogin(cont){
-  const paso2 = !!emailPendiente;
-  cont.innerHTML =
-    '<h2 class="cta-titulo">Ingresar</h2>' +
-    '<p class="cta-sub">Entra con tu correo para ver tus precios de cliente y el historial de tus pedidos. No necesitas contraseña. ' +
-    'Si es tu primera vez, luego te pediremos tu nombre y RIF o cédula.</p>' +
-    (!paso2
-      ? '<form id="cta-form-email" class="cta-form">' +
-          '<label>Correo electrónico<input type="email" id="cta-email" required autocomplete="email" placeholder="tucorreo@empresa.com"></label>' +
-          '<button type="submit" class="btn btn-cart-add">Enviarme el acceso</button>' +
-        '</form>'
-      : '<div class="cta-aviso">Te enviamos un correo a <strong>' + escHtml(emailPendiente) + '</strong>. Toca el enlace del correo, o escribe aquí el código si viene uno.</div>' +
-        '<form id="cta-form-codigo" class="cta-form">' +
-          '<label>Código<input type="text" id="cta-codigo" inputmode="numeric" autocomplete="one-time-code" maxlength="10" placeholder="123456"></label>' +
-          '<button type="submit" class="btn btn-cart-add">Entrar</button>' +
-        '</form>' +
-        '<button type="button" class="btn-enlace cta-otro" id="cta-otro-correo">Usar otro correo</button>') +
-    '<p class="cta-error" id="cta-error"></p>';
+  const pestanas = '<div class="cta-tabs">' +
+    '<button type="button" data-modo="clave" class="' + (modoLogin === 'clave' ? 'activa' : '') + '">Entrar</button>' +
+    '<button type="button" data-modo="crear" class="' + (modoLogin === 'crear' ? 'activa' : '') + '">Crear cuenta</button>' +
+    '</div>';
+  let cuerpo;
+  if (emailPendiente){
+    cuerpo = '<div class="cta-aviso">Te enviamos un correo a <strong>' + escHtml(emailPendiente) + '</strong>. ' +
+        (tipoPendiente === 'signup' ? 'Escribe el código para confirmar tu cuenta' : 'Escribe el código') + ' (o toca el enlace del correo).</div>' +
+      '<form id="cta-form-codigo" class="cta-form">' +
+        '<label>Código<input type="text" id="cta-codigo" inputmode="numeric" autocomplete="one-time-code" maxlength="10" placeholder="123456"></label>' +
+        '<button type="submit" class="btn btn-cart-add">' + (tipoPendiente === 'signup' ? 'Confirmar cuenta' : 'Entrar') + '</button>' +
+      '</form>' +
+      '<div class="cta-links"><button type="button" class="btn-enlace" id="cta-reenviar">Reenviar correo</button>' +
+      '<button type="button" class="btn-enlace" id="cta-otro-correo">Usar otro correo</button></div>';
+  } else if (modoLogin === 'crear'){
+    cuerpo = pestanas +
+      '<form id="cta-form-crear" class="cta-form">' +
+        '<label>Nombre y apellido, o razón social *<input name="nombre" required autocomplete="name" placeholder="Ej. Pedro Pérez / Industrias XYZ, C.A."></label>' +
+        '<label>RIF o cédula *<input name="rif" required placeholder="Ej. J-12345678-9 o V-12345678"></label>' +
+        '<label>Correo electrónico *<input name="email" type="email" required autocomplete="email" placeholder="tucorreo@empresa.com"></label>' +
+        '<label><span>Crea tu clave * <span class="cta-hint">(mínimo 8 caracteres)</span></span><input name="clave" type="password" required minlength="8" autocomplete="new-password"></label>' +
+        '<label>Repite la clave *<input name="clave2" type="password" required minlength="8" autocomplete="new-password"></label>' +
+        '<label>Teléfono (WhatsApp)<input name="telefono" type="tel" autocomplete="tel" placeholder="Ej. 0412-1234567"></label>' +
+        '<button type="submit" class="btn btn-cart-add">Crear mi cuenta</button>' +
+      '</form>';
+  } else if (modoLogin === 'codigo'){
+    cuerpo = pestanas +
+      '<p class="cta-sub">Te enviamos un código a tu correo para entrar sin clave. Después puedes crear una clave nueva en "Mis datos".</p>' +
+      '<form id="cta-form-email" class="cta-form">' +
+        '<label>Correo electrónico<input type="email" id="cta-email" required autocomplete="email" placeholder="tucorreo@empresa.com"></label>' +
+        '<button type="submit" class="btn btn-cart-add">Enviarme el código</button>' +
+      '</form>' +
+      '<div class="cta-links"><button type="button" class="btn-enlace" data-modo="clave">← Volver a entrar con clave</button></div>';
+  } else {
+    cuerpo = pestanas +
+      '<form id="cta-form-clave" class="cta-form">' +
+        '<label>Correo electrónico<input name="email" type="email" required autocomplete="email" placeholder="tucorreo@empresa.com"></label>' +
+        '<label>Clave<input name="clave" type="password" required autocomplete="current-password"></label>' +
+        '<button type="submit" class="btn btn-cart-add">Entrar</button>' +
+      '</form>' +
+      '<div class="cta-links"><button type="button" class="btn-enlace" data-modo="codigo">¿Olvidaste tu clave o no tienes? Entra con un código</button></div>';
+  }
+  cont.innerHTML = '<h2 class="cta-titulo">' + (modoLogin === 'crear' && !emailPendiente ? 'Crear cuenta' : 'Ingresar') + '</h2>' +
+    (emailPendiente ? '' : '<p class="cta-sub">Con tu cuenta ves tus precios de cliente y el historial de tus pedidos.</p>') +
+    cuerpo + '<p class="cta-error" id="cta-error"></p>';
   const err = cont.querySelector('#cta-error');
+  const ocupado = (b, t) => { b.disabled = true; b.dataset.t = b.textContent; b.textContent = t; };
+  const libre = (b) => { b.disabled = false; b.textContent = b.dataset.t || b.textContent; };
+  cont.querySelectorAll('[data-modo]').forEach(b => b.addEventListener('click', () => { modoLogin = b.getAttribute('data-modo'); renderLogin(cont); }));
+
+  // Entrar con clave
+  const fClave = cont.querySelector('#cta-form-clave');
+  if (fClave) fClave.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const email = fClave.elements.email.value.trim().toLowerCase();
+    const b = fClave.querySelector('button'); ocupado(b, 'Entrando…');
+    accesoEnCurso = true;
+    const { error } = await sb.auth.signInWithPassword({ email, password: fClave.elements.clave.value });
+    if (error){
+      libre(b); accesoEnCurso = false;
+      if (/email not confirmed/i.test(error.message)){
+        // Cuenta creada pero sin confirmar: reenviamos el código de confirmación.
+        await sb.auth.resend({ type: 'signup', email, options: { emailRedirectTo: location.href.split('#')[0] } });
+        emailPendiente = email; tipoPendiente = 'signup'; accesoEnCurso = true;
+        renderLogin(cont);
+        return;
+      }
+      err.textContent = mensajeAuth(error) + (/incorrectos/.test(mensajeAuth(error)) ? ' Si nunca creaste una clave, entra con un código.' : '');
+    }
+  });
+
+  // Crear cuenta
+  const fCrear = cont.querySelector('#cta-form-crear');
+  if (fCrear){
+    fCrear.elements.rif.addEventListener('blur', () => { fCrear.elements.rif.value = normalizarRif(fCrear.elements.rif.value); });
+    fCrear.addEventListener('submit', async (e) => {
+      e.preventDefault();
+      const el = fCrear.elements;
+      const nombre = el.nombre.value.trim(), rif = normalizarRif(el.rif.value), email = el.email.value.trim().toLowerCase();
+      el.rif.value = rif;
+      if (nombre.length < 3){ err.textContent = 'Escribe tu nombre o la razón social.'; return; }
+      if (!rifValido(rif)){ err.textContent = 'El RIF o cédula no parece válido. Ej.: J-12345678-9 o V-12345678.'; return; }
+      if (el.clave.value.length < 8){ err.textContent = 'La clave debe tener al menos 8 caracteres.'; return; }
+      if (el.clave.value !== el.clave2.value){ err.textContent = 'Las claves no coinciden.'; return; }
+      const b = fCrear.querySelector('button'); ocupado(b, 'Creando cuenta…');
+      accesoEnCurso = true;
+      const { data, error } = await sb.auth.signUp({ email, password: el.clave.value, options: {
+        emailRedirectTo: location.href.split('#')[0],
+        data: { nombre, rif, telefono: el.telefono.value.trim() || null },
+      } });
+      if (error){ libre(b); accesoEnCurso = false; err.textContent = /already|registered|exists/i.test(error.message) ? 'Ese correo ya tiene cuenta. Entra con tu clave o con un código.' : mensajeAuth(error); return; }
+      if (data && data.user && Array.isArray(data.user.identities) && data.user.identities.length === 0){
+        libre(b); accesoEnCurso = false;
+        err.textContent = 'Ese correo ya tiene cuenta. Usa "Entrar", o entra con un código si no recuerdas la clave.';
+        return;
+      }
+      if (data && data.session) return; // sin confirmación por correo: ya entró
+      emailPendiente = email; tipoPendiente = 'signup';
+      renderLogin(cont);
+    });
+  }
+
+  // Pedir código (sin clave / olvidé mi clave)
   const fEmail = cont.querySelector('#cta-form-email');
   if (fEmail) fEmail.addEventListener('submit', async (e) => {
     e.preventDefault();
     const email = cont.querySelector('#cta-email').value.trim().toLowerCase();
-    const b = fEmail.querySelector('button'); b.disabled = true; b.textContent = 'Enviando…';
+    const b = fEmail.querySelector('button'); ocupado(b, 'Enviando…');
     const { error } = await sb.auth.signInWithOtp({ email, options: { emailRedirectTo: location.href.split('#')[0] } });
-    if (error){
-      b.disabled = false; b.textContent = 'Enviarme el acceso';
-      err.textContent = /rate|limit|seconds/i.test(error.message)
-        ? 'Se enviaron demasiados correos. Espera unos minutos e intenta de nuevo.'
-        : 'No se pudo enviar el correo: ' + error.message;
-      return;
-    }
-    emailPendiente = email;
-    accesoEnCurso = true;
+    if (error){ libre(b); err.textContent = 'No se pudo enviar el correo: ' + mensajeAuth(error); return; }
+    emailPendiente = email; tipoPendiente = 'email'; entroSinClave = true; accesoEnCurso = true;
     renderLogin(cont);
   });
+
+  // Escribir el código recibido
   const fCod = cont.querySelector('#cta-form-codigo');
   if (fCod) fCod.addEventListener('submit', async (e) => {
     e.preventDefault();
     const token = cont.querySelector('#cta-codigo').value.replace(/\s+/g, '');
     if (!token) return;
-    const b = fCod.querySelector('button'); b.disabled = true; b.textContent = 'Verificando…';
-    const { error } = await sb.auth.verifyOtp({ email: emailPendiente, token, type: 'email' });
-    if (error){ b.disabled = false; b.textContent = 'Entrar'; err.textContent = 'El código no es válido o ya venció.'; return; }
+    const b = fCod.querySelector('button'); ocupado(b, 'Verificando…');
+    let { error } = await sb.auth.verifyOtp({ email: emailPendiente, token, type: tipoPendiente });
+    if (error && tipoPendiente === 'signup') ({ error } = await sb.auth.verifyOtp({ email: emailPendiente, token, type: 'email' }));
+    if (error){ libre(b); err.textContent = 'El código no es válido o ya venció.'; return; }
     emailPendiente = '';
+  });
+  const reenviar = cont.querySelector('#cta-reenviar');
+  if (reenviar) reenviar.addEventListener('click', async () => {
+    reenviar.disabled = true;
+    const { error } = tipoPendiente === 'signup'
+      ? await sb.auth.resend({ type: 'signup', email: emailPendiente, options: { emailRedirectTo: location.href.split('#')[0] } })
+      : await sb.auth.signInWithOtp({ email: emailPendiente, options: { emailRedirectTo: location.href.split('#')[0] } });
+    err.textContent = error ? mensajeAuth(error) : '';
+    if (!error) mostrarToast('Correo reenviado');
+    setTimeout(() => { reenviar.disabled = false; }, 30000);
   });
   const otro = cont.querySelector('#cta-otro-correo');
   if (otro) otro.addEventListener('click', () => { emailPendiente = ''; renderLogin(cont); });
@@ -2871,8 +2988,33 @@ async function renderMisDatos(cuerpo){
       campo('rif', 'RIF / Cédula') + campo('telefono', 'Teléfono', 'tel') +
       '<label class="cta-ancho">Dirección de entrega<input type="text" name="direccion" value="' + escHtml(c.direccion || '') + '"></label>' +
       '<button type="submit" class="btn btn-cart-add cta-ancho">Guardar datos</button>' +
-    '</form><p class="cta-error" id="cta-error-datos"></p>';
-  const f = cuerpo.querySelector('form');
+    '</form><p class="cta-error" id="cta-error-datos"></p>' +
+    '<h3 class="cta-sub-titulo">Mi clave</h3>' +
+    '<p class="cta-sub">Crea una clave para entrar sin esperar el código del correo, o cámbiala si la olvidaste.</p>' +
+    '<form id="cta-form-clave-nueva" class="cta-form cta-grid">' +
+      '<label><span>Clave nueva <span class="cta-hint">(mínimo 8)</span></span><input name="clave" type="password" minlength="8" required autocomplete="new-password"></label>' +
+      '<label>Repite la clave<input name="clave2" type="password" minlength="8" required autocomplete="new-password"></label>' +
+      '<button type="submit" class="btn btn-cart-add cta-ancho">Guardar clave</button>' +
+    '</form><p class="cta-error" id="cta-error-clave"></p>';
+  const fc = cuerpo.querySelector('#cta-form-clave-nueva');
+  fc.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const errC = cuerpo.querySelector('#cta-error-clave');
+    if (fc.elements.clave.value.length < 8){ errC.textContent = 'La clave debe tener al menos 8 caracteres.'; return; }
+    if (fc.elements.clave.value !== fc.elements.clave2.value){ errC.textContent = 'Las claves no coinciden.'; return; }
+    const b = fc.querySelector('button'); b.disabled = true; b.textContent = 'Guardando…';
+    const { error } = await sb.auth.updateUser({ password: fc.elements.clave.value });
+    b.disabled = false; b.textContent = 'Guardar clave';
+    if (error){
+      errC.textContent = /reauth|recent/i.test(error.message)
+        ? 'Por seguridad, cierra sesión, entra con un código y vuelve a intentarlo.'
+        : /same|different/i.test(error.message) ? 'Esa ya es tu clave actual.' : mensajeAuth(error);
+      return;
+    }
+    fc.reset(); errC.textContent = '';
+    mostrarToast('✓ Clave guardada. La próxima vez entra con tu correo y clave');
+  });
+  const f = cuerpo.querySelector('#cta-form-datos');
   f.addEventListener('submit', async (e) => {
     e.preventDefault();
     const datos = {};
@@ -2979,9 +3121,17 @@ if (sb){
         await cargarSesionYReglas();
         if (evento === 'SIGNED_IN' && accesoEnCurso){
           accesoEnCurso = false;
+          modoLogin = 'clave'; emailPendiente = '';
           const modal = document.getElementById('modal-cuenta');
-          if (modal.classList.contains('abierto') && !faltanDatos()) renderCuenta('pedidos');
-          mostrarToast('Bienvenido' + (sesion.cliente && sesion.cliente.nombre ? ', ' + sesion.cliente.nombre : ''));
+          const hola = 'Bienvenido' + (sesion.cliente && sesion.cliente.nombre ? ', ' + sesion.cliente.nombre : '');
+          if (entroSinClave && !faltanDatos()){
+            entroSinClave = false;
+            abrirCuenta('datos');
+            mostrarToast(hola + ' · puedes crear o cambiar tu clave abajo');
+          } else {
+            if (modal.classList.contains('abierto') && !faltanDatos()) renderCuenta('pedidos');
+            mostrarToast(hola);
+          }
         }
       }, 0);
     }

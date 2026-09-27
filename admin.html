@@ -140,15 +140,33 @@ async function iniciar(){
   await Promise.all([cargarProductos(), recargarBase()]);
   mostrar();
 }
+let adminModo = 'clave';
 function pantallaLogin(){
-  $('main').innerHTML =
-    '<div class="caja centro"><h2>Entrar al panel</h2>' +
-    (!emailPendiente
-      ? '<form id="f-email" class="fila"><label style="flex:1">Correo del administrador<input type="email" id="l-email" required></label><button class="btn prim">Enviar acceso</button></form>'
-      : '<div class="aviso">Te enviamos un correo a <strong>' + esc(emailPendiente) + '</strong>. Toca el enlace o escribe el código.</div>' +
-        '<form id="f-cod" class="fila"><label style="flex:1">Código<input id="l-cod" inputmode="numeric" autocomplete="one-time-code"></label><button class="btn prim">Entrar</button></form>') +
-    '<p class="error" id="l-err"></p></div>';
-  const fe = $('f-email'), fc = $('f-cod');
+  let cuerpo;
+  if (emailPendiente){
+    cuerpo = '<div class="aviso">Te enviamos un correo a <strong>' + esc(emailPendiente) + '</strong>. Escribe el código o toca el enlace.</div>' +
+      '<form id="f-cod" class="fila"><label style="flex:1">Código<input id="l-cod" inputmode="numeric" autocomplete="one-time-code"></label><button class="btn prim">Entrar</button></form>';
+  } else if (adminModo === 'codigo'){
+    cuerpo = '<form id="f-email" class="fila"><label style="flex:1">Correo del administrador<input type="email" id="l-email" required autocomplete="email"></label><button class="btn prim">Enviar código</button></form>' +
+      '<p><button type="button" class="btn chico" id="l-a-clave">← Entrar con clave</button></p>';
+  } else {
+    cuerpo = '<form id="f-clave" style="display:flex;flex-direction:column;gap:10px">' +
+      '<label>Correo<input type="email" id="l-email2" required autocomplete="email"></label>' +
+      '<label>Clave<input type="password" id="l-clave" required autocomplete="current-password"></label>' +
+      '<button class="btn prim">Entrar</button></form>' +
+      '<p class="muted" style="margin-top:12px">¿No tienes clave o la olvidaste? <button type="button" class="btn chico" id="l-a-codigo">Entrar con un código</button><br>' +
+      'Luego puedes crear tu clave en la tienda: Mi cuenta → Mis datos → Mi clave.</p>';
+  }
+  $('main').innerHTML = '<div class="caja centro"><h2>Entrar al panel</h2>' + cuerpo + '<p class="error" id="l-err"></p></div>';
+  const fe = $('f-email'), fc = $('f-cod'), fk = $('f-clave');
+  if ($('l-a-codigo')) $('l-a-codigo').onclick = () => { adminModo = 'codigo'; pantallaLogin(); };
+  if ($('l-a-clave')) $('l-a-clave').onclick = () => { adminModo = 'clave'; pantallaLogin(); };
+  if (fk) fk.onsubmit = async (e) => {
+    e.preventDefault();
+    const { error } = await sb.auth.signInWithPassword({ email: $('l-email2').value.trim().toLowerCase(), password: $('l-clave').value });
+    if (error){ $('l-err').textContent = /invalid/i.test(error.message) ? 'Correo o clave incorrectos. Si nunca creaste una clave, entra con un código.' : error.message; return; }
+    iniciar();
+  };
   if (fe) fe.onsubmit = async (e) => {
     e.preventDefault();
     const email = $('l-email').value.trim().toLowerCase();
