@@ -111,10 +111,16 @@ let emailPendiente = '';
 /* ---------- Productos (para marcas, modelos y probar precios) ---------- */
 async function cargarProductos(){
   try {
-    const [a, b] = await Promise.all([
-      fetch('productos.json', { cache: 'no-store' }).then(r => r.json()).catch(() => ({ productos: [] })),
-      fetch('productos_manuales.json', { cache: 'no-store' }).then(r => r.json()).catch(() => ({ productos: [] })),
-    ]);
+    // Normalmente un solo archivo liviano (catalogo-tienda.json); si no existe, los originales.
+    let a, b;
+    const cat = await fetch('catalogo-tienda.json', { cache: 'no-cache' }).then(r => r.ok ? r.json() : null).catch(() => null);
+    if (cat){ a = { productos: cat.productos || [] }; b = { productos: cat.manuales || [] }; }
+    else {
+      [a, b] = await Promise.all([
+        fetch('productos.json', { cache: 'no-cache' }).then(r => r.json()).catch(() => ({ productos: [] })),
+        fetch('productos_manuales.json', { cache: 'no-cache' }).then(r => r.json()).catch(() => ({ productos: [] })),
+      ]);
+    }
     const man = (b.productos || []).filter(p => p.modelo !== 'EJEMPLO-BORRAR').map(p => Object.assign(p, { _manual: true }));
     const set = new Set(man.map(p => p.modelo));
     productos = man.concat((a.productos || []).filter(p => !set.has(p.modelo)));

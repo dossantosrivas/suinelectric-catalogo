@@ -32,11 +32,15 @@ const codigo = html.slice(html.lastIndexOf('/*', ini), fin);
 const T = new Function(codigo + '\nreturn { rutaDe, rutaNavDe, slugDe, compararHermanos, MAX_NIVELES, FAMILIAS };')();
 
 /* ---------- Productos (manuales primero, como en la tienda) ---------- */
-const leer = (f) => { try { return JSON.parse(fs.readFileSync(path.join(RAIZ, f), 'utf8')); } catch (e) { return { productos: [] }; } };
-const manuales = (leer('productos_manuales.json').productos || []).filter(p => p.modelo && p.modelo !== 'EJEMPLO-BORRAR');
+const leer = (f) => { try { return JSON.parse(fs.readFileSync(path.join(RAIZ, f), 'utf8')); } catch (e) { return null; } };
+// Se usa catalogo-tienda.json (fotos propias, sin datos del proveedor). Si no existe, los originales.
+const catalogo = leer('catalogo-tienda.json');
+const fuenteManuales = catalogo ? { productos: catalogo.manuales } : (leer('productos_manuales.json') || { productos: [] });
+const fuenteScraper = catalogo || leer('productos.json') || { productos: [] };
+const manuales = (fuenteManuales.productos || []).filter(p => p.modelo && p.modelo !== 'EJEMPLO-BORRAR');
 manuales.forEach(p => { p._manual = true; });
 const setMan = new Set(manuales.map(p => p.modelo));
-const productos = manuales.concat((leer('productos.json').productos || []).filter(p => p.modelo && !setMan.has(p.modelo)));
+const productos = manuales.concat((fuenteScraper.productos || []).filter(p => p.modelo && !setMan.has(p.modelo)));
 
 /* ---------- Utilidades ---------- */
 const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');

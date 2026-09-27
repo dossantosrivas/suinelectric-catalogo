@@ -2,3 +2,5 @@
   X-Robots-Tag: noindex
 /admin
   X-Robots-Tag: noindex
+/imagenes/productos/*
+  Cache-Control: public, max-age=2592000

@@ -1609,12 +1609,13 @@ function mostrarVista(){
 
 // Imagen de presentación de cada familia en Inicio ("Compra por categoría").
 // Si una familia no está aquí (o la imagen no carga), se usa la foto de un producto.
+// Las fotos viven en imagenes/familias/ (las descarga generar-catalogo-tienda.js).
 const IMAGENES_FAMILIA = {
-  'Variadores y Arrancadores': 'https://image.makewebeasy.net/makeweb/m_1920x0/IyLW6tgjN/GD200A/IMG_2296.png',
-  'Control de Motores': 'https://grupo-electricos.com/wp-content/uploads/2023/07/3RT103X.jpg',
-  'Automatización y PLC': 'https://cdn.myshoptet.com/usr/eshop.sampli.cz/user/shop/big/450_plc-ridici-modul-6ed1052-1md08-0ba3-siemens-logo-12-24rce.png?69ee3449',
-  'Sensores e Instrumentación': 'https://grupo-electricos.com/wp-content/uploads/2023/07/3SE5112-0CH50.jpg',
-  'Mando y Señalización': 'https://grupo-electricos.com/wp-content/uploads/2023/07/3sb36XX-0BA40.jpg',
+  'Variadores y Arrancadores': 'imagenes/familias/variadores-y-arrancadores.jpg',
+  'Control de Motores': 'imagenes/familias/control-de-motores.jpg',
+  'Automatización y PLC': 'imagenes/familias/automatizacion-y-plc.jpg',
+  'Sensores e Instrumentación': 'imagenes/familias/sensores-e-instrumentacion.jpg',
+  'Mando y Señalización': 'imagenes/familias/mando-y-senalizacion.jpg',
 };
 
 // Imagen representativa de una categoría (ruta): la primera imagen de un
@@ -2470,7 +2471,7 @@ let ultimoEstado = null; // "generado|total" para detectar cambios entre recarga
 // simplemente no se agrega ningún producto manual.
 async function cargarProductosManuales(){
   try {
-    const resp = await fetch('productos_manuales.json', { cache: 'no-store' });
+    const resp = await fetch('productos_manuales.json');
     if (!resp.ok) return [];
     const data = await resp.json();
     const lista = data.productos || [];
@@ -2481,12 +2482,37 @@ async function cargarProductosManuales(){
   }
 }
 
+// Trae el catálogo. Normalmente es UN solo archivo liviano (catalogo-tienda.json,
+// lo genera generar-catalogo-tienda.js cada día). Si todavía no existe, usa los
+// archivos originales como respaldo.
+// Caché: la primera carga usa la caché normal del navegador; las revisiones
+// silenciosas preguntan al servidor si cambió ('no-cache'): si no cambió,
+// responde "sin cambios" sin volver a mandar el archivo.
+async function traerCatalogo(silencioso){
+  const opciones = silencioso ? { cache: 'no-cache' } : {};
+  try {
+    const r = await fetch('catalogo-tienda.json', opciones);
+    if (r.ok){
+      const data = await r.json();
+      const manuales = (data.manuales || []).filter(p => p.modelo !== 'EJEMPLO-BORRAR');
+      return { data, manuales };
+    }
+  } catch (e) { /* sigue con el respaldo */ }
+  const resp = await fetch('productos.json', opciones);
+  const data = await resp.json();
+  const manuales = await cargarProductosManuales();
+  return { data, manuales };
+}
+
+let catalogoEnProgreso = false;   // true mientras el scraper está trabajando
+let ultimaRevision = 0;           // cuándo se revisó el catálogo por última vez
+
 async function cargar(silencioso){
   const metaBar = document.getElementById('meta-bar');
   try {
-    const resp = await fetch('productos.json', { cache: 'no-store' });
-    const data = await resp.json();
-    const manuales = await cargarProductosManuales();
+    ultimaRevision = Date.now();
+    const { data, manuales } = await traerCatalogo(silencioso);
+    catalogoEnProgreso = !!data.en_progreso;
 
     // ¿Cambió algo desde la última vez? (para no re-renderizar de gratis)
     const firma = (data.generado || '') + '|' + (data.total_productos || 0) + '|' + manuales.length;
@@ -2523,14 +2549,20 @@ async function cargar(silencioso){
     renderSidebar();
     mostrarVista();
   } catch (e) {
-    if (!silencioso){ metaBar.textContent = "No se pudo cargar productos.json"; }
+    if (!silencioso){ metaBar.textContent = "No se pudo cargar el catálogo. Revisa tu conexión y recarga la página."; }
     console.error(e);
   }
 }
 
-// Auto-refresco: mientras el scraper esté trabajando, la web se actualiza sola.
-// Revisa el archivo cada 4 segundos y solo re-renderiza si cambió.
-setInterval(() => cargar(true), 4000);
+// Auto-refresco:
+// · Mientras el scraper esté trabajando (en_progreso), revisa cada 4 segundos.
+// · Si no, NO descarga nada en segundo plano (antes lo hacía cada 4 s y gastaba
+//   datos del cliente). Solo revisa cuando el cliente vuelve a la pestaña y pasaron
+//   más de 10 minutos desde la última revisión.
+setInterval(() => { if (catalogoEnProgreso) cargar(true); }, 4000);
+document.addEventListener('visibilitychange', () => {
+  if (document.visibilityState === 'visible' && Date.now() - ultimaRevision > 10 * 60 * 1000) cargar(true);
+});
 
 // Las sugerencias salen al instante; el listado completo se actualiza
 // cuando se hace una pausa al escribir (150 ms), no con cada letra.
