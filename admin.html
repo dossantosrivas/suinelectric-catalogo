@@ -57,6 +57,10 @@
   .prueba-res{ font-size:15px; margin-top:10px; }
   .prueba-res strong{ font-size:20px; color:var(--tinta); }
   .ayuda{ font-size:13px; color:var(--texto-2); background:var(--fondo); border-radius:var(--radio); padding:10px 12px; margin:0 0 12px; line-height:1.5; }
+  [hidden]{ display:none !important; }
+  .resumen{ margin-top:12px; padding:10px 12px; border-left:4px solid var(--azul); background:var(--azul-suave); border-radius:4px; font-size:14.5px; line-height:1.5; }
+  .resumen:empty{ display:none; }
+  .paso{ display:inline-flex; align-items:center; justify-content:center; width:20px; height:20px; border-radius:50%; background:var(--tinta); color:#fff; font-size:12px; margin-right:6px; }
   @media (max-width:700px){ main{ padding:12px; } .fila > *{ flex:1 1 100%; } }
 </style>
 </head>
@@ -83,8 +87,15 @@
 const SUPABASE_URL = 'https://yqnlxhbjassrkudnhvpr.supabase.co';
 const SUPABASE_KEY = 'sb_publishable_LOYjM5sqvQbBLIkH4KJTKQ_UfxrpTeC';
 const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, {
-  auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, flowType: 'implicit' }
+  // Sesión propia del panel: así entrar como cliente en la tienda (mismo navegador) no cambia la del administrador.
+  auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, flowType: 'implicit', storageKey: 'suinelectric-admin-auth' }
 });
+function mensajeError(err){
+  const m = (err && err.message) || String(err);
+  if (/row-level security|permission denied|JWT/i.test(m))
+    return 'Tu sesión de administrador no está activa. Pulsa "Salir" y vuelve a entrar con tu correo de administrador.';
+  return m;
+}
 const $ = (id) => document.getElementById(id);
 const esc = (s) => String(s == null ? '' : s).replace(/&/g,'&amp;').replace(/</g,'&lt;').replace(/>/g,'&gt;').replace(/"/g,'&quot;');
 const money = (n) => n == null ? '—' : '$' + Math.ceil(Number(n)).toLocaleString('en-US');
@@ -151,7 +162,11 @@ function pantallaLogin(){
   };
 }
 $('salir').onclick = async () => { await sb.auth.signOut(); location.reload(); };
-sb.auth.onAuthStateChange((ev) => { if (ev === 'SIGNED_IN' && !yo) setTimeout(iniciar, 0); });
+sb.auth.onAuthStateChange((ev, ses) => {
+  if (ev === 'SIGNED_IN' && !yo) setTimeout(iniciar, 0);
+  // Si la sesión cambia a otra cuenta (o se cierra), recargamos para no trabajar sin permisos.
+  if (yo && (ev === 'SIGNED_OUT' || (ses && String(ses.user.email || '').toLowerCase() !== yo.email))) location.reload();
+});
 
 async function recargarBase(){
   const [t, c, r] = await Promise.all([
@@ -202,13 +217,13 @@ async function vistaPedidos(){
     }).join('') + '</tbody></table>';
   document.querySelectorAll('[data-estado]').forEach(s => s.onchange = async () => {
     const { error } = await sb.from('pedidos').update({ estado: s.value }).eq('id', s.dataset.estado);
-    toast(error ? 'Error: ' + error.message : 'Estado actualizado');
+    toast(error ? 'Error: ' + mensajeError(error) : 'Estado actualizado');
   });
   document.querySelectorAll('[data-guardar-nota]').forEach(b => b.onclick = async () => {
     const id = b.dataset.guardarNota;
     const nota = document.querySelector('[data-nota="' + id + '"]').value.trim() || null;
     const { error } = await sb.from('pedidos').update({ nota_admin: nota }).eq('id', id);
-    toast(error ? 'Error: ' + error.message : 'Comentario guardado');
+    toast(error ? 'Error: ' + mensajeError(error) : 'Comentario guardado');
   });
 }
 
@@ -265,7 +280,7 @@ function vistaClientes(editar){
       d.es_admin = f.elements.es_admin.value === 'true';
       const nuevo = !editar.email;
       const res = nuevo ? await sb.from('clientes').insert(d) : await sb.from('clientes').update(d).eq('email', editar.email);
-      if (res.error){ $('c-err').textContent = res.error.code === '23505' ? 'Ya existe un cliente con ese correo.' : res.error.message; return; }
+      if (res.error){ $('c-err').textContent = res.error.code === '23505' ? 'Ya existe un cliente con ese correo.' : mensajeError(res.error); return; }
       await recargarBase(); toast(nuevo ? 'Cliente creado' : 'Cambios guardados'); vistaClientes();
     };
   }
@@ -308,19 +323,24 @@ function vistaDescuentos(){
     '<optgroup label="Cliente">' + clientes.map(c => '<option value="c:' + esc(c.email) + '">👤 ' + esc(c.nombre || c.empresa || c.email) + ' · ' + esc(c.email) + '</option>').join('') + '</optgroup>';
   const filtro = reglaDestinoInicial;
   $('main').innerHTML =
-    '<form id="r-form" class="caja"><h2>Nueva regla de descuento</h2>' +
-    '<p class="ayuda">Gana siempre la regla <strong>más específica</strong> (no se suman): modelo › marca › todo, y dentro de eso cliente › tipo de cliente › todos. ' +
-    'Ej.: si un distribuidor tiene 64% y además "Distribuidor + SIEMENS 66%", en Siemens paga con 66% y en lo demás con 64%. ' +
-    'La regla "Todos · Todo el catálogo" es el descuento general que ven los visitantes. Los productos cargados a mano solo cambian con reglas de su marca o modelo.</p>' +
+    '<form id="r-form" class="caja"><h2>Dar un descuento</h2>' +
+    '<p class="ayuda">Cada regla dice <strong>a quién</strong>, <strong>en qué productos</strong> y <strong>cuánto</strong>. Si un producto tiene varias reglas, se usa la más específica: ' +
+    'la de un modelo antes que la de una marca, y la de una marca antes que la de todos los productos; y la de un cliente antes que la de su tipo o la general. ' +
+    'Los productos cargados a mano solo cambian con reglas de su marca o modelo.</p>' +
     '<div class="fila">' +
-      '<label style="flex:2 1 260px">A quién<select name="destino">' + destinoOpts + '</select></label>' +
-      '<label style="flex:1 1 150px">Aplica a<select name="alcance"><option value="todo">Todo el catálogo</option><option value="marca">Una marca</option><option value="modelo">Un modelo</option></select></label>' +
+      '<label style="flex:2 1 260px"><span><span class="paso">1</span>¿A quién?</span><select name="destino">' + destinoOpts + '</select></label>' +
+      '<label style="flex:1 1 190px"><span><span class="paso">2</span>¿En qué productos?</span><select name="alcance"><option value="todo">Todos los productos</option><option value="marca">Solo una marca</option><option value="modelo">Solo un modelo</option></select></label>' +
       '<label style="flex:1 1 170px" id="r-marca-l" hidden>Marca<select name="marca">' + marcas().map(m => '<option>' + esc(m) + '</option>').join('') + '</select></label>' +
       '<label style="flex:2 1 200px" id="r-modelo-l" hidden>Modelo<input name="modelo" list="dl-modelos" placeholder="Ej. GD20-2R2G-S2"></label>' +
-      '<label style="flex:1 1 150px">Tipo de precio<select name="forma"><option value="pct">% de descuento</option><option value="fijo">Precio fijo (USD)</option></select></label>' +
-      '<label style="flex:0 1 120px">Valor<input name="valor" type="number" step="0.01" min="0" required placeholder="60"></label>' +
-      '<label style="flex:2 1 200px">Nota (opcional)<input name="nota" placeholder="Ej. Acordado en septiembre"></label>' +
-    '</div><div class="fila" style="margin-top:12px"><button class="btn prim">Agregar regla</button></div><p class="error" id="r-err"></p>' +
+    '</div><div class="fila" style="margin-top:10px">' +
+      '<label style="flex:2 1 260px"><span><span class="paso">3</span>¿Cuánto?</span><select name="forma">' +
+        '<option value="adic">Descuento adicional al que ya tiene (%)</option>' +
+        '<option value="pct">Descuento total sobre precio de lista (%)</option>' +
+        '<option value="fijo">Precio fijo en USD (solo un modelo)</option></select></label>' +
+      '<label style="flex:0 1 130px">Valor<input name="valor" type="number" step="0.01" min="0" required placeholder="10"></label>' +
+      '<label style="flex:2 1 220px">Nota (opcional)<input name="nota" placeholder="Ej. Acordado en septiembre"></label>' +
+    '</div><div class="resumen" id="r-resumen"></div>' +
+    '<div class="fila" style="margin-top:12px"><button class="btn prim">Guardar regla</button></div><p class="error" id="r-err"></p>' +
     '<datalist id="dl-modelos">' + productos.slice(0, 5000).map(p => '<option value="' + esc(p.modelo) + '">').join('') + '</datalist></form>' +
 
     '<div class="caja"><h2>Probar un precio</h2><div class="fila">' +
@@ -336,35 +356,87 @@ function vistaDescuentos(){
 
   const f = $('r-form');
   if (filtro) f.elements.destino.value = filtro.startsWith('c:') || filtro.startsWith('tp:') ? filtro : 't:';
-  const sync = () => {
-    $('r-marca-l').hidden = f.elements.alcance.value !== 'marca';
-    $('r-modelo-l').hidden = f.elements.alcance.value !== 'modelo';
-    if (f.elements.alcance.value !== 'modelo') f.elements.forma.value = 'pct';
-    f.elements.forma.querySelector('[value=fijo]').disabled = f.elements.alcance.value !== 'modelo';
-    f.elements.valor.placeholder = f.elements.forma.value === 'pct' ? '60' : '180.00';
+  // Datos de la regla que se está armando en el formulario.
+  const leerForm = () => {
+    const [k, v] = f.elements.destino.value.split(/:(.*)/s);
+    const alc = f.elements.alcance.value;
+    return {
+      k, v, alc, forma: f.elements.forma.value, valor: Number(f.elements.valor.value),
+      marca: alc === 'marca' ? f.elements.marca.value.toUpperCase() : null,
+      modelo: alc === 'modelo' ? f.elements.modelo.value.trim() : null,
+    };
   };
-  f.elements.alcance.onchange = sync; f.elements.forma.onchange = sync; sync();
+  const nombreDestino = (x) => x.k === 'c' ? nombreCliente(x.v) : x.k === 'tp' ? 'Los clientes tipo ' + nombreTipo(x.v) : 'Todos (visitantes y clientes)';
+  const nombreAlcance = (x) => x.alc === 'marca' ? 'en ' + x.marca : x.alc === 'modelo' ? 'en el modelo ' + (x.modelo || '…') : 'en todos los productos';
+  // Descuento que tiene HOY ese destino en esos productos (sin contar una regla idéntica que se vaya a reemplazar).
+  const baseActual = (x) => {
+    const email = x.k === 'c' ? x.v : null;
+    const cli = email ? clientes.find(c => c.email === email) : null;
+    const tipo = x.k === 'tp' ? x.v : (cli ? cli.tipo_id : null);
+    const p = { marca: x.marca || '', modelo: x.modelo || '' };
+    const guardadas = reglas;
+    reglas = reglas.filter(r => !mismaClave(r, x));
+    const r = reglaPara(p, email, tipo);
+    reglas = guardadas;
+    return r;
+  };
+  const mismaClave = (r, x) => (r.cliente_email || null) === (x.k === 'c' ? x.v : null) && (r.tipo_id || null) === (x.k === 'tp' ? x.v : null) &&
+    (r.marca || null) === x.marca && String(r.modelo || '').toUpperCase() === String(x.modelo || '').toUpperCase();
+  const pctTotal = (base, extra) => Math.round((100 - (100 - base) * (100 - extra) / 100) * 100) / 100;
+
+  const sync = () => {
+    const x = leerForm();
+    $('r-marca-l').hidden = x.alc !== 'marca';
+    $('r-modelo-l').hidden = x.alc !== 'modelo';
+    const fijo = f.elements.forma.querySelector('[value=fijo]');
+    fijo.disabled = x.alc !== 'modelo';
+    if (fijo.disabled && f.elements.forma.value === 'fijo') f.elements.forma.value = 'adic';
+    const forma = f.elements.forma.value;
+    f.elements.valor.placeholder = forma === 'fijo' ? '180.00' : forma === 'adic' ? '10' : '65';
+    // Resumen en palabras de lo que va a pasar
+    const base = baseActual(x);
+    const hoy = !base ? 'precio de lista (sin descuento)'
+      : base.precio_fijo != null ? 'precio fijo de ' + money(base.precio_fijo)
+      : Number(base.descuento_pct) + '% de descuento (' + (base.cliente_email ? 'regla propia' : base.tipo_id ? 'por ser ' + nombreTipo(base.tipo_id) : base.marca ? 'regla de ' + base.marca + ' para todos' : 'descuento general') + ')';
+    let nuevo = '';
+    if (x.valor > 0 || (forma !== 'adic' && f.elements.valor.value !== '')){
+      if (forma === 'fijo') nuevo = 'precio fijo de <strong>' + money(x.valor) + '</strong>';
+      else if (forma === 'pct') nuevo = '<strong>' + x.valor + '%</strong> de descuento total';
+      else if (base && base.precio_fijo != null) nuevo = '<span style="color:var(--off)">no se puede sumar a un precio fijo; usa "Precio fijo"</span>';
+      else { const b = base ? Number(base.descuento_pct) : 0; nuevo = '<strong>' + pctTotal(b, x.valor) + '%</strong> de descuento total (' + b + '% + ' + x.valor + '% adicional sobre su precio)'; }
+    }
+    $('r-resumen').innerHTML = '<strong>' + esc(nombreDestino(x)) + '</strong> ' + esc(nombreAlcance(x)) + ':<br>Hoy: ' + hoy +
+      (nuevo ? '<br>Con esta regla: ' + nuevo : '');
+  };
+  ['destino', 'alcance', 'marca', 'forma'].forEach(n => f.elements[n].addEventListener('change', sync));
+  ['modelo', 'valor'].forEach(n => f.elements[n].addEventListener('input', sync));
+  sync();
+
   f.onsubmit = async (e) => {
     e.preventDefault();
-    const [k, v] = f.elements.destino.value.split(/:(.*)/s);
-    const d = { cliente_email: k === 'c' ? v : null, tipo_id: k === 'tp' ? v : null, marca: null, modelo: null, descuento_pct: null, precio_fijo: null, nota: f.elements.nota.value.trim() || null };
-    if (f.elements.alcance.value === 'marca') d.marca = f.elements.marca.value.toUpperCase();
-    if (f.elements.alcance.value === 'modelo'){
-      d.modelo = f.elements.modelo.value.trim();
-      if (!d.modelo){ $('r-err').textContent = 'Escribe el modelo.'; return; }
+    $('r-err').textContent = '';
+    const x = leerForm();
+    const d = { cliente_email: x.k === 'c' ? x.v : null, tipo_id: x.k === 'tp' ? x.v : null, marca: x.marca, modelo: x.modelo,
+                descuento_pct: null, precio_fijo: null, nota: f.elements.nota.value.trim() || null };
+    if (x.alc === 'modelo' && !d.modelo){ $('r-err').textContent = 'Escribe el modelo.'; return; }
+    if (!(x.valor >= 0)){ $('r-err').textContent = 'Escribe el valor.'; return; }
+    if (x.forma === 'fijo') d.precio_fijo = x.valor;
+    else if (x.forma === 'pct'){
+      if (x.valor > 100){ $('r-err').textContent = 'El descuento no puede pasar de 100%.'; return; }
+      d.descuento_pct = x.valor;
+    } else {
+      const base = baseActual(x);
+      if (base && base.precio_fijo != null){ $('r-err').textContent = 'Ese producto tiene precio fijo; usa "Precio fijo".'; return; }
+      const b = base ? Number(base.descuento_pct) : 0;
+      d.descuento_pct = pctTotal(b, x.valor);
+      if (!d.nota) d.nota = b + '% + ' + x.valor + '% adicional';
     }
-    const val = Number(f.elements.valor.value);
-    if (f.elements.forma.value === 'pct'){
-      if (!(val >= 0 && val <= 100)){ $('r-err').textContent = 'El descuento debe estar entre 0 y 100.'; return; }
-      d.descuento_pct = val;
-    } else d.precio_fijo = val;
     // Si ya existe una regla para exactamente lo mismo, se reemplaza.
-    const igual = reglas.find(r => (r.cliente_email || null) === d.cliente_email && (r.tipo_id || null) === d.tipo_id &&
-      (r.marca || null) === d.marca && String(r.modelo || '').toUpperCase() === String(d.modelo || '').toUpperCase() && d.modelo !== null === (r.modelo !== null));
+    const igual = reglas.find(r => mismaClave(r, x));
     const res = igual ? await sb.from('reglas_descuento').update(Object.assign({ activo: true }, d)).eq('id', igual.id)
                       : await sb.from('reglas_descuento').insert(d);
-    if (res.error){ $('r-err').textContent = res.error.message; return; }
-    await recargarBase(); toast(igual ? 'Regla actualizada' : 'Regla agregada');
+    if (res.error){ $('r-err').textContent = mensajeError(res.error); return; }
+    await recargarBase(); toast(igual ? 'Regla actualizada' : 'Regla guardada');
     reglaDestinoInicial = f.elements.destino.value; vistaDescuentos();
   };
 
@@ -380,13 +452,13 @@ function vistaDescuentos(){
         '<td><button class="btn chico peligro" data-borrar="' + r.id + '">Eliminar</button></td></tr>').join('') + '</tbody></table>';
     document.querySelectorAll('[data-activa]').forEach(ch => ch.onchange = async () => {
       const { error } = await sb.from('reglas_descuento').update({ activo: ch.checked }).eq('id', ch.dataset.activa);
-      if (error) return toast('Error: ' + error.message);
+      if (error) return toast('Error: ' + mensajeError(error));
       await recargarBase(); pintarLista(); toast(ch.checked ? 'Regla activada' : 'Regla desactivada');
     });
     document.querySelectorAll('[data-borrar]').forEach(b => b.onclick = async () => {
       if (!confirm('¿Eliminar esta regla?')) return;
       const { error } = await sb.from('reglas_descuento').delete().eq('id', b.dataset.borrar);
-      if (error) return toast('Error: ' + error.message);
+      if (error) return toast('Error: ' + mensajeError(error));
       await recargarBase(); pintarLista(); toast('Regla eliminada');
     });
   };
@@ -419,13 +491,13 @@ function vistaTipos(){
   document.querySelectorAll('[data-guardar]').forEach(b => b.onclick = async () => {
     const nombre = document.querySelector('[data-nombre="' + b.dataset.guardar + '"]').value.trim();
     const { error } = await sb.from('tipos_cliente').update({ nombre }).eq('id', b.dataset.guardar);
-    if (error) return toast('Error: ' + error.message);
+    if (error) return toast('Error: ' + mensajeError(error));
     await recargarBase(); toast('Guardado');
   });
   document.querySelectorAll('[data-borrar]').forEach(b => b.onclick = async () => {
     if (!confirm('¿Eliminar este tipo? Sus reglas se borran y sus clientes quedan sin tipo.')) return;
     const { error } = await sb.from('tipos_cliente').delete().eq('id', b.dataset.borrar);
-    if (error) return toast('Error: ' + error.message);
+    if (error) return toast('Error: ' + mensajeError(error));
     await recargarBase(); vistaTipos(); toast('Tipo eliminado');
   });
   $('t-form').onsubmit = async (e) => {
@@ -433,7 +505,7 @@ function vistaTipos(){
     const nombre = e.target.elements.nombre.value.trim();
     const id = nombre.normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
     const { error } = await sb.from('tipos_cliente').insert({ id, nombre, orden: tipos.length + 1 });
-    if (error){ $('t-err').textContent = error.code === '23505' ? 'Ese tipo ya existe.' : error.message; return; }
+    if (error){ $('t-err').textContent = error.code === '23505' ? 'Ese tipo ya existe.' : mensajeError(error); return; }
     await recargarBase(); vistaTipos(); toast('Tipo agregado');
   };
 }

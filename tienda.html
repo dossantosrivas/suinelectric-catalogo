@@ -1546,6 +1546,16 @@ function mostrarVista(){
   else aplicarFiltros();
 }
 
+// Imagen de presentación de cada familia en Inicio ("Compra por categoría").
+// Si una familia no está aquí (o la imagen no carga), se usa la foto de un producto.
+const IMAGENES_FAMILIA = {
+  'Variadores y Arrancadores': 'https://image.makewebeasy.net/makeweb/m_1920x0/IyLW6tgjN/GD200A/IMG_2296.png',
+  'Control de Motores': 'https://grupo-electricos.com/wp-content/uploads/2023/07/3RT103X.jpg',
+  'Automatización y PLC': 'https://cdn.myshoptet.com/usr/eshop.sampli.cz/user/shop/big/450_plc-ridici-modul-6ed1052-1md08-0ba3-siemens-logo-12-24rce.png?69ee3449',
+  'Sensores e Instrumentación': 'https://grupo-electricos.com/wp-content/uploads/2023/07/3SE5112-0CH50.jpg',
+  'Mando y Señalización': 'https://grupo-electricos.com/wp-content/uploads/2023/07/3sb36XX-0BA40.jpg',
+};
+
 // Imagen representativa de una categoría (ruta): la primera imagen de un
 // producto que esté dentro de esa ruta (si existe).
 function imagenDeRuta(ruta){
@@ -1670,12 +1680,15 @@ function renderInicio(){
   for (const fam of familias){
     const nodoFam = arbolInicio.hijos[fam];
     const cats = Object.keys(nodoFam.hijos).sort((a,b)=>compararHermanos([fam], a, b));
-    const img = (cats.length && imagenDeRuta([fam, cats[0]])) || imagenDeRuta([fam]);
+    const imgAuto = (cats.length && imagenDeRuta([fam, cats[0]])) || imagenDeRuta([fam]);
+    const img = IMAGENES_FAMILIA[fam] || imgAuto;
     const hrefFam = hashDeRuta([fam]);
     const dataFam = encodeURIComponent(claveDe([fam]));
     html += '<div class="fam-card">' +
               '<a class="enlace-cat fam-card-img" href="' + hrefFam + '" data-ruta="' + dataFam + '" aria-hidden="true" tabindex="-1">' +
-                (img ? '<img src="' + img + '" alt="" loading="lazy">' : '<span class="cat-card-noimg">⚡</span>') +
+                (img ? '<img src="' + img + '" alt="" loading="lazy"' +
+                  (imgAuto && img !== imgAuto ? ' onerror="this.onerror=null;this.src=\'' + imgAuto + '\'"' : '') + '>'
+                     : '<span class="cat-card-noimg">⚡</span>') +
               '</a>' +
               '<a class="enlace-cat fam-card-nombre" href="' + hrefFam + '" data-ruta="' + dataFam + '">' +
                 escHtml(fam) + '<span class="cat-card-flecha">→</span></a>' +
