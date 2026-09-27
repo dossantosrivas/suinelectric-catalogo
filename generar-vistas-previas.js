@@ -267,7 +267,7 @@ for (const n of nodos.values()){
 }
 
 /* ---------- sitemap.xml ---------- */
-const lista = ['/tienda'].concat(urls.filter(u => u.startsWith('/c/')), urls.filter(u => u.startsWith('/p/')));
+const lista = ['/tienda'].concat(fs.existsSync(path.join(RAIZ, 'links.html')) ? ['/links'] : [], urls.filter(u => u.startsWith('/c/')), urls.filter(u => u.startsWith('/p/')));
 const xml = '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' +
   [...new Set(lista)].map(u => '  <url><loc>' + esc(DOMINIO + u) + '</loc><lastmod>' + FECHA + '</lastmod></url>').join('\n') + '\n</urlset>\n';
 fs.writeFileSync(path.join(RAIZ, 'sitemap.xml'), xml);

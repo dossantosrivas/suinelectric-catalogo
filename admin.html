@@ -2,6 +2,14 @@
 <html lang="es">
 <head>
 <meta charset="UTF-8">
+<script>
+// Una sola dirección para la tienda: la sesión se guarda por dominio, así que
+// www.suinelectric.com o la dirección vieja de Netlify serían "otra tienda" sin sesión.
+(function(){ var h = location.hostname;
+  if (h === 'www.suinelectric.com' || /\.netlify\.app$/.test(h))
+    location.replace('https://suinelectric.com' + location.pathname + location.search + location.hash);
+})();
+</script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
 <title>Panel de administrador | Suinelectric</title>
@@ -365,7 +373,7 @@ async function iniciar(){
     $('raiz').innerHTML = '<div class="entrada"><div class="caja">' + marcaHTML() +
       '<h2 style="margin:0 0 8px">Sin acceso</h2><p>Estás conectado como <strong>' + esc(email) + '</strong>, que no es una cuenta de administrador.</p>' +
       '<button class="btn prim" id="b-salir2" style="width:100%">Entrar con el correo de administrador</button></div></div>';
-    $('b-salir2').onclick = async () => { await sb.auth.signOut(); location.reload(); };
+    $('b-salir2').onclick = async () => { await sb.auth.signOut({ scope: 'local' }); location.reload(); };
     return;
   }
   yo = cli;
@@ -430,7 +438,7 @@ function armarApp(){
     '<div class="side-pie"><div class="quien">' + esc(yo.email) + '</div><div class="acciones"><a href="tienda.html" target="_blank" rel="noopener">Ver tienda ↗</a><button id="salir">Salir</button></div></div>' +
     '</aside><main class="contenido" id="main"></main></div>';
   document.querySelectorAll('#nav button').forEach(b => b.onclick = () => irA(b.dataset.tab));
-  $('salir').onclick = async () => { await sb.auth.signOut(); location.reload(); };
+  $('salir').onclick = async () => { await sb.auth.signOut({ scope: 'local' }); location.reload(); };
 }
 function irA(t){ tab = t; mostrar(); window.scrollTo(0, 0); }
 function mostrar(){
