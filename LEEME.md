@@ -51,3 +51,13 @@ Gana la regla más específica (no se suman):
 
 Los productos cargados a mano (`productos_manuales.json`) mantienen su precio de catálogo salvo que tengan una regla de su marca o modelo.
 El precio fijo (en USD) solo se puede poner a un modelo.
+
+## 6. Existencias reales solo para quien tú elijas
+La tienda pública muestra "+10 disponibles", "Últimas unidades" o "Agotado". Las cantidades exactas solo las ven los administradores y los clientes (o tipos de cliente) a quienes les des permiso en el panel → **Existencias**.
+
+1. Supabase → **SQL Editor** → pega todo `03_existencias.sql` → **Run** (se puede volver a correr).
+2. Supabase → **Project Settings → API Keys** → copia una **Secret key** (empieza con `sb_secret_`).
+3. GitHub → el repo → **Settings → Secrets and variables → Actions → New repository secret**:
+   - `SUPABASE_URL` = `https://yqnlxhbjassrkudnhvpr.supabase.co`
+   - `SUPABASE_SECRET_KEY` = la clave del paso 2 (nunca la pongas en un archivo del repo)
+4. Cada día, después del scraper, `subir-existencias.js` sube las cantidades a Supabase.

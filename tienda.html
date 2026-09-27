@@ -1009,6 +1009,27 @@ function precioMostrado(p){
   }
   return esManual(p) ? n : precioConDescuento(n);
 }
+/* ---------- Existencias ----------
+   El catálogo público solo trae un rango (p.stock: "+10" o "pocas").
+   Las cantidades reales llegan de Supabase solo para administradores y
+   clientes con permiso (existenciasReales = { MODELO: cantidad }). */
+let existenciasReales = null;
+function cantidadReal(p){
+  if (!existenciasReales || !p || !p.modelo) return null;
+  const n = existenciasReales[p.modelo];
+  return typeof n === 'number' ? n : null;
+}
+function textoStock(p, siAgotado){
+  if (!p.disponible) return siAgotado || 'Agotado';
+  const real = cantidadReal(p);
+  if (real != null && real > 0) return real + ' disponible' + (real === 1 ? '' : 's');
+  let rango = p.stock;
+  if (!rango && p.existencias != null && !isNaN(Number(p.existencias)) && Number(p.existencias) > 0)
+    rango = Number(p.existencias) > 10 ? '+10' : 'pocas';   // respaldo (catálogo viejo)
+  if (rango === '+10') return '+10 disponibles';
+  if (rango === 'pocas') return 'Últimas unidades';
+  return 'Disponible';
+}
 function formatoMoneda(p){ if (p === null || p === undefined) return "Consultar"; return "$" + Math.ceil(p).toLocaleString('en-US'); }
 
 /* =====================================================================
@@ -1830,9 +1851,7 @@ function tarjetaHTML(p){
   let precioTachado = null;
   if (p.precio != null && precioFinal != null && Math.ceil(precioFinal) < Math.ceil(Number(p.precio))) precioTachado = p.precio;
   else if (!esManual(p) && p.precio_lista != null) precioTachado = p.precio_lista;
-  const estadoTexto = (p.existencias != null)
-    ? (p.disponible ? p.existencias + " disponible" + (p.existencias === 1 ? '' : 's') : 'Agotado')
-    : (p.disponible ? 'Disponible' : 'Agotado');
+  const estadoTexto = textoStock(p, 'Agotado');
   const logoMarca = logoDeMarca(p.marca);
 
   return `
@@ -2207,9 +2226,7 @@ function renderSugerencias(){
         '<div class="sug-fila-datos">' +
           '<span class="sug-precio">' + formatoMoneda(precioMostrado(p)) + '</span>' + badgeDescuento(p, 'dto-chico') +
           '<span class="sug-stock ' + (p.disponible ? 'ok' : 'off') + '">' +
-            (p.disponible
-              ? (p.existencias != null ? p.existencias + ' disponible' + (p.existencias === 1 ? '' : 's') : 'Disponible')
-              : 'Agotado') +
+            textoStock(p, 'Agotado') +
           '</span>' +
         '</div>' +
       '</div>' +
@@ -2257,9 +2274,7 @@ async function copiarDatosProducto(modelo){
   const p = productos.find(x => x.modelo === modelo);
   if (!p) return;
   const precioFinal = precioMostrado(p);
-  const estadoTexto = (p.existencias != null)
-    ? p.existencias + " disponible" + (p.existencias === 1 ? '' : 's')
-    : (p.disponible ? 'Disponible' : 'No disponible');
+  const estadoTexto = textoStock(p, 'No disponible');
   const rutaCat = rutaDe(p).join(' > ');
 
   const texto = [
@@ -2302,9 +2317,7 @@ function abrirDetalle(modelo){
   if (!p) return;
   const cont = document.getElementById('detalle-contenido');
   const precioFinal = precioMostrado(p);
-  const estadoTexto = (p.existencias != null)
-    ? p.existencias + " disponible" + (p.existencias === 1 ? '' : 's')
-    : (p.disponible ? 'Disponible' : 'No disponible');
+  const estadoTexto = textoStock(p, 'No disponible');
   const rutaCat = rutaDe(p).join(' > ');
   const logoMarca = logoDeMarca(p.marca);
   const muestraAntes = p.precio != null && precioFinal != null && Math.ceil(precioFinal) < Math.ceil(Number(p.precio));
@@ -2695,6 +2708,14 @@ async function cargarSesionYReglas(){
       sesion.cliente = ficha || null;
       sesion.admin = !!(ficha && ficha.es_admin && ficha.activo);
       sesion.bloqueado = !!(ficha && ficha.activo === false);
+    }
+    // Cantidades reales: Supabase solo las entrega si esta cuenta tiene permiso.
+    existenciasReales = null;
+    if (sesion.email && !sesion.bloqueado){
+      try {
+        const { data: ex, error: errEx } = await sb.rpc('existencias_reales');
+        if (!errEx && ex && typeof ex === 'object') existenciasReales = ex;
+      } catch (e) { /* sin permiso o función no instalada: se muestran los rangos */ }
     }
     const [{ data: reglas, error: errR }, { data: tipos }] = await Promise.all([
       sb.from('reglas_descuento').select('*').eq('activo', true),

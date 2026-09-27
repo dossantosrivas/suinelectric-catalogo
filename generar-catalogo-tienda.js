@@ -52,14 +52,27 @@ try { sharp = require('sharp'); } catch (e) { console.log('(sharp no instalado: 
 /* ---------- Qué campos llegan a la tienda ---------- */
 const CAMPOS = [
   'modelo', 'nombre', 'marca', 'sku',
-  'precio', 'precio_lista', 'disponible', 'existencias',
+  'precio', 'precio_lista', 'disponible',
   'descripcion', 'imagen', 'imagenes',
   'categoria', 'categoria_principal', 'categorias', 'subcategoria', 'subcategorias',
 ];
 const vacio = (v) => v === null || v === undefined || v === '' || (Array.isArray(v) && v.length === 0);
+// Las cantidades exactas NO se publican. La tienda solo recibe un rango:
+//   "+10"   → más de 10 unidades        → "+10 disponibles"
+//   "pocas" → de 1 a LIMITE_POCAS        → "Últimas unidades"
+// Las cantidades reales van a Supabase (subir-existencias.js) y solo las ven
+// los administradores y los clientes a quienes les des permiso en el panel.
+const LIMITE_POCAS = 10;
+function rangoStock(p){
+  const n = Number(p.existencias);
+  if (p.existencias == null || isNaN(n) || p.disponible === false || n <= 0) return null;
+  return n > LIMITE_POCAS ? '+10' : 'pocas';
+}
 function reducir(p){
   const r = {};
   for (const k of CAMPOS) if (!vacio(p[k])) r[k] = p[k];
+  const stock = rangoStock(p);
+  if (stock) r.stock = stock;
   return r;
 }
 

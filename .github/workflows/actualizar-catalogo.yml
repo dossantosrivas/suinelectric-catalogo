@@ -30,6 +30,12 @@ jobs:
       - name: Correr el scraper (catálogo completo)
         run: node scraper.js
 
+      - name: Subir existencias reales a Supabase (solo las ven admins y clientes con permiso)
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+        run: node subir-existencias.js
+
       - name: Guardar productos.json y categorias.json (con reintentos)
         run: |
           git config user.name "github-actions[bot]"
