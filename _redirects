@@ -1,0 +1,3 @@
+# La portada lleva directo a la tienda (redirección permanente, la entiende Google)
+/            /tienda   301
+/index.html  /tienda   301

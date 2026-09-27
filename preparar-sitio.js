@@ -20,7 +20,7 @@ const DESTINO = path.join(RAIZ, 'sitio');
 // Lo que se publica. Agrega aquí cualquier archivo o carpeta nueva que la web necesite.
 const PUBLICAR = [
   'index.html', 'tienda.html', 'admin.html',
-  '_headers', '_redirects',
+  '_headers', '_redirects', 'robots.txt', 'sitemap.xml', 'publico.css',
   'catalogo-tienda.json',
   'imagenes',          // logos, fotos propias, fotos de productos y familias
   'p', 'c',            // vistas previas para WhatsApp/redes

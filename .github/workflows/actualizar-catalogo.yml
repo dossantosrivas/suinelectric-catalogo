@@ -70,7 +70,7 @@ jobs:
             # tienda.html más reciente y los productos nuevos.
             node generar-vistas-previas.js
 
-            git add productos.json categorias.json catalogo-tienda.json imagenes/productos imagenes/familias p c
+            git add productos.json categorias.json catalogo-tienda.json imagenes/productos imagenes/familias p c sitemap.xml
 
             if git diff --staged --quiet; then
               echo "Sin cambios que subir."

@@ -61,3 +61,8 @@ La tienda pública muestra "+10 disponibles", "Últimas unidades" o "Agotado". L
    - `SUPABASE_URL` = `https://yqnlxhbjassrkudnhvpr.supabase.co`
    - `SUPABASE_SECRET_KEY` = la clave del paso 2 (nunca la pongas en un archivo del repo)
 4. Cada día, después del scraper, `subir-existencias.js` sube las cantidades a Supabase.
+
+## 7. Google (Search Console)
+- Cada día se generan páginas reales por producto (`/p/…`) y categoría (`/c/…`) con datos para Google, más `sitemap.xml`.
+- `robots.txt` le dice a Google dónde está el sitemap y que no entre a `/admin`.
+- Alta en Google: search.google.com/search-console → Agregar propiedad → **Dominio** `suinelectric.com` → verificar con Cloudflare → Sitemaps → `https://suinelectric.com/sitemap.xml`.

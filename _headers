@@ -4,3 +4,5 @@
   X-Robots-Tag: noindex
 /imagenes/productos/*
   Cache-Control: public, max-age=2592000
+/publico.css
+  Cache-Control: public, max-age=86400
