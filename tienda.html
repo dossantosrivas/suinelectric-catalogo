@@ -291,6 +291,12 @@
   .price-row{ display:flex; align-items:flex-end; justify-content:space-between; margin-top:auto; gap:8px; }
   .precio-box{ display:flex; flex-direction:column; }
   .precio-original{ font-size:13px; color:var(--texto-3); text-decoration:line-through; }
+  .precio-linea{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .dto-badge{ display:inline-block; font-size:12.5px; font-weight:700; line-height:1; padding:4px 7px; border-radius:4px;
+    background:var(--ok-suave); color:var(--ok); white-space:nowrap; font-variant-numeric:tabular-nums; }
+  .dto-badge.dto-propio{ background:var(--amarillo); color:var(--tinta); }
+  .dto-badge.dto-grande{ font-size:15px; padding:6px 9px; margin-left:10px; vertical-align:middle; }
+  .dto-badge.dto-chico{ font-size:11px; padding:3px 5px; }
   .precio{ font-size:24px; font-weight:700; color:var(--tinta); line-height:1.15; font-variant-numeric:tabular-nums; }
   .precio-nota{ font-size:12px; color:var(--texto-3); font-style:italic; }
 
@@ -975,6 +981,21 @@ function precioConDescuento(p){ if (p === null || p === undefined) return null; 
 // agregados a mano (_manual === true) siempre muestran su precio de
 // catálogo tal cual, sin descuento.
 function esManual(p){ return p && p._manual === true; }
+// % de descuento que está viendo este cliente en este producto (para mostrarlo junto al precio).
+function descuentoDe(p){
+  const lista = Number(p.precio), final = precioMostrado(p);
+  if (!(lista > 0) || final == null || final >= lista) return null;
+  const r = (typeof reglaPara === 'function') ? reglaPara(p) : null;
+  const pct = Math.round((1 - final / lista) * 1000) / 10;
+  return { pct, fijo: !!(r && r.precio_fijo != null), propio: !!(r && (r.cliente_email || r.tipo_id)) };
+}
+function badgeDescuento(p, extraCls){
+  const d = descuentoDe(p);
+  if (!d) return '';
+  const titulo = d.fijo ? 'Precio especial para ti' : d.propio ? 'Tu descuento de cliente' : 'Descuento sobre precio de lista';
+  return '<span class="dto-badge' + (d.propio || d.fijo ? ' dto-propio' : '') + (extraCls ? ' ' + extraCls : '') + '" title="' + titulo + '">-' +
+         String(d.pct).replace('.', ',') + '%' + (d.fijo ? ' · especial' : '') + '</span>';
+}
 function precioMostrado(p){
   // Precio según las reglas de descuento de quien está viendo (ver CUENTAS DE CLIENTES).
   const r = (typeof reglaPara === 'function') ? reglaPara(p) : null;
@@ -1827,7 +1848,7 @@ function tarjetaHTML(p){
         <div class="price-row">
           <div class="precio-box">
             ${precioTachado != null ? '<span class="precio-original">'+formatoMoneda(precioTachado)+'</span>' : ''}
-            <span class="precio">${formatoMoneda(precioFinal)}</span>
+            <span class="precio-linea"><span class="precio">${formatoMoneda(precioFinal)}</span>${badgeDescuento(p)}</span>
             ${(esManual(p) && precioFinal != null) ? '<span class="precio-nota">precio de catálogo</span>' : ''}
           </div>
         </div>
@@ -2183,7 +2204,7 @@ function renderSugerencias(){
         (p.descripcion ? '<div class="sug-desc">' + p.descripcion + '</div>' : '') +
         '<div class="sug-ruta">' + migasHTML(rutaNavDe(p)) + '</div>' +
         '<div class="sug-fila-datos">' +
-          '<span class="sug-precio">' + formatoMoneda(precioMostrado(p)) + '</span>' +
+          '<span class="sug-precio">' + formatoMoneda(precioMostrado(p)) + '</span>' + badgeDescuento(p, 'dto-chico') +
           '<span class="sug-stock ' + (p.disponible ? 'ok' : 'off') + '">' +
             (p.disponible
               ? (p.existencias != null ? p.existencias + ' disponible' + (p.existencias === 1 ? '' : 's') : 'Disponible')
@@ -2312,6 +2333,7 @@ function abrirDetalle(modelo){
         '<div class="det-precio-bloque">' +
           '<div class="det-precio">' + formatoMoneda(precioFinal) +
             (muestraAntes ? '<span class="det-precio-antes">' + formatoMoneda(p.precio) + '</span>' : '') +
+            badgeDescuento(p, 'dto-grande') +
           '</div>' +
           (esManual(p) && precioFinal != null ? '<span class="precio-nota">precio de catálogo</span>' : '') +
           '<div><span class="estado ' + (p.disponible ? 'ok' : 'off') + '">' + (p.disponible ? estadoTexto : 'Agotado') + '</span></div>' +
@@ -2412,7 +2434,7 @@ function renderCarrito(){
       '<div class="ci-info">' +
         '<div class="ci-modelo">' + producto.modelo + '</div>' +
         '<div class="ci-cat">' + ruta + '</div>' +
-        '<div class="ci-precio">' + formatoMoneda(precioUnitFinal) + ' c/u' +
+        '<div class="ci-precio">' + formatoMoneda(precioUnitFinal) + ' c/u ' + badgeDescuento(producto, 'dto-chico') +
           (tieneDescuento ? ' <span class="ci-precio-tachado">' + formatoMoneda(precioUnitLista) + '</span>' : '') +
           (esManual(producto) ? ' <span class="precio-nota">catálogo</span>' : '') +
         '</div>' +
@@ -2602,10 +2624,10 @@ try {
 } catch (e){ console.warn('Supabase no disponible', e); sb = null; }
 
 const sesion = { email: null, cliente: null, admin: false, bloqueado: false };
-// Un cliente nuevo debe completar nombre y RIF/cédula antes de seguir.
+// Un cliente nuevo debe decirnos al menos su nombre (el RIF/cédula es opcional).
 function faltanDatos(){
   const c = sesion.cliente;
-  return !!(sesion.email && c && !sesion.bloqueado && !sesion.admin && (!c.nombre || !c.rif));
+  return !!(sesion.email && c && !sesion.bloqueado && !sesion.admin && !c.nombre);
 }
 let reglasDescuento = [];     // solo las que le aplican a quien está viendo (lo filtra Supabase)
 let tiposCliente = {};        // id -> nombre
@@ -2633,8 +2655,8 @@ async function cargarSesionYReglas(){
       // Si creó la cuenta con clave, sus datos de registro vienen guardados en la cuenta: los pasamos a su ficha.
       const meta = (session.user && session.user.user_metadata) || {};
       let ficha = cli;
-      if (ficha && ficha.activo !== false && (!ficha.nombre || !ficha.rif) && meta.nombre && meta.rif){
-        const { data: act } = await sb.from('clientes').update({ nombre: ficha.nombre || meta.nombre, rif: ficha.rif || meta.rif, telefono: ficha.telefono || meta.telefono || null })
+      if (ficha && ficha.activo !== false && (!ficha.nombre || !ficha.rif) && meta.nombre){
+        const { data: act } = await sb.from('clientes').update({ nombre: ficha.nombre || meta.nombre, rif: ficha.rif || meta.rif || null, telefono: ficha.telefono || meta.telefono || null })
           .eq('email', sesion.email).select().maybeSingle();
         if (act) ficha = act;
       }
@@ -2780,6 +2802,7 @@ async function renderCuenta(pestana){
 
 // Datos mínimos de un cliente nuevo (el resto lo completa luego en "Mis datos").
 function normalizarRif(v){
+  if (!String(v || '').trim()) return '';
   let t = String(v || '').toUpperCase().replace(/\s+/g, '').replace(/\./g, '');
   if (/^\d/.test(t)) t = 'V-' + t;                       // solo números: cédula venezolana
   t = t.replace(/^([VEJGPC])-?(\d+)-?(\d)?$/, (m, l, n, d) => l + '-' + n + (d ? '-' + d : ''));
@@ -2790,10 +2813,10 @@ function renderRegistro(cont){
   const c = sesion.cliente || {};
   cont.innerHTML =
     '<h2 class="cta-titulo">Completa tu registro</h2>' +
-    '<p class="cta-sub">Es la primera vez que entras con <strong>' + escHtml(sesion.email) + '</strong>. Necesitamos estos datos para tus ofertas y pedidos; el resto lo puedes agregar después en "Mis datos".</p>' +
+    '<p class="cta-sub">Es la primera vez que entras con <strong>' + escHtml(sesion.email) + '</strong>. Solo necesitamos tu nombre para tus ofertas y pedidos; lo demás es opcional y lo puedes agregar después en "Mis datos".</p>' +
     '<form id="cta-form-reg" class="cta-form">' +
       '<label>Nombre y apellido, o razón social *<input name="nombre" required autocomplete="name" value="' + escHtml(c.nombre || '') + '" placeholder="Ej. Pedro Pérez / Industrias XYZ, C.A."></label>' +
-      '<label>RIF o cédula *<input name="rif" required value="' + escHtml(c.rif || '') + '" placeholder="Ej. J-12345678-9 o V-12345678"></label>' +
+      '<label><span>RIF o cédula <span class="cta-hint">(opcional)</span></span><input name="rif" value="' + escHtml(c.rif || '') + '" placeholder="Ej. J-12345678-9 o V-12345678"></label>' +
       '<label>Teléfono (WhatsApp)<input name="telefono" type="tel" autocomplete="tel" value="' + escHtml(c.telefono || '') + '" placeholder="Ej. 0412-1234567"></label>' +
       '<button type="submit" class="btn btn-cart-add">Guardar y continuar</button>' +
     '</form><p class="cta-error" id="cta-error-reg"></p>' +
@@ -2807,9 +2830,9 @@ function renderRegistro(cont){
     const rif = normalizarRif(f.elements.rif.value);
     f.elements.rif.value = rif;
     if (nombre.length < 3){ err.textContent = 'Escribe tu nombre o la razón social.'; return; }
-    if (!rifValido(rif)){ err.textContent = 'El RIF o cédula no parece válido. Ej.: J-12345678-9 o V-12345678.'; return; }
+    if (rif && !rifValido(rif)){ err.textContent = 'El RIF o cédula no parece válido. Ej.: J-12345678-9 o V-12345678 (o déjalo en blanco).'; return; }
     const b = f.querySelector('button'); b.disabled = true; b.textContent = 'Guardando…';
-    const datos = { nombre, rif, telefono: f.elements.telefono.value.trim() || c.telefono || null };
+    const datos = { nombre, rif: rif || null, telefono: f.elements.telefono.value.trim() || c.telefono || null };
     const { data, error } = await sb.from('clientes').update(datos).eq('email', sesion.email).select().maybeSingle();
     if (error || !data){ b.disabled = false; b.textContent = 'Guardar y continuar'; err.textContent = 'No se pudo guardar. Intenta de nuevo.'; return; }
     sesion.cliente = data;
@@ -2856,7 +2879,7 @@ function renderLogin(cont){
     cuerpo = pestanas +
       '<form id="cta-form-crear" class="cta-form">' +
         '<label>Nombre y apellido, o razón social *<input name="nombre" required autocomplete="name" placeholder="Ej. Pedro Pérez / Industrias XYZ, C.A."></label>' +
-        '<label>RIF o cédula *<input name="rif" required placeholder="Ej. J-12345678-9 o V-12345678"></label>' +
+        '<label><span>RIF o cédula <span class="cta-hint">(opcional)</span></span><input name="rif" placeholder="Ej. J-12345678-9 o V-12345678"></label>' +
         '<label>Correo electrónico *<input name="email" type="email" required autocomplete="email" placeholder="tucorreo@empresa.com"></label>' +
         '<label><span>Crea tu clave * <span class="cta-hint">(mínimo 8 caracteres)</span></span><input name="clave" type="password" required minlength="8" autocomplete="new-password"></label>' +
         '<label>Repite la clave *<input name="clave2" type="password" required minlength="8" autocomplete="new-password"></label>' +
@@ -2919,7 +2942,7 @@ function renderLogin(cont){
       const nombre = el.nombre.value.trim(), rif = normalizarRif(el.rif.value), email = el.email.value.trim().toLowerCase();
       el.rif.value = rif;
       if (nombre.length < 3){ err.textContent = 'Escribe tu nombre o la razón social.'; return; }
-      if (!rifValido(rif)){ err.textContent = 'El RIF o cédula no parece válido. Ej.: J-12345678-9 o V-12345678.'; return; }
+      if (rif && !rifValido(rif)){ err.textContent = 'El RIF o cédula no parece válido. Ej.: J-12345678-9 o V-12345678 (o déjalo en blanco).'; return; }
       if (el.clave.value.length < 8){ err.textContent = 'La clave debe tener al menos 8 caracteres.'; return; }
       if (el.clave.value !== el.clave2.value){ err.textContent = 'Las claves no coinciden.'; return; }
       const b = fCrear.querySelector('button'); ocupado(b, 'Creando cuenta…');
@@ -3089,7 +3112,7 @@ async function registrarPedido(){
     if (faltanDatos()){
       document.getElementById('cart-drawer').classList.remove('abierto');
       abrirCuenta();
-      mostrarToast('Completa tu nombre y RIF para enviar el pedido');
+      mostrarToast('Dinos tu nombre para enviar el pedido');
       return;
     }
     const urlBase = a.getAttribute('href');
