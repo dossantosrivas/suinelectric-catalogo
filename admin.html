@@ -40,7 +40,7 @@
   table{ width:100%; border-collapse:collapse; font-size:14px; }
   th{ text-align:left; font-size:12px; text-transform:uppercase; letter-spacing:.4px; color:var(--texto-3); padding:8px; border-bottom:1px solid var(--linea); white-space:nowrap; }
   td{ padding:8px; border-bottom:1px solid var(--linea-suave); vertical-align:top; }
-  tr.inactivo td{ opacity:.5; }
+  tr.inactivo td:not(:last-child){ opacity:.5; }
   .tabla-wrap{ overflow-x:auto; }
   .muted{ color:var(--texto-3); font-size:13px; }
   .pill{ display:inline-block; font-size:12px; font-weight:700; border-radius:12px; padding:2px 9px; background:var(--linea-suave); color:var(--texto-2); white-space:nowrap; }
@@ -242,7 +242,7 @@ function formCliente(c){
       '<label style="flex:1 1 150px">Teléfono<input name="telefono" value="' + esc(c.telefono || '') + '"></label>' +
       '<label style="flex:3 1 260px">Dirección<input name="direccion" value="' + esc(c.direccion || '') + '"></label>' +
       '<label style="flex:1 1 160px">Tipo de cliente<select name="tipo_id"><option value="">—</option>' + tipos.map(t => '<option value="' + t.id + '"' + (c.tipo_id === t.id || (nuevo && t.id === 'final') ? ' selected' : '') + '>' + esc(t.nombre) + '</option>').join('') + '</select></label>' +
-      '<label style="flex:0 0 auto">Activo<select name="activo"><option value="true"' + (c.activo !== false ? ' selected' : '') + '>Sí</option><option value="false"' + (c.activo === false ? ' selected' : '') + '>No</option></select></label>' +
+      '<label style="flex:0 0 auto">Estado<select name="activo"><option value="true"' + (c.activo !== false ? ' selected' : '') + '>Activo</option><option value="false"' + (c.activo === false ? ' selected' : '') + '>Bloqueado</option></select></label>' +
       '<label style="flex:0 0 auto">Administrador<select name="es_admin"><option value="false">No</option><option value="true"' + (c.es_admin ? ' selected' : '') + '>Sí</option></select></label>' +
     '</div><div class="fila" style="margin-top:12px"><button class="btn prim">' + (nuevo ? 'Crear cliente' : 'Guardar cambios') + '</button>' +
     '<button type="button" class="btn" id="c-cancelar">Cancelar</button>' +
@@ -253,7 +253,9 @@ function vistaClientes(editar){
   const lista = clientes.filter(c => !q || [c.email, c.nombre, c.empresa, c.rif].join(' ').toLowerCase().includes(q));
   $('main').innerHTML = (editar !== undefined ? formCliente(editar) : '') +
     '<div class="caja"><div class="fila" style="justify-content:space-between"><h2 style="margin:0">Clientes (' + clientes.length + ')</h2>' +
-    '<div class="fila"><input id="c-busca" placeholder="Buscar…" value="' + esc(buscaCli) + '"><button class="btn prim" id="c-nuevo">+ Nuevo cliente</button></div></div>' +
+    '<div class="fila"><input id="c-busca" placeholder="Buscar…" value="' + esc(buscaCli) + '"><button class="btn" id="c-bloquear-correo">🚫 Bloquear un correo</button><button class="btn prim" id="c-nuevo">+ Nuevo cliente</button></div></div>' +
+    '<form id="c-form-bloq" class="fila" style="margin-top:10px" hidden><label style="flex:1 1 260px">Correo a bloquear (aunque todavía no se haya registrado)<input name="email" type="email" required placeholder="correo@ejemplo.com"></label>' +
+    '<button class="btn peligro">Bloquear</button><button type="button" class="btn" id="c-bloq-cancelar">Cancelar</button></form>' +
     '<div class="tabla-wrap" style="margin-top:10px"><table><thead><tr><th>Cliente</th><th>Tipo</th><th>Contacto</th><th>Descuentos propios</th><th>Estado</th><th></th></tr></thead><tbody>' +
     lista.map(c => {
       const n = reglas.filter(r => r.cliente_email === c.email).length;
@@ -261,11 +263,46 @@ function vistaClientes(editar){
         '<td><span class="pill azul">' + esc(nombreTipo(c.tipo_id)) + '</span>' + (c.es_admin ? ' <span class="pill amar">Admin</span>' : '') + '</td>' +
         '<td class="muted">' + esc([c.rif, c.telefono].filter(Boolean).join(' · ') || '—') + '</td>' +
         '<td>' + (n ? n + ' regla' + (n > 1 ? 's' : '') : '<span class="muted">—</span>') + '</td>' +
-        '<td>' + (c.user_id ? '<span class="pill verde">Ya entró</span>' : '<span class="pill">Sin entrar</span>') + '</td>' +
-        '<td><button class="btn chico" data-edit="' + esc(c.email) + '">Editar</button></td></tr>';
+        '<td>' + (c.activo === false ? '<span class="pill rojo">Bloqueado</span>' : c.user_id ? '<span class="pill verde">Ya entró</span>' : '<span class="pill">Sin entrar</span>') + '</td>' +
+        '<td style="white-space:nowrap"><button class="btn chico" data-edit="' + esc(c.email) + '">Editar</button> ' +
+        (c.email === yo.email ? '' :
+          '<button class="btn chico" data-bloq="' + esc(c.email) + '" data-activo="' + (c.activo === false ? '0' : '1') + '">' + (c.activo === false ? 'Desbloquear' : 'Bloquear') + '</button> ' +
+          '<button class="btn chico peligro" data-borrar-cli="' + esc(c.email) + '">Borrar</button>') + '</td></tr>';
     }).join('') + '</tbody></table></div></div>';
   $('c-busca').oninput = (e) => { buscaCli = e.target.value; const pos = e.target.selectionStart; vistaClientes(editar); const i = $('c-busca'); i.focus(); i.setSelectionRange(pos, pos); };
   $('c-nuevo').onclick = () => vistaClientes({});
+  // Bloquear un correo (exista o no la ficha)
+  $('c-bloquear-correo').onclick = () => { $('c-form-bloq').hidden = false; $('c-form-bloq').elements.email.focus(); };
+  $('c-bloq-cancelar').onclick = () => { $('c-form-bloq').hidden = true; };
+  $('c-form-bloq').onsubmit = async (e) => {
+    e.preventDefault();
+    const email = e.target.elements.email.value.trim().toLowerCase();
+    if (email === yo.email) return toast('No puedes bloquear tu propia cuenta');
+    const existe = clientes.some(c => c.email === email);
+    const res = existe ? await sb.from('clientes').update({ activo: false }).eq('email', email)
+                       : await sb.from('clientes').insert({ email, activo: false, tipo_id: null });
+    if (res.error) return toast('Error: ' + mensajeError(res.error));
+    await recargarBase(); toast(email + ' bloqueado'); vistaClientes();
+  };
+  document.querySelectorAll('[data-bloq]').forEach(b => b.onclick = async () => {
+    const email = b.dataset.bloq, bloquear = b.dataset.activo === '1';
+    if (bloquear && !confirm('¿Bloquear a ' + email + '?\nVerá la tienda como visitante (sin sus descuentos) y no podrá registrar pedidos. Puedes desbloquearlo cuando quieras.')) return;
+    const { error } = await sb.from('clientes').update({ activo: !bloquear }).eq('email', email);
+    if (error) return toast('Error: ' + mensajeError(error));
+    await recargarBase(); toast(bloquear ? 'Cliente bloqueado' : 'Cliente desbloqueado'); vistaClientes();
+  });
+  document.querySelectorAll('[data-borrar-cli]').forEach(b => b.onclick = async () => {
+    const email = b.dataset.borrarCli;
+    const conf = prompt('Esto borra a ' + email + ' con TODOS sus pedidos y descuentos. No se puede deshacer.\n' +
+                        'Si vuelve a entrar con ese correo empezará como cliente nuevo (para impedirlo, usa Bloquear).\n\nEscribe BORRAR para confirmar:');
+    if (conf === null) return;
+    if (conf.trim().toUpperCase() !== 'BORRAR') return toast('No se borró (no escribiste BORRAR)');
+    const { data, error } = await sb.rpc('borrar_cliente', { p_email: email });
+    if (error) return toast('Error: ' + (/borrar_cliente/.test(error.message) ? 'falta correr 02_bloquear_borrar.sql en Supabase' : mensajeError(error)));
+    await recargarBase();
+    toast('Cliente borrado' + (data && data.pedidos_borrados ? ' (' + data.pedidos_borrados + ' pedidos)' : ''));
+    vistaClientes();
+  });
   document.querySelectorAll('[data-edit]').forEach(b => b.onclick = () => { vistaClientes(clientes.find(c => c.email === b.dataset.edit)); window.scrollTo(0, 0); });
   const f = $('c-form');
   if (f){

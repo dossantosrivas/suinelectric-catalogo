@@ -2557,7 +2557,12 @@ try {
   }
 } catch (e){ console.warn('Supabase no disponible', e); sb = null; }
 
-const sesion = { email: null, cliente: null, admin: false };
+const sesion = { email: null, cliente: null, admin: false, bloqueado: false };
+// Un cliente nuevo debe completar nombre y RIF/cédula antes de seguir.
+function faltanDatos(){
+  const c = sesion.cliente;
+  return !!(sesion.email && c && !sesion.bloqueado && !sesion.admin && (!c.nombre || !c.rif));
+}
 let reglasDescuento = [];     // solo las que le aplican a quien está viendo (lo filtra Supabase)
 let tiposCliente = {};        // id -> nombre
 let emailPendiente = '';      // correo al que se envió el código
@@ -2578,11 +2583,12 @@ async function cargarSesionYReglas(){
   try {
     const { data: { session } } = await sb.auth.getSession();
     sesion.email = session && session.user ? String(session.user.email || '').toLowerCase() : null;
-    sesion.cliente = null; sesion.admin = false;
+    sesion.cliente = null; sesion.admin = false; sesion.bloqueado = false;
     if (sesion.email){
       const { data: cli } = await sb.from('clientes').select('*').eq('email', sesion.email).maybeSingle();
       sesion.cliente = cli || null;
       sesion.admin = !!(cli && cli.es_admin && cli.activo);
+      sesion.bloqueado = !!(cli && cli.activo === false);
     }
     const [{ data: reglas, error: errR }, { data: tipos }] = await Promise.all([
       sb.from('reglas_descuento').select('*').eq('activo', true),
@@ -2603,6 +2609,7 @@ async function cargarSesionYReglas(){
   }
   actualizarUICuenta();
   refrescarPrecios();
+  if (faltanDatos()) abrirCuenta();
 }
 function refrescarPrecios(){
   if (!productos.length) return;
@@ -2681,6 +2688,18 @@ async function renderCuenta(pestana){
     renderLogin(cont);
     return;
   }
+  if (sesion.bloqueado){
+    cont.innerHTML = '<h2 class="cta-titulo">Cuenta suspendida</h2>' +
+      '<p class="cta-sub">La cuenta <strong>' + escHtml(sesion.email) + '</strong> está suspendida. Mientras tanto verás los precios generales de la tienda. ' +
+      'Si crees que es un error, escríbenos por WhatsApp.</p>' +
+      '<button type="button" class="btn-enlace" id="cta-salir">Cerrar sesión</button>';
+    cont.querySelector('#cta-salir').addEventListener('click', async () => { await sb.auth.signOut(); document.getElementById('modal-cuenta').classList.remove('abierto'); });
+    return;
+  }
+  if (faltanDatos()){
+    renderRegistro(cont);
+    return;
+  }
   const c = sesion.cliente || {};
   const tipo = c.tipo_id ? (tiposCliente[c.tipo_id] || c.tipo_id) : '';
   cont.innerHTML =
@@ -2707,11 +2726,57 @@ async function renderCuenta(pestana){
   else renderMisPedidos(cuerpo);
 }
 
+// Datos mínimos de un cliente nuevo (el resto lo completa luego en "Mis datos").
+function normalizarRif(v){
+  let t = String(v || '').toUpperCase().replace(/\s+/g, '').replace(/\./g, '');
+  if (/^\d/.test(t)) t = 'V-' + t;                       // solo números: cédula venezolana
+  t = t.replace(/^([VEJGPC])-?(\d+)-?(\d)?$/, (m, l, n, d) => l + '-' + n + (d ? '-' + d : ''));
+  return t;
+}
+function rifValido(v){ return /^[VEJGPC]-\d{5,9}(-\d)?$/.test(v); }
+function renderRegistro(cont){
+  const c = sesion.cliente || {};
+  cont.innerHTML =
+    '<h2 class="cta-titulo">Completa tu registro</h2>' +
+    '<p class="cta-sub">Es la primera vez que entras con <strong>' + escHtml(sesion.email) + '</strong>. Necesitamos estos datos para tus ofertas y pedidos; el resto lo puedes agregar después en "Mis datos".</p>' +
+    '<form id="cta-form-reg" class="cta-form">' +
+      '<label>Nombre y apellido, o razón social *<input name="nombre" required autocomplete="name" value="' + escHtml(c.nombre || '') + '" placeholder="Ej. Pedro Pérez / Industrias XYZ, C.A."></label>' +
+      '<label>RIF o cédula *<input name="rif" required value="' + escHtml(c.rif || '') + '" placeholder="Ej. J-12345678-9 o V-12345678"></label>' +
+      '<label>Teléfono (WhatsApp)<input name="telefono" type="tel" autocomplete="tel" value="' + escHtml(c.telefono || '') + '" placeholder="Ej. 0412-1234567"></label>' +
+      '<button type="submit" class="btn btn-cart-add">Guardar y continuar</button>' +
+    '</form><p class="cta-error" id="cta-error-reg"></p>' +
+    '<button type="button" class="btn-enlace cta-otro" id="cta-salir">Cerrar sesión</button>';
+  const f = cont.querySelector('#cta-form-reg');
+  const err = cont.querySelector('#cta-error-reg');
+  f.elements.rif.addEventListener('blur', () => { f.elements.rif.value = normalizarRif(f.elements.rif.value); });
+  f.addEventListener('submit', async (e) => {
+    e.preventDefault();
+    const nombre = f.elements.nombre.value.trim();
+    const rif = normalizarRif(f.elements.rif.value);
+    f.elements.rif.value = rif;
+    if (nombre.length < 3){ err.textContent = 'Escribe tu nombre o la razón social.'; return; }
+    if (!rifValido(rif)){ err.textContent = 'El RIF o cédula no parece válido. Ej.: J-12345678-9 o V-12345678.'; return; }
+    const b = f.querySelector('button'); b.disabled = true; b.textContent = 'Guardando…';
+    const datos = { nombre, rif, telefono: f.elements.telefono.value.trim() || c.telefono || null };
+    const { data, error } = await sb.from('clientes').update(datos).eq('email', sesion.email).select().maybeSingle();
+    if (error || !data){ b.disabled = false; b.textContent = 'Guardar y continuar'; err.textContent = 'No se pudo guardar. Intenta de nuevo.'; return; }
+    sesion.cliente = data;
+    actualizarUICuenta();
+    mostrarToast('✓ ¡Listo, ' + nombre.split(' ')[0] + '! Ya ves tus precios de cliente');
+    renderCuenta('pedidos');
+  });
+  cont.querySelector('#cta-salir').addEventListener('click', async () => {
+    await sb.auth.signOut();
+    document.getElementById('modal-cuenta').classList.remove('abierto');
+  });
+}
+
 function renderLogin(cont){
   const paso2 = !!emailPendiente;
   cont.innerHTML =
     '<h2 class="cta-titulo">Ingresar</h2>' +
-    '<p class="cta-sub">Entra con tu correo para ver tus precios de cliente y el historial de tus pedidos. No necesitas contraseña.</p>' +
+    '<p class="cta-sub">Entra con tu correo para ver tus precios de cliente y el historial de tus pedidos. No necesitas contraseña. ' +
+    'Si es tu primera vez, luego te pediremos tu nombre y RIF o cédula.</p>' +
     (!paso2
       ? '<form id="cta-form-email" class="cta-form">' +
           '<label>Correo electrónico<input type="email" id="cta-email" required autocomplete="email" placeholder="tucorreo@empresa.com"></label>' +
@@ -2772,6 +2837,7 @@ async function renderMisDatos(cuerpo){
     e.preventDefault();
     const datos = {};
     ['nombre', 'empresa', 'rif', 'telefono', 'direccion'].forEach(k => { datos[k] = f.elements[k].value.trim() || null; });
+    if (datos.rif) datos.rif = normalizarRif(datos.rif);
     const { data, error } = await sb.from('clientes').update(datos).eq('email', sesion.email).select().maybeSingle();
     if (error){ cuerpo.querySelector('#cta-error-datos').textContent = 'No se pudo guardar: ' + error.message; return; }
     if (data) sesion.cliente = data;
@@ -2836,8 +2902,14 @@ async function registrarPedido(){
   const a = document.getElementById(id);
   if (!a) return;
   a.addEventListener('click', async (e) => {
-    if (!sb || !sesion.email || !Object.keys(carrito).length) return; // sin cuenta: WhatsApp normal
+    if (!sb || !sesion.email || sesion.bloqueado || !Object.keys(carrito).length) return; // sin cuenta: WhatsApp normal
     e.preventDefault();
+    if (faltanDatos()){
+      document.getElementById('cart-drawer').classList.remove('abierto');
+      abrirCuenta();
+      mostrarToast('Completa tu nombre y RIF para enviar el pedido');
+      return;
+    }
     const urlBase = a.getAttribute('href');
     const ventana = window.open('about:blank', '_blank'); // se abre ya (si no, el navegador la bloquea)
     let url = urlBase;
@@ -2868,7 +2940,7 @@ if (sb){
         if (evento === 'SIGNED_IN' && accesoEnCurso){
           accesoEnCurso = false;
           const modal = document.getElementById('modal-cuenta');
-          if (modal.classList.contains('abierto')) renderCuenta('pedidos');
+          if (modal.classList.contains('abierto') && !faltanDatos()) renderCuenta('pedidos');
           mostrarToast('Bienvenido' + (sesion.cliente && sesion.cliente.nombre ? ', ' + sesion.cliente.nombre : ''));
         }
       }, 0);
