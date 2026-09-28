@@ -193,6 +193,20 @@
   .items li.mas{ color:var(--azul-texto); cursor:pointer; border-bottom:none; }
   .chip.sep{ margin-left:6px; }
 
+  /* Actividad por cliente */
+  .ranking li.clic{ cursor:pointer; }
+  .ranking li.clic:hover .nom strong{ color:var(--azul-texto); }
+  .ranking .nom strong{ font-weight:600; }
+  .act-linea{ list-style:none; margin:0; padding:0; }
+  .act-dia{ font-size:12px; font-weight:700; color:var(--texto-3); padding:14px 0 6px; border-bottom:1px solid var(--linea); }
+  .act-dia::first-letter{ text-transform:uppercase; }
+  .act-dia:first-child{ padding-top:0; }
+  .act-ev{ display:grid; grid-template-columns:18px minmax(0,1fr) auto; gap:10px; align-items:start; padding:8px 0; border-bottom:1px dashed var(--linea-suave); font-size:13.5px; }
+  .act-ev svg{ width:16px; height:16px; color:var(--texto-3); margin-top:2px; }
+  .act-ev.t-agregar_carrito svg, .act-ev.t-cotizar_whatsapp svg, .act-ev.t-pedido_whatsapp svg{ color:var(--ok); }
+  .act-ev time{ color:var(--texto-3); font-size:12.5px; white-space:nowrap; }
+  .act-ev a.mono{ text-decoration:none; font-weight:500; }
+
   /* Detalle del pedido (panel lateral ancho) */
   .panel.ancho{ width:min(760px,100%); }
   .det-datos{ display:grid; grid-template-columns:1fr 1fr; gap:10px 18px; font-size:14px; }
@@ -840,9 +854,10 @@ function pintarClientes(){
         '<td>' + (c.es_admin ? '<span class="pill tinta">Admin</span> ' : '') + (ms && !c.es_admin ? '<span class="pill verde" title="' + esc(ms) + '">' + ICO.ojo.replace('<svg', '<svg width="13" height="13"') + 'Existencias</span>' : '') + (!ms && !c.es_admin ? '<span class="muted">Estándar</span>' : '') + '</td>' +
         '<td>' + (n ? '<span class="pill amar">' + n + ' regla' + (n > 1 ? 's' : '') + '</span>' : '<span class="muted">—</span>') + '</td>' +
         '<td>' + (c.activo === false ? '<span class="pill rojo"><span class="punto"></span>Bloqueado</span>' : c.user_id ? '<span class="pill verde"><span class="punto"></span>Ya entró</span>' : '<span class="pill"><span class="punto"></span>Sin entrar</span>') + '</td>' +
-        '<td class="acciones"><button class="btn chico" data-edit="' + esc(c.email) + '">Editar</button></td></tr>';
+        '<td class="acciones">' + (c.es_admin ? '' : '<button class="btn chico fantasma" data-act="' + esc(c.email) + '" title="Qué busca, mira y cotiza">' + ICO.grafica + 'Actividad</button> ') + '<button class="btn chico" data-edit="' + esc(c.email) + '">Editar</button></td></tr>';
     }).join('') + '</tbody></table>';
   document.querySelectorAll('[data-edit]').forEach(b => b.onclick = () => abrirCliente(clientes.find(c => c.email === b.dataset.edit)));
+  document.querySelectorAll('[data-act]').forEach(b => b.onclick = () => abrirActividad(b.dataset.act));
 }
 
 /* Panel lateral para crear / editar un cliente */
@@ -851,7 +866,7 @@ function abrirPanel(html, ancho){
   $('panel').innerHTML = html; $('panel').scrollTop = 0; $('panel').classList.add('ver'); $('panel').setAttribute('aria-hidden', 'false'); $('velo').classList.add('ver');
 }
 function cerrarPanel(){
-  delete $('panel').dataset.pedido;
+  delete $('panel').dataset.pedido; delete $('panel').dataset.actividad;
   $('panel').classList.remove('ver'); $('panel').setAttribute('aria-hidden', 'true'); $('velo').classList.remove('ver');
 }
 $('velo').onclick = cerrarPanel;
@@ -882,6 +897,7 @@ function abrirCliente(c){
         interruptor('es_admin', 'Administrador', 'Puede entrar a este panel y ve todo, incluidas las existencias reales.', !!c.es_admin, soyYo) +
         interruptor('ver_existencias', 'Ver existencias reales', porTipo ? 'Ya las ve por su tipo de cliente (' + esc(nombreTipo(c.tipo_id)) + '). Actívalo para dárselas aunque cambie de tipo.' : 'Verá la cantidad exacta (ej. "252 disponibles") en vez de "+10 disponibles".', !!c.ver_existencias) +
       '</div></div>' +
+      (nuevo || c.es_admin ? '' : '<div class="seccion"><h3>Actividad en la tienda</h3><p class="muted" style="margin:0 0 10px">Qué busca, qué productos mira y qué cotiza cuando entra con su cuenta.</p><button type="button" class="btn chico" id="c-actividad">' + ICO.grafica + 'Ver actividad →</button></div>') +
       (nuevo ? '' : '<div class="seccion"><h3>Descuentos propios</h3><p class="muted" style="margin:0 0 10px">' + (reglas.filter(r => r.cliente_email === c.email).length || 'Ninguna') + ' regla(s) solo para este cliente.</p><button type="button" class="btn chico" id="c-reglas">' + ICO.descuentos + 'Ver o dar descuentos →</button></div>' +
         (soyYo ? '' : '<div class="seccion"><h3>Zona de cuidado</h3><div class="fila"><button type="button" class="btn chico" id="c-bloq">' + (c.activo === false ? 'Desbloquear' : 'Bloquear') + '</button><button type="button" class="btn chico peligro" id="c-borrar">Borrar cliente</button></div></div>')) +
       '<p class="error" id="c-err"></p>' +
@@ -891,6 +907,7 @@ function abrirCliente(c){
   const f = $('c-form');
   $('c-cerrar').onclick = cerrarPanel; $('c-cancelar').onclick = cerrarPanel;
   setTimeout(() => (nuevo ? f.elements.email : f.elements.nombre).focus(), 60);
+  if ($('c-actividad')) $('c-actividad').onclick = () => abrirActividad(c.email);
   if ($('c-reglas')) $('c-reglas').onclick = () => { reglaDestinoInicial = 'c:' + c.email; irA('descuentos'); };
   if ($('c-bloq')) $('c-bloq').onclick = async () => {
     const bloquear = c.activo !== false;
@@ -1128,9 +1145,12 @@ let diasEst = 30;
 const slugDe = (x) => String(x).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'x';
 async function vistaEstadisticas(){
   const chips = '<div class="chips">' + [[7, '7 días'], [30, '30 días'], [90, '90 días']].map(([d, t]) => '<button class="chip' + (diasEst === d ? ' activo' : '') + '" data-dias="' + d + '">' + t + '</button>').join('') + '</div>';
-  $('main').innerHTML = cabecera('Estadísticas', 'Qué buscan, qué miran y qué cotizan tus clientes. No se cuenta lo que haces tú como administrador.', chips) + '<div class="cargando">Cargando…</div>';
+  $('main').innerHTML = cabecera('Estadísticas', 'Qué buscan, qué miran y qué cotizan tus clientes. Abajo, cada cliente con cuenta por separado. No se cuenta lo que haces tú como administrador.', chips) + '<div class="cargando">Cargando…</div>';
   document.querySelectorAll('[data-dias]').forEach(b => b.onclick = () => { diasEst = Number(b.dataset.dias); vistaEstadisticas(); });
-  const { data, error } = await sb.rpc('resumen_estadisticas', { dias: diasEst });
+  const [{ data, error }, resCli] = await Promise.all([
+    sb.rpc('resumen_estadisticas', { dias: diasEst }),
+    sb.rpc('clientes_activos', { dias: diasEst }).then(r => r, e => ({ error: e })),
+  ]);
   if (tab !== 'estadisticas') return;
   const cont = document.querySelector('#main .cargando');
   if (error || !data){
@@ -1187,7 +1207,125 @@ async function vistaEstadisticas(){
       '<div class="caja"><div class="caja-cab"><h2>Productos más cotizados</h2></div>' +
         ranking(data.cotizados, (x, i) => '<li><span class="pos">' + (i + 1) + '</span><span class="nom">' + nomProd(x.modelo) + barra(totalCot(x), maxC) + '</span><span class="num">' + totalCot(x) +
           '<small>' + [x.whatsapp ? x.whatsapp + ' WhatsApp' : '', x.carrito ? x.carrito + ' carrito' : '', x.pedidos ? x.pedidos + ' pedido' + (x.pedidos > 1 ? 's' : '') : ''].filter(Boolean).join(' · ') + (x.clientes ? ' · ' + x.clientes + ' con cuenta' : '') + '</small></span></li>', 'Todavía no hay cotizaciones en este período.') + '</div>' +
-    '</div>';
+    '</div>' +
+    '<div style="margin-top:18px">' + cajaClientesActivos(resCli) + '</div>';
+  document.querySelectorAll('#main [data-actividad]').forEach(li => li.onclick = () => abrirActividad(li.dataset.actividad));
+}
+
+/* ---------- Actividad por cliente ---------- */
+const DIAS_ACT = [[7, '7 días'], [30, '30 días'], [90, '90 días'], [365, '1 año']];
+let diasAct = 90;
+const faltaActividad = (err) => '<div class="tarjeta-sync" style="margin:6px 0"><div class="icono mal">' + ICO.alerta + '</div><div><strong>Falta instalar la actividad por cliente</strong><div class="muted">Corre <span class="mono">06_actividad_clientes.sql</span> en Supabase → SQL Editor (después de <span class="mono">04_estadisticas.sql</span>).' + (err ? '<br><small>' + esc(mensajeError(err)) + '</small>' : '') + '</div></div></div>';
+const haceCuanto = (d) => {
+  if (!d) return 'nunca';
+  const min = Math.round((Date.now() - new Date(d)) / 60000);
+  if (min < 2) return 'hace un momento';
+  if (min < 60) return 'hace ' + min + ' min';
+  const h = Math.round(min / 60); if (h < 24) return 'hace ' + h + ' h';
+  const dd = Math.round(h / 24); if (dd < 31) return 'hace ' + dd + ' día' + (dd > 1 ? 's' : '');
+  return fecha(d, false);
+};
+const linkProd = (m) => '<a href="/p/' + slugDe(m) + '" target="_blank" rel="noopener" class="mono">' + esc(m) + '</a>';
+const descProd = (m) => { const p = productos.find(x => x.modelo === m); return p ? [p.marca, p.descripcion || p.nombre].filter(Boolean).join(' · ') : 'Ya no está en el catálogo'; };
+
+// Caja "Clientes más activos" dentro de Estadísticas
+function cajaClientesActivos(res){
+  if (!res || res.error || !res.data) return '<div class="caja"><div class="caja-cab"><h2>Clientes más activos</h2></div>' + faltaActividad(res && res.error) + '</div>';
+  const d = res.data, lista = d.clientes || [];
+  const totalEv = (d.con_cuenta || 0) + (d.sin_cuenta || 0);
+  const pct = totalEv ? Math.round(100 * (d.con_cuenta || 0) / totalEv) : 0;
+  const max = Math.max(1, ...lista.map(x => x.total));
+  return '<div class="caja"><div class="caja-cab"><h2>Clientes más activos <small>' + lista.length + '</small></h2><span class="muted">' + pct + '% de la actividad es de clientes con cuenta</span></div>' +
+    (!lista.length ? '<div class="vacio">' + ICO.clientes + 'Ningún cliente con cuenta ha usado la tienda en este período.</div>' :
+    '<ol class="ranking">' + lista.slice(0, 20).map((x, i) => {
+      const c = clientes.find(y => y.email === x.email) || { email: x.email };
+      const partes = [x.busquedas && x.busquedas + ' búsq.', x.vistas && x.vistas + ' vistos', x.carrito && x.carrito + ' al carrito', x.whatsapp && x.whatsapp + ' WhatsApp', x.pedidos && x.pedidos + ' pedido' + (x.pedidos > 1 ? 's' : '')].filter(Boolean).join(' · ');
+      return '<li class="clic" data-actividad="' + esc(x.email) + '"><span class="pos">' + (i + 1) + '</span><span class="nom"><strong>' + esc(c.nombre || c.empresa || c.email) + '</strong>' + (c.nombre && c.empresa ? ' <span class="muted">· ' + esc(c.empresa) + '</span>' : '') +
+        '<small>' + partes + ' · ' + haceCuanto(x.ultima) + '</small>' + '<div class="barra"><i style="width:' + Math.max(4, Math.round(100 * x.total / max)) + '%"></i></div></span>' +
+        '<span class="num">' + x.dias_activos + '<small>día' + (x.dias_activos > 1 ? 's' : '') + ' activo</small></span></li>';
+    }).join('') + '</ol>') + '</div>';
+}
+
+// Panel con la actividad de un cliente
+async function abrirActividad(email){
+  const c = clientes.find(x => x.email === email) || { email };
+  const cab = '<div class="panel-cab"><div class="avatar">' + esc(iniciales(c)) + '</div><div><h2>' + esc(c.nombre || c.empresa || c.email) + '</h2><div class="muted">' + esc([c.empresa && c.nombre ? c.empresa : '', c.email].filter(Boolean).join(' · ')) + '</div></div>' +
+    '<button class="btn chico fantasma cerrar" id="a-cerrar" aria-label="Cerrar">' + ICO.cerrar + '</button></div>';
+  const chips = '<div class="chips" style="margin-bottom:16px">' + DIAS_ACT.map(([d, t]) => '<button class="chip' + (diasAct === d ? ' activo' : '') + '" data-dias-act="' + d + '">' + t + '</button>').join('') + '</div>';
+  abrirPanel(cab + '<div class="panel-cuerpo">' + chips + '<div class="cargando">Cargando actividad…</div></div>', true);
+  $('panel').dataset.actividad = email;
+  const enlazar = () => {
+    $('a-cerrar').onclick = cerrarPanel;
+    document.querySelectorAll('[data-dias-act]').forEach(b => b.onclick = () => { diasAct = Number(b.dataset.diasAct); abrirActividad(email); });
+  };
+  enlazar();
+  const { data, error } = await sb.rpc('actividad_cliente', { p_email: email, dias: diasAct });
+  if ($('panel').dataset.actividad !== email) return;       // se cerró o se abrió otro
+  const cuerpo = document.querySelector('#panel .panel-cuerpo');
+  if (error || !data){ cuerpo.innerHTML = chips + faltaActividad(error); enlazar(); return; }
+
+  const t = data.totales || {};
+  const susPedidos = pedidos.filter(p => p.cliente_email === email);
+  const desde = Date.now() - diasAct * 86400000;
+  const pedPer = susPedidos.filter(p => new Date(p.creado) >= desde);
+  const montoPer = pedPer.filter(p => p.estado !== 'cancelado').reduce((s, p) => s + Number(p.total || 0), 0);
+  const mini = (titulo, num, pie) => '<div class="kpi"><div class="k-cab">' + titulo + '</div><div class="k-num" style="font-size:23px">' + Number(num || 0).toLocaleString('es-VE') + '</div>' + (pie ? '<div class="k-pie">' + pie + '</div>' : '') + '</div>';
+  const vacio = (txt) => '<div class="muted" style="padding:8px 0">' + txt + '</div>';
+  const maxB = Math.max(1, ...(data.buscado || []).map(x => x.veces));
+  const maxV = Math.max(1, ...(data.vistos || []).map(x => x.veces));
+  const totC = (x) => x.carrito + x.whatsapp + x.pedidos;
+  const maxC = Math.max(1, ...(data.cotizados || []).map(totC));
+  const barra = (v, m) => '<div class="barra"><i style="width:' + Math.max(4, Math.round(100 * v / m)) + '%"></i></div>';
+
+  // Línea de tiempo agrupada por día
+  const TXT = {
+    busqueda: (e) => 'Buscó <strong>“' + esc(e.texto) + '”</strong>' + (e.resultados === 0 ? ' <span class="pill rojo">sin resultados</span>' : e.resultados != null ? ' <span class="muted">(' + e.resultados + ' resultados)</span>' : ''),
+    ver_producto: (e) => 'Vio ' + linkProd(e.modelo),
+    agregar_carrito: (e) => 'Agregó ' + (e.cantidad ? e.cantidad + ' × ' : '') + linkProd(e.modelo) + ' al carrito',
+    cotizar_whatsapp: (e) => 'Pidió cotización por WhatsApp de ' + linkProd(e.modelo) + (e.origen === 'pagina' ? ' <span class="muted">(desde la página del producto)</span>' : ''),
+    pedido_whatsapp: (e) => 'Envió por WhatsApp ' + (e.cantidad ? e.cantidad + ' × ' : '') + linkProd(e.modelo),
+  };
+  const ICO_EV = { busqueda: ICO.buscar, ver_producto: ICO.ojo, agregar_carrito: ICO.tienda, cotizar_whatsapp: ICO.whatsapp, pedido_whatsapp: ICO.pedidos };
+  let diaAnt = '';
+  const linea = (data.recientes || []).map(e => {
+    const dia = new Date(e.creado).toLocaleDateString('es-VE', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'America/Caracas' });
+    const cabDia = dia !== diaAnt ? '<li class="act-dia">' + dia + '</li>' : '';
+    diaAnt = dia;
+    return cabDia + '<li class="act-ev t-' + e.tipo + '">' + (ICO_EV[e.tipo] || '') + '<span>' + (TXT[e.tipo] || (() => esc(e.tipo)))(e) + '</span><time>' +
+      new Date(e.creado).toLocaleTimeString('es-VE', { hour: 'numeric', minute: '2-digit', timeZone: 'America/Caracas' }) + '</time></li>';
+  }).join('');
+
+  cuerpo.innerHTML = chips +
+    '<div class="det-datos" style="margin-bottom:16px">' +
+      '<div><span>Última visita</span>' + (data.ultima ? haceCuanto(data.ultima) + ' <small class="muted">· ' + fecha(data.ultima) + '</small>' : 'Todavía no ha usado la tienda con su cuenta') + '</div>' +
+      '<div><span>Cliente desde</span>' + (data.primera ? fecha(data.primera, false) : c.creado ? fecha(c.creado, false) : '—') + ' · ' + esc(nombreTipo(c.tipo_id)) + '</div>' +
+    '</div>' +
+    '<div class="kpis" style="grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:10px">' +
+      mini('Días activo', data.dias_activos) +
+      mini('Búsquedas', t.busqueda) +
+      mini('Vistos', t.ver_producto) +
+      mini('Al carrito', t.agregar_carrito) +
+      mini('WhatsApp', (t.cotizar_whatsapp || 0) + (data.envios || 0), (data.envios || 0) + ' carrito · ' + (t.cotizar_whatsapp || 0) + ' producto') +
+      mini('Pedidos', pedPer.length, money(montoPer)) +
+    '</div>' +
+    '<div class="seccion"><h3>Lo que buscó</h3>' + (!(data.buscado || []).length ? vacio('No buscó nada en este período.') :
+      '<ol class="ranking">' + data.buscado.slice(0, 15).map((x, i) => '<li><span class="pos">' + (i + 1) + '</span><span class="nom">' + esc(x.texto) + (x.resultados === 0 ? ' <span class="pill rojo">sin resultados</span>' : '') +
+        '<small>' + haceCuanto(x.ultima) + '</small>' + barra(x.veces, maxB) + '</span><span class="num">' + x.veces + '</span></li>').join('') + '</ol>') + '</div>' +
+    '<div class="seccion"><h3>Lo que cotizó o puso en el carrito</h3>' + (!(data.cotizados || []).length ? vacio('No cotizó nada en este período.') :
+      '<ol class="ranking">' + data.cotizados.slice(0, 15).map((x, i) => '<li><span class="pos">' + (i + 1) + '</span><span class="nom">' + linkProd(x.modelo) + '<small>' + esc(descProd(x.modelo)) + '</small>' + barra(totC(x), maxC) + '</span>' +
+        '<span class="num">' + totC(x) + '<small>' + [x.carrito ? x.carrito + ' carrito' : '', x.whatsapp ? x.whatsapp + ' WhatsApp' : '', x.pedidos ? x.pedidos + ' enviado' : ''].filter(Boolean).join(' · ') + '</small></span></li>').join('') + '</ol>') + '</div>' +
+    '<div class="seccion"><h3>Productos que miró</h3>' + (!(data.vistos || []).length ? vacio('No abrió fichas de producto en este período.') :
+      '<ol class="ranking">' + data.vistos.slice(0, 15).map((x, i) => '<li><span class="pos">' + (i + 1) + '</span><span class="nom">' + linkProd(x.modelo) + '<small>' + esc(descProd(x.modelo)) + '</small>' + barra(x.veces, maxV) + '</span><span class="num">' + x.veces + '<small>' + haceCuanto(x.ultima) + '</small></span></li>').join('') + '</ol>') + '</div>' +
+    '<div class="seccion"><h3>Paso a paso <small class="muted" style="text-transform:none;letter-spacing:0;font-weight:500">(lo más reciente primero)</small></h3>' + (linea ? '<ul class="act-linea">' + linea + '</ul>' : vacio('Sin actividad en este período.')) + '</div>' +
+    '<p class="muted" style="font-size:12.5px">Solo cuenta lo que hace con la sesión iniciada. Si entra sin su cuenta, cuenta como visitante anónimo en las estadísticas generales.</p>';
+  cuerpo.insertAdjacentHTML('afterend', '<div class="panel-pie">' +
+    (susPedidos.length ? '<button class="btn" id="a-pedidos">' + ICO.pedidos + 'Ver sus pedidos (' + susPedidos.length + ')</button>' : '') +
+    (clientes.some(x => x.email === email) ? '<button class="btn" id="a-editar">Editar cliente</button>' : '') +
+    '<button class="btn prim" id="a-listo" style="margin-left:auto">Cerrar</button></div>');
+  enlazar();
+  $('a-listo').onclick = cerrarPanel;
+  if ($('a-pedidos')) $('a-pedidos').onclick = () => { buscaPed = email; filtroEstado = ''; irA('pedidos'); };
+  if ($('a-editar')) $('a-editar').onclick = () => abrirCliente(clientes.find(x => x.email === email));
 }
 
 /* ---------- Existencias ---------- */
