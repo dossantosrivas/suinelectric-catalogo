@@ -73,6 +73,21 @@ function textoStock(p){
   if (!r && p.existencias != null && Number(p.existencias) > 0) r = Number(p.existencias) > 10 ? '+10' : 'pocas';
   return r === '+10' ? '+10 disponibles' : r === 'pocas' ? 'Últimas unidades' : 'Disponible';
 }
+/* Separa la descripción en texto y datos técnicos.
+   "Contactor tripolar. Corriente AC3 (A): 500. Tensión de bobina: 110 V AC."
+   → texto "Contactor tripolar." + filas [["Corriente AC3 (A)","500"], ["Tensión de bobina","110 V AC"]]
+   Si salen menos de 2 filas se deja la descripción tal cual. */
+function separarDatos(desc){
+  const frases = String(desc || '').replace(/\s+/g, ' ').trim().split(/\.\s+(?=[A-ZÁÉÍÓÚÑ0-9¿"])/).map(f => f.replace(/\.$/, '').trim()).filter(Boolean);
+  const filas = [], texto = [];
+  for (const f of frases){
+    const m = f.match(/^([^:]{2,40}?)\s*:\s*(.+)$/);
+    if (m && !/:/.test(m[2]) && /[A-Za-zÁÉÍÓÚáéíóúñÑ]/.test(m[1])) filas.push([m[1], m[2]]);
+    else texto.push(f);
+  }
+  if (filas.length < 2) return { texto: String(desc || ''), filas: [] };
+  return { texto: texto.length ? texto.join('. ') + '.' : '', filas };
+}
 const urlP = (p) => '/p/' + T.slugDe(p.modelo);
 const urlC = (ruta) => '/c/' + ruta.map(T.slugDe).join('/');
 const waLink = (texto) => 'https://wa.me/' + WA + '?text=' + encodeURIComponent(texto);
@@ -107,21 +122,33 @@ function pagina({ titulo, descripcion, imagen, canonica, cuerpo, datos, tipoOg }
 <meta name="twitter:description" content="${esc(descripcion)}">
 <meta name="twitter:image" content="${esc(imagen)}">
 <meta name="theme-color" content="#0e2a3b">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
 <link rel="stylesheet" href="/publico.css">
 <script src="/publico.js" defer></script>
 ${(datos || []).map(jsonLD).join('\n')}
 </head>
 <body>
-<header class="barra"><div class="ancho">
-  <a class="logo" href="/tienda"><span class="logo-s">S</span>SUINELECTRIC</a>
-  <nav><a href="/tienda">Tienda</a><a class="wa" href="https://wa.me/${WA}" rel="noopener">WhatsApp ${esc(WA_TXT)}</a></nav>
+<div class="topbar"><div class="ancho">
+  <a href="https://wa.me/${WA}" rel="noopener">WhatsApp ${esc(WA_TXT)}</a>
+  <span>Automatización y control eléctrico · Venezuela</span>
+</div></div>
+<header class="cabecera"><div class="ancho">
+  <a class="logo" href="/tienda"><img src="/imagenes/logo-suinelectric.png" alt="" width="52" height="52"><span><strong>SUINELECTRIC</strong><small>Automatización y control</small></span></a>
+  <form class="buscador" action="/tienda" method="get" role="search">
+    <label for="q" class="oculto">Buscar en la tienda</label>
+    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+    <input id="q" type="search" name="q" placeholder="Buscar modelo, marca o descripción" autocomplete="off">
+  </form>
+  <a class="btn tinta" href="/tienda">Ir a la tienda</a>
 </div></header>
 <main class="ancho">
 ${cuerpo}
 </main>
 <footer class="pie"><div class="ancho">
-  <strong>Suinelectric</strong> · Automatización y control eléctrico en Venezuela ·
-  <a href="https://wa.me/${WA}" rel="noopener">WhatsApp ${esc(WA_TXT)}</a> · <a href="/tienda">Ver toda la tienda</a>
+  <div><strong>SUINELECTRIC</strong><p>Automatización y control eléctrico en Venezuela.</p></div>
+  <div><h2>Contacto</h2><a href="https://wa.me/${WA}" rel="noopener">WhatsApp ${esc(WA_TXT)}</a><a href="/tienda">Ver toda la tienda</a></div>
 </div></footer>
 </body>
 </html>
@@ -178,6 +205,7 @@ for (const p of productos){
   const m = migas(ruta, p.modelo);
   const hermanos = (nodos.get(ruta.join('|||')) || { productos: [] }).productos.filter(x => x !== p).slice(0, 8);
   const textoWa = 'Hola, quiero cotizar: ' + p.modelo + (marca ? ' (' + marca + ')' : '') + '\n' + canonica;
+  const sep = separarDatos(p.descripcion);
   const imgs = [...new Set([p.imagen].concat(p.imagenes || []).filter(Boolean))];
 
   const producto = {
@@ -202,14 +230,16 @@ for (const p of productos){
       '<div class="p-info">' +
         (marca ? '<div class="p-marca">' + esc(marca) + '</div>' : '') +
         '<h1>' + esc(p.modelo) + '</h1>' +
-        (p.descripcion ? '<p class="p-desc">' + esc(p.descripcion) + '</p>' : '') +
+        (sep.texto ? '<p class="p-desc">' + esc(sep.texto) + '</p>' : '') +
         '<div class="p-precio">' + (precio != null ? dinero(precio) + ' <small>USD</small>' : 'Consultar precio') + '</div>' +
         '<div class="p-stock ' + (p.disponible === false ? 'off' : 'ok') + '">' + esc(textoStock(p)) + '</div>' +
         '<div class="p-botones">' +
           '<a class="btn wa" href="' + esc(waLink(textoWa)) + '" data-modelo="' + esc(p.modelo) + '" rel="noopener">Cotizar por WhatsApp</a>' +
-          '<a class="btn" href="/tienda#/?p=' + encodeURIComponent(p.modelo) + '">Agregar al pedido en la tienda</a>' +
+          '<a class="btn amarillo" href="/tienda#/?p=' + encodeURIComponent(p.modelo) + '">Agregar al pedido</a>' +
         '</div>' +
         '<ul class="p-cond">' + CONDICIONES.map(c => '<li>' + esc(c) + '</li>').join('') + '<li>Con nota de entrega.</li></ul>' +
+        (sep.filas.length ? '<h2 class="p-sub">Especificaciones</h2><table class="p-tabla"><tbody>' +
+          sep.filas.map(([k, v]) => '<tr><th scope="row">' + esc(k) + '</th><td>' + esc(v) + '</td></tr>').join('') + '</tbody></table>' : '') +
         '<dl class="p-datos">' +
           '<dt>Modelo</dt><dd>' + esc(p.modelo) + '</dd>' +
           (marca ? '<dt>Marca</dt><dd>' + esc(marca) + '</dd>' : '') +

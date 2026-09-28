@@ -22,3 +22,13 @@
     } catch (x) {}
   }, true);
 })();
+/* Buscador de la cabecera: abre la búsqueda dentro de la tienda (#/buscar?q=…). */
+(function(){
+  var f = document.querySelector('form.buscador');
+  if (!f) return;
+  f.addEventListener('submit', function(e){
+    var q = (f.q.value || '').trim();
+    e.preventDefault();
+    location.href = '/tienda' + (q ? '#/buscar?q=' + encodeURIComponent(q) : '');
+  });
+})();
