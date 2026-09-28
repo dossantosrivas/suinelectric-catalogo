@@ -69,3 +69,10 @@ La tienda pública muestra "+10 disponibles", "Últimas unidades" o "Agotado". L
 
 ## 8. Estadísticas (qué buscan, qué ven y qué cotizan)
 Supabase → **SQL Editor** → pega todo `04_estadisticas.sql` → **Run**. Desde ese momento la tienda anota búsquedas, fichas vistas, productos agregados al carrito y clics en WhatsApp (también desde las páginas `/p/…`). Se ve en el panel → **Estadísticas**. No se anota lo que hacen los administradores y los datos de más de un año se borran solos.
+
+## 9. Archivar, eliminar y ver pedidos en detalle
+Supabase → **SQL Editor** → pega todo `05_pedidos_archivo.sql` → **Run** (se puede volver a correr).
+En el panel → **Pedidos**, cada pedido tiene:
+- **Ver detalle** (o toca el número `#`): cliente con teléfono/WhatsApp y RIF, cada producto con foto, descripción completa, precio de lista, descuento y subtotal, y el botón **Copiar lista**.
+- **Archivar**: lo saca de la lista y de "por atender", sin borrarlo. Se ve en el filtro **Archivados** y se puede desarchivar. El cliente lo sigue viendo en "Mi cuenta".
+- **Eliminar**: lo borra para siempre (también para el cliente). Pide confirmación.
