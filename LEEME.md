@@ -66,3 +66,6 @@ La tienda pública muestra "+10 disponibles", "Últimas unidades" o "Agotado". L
 - Cada día se generan páginas reales por producto (`/p/…`) y categoría (`/c/…`) con datos para Google, más `sitemap.xml`.
 - `robots.txt` le dice a Google dónde está el sitemap y que no entre a `/admin`.
 - Alta en Google: search.google.com/search-console → Agregar propiedad → **Dominio** `suinelectric.com` → verificar con Cloudflare → Sitemaps → `https://suinelectric.com/sitemap.xml`.
+
+## 8. Estadísticas (qué buscan, qué ven y qué cotizan)
+Supabase → **SQL Editor** → pega todo `04_estadisticas.sql` → **Run**. Desde ese momento la tienda anota búsquedas, fichas vistas, productos agregados al carrito y clics en WhatsApp (también desde las páginas `/p/…`). Se ve en el panel → **Estadísticas**. No se anota lo que hacen los administradores y los datos de más de un año se borran solos.
