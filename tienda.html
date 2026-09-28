@@ -2322,9 +2322,49 @@ async function copiarDatosProducto(modelo){
   }
 }
 
+/* ---------- Estadísticas (qué buscan, qué ven y qué cotizan) ----------
+   Se anota en Supabase (tabla eventos, ver 04_estadisticas.sql). Solo los
+   administradores lo pueden leer, en el panel → Estadísticas. Lo que hacen los
+   administradores no se anota. Si Supabase no responde, no pasa nada. */
+const eventosRecientes = {};
+function registrar(tipo, datos){
+  try {
+    if (!sb || sesion.admin) return;
+    datos = datos || {};
+    const clave = tipo + '|' + (datos.modelo || datos.texto || '');
+    const ahora = Date.now();
+    if (eventosRecientes[clave] && ahora - eventosRecientes[clave] < 60000) return; // no repetir en 1 minuto
+    eventosRecientes[clave] = ahora;
+    sb.from('eventos').insert(Object.assign({ tipo, origen: 'tienda' }, datos)).then(() => {}, () => {});
+  } catch (e) { /* nunca debe afectar la tienda */ }
+}
+let timerRegistroBusqueda = null, ultimaBusquedaRegistrada = '';
+function registrarBusqueda(){
+  const t = document.getElementById('buscador').value.trim();
+  if (t.length < 2 || t.toLowerCase() === ultimaBusquedaRegistrada || !productos.length) return;
+  ultimaBusquedaRegistrada = t.toLowerCase();
+  const palabras = palabrasDe(t.toLowerCase());
+  const n = productos.filter(p => coincideBusqueda(p, palabras)).length;
+  registrar('busqueda', { texto: t.slice(0, 120), resultados: n });
+}
+// Clics en WhatsApp: consulta de un producto o envío del pedido completo.
+document.addEventListener('click', (e) => {
+  const a = e.target && e.target.closest ? e.target.closest('a[href*="wa.me/"]') : null;
+  if (!a) return;
+  if (a.id === 'btn-wa-carrito' || a.id === 'btn-wa-carrito-2'){
+    Object.values(carrito).forEach(it => registrar('pedido_whatsapp', { modelo: String(it.producto.modelo).slice(0, 80), cantidad: it.cantidad }));
+    return;
+  }
+  let txt = '';
+  try { txt = decodeURIComponent((a.getAttribute('href') || '').split('?text=')[1] || ''); } catch (err) {}
+  const m = txt.match(/precio de: ([^\n]+)/);
+  if (m) registrar('cotizar_whatsapp', { modelo: m[1].trim().slice(0, 80) });
+}, true);
+
 function abrirDetalle(modelo){
   const p = productos.find(x => x.modelo === modelo);
   if (!p) return;
+  registrar('ver_producto', { modelo: String(p.modelo).slice(0, 80) });
   const cont = document.getElementById('detalle-contenido');
   const precioFinal = precioMostrado(p);
   const estadoTexto = textoStock(p, 'No disponible');
@@ -2405,6 +2445,7 @@ function agregarAlCarrito(modelo, cantidad){
   if (!p) return;
   if (!carrito[modelo]) carrito[modelo] = { producto: p, cantidad: 0 };
   carrito[modelo].cantidad += cantidad;
+  registrar('agregar_carrito', { modelo: String(p.modelo).slice(0, 80), cantidad });
   renderCarrito();
   mostrarToast(cantidad + ' × ' + p.modelo + ' agregado al pedido');
   const btn = document.getElementById('btn-cart');
@@ -2592,6 +2633,8 @@ document.addEventListener('visibilitychange', () => {
 let timerBusqueda = null;
 document.getElementById('buscador').addEventListener('input', () => {
   renderSugerencias();
+  clearTimeout(timerRegistroBusqueda);
+  timerRegistroBusqueda = setTimeout(registrarBusqueda, 1800); // se anota cuando deja de escribir
   clearTimeout(timerBusqueda);
   timerBusqueda = setTimeout(() => {
     const hay = document.getElementById('buscador').value.trim() !== '';

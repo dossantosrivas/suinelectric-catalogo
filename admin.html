@@ -209,6 +209,28 @@
   .tarjeta-sync .icono.mal{ background:var(--amarillo-suave); color:var(--amarillo-texto); }
   .tarjeta-sync .icono svg{ width:22px; height:22px; }
 
+  /* Estadísticas */
+  .grafico{ display:flex; align-items:flex-end; gap:4px; height:170px; padding:10px 0 0; border-bottom:1px solid var(--linea); }
+  .grafico .col{ flex:1; display:flex; flex-direction:column; justify-content:flex-end; align-items:stretch; height:100%; position:relative; min-width:6px; }
+  .grafico .b1{ background:var(--azul-suave); border-radius:4px 4px 0 0; position:relative; }
+  .grafico .b2{ background:var(--azul); border-radius:4px 4px 0 0; position:absolute; bottom:0; left:22%; right:22%; }
+  .grafico .col:hover .b1{ background:#cce9f2; }
+  .grafico-ejes{ display:flex; gap:4px; font-size:11px; color:var(--texto-3); margin-top:5px; }
+  .grafico-ejes span{ flex:1; text-align:center; min-width:6px; overflow:hidden; }
+  .leyenda{ display:flex; gap:16px; font-size:12.5px; color:var(--texto-2); }
+  .leyenda i{ display:inline-block; width:11px; height:11px; border-radius:3px; margin-right:6px; vertical-align:-1px; }
+  .ranking{ list-style:none; margin:0; padding:0; }
+  .ranking li{ display:grid; grid-template-columns:22px minmax(0,1fr) auto; gap:10px; align-items:center; padding:8px 0; border-bottom:1px solid var(--linea-suave); font-size:14px; }
+  .ranking li:last-child{ border-bottom:none; }
+  .ranking .pos{ color:var(--texto-3); font-size:12.5px; text-align:right; }
+  .ranking .nom{ overflow:hidden; }
+  .ranking .nom a{ text-decoration:none; font-weight:600; }
+  .ranking .nom small{ display:block; color:var(--texto-3); font-size:12px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .ranking .barra{ height:4px; background:var(--linea-suave); border-radius:3px; margin-top:5px; }
+  .ranking .barra i{ display:block; height:100%; background:var(--azul); border-radius:3px; }
+  .ranking .num{ font-weight:700; color:var(--tinta); text-align:right; white-space:nowrap; }
+  .ranking .num small{ display:block; font-weight:500; color:var(--texto-3); font-size:11.5px; }
+
   /* Panel lateral (editar cliente) */
   .velo{ position:fixed; inset:0; background:rgba(14,42,59,.38); z-index:20; opacity:0; pointer-events:none; transition:opacity .18s; }
   .velo.ver{ opacity:1; pointer-events:auto; }
@@ -242,6 +264,7 @@
     .pedido > div:last-child{ grid-column:1 / -1; border-left:none; border-top:1px solid var(--linea-suave); }
   }
   @media (max-width:860px){
+    .grid-2[style]{ grid-template-columns:1fr !important; }
     .app{ grid-template-columns:1fr; }
     .side{ position:sticky; top:0; height:auto; z-index:10; padding:10px 12px 0; flex-direction:column; }
     .marca{ padding:2px 4px 10px; }
@@ -310,6 +333,7 @@ const ICO = {
   pedidos:   I('<path d="M6 2h9l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h5"/>'),
   clientes:  I('<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.5 3.4-5.5 6.5-5.5s5.7 2 6.5 5.5"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18.5 14.8c1.7.8 2.7 2.5 3 5.2"/>'),
   descuentos:I('<path d="M20.6 13.4 13.4 20.6a2 2 0 0 1-2.8 0L3 13V3h10l7.6 7.6a2 2 0 0 1 0 2.8z"/><circle cx="7.5" cy="7.5" r="1.5"/>'),
+  grafica:   I('<path d="M3 3v18h18"/><path d="M7 15v-4M12 15V7M17 15v-7"/>'),
   existencias:I('<path d="M21 8 12 3 3 8v8l9 5 9-5z"/><path d="m3 8 9 5 9-5M12 13v8"/>'),
   tipos:     I('<path d="M4 6h16M4 12h10M4 18h7"/><circle cx="18" cy="16" r="3"/>'),
   buscar:    I('<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>'),
@@ -331,6 +355,7 @@ const nombreEstado = (e) => (ESTADOS.find(x => x[0] === e) || [e, e])[1];
 const VISTAS = [
   ['resumen', 'Resumen', ICO.resumen],
   ['pedidos', 'Pedidos', ICO.pedidos],
+  ['estadisticas', 'Estadísticas', ICO.grafica],
   ['clientes', 'Clientes', ICO.clientes],
   ['descuentos', 'Descuentos', ICO.descuentos],
   ['existencias', 'Existencias', ICO.existencias],
@@ -444,7 +469,7 @@ function irA(t){ tab = t; mostrar(); window.scrollTo(0, 0); }
 function mostrar(){
   document.querySelectorAll('#nav button').forEach(x => x.classList.toggle('activa', x.dataset.tab === tab));
   cerrarPanel();
-  ({ resumen: vistaResumen, pedidos: vistaPedidos, clientes: vistaClientes, descuentos: vistaDescuentos, existencias: vistaExistencias, tipos: vistaTipos }[tab] || vistaResumen)();
+  ({ resumen: vistaResumen, pedidos: vistaPedidos, estadisticas: vistaEstadisticas, clientes: vistaClientes, descuentos: vistaDescuentos, existencias: vistaExistencias, tipos: vistaTipos }[tab] || vistaResumen)();
 }
 function pintarBadges(){
   const nuevos = pedidos.filter(p => p.estado === 'enviado').length;
@@ -914,6 +939,73 @@ function vistaDescuentos(){
       (r ? 'por la regla: ' + (r.cliente_email ? esc(nombreCliente(r.cliente_email)) : r.tipo_id ? esc(nombreTipo(r.tipo_id)) : 'Todos') + ' · ' + describirQue(r).replace(/<[^>]+>/g, '') + ' · ' + (r.precio_fijo != null ? 'precio fijo' : Number(r.descuento_pct) + '%') : (p._manual ? 'producto cargado a mano: precio de catálogo, sin regla.' : 'sin regla: precio de lista.')) + '</span>';
   };
   $('pr-modelo').oninput = probar; $('pr-quien').onchange = probar;
+}
+
+/* ---------- Estadísticas ---------- */
+let diasEst = 30;
+const slugDe = (x) => String(x).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'x';
+async function vistaEstadisticas(){
+  const chips = '<div class="chips">' + [[7, '7 días'], [30, '30 días'], [90, '90 días']].map(([d, t]) => '<button class="chip' + (diasEst === d ? ' activo' : '') + '" data-dias="' + d + '">' + t + '</button>').join('') + '</div>';
+  $('main').innerHTML = cabecera('Estadísticas', 'Qué buscan, qué miran y qué cotizan tus clientes. No se cuenta lo que haces tú como administrador.', chips) + '<div class="cargando">Cargando…</div>';
+  document.querySelectorAll('[data-dias]').forEach(b => b.onclick = () => { diasEst = Number(b.dataset.dias); vistaEstadisticas(); });
+  const { data, error } = await sb.rpc('resumen_estadisticas', { dias: diasEst });
+  if (tab !== 'estadisticas') return;
+  const cont = document.querySelector('#main .cargando');
+  if (error || !data){
+    cont.outerHTML = '<div class="caja"><div class="tarjeta-sync"><div class="icono mal">' + ICO.alerta + '</div><div><strong>Falta instalar las estadísticas en Supabase</strong><div class="muted">Corre <span class="mono">04_estadisticas.sql</span> en Supabase → SQL Editor. Desde ese momento la tienda empieza a anotar búsquedas, visitas y cotizaciones.</div></div></div></div>';
+    return;
+  }
+  sb.rpc('limpiar_eventos').then(() => {}, () => {});
+  const t = data.totales || {};
+  const cotiza = (t.cotizar_whatsapp || 0) + (t.pedido_whatsapp || 0);
+  const kpi = (icono, titulo, num, pie) => '<div class="kpi"><div class="k-cab">' + titulo + icono + '</div><div class="k-num">' + Number(num || 0).toLocaleString('es-VE') + '</div><div class="k-pie">' + pie + '</div></div>';
+  const prod = (m) => productos.find(p => p.modelo === m);
+  const nomProd = (m) => { const p = prod(m); return '<a href="/p/' + slugDe(m) + '" target="_blank" rel="noopener" class="mono">' + esc(m) + '</a><small>' + esc(p ? [p.marca, p.descripcion || p.nombre].filter(Boolean).join(' · ') : 'Ya no está en el catálogo') + '</small>'; };
+  const ranking = (lista, fila, vacio) => !lista || !lista.length ? '<div class="vacio">' + ICO.grafica + vacio + '</div>' :
+    '<ol class="ranking">' + lista.slice(0, 15).map((x, i) => fila(x, i, lista)).join('') + '</ol>';
+  const barra = (v, max) => '<div class="barra"><i style="width:' + Math.max(4, Math.round(100 * v / (max || 1))) + '%"></i></div>';
+
+  // Gráfico por día (completa los días sin datos)
+  const porDia = {}; (data.por_dia || []).forEach(d => { porDia[d.dia] = d; });
+  const dias = [];
+  for (let i = diasEst - 1; i >= 0; i--){
+    const f = new Date(Date.now() - i * 86400000);
+    const k = f.toLocaleDateString('en-CA', { timeZone: 'America/Caracas' });
+    dias.push({ k, f, v: (porDia[k] || {}).vistas || 0, c: (porDia[k] || {}).cotiza || 0 });
+  }
+  const maxV = Math.max(1, ...dias.map(d => Math.max(d.v, d.c)));
+  const cada = diasEst <= 7 ? 1 : diasEst <= 30 ? 5 : 15;
+  const grafico = '<div class="grafico">' + dias.map(d => '<div class="col" title="' + d.f.toLocaleDateString('es-VE', { weekday: 'short', day: 'numeric', month: 'short' }) + ': ' + d.v + ' vistas, ' + d.c + ' cotizaciones">' +
+      '<div class="b1" style="height:' + (100 * d.v / maxV) + '%"></div><div class="b2" style="height:' + (100 * d.c / maxV) + '%"></div></div>').join('') + '</div>' +
+    '<div class="grafico-ejes">' + dias.map((d, i) => '<span>' + ((dias.length - 1 - i) % cada === 0 ? d.f.getDate() : '') + '</span>').join('') + '</div>';
+
+  const maxB = Math.max(1, ...(data.buscado || []).map(x => x.veces));
+  const maxS = Math.max(1, ...(data.sin_resultados || []).map(x => x.veces));
+  const maxVi = Math.max(1, ...(data.vistos || []).map(x => x.veces));
+  const totalCot = (x) => x.whatsapp + x.carrito + x.pedidos;
+  const maxC = Math.max(1, ...(data.cotizados || []).map(totalCot));
+
+  cont.outerHTML =
+    '<div class="kpis">' +
+      kpi(ICO.buscar, 'Búsquedas', t.busqueda, 'veces que usaron el buscador') +
+      kpi(ICO.ojo, 'Productos vistos', t.ver_producto, 'fichas de producto abiertas') +
+      kpi(ICO.tienda, 'Agregados al pedido', t.agregar_carrito, 'productos puestos en el carrito') +
+      kpi(ICO.pedidos, 'Cotizaciones por WhatsApp', cotiza, (t.pedido_whatsapp || 0) + ' desde el carrito · ' + (t.cotizar_whatsapp || 0) + ' de un producto') +
+    '</div>' +
+    '<div class="caja"><div class="caja-cab"><h2>Actividad por día</h2><div class="leyenda"><span><i style="background:var(--azul-suave)"></i>Productos vistos</span><span><i style="background:var(--azul)"></i>Cotizaciones y carrito</span></div></div>' + grafico + '</div>' +
+    '<div class="grid-2" style="grid-template-columns:1fr 1fr;margin-bottom:18px">' +
+      '<div class="caja"><div class="caja-cab"><h2>Lo más buscado</h2></div>' +
+        ranking(data.buscado, (x, i) => '<li><span class="pos">' + (i + 1) + '</span><span class="nom">' + esc(x.texto) + (x.resultados === 0 ? ' <span class="pill rojo">sin resultados</span>' : '') + barra(x.veces, maxB) + '</span><span class="num">' + x.veces + '</span></li>', 'Todavía no hay búsquedas en este período.') + '</div>' +
+      '<div class="caja"><div class="caja-cab"><h2>Buscan y no encuentran</h2></div><p class="sub">Oportunidades: productos que te piden y no están en la tienda (o están escritos distinto).</p>' +
+        ranking(data.sin_resultados, (x, i) => '<li><span class="pos">' + (i + 1) + '</span><span class="nom">' + esc(x.texto) + '<small>Última vez: ' + fecha(x.ultima) + '</small>' + barra(x.veces, maxS) + '</span><span class="num">' + x.veces + '</span></li>', 'Nadie se ha quedado sin resultados. 👍') + '</div>' +
+    '</div>' +
+    '<div class="grid-2" style="grid-template-columns:1fr 1fr">' +
+      '<div class="caja"><div class="caja-cab"><h2>Productos más vistos</h2></div>' +
+        ranking(data.vistos, (x, i) => '<li><span class="pos">' + (i + 1) + '</span><span class="nom">' + nomProd(x.modelo) + barra(x.veces, maxVi) + '</span><span class="num">' + x.veces + '<small>vistas</small></span></li>', 'Todavía no hay visitas en este período.') + '</div>' +
+      '<div class="caja"><div class="caja-cab"><h2>Productos más cotizados</h2></div>' +
+        ranking(data.cotizados, (x, i) => '<li><span class="pos">' + (i + 1) + '</span><span class="nom">' + nomProd(x.modelo) + barra(totalCot(x), maxC) + '</span><span class="num">' + totalCot(x) +
+          '<small>' + [x.whatsapp ? x.whatsapp + ' WhatsApp' : '', x.carrito ? x.carrito + ' carrito' : '', x.pedidos ? x.pedidos + ' pedido' + (x.pedidos > 1 ? 's' : '') : ''].filter(Boolean).join(' · ') + (x.clientes ? ' · ' + x.clientes + ' con cuenta' : '') + '</small></span></li>', 'Todavía no hay cotizaciones en este período.') + '</div>' +
+    '</div>';
 }
 
 /* ---------- Existencias ---------- */

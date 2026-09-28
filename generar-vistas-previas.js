@@ -108,6 +108,7 @@ function pagina({ titulo, descripcion, imagen, canonica, cuerpo, datos, tipoOg }
 <meta name="twitter:image" content="${esc(imagen)}">
 <meta name="theme-color" content="#0e2a3b">
 <link rel="stylesheet" href="/publico.css">
+<script src="/publico.js" defer></script>
 ${(datos || []).map(jsonLD).join('\n')}
 </head>
 <body>
@@ -205,7 +206,7 @@ for (const p of productos){
         '<div class="p-precio">' + (precio != null ? dinero(precio) + ' <small>USD</small>' : 'Consultar precio') + '</div>' +
         '<div class="p-stock ' + (p.disponible === false ? 'off' : 'ok') + '">' + esc(textoStock(p)) + '</div>' +
         '<div class="p-botones">' +
-          '<a class="btn wa" href="' + esc(waLink(textoWa)) + '" rel="noopener">Cotizar por WhatsApp</a>' +
+          '<a class="btn wa" href="' + esc(waLink(textoWa)) + '" data-modelo="' + esc(p.modelo) + '" rel="noopener">Cotizar por WhatsApp</a>' +
           '<a class="btn" href="/tienda#/?p=' + encodeURIComponent(p.modelo) + '">Agregar al pedido en la tienda</a>' +
         '</div>' +
         '<ul class="p-cond">' + CONDICIONES.map(c => '<li>' + esc(c) + '</li>').join('') + '<li>Con nota de entrega.</li></ul>' +
