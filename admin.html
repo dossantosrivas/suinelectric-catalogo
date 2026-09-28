@@ -183,6 +183,42 @@
   .estado-sel.e-cancelado{ background:var(--off-suave); border-color:#efc0bb; color:var(--off); }
   .nota-wrap{ display:flex; flex-direction:column; gap:8px; }
   .nota-wrap textarea{ min-height:64px; font-size:13.5px; }
+  .pd-acciones{ display:flex; gap:6px; flex-wrap:wrap; margin-top:auto; padding-top:4px; }
+  .pd-acciones .btn svg{ width:15px; height:15px; }
+  .pedido.archivado{ background:#fafbfc; }
+  .pedido.archivado > div:first-child{ opacity:.8; }
+  .pd-num .abrir{ background:none; border:none; padding:0; cursor:pointer; font:inherit; color:var(--tinta); }
+  .pd-num .abrir strong{ text-decoration:underline; text-decoration-color:var(--linea); text-underline-offset:3px; }
+  .pd-num .abrir:hover strong{ color:var(--azul-texto); text-decoration-color:currentColor; }
+  .items li.mas{ color:var(--azul-texto); cursor:pointer; border-bottom:none; }
+  .chip.sep{ margin-left:6px; }
+
+  /* Detalle del pedido (panel lateral ancho) */
+  .panel.ancho{ width:min(760px,100%); }
+  .det-datos{ display:grid; grid-template-columns:1fr 1fr; gap:10px 18px; font-size:14px; }
+  .det-datos div span{ display:block; font-size:12px; color:var(--texto-3); font-weight:600; text-transform:uppercase; letter-spacing:.4px; margin-bottom:2px; }
+  .det-items{ list-style:none; margin:0; padding:0; }
+  .det-items li{ display:grid; grid-template-columns:56px minmax(0,1fr) auto; gap:12px; padding:12px 0; border-bottom:1px solid var(--linea-suave); align-items:start; }
+  .det-items li:last-child{ border-bottom:none; }
+  .det-img{ width:56px; height:56px; border:1px solid var(--linea); border-radius:8px; background:#fff; display:grid; place-items:center; overflow:hidden; color:var(--texto-3); }
+  .det-img img{ width:100%; height:100%; object-fit:contain; }
+  .det-img svg{ width:22px; height:22px; opacity:.5; }
+  .det-mod{ font-family:var(--mono); font-size:13.5px; font-weight:500; }
+  .det-mod a{ text-decoration:none; }
+  .det-mod a:hover{ text-decoration:underline; }
+  .det-desc{ font-size:13.5px; color:var(--texto-2); margin-top:3px; line-height:1.45; }
+  .det-cat{ font-size:12px; color:var(--texto-3); margin-top:4px; }
+  .det-num{ text-align:right; font-size:13.5px; white-space:nowrap; }
+  .det-num strong{ display:block; font-size:15px; color:var(--tinta); }
+  .det-num small{ display:block; color:var(--texto-3); font-size:12px; }
+  .det-total{ display:flex; justify-content:space-between; align-items:baseline; border-top:2px solid var(--tinta); margin-top:6px; padding-top:12px; }
+  .det-total strong{ font-size:22px; color:var(--tinta); }
+  @media (max-width:560px){
+    .det-datos{ grid-template-columns:1fr; }
+    .det-items li{ grid-template-columns:44px minmax(0,1fr); }
+    .det-img{ width:44px; height:44px; }
+    .det-num{ grid-column:2; text-align:left; }
+  }
 
   /* Descuentos */
   .paso{ display:inline-flex; align-items:center; justify-content:center; width:20px; height:20px; border-radius:50%; background:var(--tinta); color:#fff; font-size:11.5px; margin-right:6px; }
@@ -316,6 +352,8 @@ function mensajeError(err){
   const m = (err && err.message) || String(err);
   if (/ver_existencias|existencias_reales|estado_existencias/i.test(m))
     return 'Falta instalar la parte de existencias: corre 03_existencias.sql en Supabase (SQL Editor).';
+  if (/archivado/i.test(m))
+    return 'Falta instalar la opción de archivar: corre 05_pedidos_archivo.sql en Supabase (SQL Editor).';
   if (/row-level security|permission denied|JWT/i.test(m))
     return 'Tu sesión de administrador no está activa. Pulsa "Salir" y vuelve a entrar con tu correo de administrador.';
   return m;
@@ -348,6 +386,9 @@ const ICO = {
   tienda:    I('<path d="M3 9 4.5 4h15L21 9"/><path d="M4 9v11h16V9"/><path d="M3 9a3 3 0 0 0 6 0 3 3 0 0 0 6 0 3 3 0 0 0 6 0"/>'),
   bloquear:  I('<circle cx="12" cy="12" r="9"/><path d="m5.6 5.6 12.8 12.8"/>'),
   caja:      I('<path d="M3 7h18v13H3z"/><path d="M3 7 5 3h14l2 4M9 11h6"/>'),
+  archivar:  I('<rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8M10 12h4"/>'),
+  borrar:    I('<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13M9 7V4h6v3"/>'),
+  whatsapp:  I('<path d="M20.5 11.6a8.5 8.5 0 0 1-12.6 7.4L3.5 20.5l1.5-4.3a8.5 8.5 0 1 1 15.5-4.6z"/>'),
 };
 
 const ESTADOS = [['enviado','Nuevo'],['cotizado','Cotizado'],['aprobado','Aprobado'],['pagado','Pagado'],['entregado','Entregado'],['cancelado','Cancelado']];
@@ -472,7 +513,7 @@ function mostrar(){
   ({ resumen: vistaResumen, pedidos: vistaPedidos, estadisticas: vistaEstadisticas, clientes: vistaClientes, descuentos: vistaDescuentos, existencias: vistaExistencias, tipos: vistaTipos }[tab] || vistaResumen)();
 }
 function pintarBadges(){
-  const nuevos = pedidos.filter(p => p.estado === 'enviado').length;
+  const nuevos = pedidos.filter(p => p.estado === 'enviado' && !p.archivado).length;
   const b = document.querySelector('[data-badge=pedidos]');
   if (b){ b.textContent = nuevos; b.hidden = !nuevos; }
 }
@@ -509,7 +550,7 @@ function motivoStock(c){
 
 /* ---------- Resumen ---------- */
 function vistaResumen(){
-  const nuevos = pedidos.filter(p => p.estado === 'enviado');
+  const nuevos = pedidos.filter(p => p.estado === 'enviado' && !p.archivado);
   const ahora = new Date(), mes = new Date(ahora.getFullYear(), ahora.getMonth(), 1);
   const delMes = pedidos.filter(p => new Date(p.creado) >= mes && p.estado !== 'cancelado');
   const totalMes = delMes.reduce((s, p) => s + Number(p.total || 0), 0);
@@ -530,10 +571,10 @@ function vistaResumen(){
       kpi(null, ICO.tienda, 'Productos', productos.length.toLocaleString('es-VE'), infoCatalogo && infoCatalogo.generado ? 'Catálogo al ' + fecha(infoCatalogo.generado) : stockPie) +
     '</div>' +
     '<div class="grid-2"><div class="caja"><div class="caja-cab"><h2>Últimos pedidos</h2><button class="btn chico" data-ir="pedidos">Ver todos →</button></div>' +
-      (pedidos.length ? '<ul class="lista-simple">' + pedidos.slice(0, 6).map(pd => {
+      (pedidos.length ? '<ul class="lista-simple">' + pedidos.filter(p => !p.archivado).slice(0, 6).map(pd => {
         const c = clientes.find(x => x.email === pd.cliente_email) || { email: pd.cliente_email };
         const n = (Array.isArray(pd.items) ? pd.items : []).reduce((s, it) => s + Number(it.cantidad || 0), 0);
-        return '<li><div class="avatar">' + esc(iniciales(c)) + '</div><div><strong>#' + pd.id + ' · ' + esc(c.nombre || c.empresa || c.email) + '</strong><div class="muted">' + fecha(pd.creado) + ' · ' + n + ' unid.</div></div>' +
+        return '<li data-ver-pedido="' + pd.id + '" style="cursor:pointer"><div class="avatar">' + esc(iniciales(c)) + '</div><div><strong>#' + pd.id + ' · ' + esc(c.nombre || c.empresa || c.email) + '</strong><div class="muted">' + fecha(pd.creado) + ' · ' + n + ' unid.</div></div>' +
           '<div class="der"><strong>' + money(pd.total) + '</strong><br>' + pillEstado(pd.estado) + '</div></li>';
       }).join('') + '</ul>' : '<div class="vacio">' + ICO.pedidos + 'Todavía no hay pedidos.</div>') +
     '</div><div class="caja"><div class="caja-cab"><h2>Clientes nuevos</h2><button class="btn chico" data-ir="clientes">Ver todos →</button></div>' +
@@ -542,6 +583,7 @@ function vistaResumen(){
         '<div class="der"><span class="pill azul">' + esc(nombreTipo(c.tipo_id)) + '</span></div></li>').join('') + '</ul>' : '<div class="vacio">' + ICO.clientes + 'Aún no hay clientes.</div>') +
     '</div></div>';
   document.querySelectorAll('[data-ir]').forEach(b => b.onclick = () => { if (b.dataset.ir === 'pedidos' && nuevos.length && b.classList.contains('destacado')) filtroEstado = 'enviado'; irA(b.dataset.ir); });
+  document.querySelectorAll('[data-ver-pedido]').forEach(li => li.onclick = () => abrirPedido(li.dataset.verPedido));
 }
 const pillEstado = (e) => {
   const cls = { enviado: 'amar', cotizado: 'azul', entregado: 'verde', cancelado: 'rojo' }[e] || '';
@@ -550,13 +592,28 @@ const pillEstado = (e) => {
 
 /* ---------- Pedidos ---------- */
 let filtroEstado = '', buscaPed = '';
+const ARCH = 'archivados';
+const itemsDe = (pd) => Array.isArray(pd.items) ? pd.items : [];
+const clienteDe = (pd) => clientes.find(x => x.email === pd.cliente_email) || { email: pd.cliente_email };
+const productoDe = (modelo) => productos.find(p => p.modelo === modelo);
+const rutaImagen = (src) => !src ? '' : /^(https?:)?\/\//.test(src) || src.startsWith('/') ? src : '/' + src;
+const linkWhatsApp = (tel) => {
+  let d = String(tel || '').replace(/\D/g, '');
+  if (!d) return '';
+  if (d.startsWith('0')) d = '58' + d.slice(1);       // 0414… → 58414…
+  return 'https://wa.me/' + d;
+};
+
 function vistaPedidos(){
-  const cuenta = (e) => pedidos.filter(p => !e || p.estado === e).length;
-  $('main').innerHTML = cabecera('Pedidos', 'Los pedidos que los clientes con cuenta envían por WhatsApp. Cambia el estado y deja un comentario: el cliente lo ve en "Mi cuenta".',
+  const activos = pedidos.filter(p => !p.archivado);
+  const cuenta = (e) => activos.filter(p => !e || p.estado === e).length;
+  const nArch = pedidos.length - activos.length;
+  $('main').innerHTML = cabecera('Pedidos', 'Los pedidos que los clientes con cuenta envían por WhatsApp. Ábrelos para ver el detalle, cambia el estado y deja un comentario: el cliente lo ve en "Mi cuenta".',
       '<button class="btn" id="p-recargar">' + ICO.sync + 'Actualizar</button>') +
     '<div class="caja"><div class="caja-cab" style="margin-bottom:0"><div class="chips" id="p-chips">' +
       '<button class="chip' + (!filtroEstado ? ' activo' : '') + '" data-f="">Todos <b>' + cuenta('') + '</b></button>' +
       ESTADOS.map(e => '<button class="chip' + (filtroEstado === e[0] ? ' activo' : '') + '" data-f="' + e[0] + '">' + e[1] + ' <b>' + cuenta(e[0]) + '</b></button>').join('') +
+      '<button class="chip sep' + (filtroEstado === ARCH ? ' activo' : '') + '" data-f="' + ARCH + '">' + ICO.archivar.replace('<svg', '<svg width="14" height="14"') + 'Archivados <b>' + nArch + '</b></button>' +
     '</div><div class="buscar">' + ICO.buscar + '<input id="p-busca" placeholder="Buscar cliente, # o modelo" value="' + esc(buscaPed) + '"></div></div></div>' +
     '<div class="pedidos" id="p-lista"></div>';
   document.querySelectorAll('#p-chips .chip').forEach(ch => ch.onclick = () => { filtroEstado = ch.dataset.f; vistaPedidos(); });
@@ -566,48 +623,171 @@ function vistaPedidos(){
 }
 function pintarPedidos(){
   const q = buscaPed.trim().toLowerCase();
+  const verArch = filtroEstado === ARCH;
   const lista = pedidos.filter(pd => {
-    if (filtroEstado && pd.estado !== filtroEstado) return false;
+    if (!!pd.archivado !== verArch) return false;
+    if (!verArch && filtroEstado && pd.estado !== filtroEstado) return false;
     if (!q) return true;
-    const c = clientes.find(x => x.email === pd.cliente_email) || {};
-    const items = Array.isArray(pd.items) ? pd.items : [];
-    return ['#' + pd.id, String(pd.id), pd.cliente_email, c.nombre, c.empresa, c.rif].concat(items.map(it => it.modelo)).join(' ').toLowerCase().includes(q);
+    const c = clienteDe(pd);
+    return ['#' + pd.id, String(pd.id), pd.cliente_email, c.nombre, c.empresa, c.rif].concat(itemsDe(pd).map(it => it.modelo)).join(' ').toLowerCase().includes(q);
   });
   if (!lista.length){
-    $('p-lista').innerHTML = '<div class="caja vacio">' + ICO.pedidos + (pedidos.length ? 'No hay pedidos con este filtro.' : 'Todavía no hay pedidos.') + '</div>';
+    $('p-lista').innerHTML = '<div class="caja vacio">' + (verArch ? ICO.archivar + 'No hay pedidos archivados.' : ICO.pedidos + (pedidos.length ? 'No hay pedidos con este filtro.' : 'Todavía no hay pedidos.')) + '</div>';
     return;
   }
+  const MAX = 5;
   $('p-lista').innerHTML = lista.map(pd => {
-    const c = clientes.find(x => x.email === pd.cliente_email) || { email: pd.cliente_email };
-    const items = Array.isArray(pd.items) ? pd.items : [];
-    return '<article class="pedido">' +
-      '<div><div class="pd-num"><strong>#' + pd.id + '</strong><select class="estado-sel e-' + pd.estado + '" data-estado="' + pd.id + '" aria-label="Estado del pedido">' +
-        ESTADOS.map(e => '<option value="' + e[0] + '"' + (pd.estado === e[0] ? ' selected' : '') + '>' + e[1] + '</option>').join('') + '</select></div>' +
+    const c = clienteDe(pd);
+    const items = itemsDe(pd);
+    return '<article class="pedido' + (pd.archivado ? ' archivado' : '') + '">' +
+      '<div><div class="pd-num"><button class="abrir" data-ver-pedido="' + pd.id + '" title="Ver detalle"><strong>#' + pd.id + '</strong></button><select class="estado-sel e-' + pd.estado + '" data-estado="' + pd.id + '" aria-label="Estado del pedido">' +
+        ESTADOS.map(e => '<option value="' + e[0] + '"' + (pd.estado === e[0] ? ' selected' : '') + '>' + e[1] + '</option>').join('') + '</select>' +
+        (pd.archivado ? '<span class="pill">Archivado</span>' : '') + '</div>' +
         '<div class="persona"><div class="avatar">' + esc(iniciales(c)) + '</div><div><strong>' + esc(c.nombre || '—') + '</strong>' +
         (c.empresa ? '<span>' + esc(c.empresa) + '</span><br>' : '') + '<span>' + esc(pd.cliente_email) + (c.telefono ? ' · ' + esc(c.telefono) : '') + '</span></div></div>' +
         '<div class="muted" style="margin-top:10px">' + fecha(pd.creado) + '</div>' +
         (pd.nota_cliente ? '<div class="ayuda" style="margin:10px 0 0"><strong>Nota del cliente:</strong> ' + esc(pd.nota_cliente) + '</div>' : '') + '</div>' +
-      '<div><ul class="items">' + items.map(it => '<li><span class="can">' + esc(it.cantidad) + '×</span><span class="mono">' + esc(it.modelo) + '</span><span class="pre">' + money(it.precio_unit) + '</span></li>').join('') + '</ul>' +
+      '<div><ul class="items">' + items.slice(0, MAX).map(it => '<li><span class="can">' + esc(it.cantidad) + '×</span><span class="mono">' + esc(it.modelo) + '</span><span class="pre">' + money(it.precio_unit) + '</span></li>').join('') +
+        (items.length > MAX ? '<li class="mas" data-ver-pedido="' + pd.id + '">+ ' + (items.length - MAX) + ' producto' + (items.length - MAX > 1 ? 's' : '') + ' más · ver detalle</li>' : '') + '</ul>' +
         '<div class="pd-total">' + money(pd.total) + '</div></div>' +
       '<div class="nota-wrap"><label class="campo">Comentario para el cliente<textarea rows="2" data-nota="' + pd.id + '" placeholder="Ej. Listo para retirar">' + esc(pd.nota_admin || '') + '</textarea></label>' +
-        '<div><button class="btn chico" data-guardar-nota="' + pd.id + '">Guardar comentario</button></div></div>' +
+        '<div><button class="btn chico" data-guardar-nota="' + pd.id + '">Guardar comentario</button></div>' +
+        '<div class="pd-acciones">' +
+          '<button class="btn chico" data-ver-pedido="' + pd.id + '">' + ICO.ojo + 'Ver detalle</button>' +
+          '<button class="btn chico" data-archivar="' + pd.id + '">' + ICO.archivar + (pd.archivado ? 'Desarchivar' : 'Archivar') + '</button>' +
+          '<button class="btn chico peligro" data-borrar="' + pd.id + '" title="Eliminar pedido">' + ICO.borrar + 'Eliminar</button>' +
+        '</div></div>' +
     '</article>';
   }).join('');
-  document.querySelectorAll('[data-estado]').forEach(s => s.onchange = async () => {
-    const { error } = await sb.from('pedidos').update({ estado: s.value }).eq('id', s.dataset.estado);
-    if (error) return toast('Error: ' + mensajeError(error));
-    const pd = pedidos.find(p => String(p.id) === s.dataset.estado); if (pd) pd.estado = s.value;
-    s.className = 'estado-sel e-' + s.value;
-    pintarBadges(); toast('Estado: ' + nombreEstado(s.value));
-  });
-  document.querySelectorAll('[data-guardar-nota]').forEach(b => b.onclick = async () => {
-    const id = b.dataset.guardarNota;
-    const nota = document.querySelector('[data-nota="' + id + '"]').value.trim() || null;
-    const { error } = await sb.from('pedidos').update({ nota_admin: nota }).eq('id', id);
-    if (error) return toast('Error: ' + mensajeError(error));
-    const pd = pedidos.find(p => String(p.id) === id); if (pd) pd.nota_admin = nota;
-    toast('Comentario guardado');
-  });
+  document.querySelectorAll('#p-lista [data-estado]').forEach(s => s.onchange = () => guardarEstado(s.dataset.estado, s.value, s));
+  document.querySelectorAll('#p-lista [data-guardar-nota]').forEach(b => b.onclick = () =>
+    guardarNota(b.dataset.guardarNota, document.querySelector('#p-lista [data-nota="' + b.dataset.guardarNota + '"]').value));
+  document.querySelectorAll('#p-lista [data-ver-pedido]').forEach(b => b.onclick = () => abrirPedido(b.dataset.verPedido));
+  document.querySelectorAll('#p-lista [data-archivar]').forEach(b => b.onclick = () => archivarPedido(b.dataset.archivar));
+  document.querySelectorAll('#p-lista [data-borrar]').forEach(b => b.onclick = () => eliminarPedido(b.dataset.borrar));
+}
+
+/* Acciones sobre un pedido (se usan desde la lista y desde el detalle) */
+const pedidoPorId = (id) => pedidos.find(p => String(p.id) === String(id));
+function refrescarDetrasDelPanel(){
+  if (tab === 'pedidos') vistaPedidos();
+  else if (tab === 'resumen') vistaResumen();
+  pintarBadges();
+}
+async function guardarEstado(id, estado, sel){
+  const { error } = await sb.from('pedidos').update({ estado }).eq('id', id);
+  if (error){ toast('Error: ' + mensajeError(error)); if (sel) sel.value = (pedidoPorId(id) || {}).estado; return; }
+  const pd = pedidoPorId(id); if (pd) pd.estado = estado;
+  document.querySelectorAll('[data-estado="' + id + '"]').forEach(s => { s.value = estado; s.className = 'estado-sel e-' + estado; });
+  pintarBadges(); toast('Estado: ' + nombreEstado(estado));
+}
+async function guardarNota(id, texto){
+  const nota = String(texto || '').trim() || null;
+  const { error } = await sb.from('pedidos').update({ nota_admin: nota }).eq('id', id);
+  if (error) return toast('Error: ' + mensajeError(error));
+  const pd = pedidoPorId(id); if (pd) pd.nota_admin = nota;
+  document.querySelectorAll('[data-nota="' + id + '"]').forEach(t => { t.value = nota || ''; });
+  toast('Comentario guardado');
+}
+async function archivarPedido(id){
+  const pd = pedidoPorId(id); if (!pd) return;
+  const archivar = !pd.archivado;
+  const { error } = await sb.from('pedidos').update({ archivado: archivar, archivado_en: archivar ? new Date().toISOString() : null }).eq('id', id);
+  if (error) return toast('Error: ' + mensajeError(error));
+  pd.archivado = archivar; pd.archivado_en = archivar ? new Date().toISOString() : null;
+  toast('Pedido #' + id + (archivar ? ' archivado' : ' vuelve a la lista'));
+  if ($('panel').classList.contains('ver') && $('panel').dataset.pedido === String(id)) abrirPedido(id);
+  refrescarDetrasDelPanel();
+}
+async function eliminarPedido(id){
+  const pd = pedidoPorId(id); if (!pd) return;
+  const c = clienteDe(pd);
+  if (!confirm('¿Eliminar el pedido #' + id + ' de ' + (c.nombre || c.empresa || c.email) + ' (' + money(pd.total) + ')?\n\n' +
+    'Se borra para siempre, también de "Mi cuenta" del cliente. No se puede deshacer.\n' +
+    'Si solo quieres sacarlo de la lista, usa "Archivar".')) return;
+  const { data, error } = await sb.from('pedidos').delete().eq('id', id).select('id');
+  if (error) return toast('Error: ' + mensajeError(error));
+  if (!data || !data.length) return toast('No se pudo eliminar: ' + mensajeError({ message: 'permission denied' }));
+  pedidos = pedidos.filter(p => String(p.id) !== String(id));
+  if ($('panel').dataset.pedido === String(id)) cerrarPanel();
+  toast('Pedido #' + id + ' eliminado');
+  refrescarDetrasDelPanel();
+}
+
+/* Detalle de un pedido (panel lateral) */
+function abrirPedido(id){
+  const pd = pedidoPorId(id); if (!pd) return;
+  const c = clienteDe(pd);
+  const items = itemsDe(pd);
+  const unidades = items.reduce((s, it) => s + Number(it.cantidad || 0), 0);
+  const suma = items.reduce((s, it) => s + Number(it.precio_unit || 0) * Number(it.cantidad || 0), 0);
+  const wa = linkWhatsApp(c.telefono);
+  const dato = (t, v) => '<div><span>' + t + '</span>' + (v || '<span class="muted" style="text-transform:none;font-weight:400;letter-spacing:0;font-size:14px;color:var(--texto-3)">—</span>') + '</div>';
+
+  const filas = items.map(it => {
+    const p = productoDe(it.modelo);
+    const desc = (p && p.descripcion) || it.descripcion || '';
+    const img = rutaImagen(p && (p.imagen || (p.imagenes || [])[0]));
+    const marca = it.marca || (p && p.marca) || '';
+    const cat = p && (p.subcategoria || p.categoria_principal);
+    const sub = Number(it.precio_unit || 0) * Number(it.cantidad || 0);
+    const lista = it.precio_lista != null ? Number(it.precio_lista) : null;
+    const dcto = lista && it.precio_unit != null && lista > 0 ? Math.round((1 - Number(it.precio_unit) / lista) * 100) : null;
+    return '<li><div class="det-img">' + (img ? '<img src="' + esc(img) + '" alt="" loading="lazy" onerror="this.remove()">' : ICO.caja) + '</div>' +
+      '<div><div class="det-mod">' + (p ? '<a href="/p/' + slugDe(it.modelo) + '" target="_blank" rel="noopener">' + esc(it.modelo) + ' ↗</a>' : esc(it.modelo)) +
+        (marca ? ' <span class="pill" style="font-family:var(--sans);margin-left:4px">' + esc(marca) + '</span>' : '') + '</div>' +
+        (desc ? '<div class="det-desc">' + esc(desc) + '</div>' : '<div class="det-desc muted">Sin descripción</div>') +
+        (cat ? '<div class="det-cat">' + esc(cat) + '</div>' : '') +
+        (!p ? '<div class="det-cat" style="color:var(--amarillo-texto)">Ya no está en el catálogo actual</div>' : '') + '</div>' +
+      '<div class="det-num"><strong>' + money(sub) + '</strong>' + esc(it.cantidad) + ' × ' + money(it.precio_unit) +
+        (lista != null ? '<small>Lista ' + money(lista) + (dcto > 0 ? ' · −' + dcto + '%' : '') + '</small>' : '') + '</div></li>';
+  }).join('');
+
+  abrirPanel(
+    '<div class="panel-cab"><h2>Pedido #' + pd.id + '</h2>' + pillEstado(pd.estado) + (pd.archivado ? '<span class="pill">Archivado</span>' : '') +
+      '<button class="btn chico fantasma cerrar" id="d-cerrar" aria-label="Cerrar">' + ICO.cerrar + '</button></div>' +
+    '<div class="panel-cuerpo">' +
+      '<div class="seccion"><h3>Cliente</h3><div class="persona" style="margin-bottom:12px"><div class="avatar">' + esc(iniciales(c)) + '</div><div><strong>' + esc(c.nombre || c.empresa || c.email) + '</strong>' +
+        (c.nombre && c.empresa ? '<span>' + esc(c.empresa) + '</span>' : '') + '</div></div>' +
+        '<div class="det-datos">' +
+          dato('Correo', '<a href="mailto:' + esc(c.email) + '">' + esc(c.email) + '</a>') +
+          dato('Teléfono', c.telefono ? esc(c.telefono) + (wa ? ' · <a href="' + wa + '" target="_blank" rel="noopener">WhatsApp ↗</a>' : '') : '') +
+          dato('RIF', c.rif ? esc(c.rif) : '') +
+          dato('Tipo de cliente', c.tipo_id ? esc(nombreTipo(c.tipo_id)) : '') +
+        '</div></div>' +
+      '<div class="seccion"><h3>Pedido</h3><div class="det-datos">' +
+        dato('Recibido', fecha(pd.creado)) +
+        dato('Última actualización', fecha(pd.actualizado)) +
+        dato('Estado', '<select class="estado-sel e-' + pd.estado + '" data-estado="' + pd.id + '" id="d-estado">' + ESTADOS.map(e => '<option value="' + e[0] + '"' + (pd.estado === e[0] ? ' selected' : '') + '>' + e[1] + '</option>').join('') + '</select>') +
+        dato('Contenido', items.length + ' producto' + (items.length === 1 ? '' : 's') + ' · ' + unidades + ' unid.') +
+      '</div>' +
+      (pd.nota_cliente ? '<div class="ayuda" style="margin:14px 0 0"><strong>Nota del cliente:</strong> ' + esc(pd.nota_cliente) + '</div>' : '') + '</div>' +
+      '<div class="seccion"><h3>Productos</h3>' +
+        (items.length ? '<ul class="det-items">' + filas + '</ul>' : '<div class="vacio">Este pedido no tiene productos.</div>') +
+        '<div class="det-total"><span class="muted">Total' + (pd.total != null && Math.abs(Number(pd.total) - suma) > 1 ? ' (registrado; la suma da ' + money(suma) + ')' : '') + '</span><strong>' + money(pd.total != null ? pd.total : suma) + '</strong></div>' +
+      '</div>' +
+      '<div class="seccion"><h3>Comentario para el cliente</h3><div class="nota-wrap"><textarea rows="3" data-nota="' + pd.id + '" id="d-nota" placeholder="Ej. Listo para retirar">' + esc(pd.nota_admin || '') + '</textarea>' +
+        '<div><button class="btn chico" id="d-guardar-nota">Guardar comentario</button></div></div></div>' +
+    '</div>' +
+    '<div class="panel-pie">' +
+      '<button class="btn" id="d-copiar">Copiar lista</button>' +
+      '<button class="btn" id="d-archivar">' + ICO.archivar + (pd.archivado ? 'Desarchivar' : 'Archivar') + '</button>' +
+      '<button class="btn peligro" id="d-borrar">' + ICO.borrar + 'Eliminar</button>' +
+      '<button class="btn prim" id="d-listo" style="margin-left:auto">Cerrar</button>' +
+    '</div>', true);
+  $('panel').dataset.pedido = String(pd.id);
+
+  $('d-cerrar').onclick = $('d-listo').onclick = cerrarPanel;
+  $('d-estado').onchange = async (e) => { await guardarEstado(pd.id, e.target.value, e.target); abrirPedido(pd.id); refrescarDetrasDelPanel(); };
+  $('d-guardar-nota').onclick = () => guardarNota(pd.id, $('d-nota').value);
+  $('d-archivar').onclick = () => archivarPedido(pd.id);
+  $('d-borrar').onclick = () => eliminarPedido(pd.id);
+  $('d-copiar').onclick = async () => {
+    const texto = 'Pedido #' + pd.id + ' · ' + (c.nombre || c.empresa || c.email) + '\n' +
+      items.map(it => it.cantidad + ' × ' + it.modelo + (it.descripcion ? ' — ' + it.descripcion : '') + ' — ' + money(it.precio_unit) + ' c/u').join('\n') +
+      '\nTotal: ' + money(pd.total != null ? pd.total : suma);
+    try { await navigator.clipboard.writeText(texto); toast('Lista copiada'); } catch (e) { toast('No se pudo copiar'); }
+  };
 }
 
 /* ---------- Clientes ---------- */
@@ -666,10 +846,12 @@ function pintarClientes(){
 }
 
 /* Panel lateral para crear / editar un cliente */
-function abrirPanel(html){
-  $('panel').innerHTML = html; $('panel').classList.add('ver'); $('panel').setAttribute('aria-hidden', 'false'); $('velo').classList.add('ver');
+function abrirPanel(html, ancho){
+  $('panel').classList.toggle('ancho', !!ancho);
+  $('panel').innerHTML = html; $('panel').scrollTop = 0; $('panel').classList.add('ver'); $('panel').setAttribute('aria-hidden', 'false'); $('velo').classList.add('ver');
 }
 function cerrarPanel(){
+  delete $('panel').dataset.pedido;
   $('panel').classList.remove('ver'); $('panel').setAttribute('aria-hidden', 'true'); $('velo').classList.remove('ver');
 }
 $('velo').onclick = cerrarPanel;
