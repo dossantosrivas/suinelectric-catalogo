@@ -87,3 +87,18 @@ jobs:
             echo "Push rechazado (intento $intentos de $maximo). Reintentando..."
             sleep 5
           done
+
+      - name: Avisar por Telegram si algo falló
+        if: failure()
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          ENLACE: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [ -z "$TELEGRAM_TOKEN" ] || [ -z "$TELEGRAM_CHAT_ID" ]; then
+            echo "Sin secretos de Telegram: no se envía aviso."; exit 0
+          fi
+          curl -sS -X POST "https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage" \
+            --data-urlencode "chat_id=${TELEGRAM_CHAT_ID}" \
+            --data-urlencode "text=⚠️ Falló la actualización diaria del catálogo de la tienda. La tienda sigue con los datos de ayer. Detalles: ${ENLACE}" \
+            -o /dev/null
