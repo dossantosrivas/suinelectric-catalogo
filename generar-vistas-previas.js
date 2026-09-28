@@ -23,7 +23,10 @@ const DOMINIO = 'https://suinelectric.com';          // dirección principal de 
 const IMAGEN_GENERAL = DOMINIO + '/imagenes/og-suinelectric.jpg';
 const DESCUENTO_GENERAL = 60;                          // % que ven los visitantes (igual que en Supabase)
 const MOSTRAR_PRECIO = true;                           // false = no poner precio en las páginas
-const MAX_EN_CATEGORIA = 120;                          // más de esto: se muestran subcategorías + una muestra
+const MAX_EN_CATEGORIA = 120;
+// Súbelo cada vez que cambies publico.css o publico.js: el navegador los guarda un día
+// (ver _headers) y sin esto las páginas nuevas se ven con el estilo viejo.
+const VERSION_ESTILOS = 2;                          // más de esto: se muestran subcategorías + una muestra
 
 /* ---------- Cargar la organización de categorías desde tienda.html ----------
    Así hay una sola fuente: si cambias las familias en tienda.html, las páginas
@@ -125,8 +128,8 @@ function pagina({ titulo, descripcion, imagen, canonica, cuerpo, datos, tipoOg }
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link rel="stylesheet" href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap">
-<link rel="stylesheet" href="/publico.css">
-<script src="/publico.js" defer></script>
+<link rel="stylesheet" href="/publico.css?v=${VERSION_ESTILOS}">
+<script src="/publico.js?v=${VERSION_ESTILOS}" defer></script>
 ${(datos || []).map(jsonLD).join('\n')}
 </head>
 <body>
@@ -138,7 +141,7 @@ ${(datos || []).map(jsonLD).join('\n')}
   <a class="logo" href="/tienda"><img src="/imagenes/logo-suinelectric.png" alt="" width="52" height="52"><span><strong>SUINELECTRIC</strong><small>Automatización y control</small></span></a>
   <form class="buscador" action="/tienda" method="get" role="search">
     <label for="q" class="oculto">Buscar en la tienda</label>
-    <svg aria-hidden="true" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
+    <svg aria-hidden="true" width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="11" cy="11" r="7"/><path d="M20 20l-4-4"/></svg>
     <input id="q" type="search" name="q" placeholder="Buscar modelo, marca o descripción" autocomplete="off">
   </form>
   <a class="btn tinta" href="/tienda">Ir a la tienda</a>
