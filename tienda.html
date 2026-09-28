@@ -644,6 +644,35 @@
   }
   #toast.mostrar{ opacity:1; transform:translateX(-50%) translateY(0); }
 
+  /* ---------- Aviso de registro (solo visitantes sin sesión) ---------- */
+  #aviso-registro{
+    position:fixed; left:24px; bottom:24px; z-index:90; width:340px; max-width:calc(100vw - 24px);
+    background:var(--superficie); color:var(--texto); border:1px solid var(--linea); border-left:4px solid var(--amarillo);
+    border-radius:var(--radio); box-shadow:0 14px 40px rgba(9,24,34,0.22); overflow:hidden;
+    opacity:0; transform:translateY(16px); pointer-events:none; transition:opacity .3s ease, transform .3s ease;
+  }
+  #aviso-registro.mostrar{ opacity:1; transform:translateY(0); pointer-events:auto; }
+  #aviso-registro .aviso-cuerpo{ padding:16px 44px 16px 18px; }
+  #aviso-registro h4{ margin:0 0 4px; font-family:var(--display); font-size:19px; font-weight:700; color:var(--tinta); line-height:1.2; }
+  #aviso-registro p{ margin:0 0 12px; font-size:13.5px; line-height:1.45; color:var(--texto-2); }
+  #aviso-registro .aviso-acciones{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+  #aviso-registro .aviso-crear{
+    background:var(--amarillo); color:var(--tinta); border:none; border-radius:var(--radio);
+    padding:9px 14px; font-weight:700; font-size:14px; cursor:pointer; font-family:inherit;
+  }
+  #aviso-registro .aviso-crear:hover{ background:var(--amarillo-hover); }
+  #aviso-registro .aviso-entrar{ background:none; border:none; color:var(--azul-texto); font-weight:600; font-size:13.5px; cursor:pointer; padding:4px 2px; font-family:inherit; }
+  #aviso-registro .aviso-entrar:hover{ text-decoration:underline; }
+  #aviso-registro .aviso-x{
+    position:absolute; top:8px; right:8px; width:30px; height:30px; border:none; border-radius:50%;
+    background:none; color:var(--texto-2); font-size:16px; line-height:1; cursor:pointer;
+  }
+  #aviso-registro .aviso-x:hover{ background:var(--fondo); color:var(--tinta); }
+  #aviso-registro .aviso-barra{ height:3px; background:var(--amarillo); transform-origin:left; }
+  #aviso-registro.corriendo .aviso-barra{ animation:avisoBarra 5s linear forwards; }
+  #aviso-registro.corriendo:hover .aviso-barra{ animation-play-state:paused; }
+  @keyframes avisoBarra{ from{ transform:scaleX(1); } to{ transform:scaleX(0); } }
+
   /* ---------- Carga ---------- */
   .skeleton-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(240px,1fr)); gap:16px; }
   .skeleton-card{ height:360px; border-radius:var(--radio); background:linear-gradient(90deg, #e8ecef 25%, #f5f7f8 50%, #e8ecef 75%); background-size:200% 100%; animation:brillo 1.4s ease-in-out infinite; }
@@ -775,6 +804,7 @@
     }
     #toast{ bottom:calc(80px + env(safe-area-inset-bottom, 0px)); left:12px; right:12px; transform:translateY(20px); text-align:center; }
     #toast.mostrar{ transform:translateY(0); }
+    #aviso-registro{ left:12px; right:12px; width:auto; bottom:calc(80px + env(safe-area-inset-bottom, 0px)); }
   }
 
   @media (prefers-reduced-motion: reduce){
@@ -915,6 +945,19 @@
 </div>
 
 <div id="toast"></div>
+
+<div id="aviso-registro" role="dialog" aria-live="polite" aria-labelledby="aviso-registro-titulo" hidden>
+  <button type="button" class="aviso-x" id="aviso-registro-x" aria-label="Cerrar aviso">✕</button>
+  <div class="aviso-cuerpo">
+    <h4 id="aviso-registro-titulo">Regístrate gratis</h4>
+    <p>Crea tu cuenta para ver tus precios de cliente y llevar el registro de tus pedidos.</p>
+    <div class="aviso-acciones">
+      <button type="button" class="aviso-crear" id="aviso-registro-crear">Crear cuenta</button>
+      <button type="button" class="aviso-entrar" id="aviso-registro-entrar">Ya tengo cuenta</button>
+    </div>
+  </div>
+  <div class="aviso-barra"></div>
+</div>
 
 <div id="barra-movil">
   <button id="barra-inicio">⌂<span>Inicio</span></button>
@@ -2853,6 +2896,8 @@ function actualizarUICuenta(){
   // La casilla "Dto." solo la ve el administrador.
   const dto = document.querySelector('.descuento-box');
   if (dto) dto.style.display = (!sb || sesion.admin) ? '' : 'none';
+  // Si ya inició sesión, el aviso de registro no tiene sentido.
+  if (sesion.email && typeof ocultarAvisoRegistro === 'function') ocultarAvisoRegistro();
 }
 function abrirCuenta(pestana){
   renderCuenta(pestana || 'pedidos');
@@ -3238,6 +3283,63 @@ async function registrarPedido(){
   });
 });
 
+/* ---------- Aviso de registro ----------
+   Solo para visitantes sin sesión. Se cierra solo a los 5 s (se pausa si
+   el mouse está encima) o con la X. Si el cliente ya entró, no aparece. */
+const AVISO_DURACION = 5000;
+const aviso = {
+  el: document.getElementById('aviso-registro'),
+  timer: null, inicio: 0, restante: AVISO_DURACION,
+};
+function avisoYaVisto(){
+  try { return sessionStorage.getItem('avisoRegistroVisto') === '1'; } catch (e){ return false; }
+}
+function marcarAvisoVisto(){
+  try { sessionStorage.setItem('avisoRegistroVisto', '1'); } catch (e){ /* sin almacenamiento: no pasa nada */ }
+}
+function ocultarAvisoRegistro(){
+  if (!aviso.el) return;
+  clearTimeout(aviso.timer); aviso.timer = null;
+  aviso.el.classList.remove('mostrar', 'corriendo');
+  setTimeout(() => { if (!aviso.el.classList.contains('mostrar')) aviso.el.hidden = true; }, 350);
+}
+function correrAviso(ms){
+  aviso.restante = ms; aviso.inicio = Date.now();
+  clearTimeout(aviso.timer);
+  aviso.timer = setTimeout(ocultarAvisoRegistro, ms);
+}
+function mostrarAvisoRegistro(){
+  // Hacer caso omiso si hay sesión, si no hay cuentas o si ya se mostró en esta visita.
+  if (!aviso.el || !sb || sesion.email || accesoEnCurso || avisoYaVisto()) return;
+  if (document.getElementById('modal-cuenta').classList.contains('abierto')) return;
+  marcarAvisoVisto();
+  aviso.el.hidden = false;
+  aviso.el.classList.remove('corriendo');
+  void aviso.el.offsetWidth;            // reinicia la barra de tiempo
+  aviso.el.classList.add('mostrar', 'corriendo');
+  correrAviso(AVISO_DURACION);
+}
+if (aviso.el){
+  document.getElementById('aviso-registro-x').addEventListener('click', ocultarAvisoRegistro);
+  document.getElementById('aviso-registro-crear').addEventListener('click', () => {
+    ocultarAvisoRegistro(); modoLogin = 'crear'; abrirCuenta();
+  });
+  document.getElementById('aviso-registro-entrar').addEventListener('click', () => {
+    ocultarAvisoRegistro(); modoLogin = 'clave'; abrirCuenta();
+  });
+  // Pausa mientras el mouse está encima, para que alcance a leerlo
+  // (la barra se pausa sola con CSS :hover).
+  aviso.el.addEventListener('mouseenter', () => {
+    if (!aviso.timer) return;
+    clearTimeout(aviso.timer); aviso.timer = null;
+    aviso.restante = Math.max(300, aviso.restante - (Date.now() - aviso.inicio));
+  });
+  aviso.el.addEventListener('mouseleave', () => {
+    if (!aviso.el.classList.contains('mostrar') || aviso.timer) return;
+    correrAviso(aviso.restante);
+  });
+}
+
 /* ---------- Arranque ---------- */
 document.getElementById('btn-cuenta').addEventListener('click', () => abrirCuenta());
 document.getElementById('barra-cuenta').addEventListener('click', () => abrirCuenta());
@@ -3265,7 +3367,8 @@ if (sb){
       }, 0);
     }
   });
-  cargarSesionYReglas();
+  // Primero se confirma si hay sesión; solo si no la hay aparece el aviso.
+  cargarSesionYReglas().then(() => setTimeout(mostrarAvisoRegistro, 1500));
 }
 
 renderCarrito();
