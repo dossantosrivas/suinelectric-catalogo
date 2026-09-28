@@ -491,18 +491,22 @@
 <script>
 /* Logo animado: la intro (rayo) se ve una vez; después repite solo el tramo
    del anillo eléctrico (4s → final) para que el bucle no dé saltos.
-   Tocar el logo repite la intro. Con "reducir movimiento" queda la imagen fija. */
+   Tocar el logo repite la intro. */
 (function(){
   const v = document.getElementById('logo-anim');
   if (!v) return;
   const BUCLE_DESDE = 4;
-  if (window.matchMedia && matchMedia('(prefers-reduced-motion: reduce)').matches){
-    v.removeAttribute('autoplay'); v.pause(); v.preload = 'none';
-    return;
-  }
-  v.addEventListener('ended', () => { v.play().catch(()=>{}); v.currentTime = BUCLE_DESDE; });
-  v.addEventListener('click', () => { v.currentTime = 0; v.play().catch(()=>{}); });
-  v.play().catch(()=>{});
+  v.muted = true; v.defaultMuted = true; v.playsInline = true;
+  const reproducir = () => { const p = v.play(); if (p && p.catch) p.catch(() => {}); };
+  v.addEventListener('ended', () => { reproducir(); v.currentTime = BUCLE_DESDE; });
+  // Respaldo por si el navegador cambia el orden de eventos al terminar
+  v.addEventListener('timeupdate', () => { if (v.duration && v.currentTime >= v.duration - 0.08) v.currentTime = BUCLE_DESDE; });
+  v.addEventListener('click', () => { v.currentTime = 0; reproducir(); });
+  // Si el navegador bloqueó la reproducción automática, arranca con la primera interacción
+  const alInteractuar = () => { if (v.paused) reproducir(); };
+  ['pointerdown','keydown','scroll','touchstart'].forEach(e => window.addEventListener(e, alInteractuar, { once:true, passive:true }));
+  document.addEventListener('visibilitychange', () => { if (!document.hidden && v.paused) reproducir(); });
+  if (v.readyState >= 2) reproducir(); else v.addEventListener('canplay', reproducir, { once:true });
 })();
 </script>
 <script>
