@@ -45,7 +45,8 @@ begin
                  'chat_id', v_chat,
                  'text', left(texto, 4000),
                  'parse_mode', 'HTML',
-                 'disable_web_page_preview', true)
+                 'disable_web_page_preview', true),
+    timeout_milliseconds := 20000   -- la conexión a Telegram a veces tarda más de 5 s
   );
 exception when others then
   raise warning 'notificar_telegram: %', sqlerrm;   -- nunca bloquea la operación
