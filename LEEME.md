@@ -76,3 +76,10 @@ En el panel → **Pedidos**, cada pedido tiene:
 - **Ver detalle** (o toca el número `#`): cliente con teléfono/WhatsApp y RIF, cada producto con foto, descripción completa, precio de lista, descuento y subtotal, y el botón **Copiar lista**.
 - **Archivar**: lo saca de la lista y de "por atender", sin borrarlo. Se ve en el filtro **Archivados** y se puede desarchivar. El cliente lo sigue viendo en "Mi cuenta".
 - **Eliminar**: lo borra para siempre (también para el cliente). Pide confirmación.
+
+## 10. Actividad por cliente (qué busca, mira y cotiza cada uno)
+Supabase → **SQL Editor** → pega todo `06_actividad_clientes.sql` → **Run** (requiere haber corrido antes `04_estadisticas.sql`).
+- Panel → **Estadísticas** → al final, **Clientes más activos** (toca uno para ver su detalle).
+- Panel → **Clientes** → botón **Actividad** (o dentro de Editar → Ver actividad).
+- El detalle muestra: última visita, días activo, lo que buscó (y qué no encontró), lo que cotizó o puso en el carrito, los productos que miró, sus pedidos y el paso a paso por día.
+- Solo cuenta lo que el cliente hace con la sesión iniciada; los visitantes sin cuenta siguen en las estadísticas generales.
