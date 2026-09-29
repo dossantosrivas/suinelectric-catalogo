@@ -8,3 +8,5 @@
   Cache-Control: public, max-age=86400
 /publico.js
   Cache-Control: public, max-age=86400
+/rastreo.js
+  Cache-Control: public, max-age=86400

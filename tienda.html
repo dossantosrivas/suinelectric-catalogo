@@ -1098,6 +1098,8 @@
   <button id="barra-cart">🛒<span>Pedido</span><span class="barra-cart-count" id="barra-cart-count">0</span></button>
 </div>
 
+<script>window.SUIN_RASTREO_MANUAL = true; /* rastreo.js arranca cuando se sabe si es administrador */</script>
+<script src="/rastreo.js?v=1"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
 const WHATSAPP_PRIORITARIO = "584124111319"; // 0412-4111319 (principal)
@@ -2497,20 +2499,48 @@ async function copiarDatosProducto(modelo){
 }
 
 /* ---------- Estadísticas (qué buscan, qué ven y qué cotizan) ----------
-   Se anota en Supabase (tabla eventos, ver 04_estadisticas.sql). Solo los
-   administradores lo pueden leer, en el panel → Estadísticas. Lo que hacen los
-   administradores no se anota. Si Supabase no responde, no pasa nada. */
+   Se anota en Supabase (tabla eventos, ver 04_estadisticas.sql y
+   10_visitantes.sql) a través de rastreo.js, que además agrega el código del
+   visitante y de la visita. Solo los administradores lo pueden leer, en el
+   panel → Estadísticas y → Visitantes. Lo que hacen los administradores no se
+   anota. Si Supabase no responde, no pasa nada. */
 const eventosRecientes = {};
 function registrar(tipo, datos){
   try {
-    if (!sb || sesion.admin) return;
+    if (sesion.admin) return;
     datos = datos || {};
     const clave = tipo + '|' + (datos.modelo || datos.texto || '');
     const ahora = Date.now();
     if (eventosRecientes[clave] && ahora - eventosRecientes[clave] < 60000) return; // no repetir en 1 minuto
     eventosRecientes[clave] = ahora;
-    sb.from('eventos').insert(Object.assign({ tipo, origen: 'tienda' }, datos)).then(() => {}, () => {});
+    if (window.suinRastreo) window.suinRastreo.evento(tipo, Object.assign({ origen: 'tienda' }, datos));
+    else if (sb) sb.from('eventos').insert(Object.assign({ tipo, origen: 'tienda' }, datos)).then(() => {}, () => {});
   } catch (e) { /* nunca debe afectar la tienda */ }
+}
+let fichaAbierta = null;
+// Dónde está el visitante cuando ve las tarjetas (se guarda junto a ellas).
+function contextoTarjetas(){
+  const q = (document.getElementById('buscador').value || '').trim();
+  if (document.getElementById('modal-detalle').classList.contains('abierto')) return 'Ficha de ' + (fichaAbierta || 'producto');
+  if (q) return 'Búsqueda: ' + q;
+  if (vista === 'inicio') return 'Inicio';
+  if (vista === 'catalogos') return 'Catálogos';
+  const partes = [];
+  if (filtroMarca) partes.push('Marca ' + filtroMarca);
+  if (seleccion && seleccion.length) partes.push(seleccion.join(' › '));
+  return partes.join(' · ') || 'Todo el catálogo';
+}
+// Arranca el registro de visitas (después de saber si es administrador).
+function iniciarRastreo(){
+  const r = window.suinRastreo;
+  if (!r) return;
+  if (sesion.admin){ r.noContarMas(); return; }
+  r.iniciar();
+  r.tarjetas({
+    selector: '.card, .carrusel-card',
+    modelo: (el) => { const m = el.hasAttribute('data-modelo') ? el : el.querySelector('[data-modelo]'); return m ? m.getAttribute('data-modelo') : ''; },
+    contexto: contextoTarjetas,
+  });
 }
 let timerRegistroBusqueda = null, ultimaBusquedaRegistrada = '';
 function registrarBusqueda(){
@@ -2538,6 +2568,7 @@ document.addEventListener('click', (e) => {
 function abrirDetalle(modelo){
   const p = productos.find(x => x.modelo === modelo);
   if (!p) return;
+  fichaAbierta = p.modelo;
   registrar('ver_producto', { modelo: String(p.modelo).slice(0, 80) });
   const cont = document.getElementById('detalle-contenido');
   const precioFinal = precioMostrado(p);
@@ -2935,6 +2966,7 @@ async function cargarSesionYReglas(){
       }
       sesion.cliente = ficha || null;
       sesion.admin = !!(ficha && ficha.es_admin && ficha.activo);
+      if (sesion.admin && window.suinRastreo) window.suinRastreo.noContarMas();
       sesion.bloqueado = !!(ficha && ficha.activo === false);
     }
     // Cantidades reales: Supabase solo las entrega si esta cuenta tiene permiso.
@@ -3500,8 +3532,8 @@ if (sb){
     }
   });
   // Primero se confirma si hay sesión; solo si no la hay aparece el aviso.
-  cargarSesionYReglas().then(() => setTimeout(mostrarAvisoRegistro, 1500));
-}
+  cargarSesionYReglas().then(() => { iniciarRastreo(); setTimeout(mostrarAvisoRegistro, 1500); });
+} else iniciarRastreo();
 
 renderCarrito();
 cargar();

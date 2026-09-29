@@ -195,6 +195,19 @@
 
   /* Actividad por cliente */
   .ranking li.clic{ cursor:pointer; }
+  /* Visitantes */
+  .tabla-vis tr.clic{ cursor:pointer; }
+  .tabla-vis td{ vertical-align:top; font-size:13.5px; }
+  .tabla-vis tr.clic:hover td:first-child strong{ color:var(--azul-texto); }
+  .vis-act .pill{ margin:0 3px 3px 0; }
+  .vis-cabv{ font-weight:500; color:var(--texto-3); font-size:12.5px; margin-top:2px; }
+  .vis-cabv::first-letter{ text-transform:none; }
+  .vis-tarj{ margin-top:4px; font-size:12.5px; }
+  .vis-tarj summary{ cursor:pointer; color:var(--azul-texto); }
+  .vis-tarj a.mono{ display:inline-block; margin:3px 8px 0 0; }
+  .vis-modelos{ display:flex; flex-wrap:wrap; gap:6px 12px; font-size:13px; }
+  .vis-modelos a.mono{ text-decoration:none; }
+  .vis-modelos b{ color:var(--texto-3); font-size:12px; }
   .ranking li.clic:hover .nom strong{ color:var(--azul-texto); }
   .ranking .nom strong{ font-weight:600; }
   .act-linea{ list-style:none; margin:0; padding:0; }
@@ -315,7 +328,7 @@
   }
   @media (max-width:860px){
     .grid-2[style]{ grid-template-columns:1fr !important; }
-    .app{ grid-template-columns:1fr; }
+    .app{ grid-template-columns:minmax(0,1fr); }
     .side{ position:sticky; top:0; height:auto; z-index:10; padding:10px 12px 0; flex-direction:column; }
     .marca{ padding:2px 4px 10px; }
     .marca-logo{ width:30px; height:30px; font-size:15px; }
@@ -402,6 +415,7 @@ const ICO = {
   caja:      I('<path d="M3 7h18v13H3z"/><path d="M3 7 5 3h14l2 4M9 11h6"/>'),
   archivar:  I('<rect x="3" y="4" width="18" height="4" rx="1"/><path d="M5 8v11a1 1 0 0 0 1 1h12a1 1 0 0 0 1-1V8M10 12h4"/>'),
   borrar:    I('<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13M9 7V4h6v3"/>'),
+  globo:     I('<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>'),
   whatsapp:  I('<path d="M20.5 11.6a8.5 8.5 0 0 1-12.6 7.4L3.5 20.5l1.5-4.3a8.5 8.5 0 1 1 15.5-4.6z"/>'),
 };
 
@@ -411,6 +425,7 @@ const VISTAS = [
   ['resumen', 'Resumen', ICO.resumen],
   ['pedidos', 'Pedidos', ICO.pedidos],
   ['estadisticas', 'Estadísticas', ICO.grafica],
+  ['visitantes', 'Visitantes', ICO.globo],
   ['clientes', 'Clientes', ICO.clientes],
   ['descuentos', 'Descuentos', ICO.descuentos],
   ['existencias', 'Existencias', ICO.existencias],
@@ -457,6 +472,8 @@ async function iniciar(){
     return;
   }
   yo = cli;
+  // Este navegador es de un administrador: la tienda no lo cuenta como visitante.
+  try { localStorage.setItem('suin_no_contar', '1'); } catch (e) {}
   armarApp();
   await Promise.all([cargarProductos(), recargarBase(), cargarPedidos(), cargarEstadoStock()]);
   pintarBadges();
@@ -524,7 +541,7 @@ function irA(t){ tab = t; mostrar(); window.scrollTo(0, 0); }
 function mostrar(){
   document.querySelectorAll('#nav button').forEach(x => x.classList.toggle('activa', x.dataset.tab === tab));
   cerrarPanel();
-  ({ resumen: vistaResumen, pedidos: vistaPedidos, estadisticas: vistaEstadisticas, clientes: vistaClientes, descuentos: vistaDescuentos, existencias: vistaExistencias, tipos: vistaTipos }[tab] || vistaResumen)();
+  ({ resumen: vistaResumen, pedidos: vistaPedidos, estadisticas: vistaEstadisticas, visitantes: vistaVisitantes, clientes: vistaClientes, descuentos: vistaDescuentos, existencias: vistaExistencias, tipos: vistaTipos }[tab] || vistaResumen)();
 }
 function pintarBadges(){
   const nuevos = pedidos.filter(p => p.estado === 'enviado' && !p.archivado).length;
@@ -1285,7 +1302,9 @@ async function abrirActividad(email){
     cotizar_whatsapp: (e) => 'Pidió cotización por WhatsApp de ' + linkProd(e.modelo) + (e.origen === 'pagina' ? ' <span class="muted">(desde la página del producto)</span>' : ''),
     pedido_whatsapp: (e) => 'Envió por WhatsApp ' + (e.cantidad ? e.cantidad + ' × ' : '') + linkProd(e.modelo),
   };
-  const ICO_EV = { busqueda: ICO.buscar, ver_producto: ICO.ojo, agregar_carrito: ICO.tienda, cotizar_whatsapp: ICO.whatsapp, pedido_whatsapp: ICO.pedidos };
+  TXT.visita = () => 'Entró a la tienda';
+  TXT.ver_tarjetas = (e) => 'Vio tarjetas de productos' + (e.texto ? ' en <strong>' + esc(e.texto) + '</strong>' : '');
+  const ICO_EV = { busqueda: ICO.buscar, ver_producto: ICO.ojo, agregar_carrito: ICO.tienda, cotizar_whatsapp: ICO.whatsapp, pedido_whatsapp: ICO.pedidos, visita: ICO.tienda, ver_tarjetas: ICO.grafica };
   let diaAnt = '';
   const linea = (data.recientes || []).map(e => {
     const dia = new Date(e.creado).toLocaleDateString('es-VE', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'America/Caracas' });
@@ -1326,6 +1345,264 @@ async function abrirActividad(email){
   $('a-listo').onclick = cerrarPanel;
   if ($('a-pedidos')) $('a-pedidos').onclick = () => { buscaPed = email; filtroEstado = ''; irA('pedidos'); };
   if ($('a-editar')) $('a-editar').onclick = () => abrirCliente(clientes.find(x => x.email === email));
+}
+
+/* ---------- Visitantes sin cuenta (10_visitantes.sql) ---------- */
+let diasVis = 30, buscaVis = '', datosVis = null, cuantasVis = 25;
+const DIAS_VIS = [[1, '24 horas'], [7, '7 días'], [30, '30 días'], [90, '90 días']];
+const faltaVisitantes = (err) => '<div class="caja"><div class="tarjeta-sync"><div class="icono mal">' + ICO.alerta + '</div><div><strong>Falta instalar el registro de visitantes</strong><div class="muted">Corre <span class="mono">10_visitantes.sql</span> en Supabase → SQL Editor (después de <span class="mono">04_estadisticas.sql</span>). Desde ese momento la tienda anota cada visita: de dónde entran, con qué equipo, qué buscan y qué tarjetas de producto ven.' + (err ? '<br><small>' + esc(mensajeError(err)) + '</small>' : '') + '</div></div></div></div>';
+let nombresPais = null;
+try { nombresPais = new Intl.DisplayNames(['es'], { type: 'region' }); } catch (e) {}
+const nomPais = (c) => {
+  if (!c || c === 'XX') return 'Desconocido';
+  if (c === 'T1') return 'Red Tor (oculto)';
+  try { return (nombresPais && nombresPais.of(c)) || c; } catch (e) { return c; }
+};
+const bandera = (c) => /^[A-Z]{2}$/.test(c || '') && c !== 'XX' && c !== 'T1' ? String.fromCodePoint(...[...c].map(ch => 127397 + ch.charCodeAt(0))) + ' ' : '🌐 ';
+const lugarDe = (x) => {
+  const partes = [x.ciudad, x.region && x.region !== x.ciudad ? x.region : null].filter(Boolean);
+  if (x.pais && x.pais !== 'VE') partes.push(nomPais(x.pais));
+  return partes.length ? bandera(x.pais) + partes.join(', ') : x.pais ? bandera(x.pais) + nomPais(x.pais) : 'Lugar desconocido';
+};
+const ICO_DISP = { Celular: '📱', Tablet: '📱', Computadora: '💻' };
+const equipoDe = (x) => x.dispositivo ? (ICO_DISP[x.dispositivo] || '') + ' ' + x.dispositivo + (x.sistema && x.sistema !== 'Otro' ? ' · ' + x.sistema : '') + (x.navegador && x.navegador !== 'Otro' ? ' · ' + x.navegador : '') : '—';
+const origenDe = (r) => r || 'Directo / enlace';
+const duracion = (seg) => {
+  seg = Math.round(Number(seg) || 0);
+  if (seg < 5) return 'un momento';
+  if (seg < 60) return seg + ' s';
+  const m = Math.round(seg / 60); if (m < 60) return m + ' min';
+  return Math.floor(m / 60) + ' h ' + (m % 60) + ' min';
+};
+const hora = (d) => new Date(d).toLocaleTimeString('es-VE', { hour: 'numeric', minute: '2-digit', timeZone: 'America/Caracas' });
+const diaLargo = (d) => new Date(d).toLocaleDateString('es-VE', { weekday: 'long', day: 'numeric', month: 'long', timeZone: 'America/Caracas' });
+const codigoVis = (v) => String(v || '').replace(/-/g, '').slice(0, 6).toUpperCase();
+const paginaBonita = (p) => {
+  if (!p) return '—';
+  if (/^\/p\//.test(p)) return 'Página de producto ' + p.slice(3);
+  if (/^\/c\//.test(p)) return 'Página de categoría ' + p.slice(3).replace(/\//g, ' › ');
+  const h = p.replace(/^\/(tienda)?(\.html)?/, '');
+  if (!h || h === '#' || h === '#/') return 'Inicio de la tienda';
+  const q = h.match(/buscar\?q=([^&]+)/); if (q) return 'Búsqueda “' + q[1] + '”';
+  const pr = h.match(/[?&]p=([^&]+)/); if (pr) return 'Producto ' + pr[1];
+  return 'Tienda ' + h.replace(/^#\/?/, '').replace(/\//g, ' › ');
+};
+
+// Mini gráfico de barras (horas del día, días de la semana)
+function barrasSimples(valores, etiquetas, titulo){
+  const max = Math.max(1, ...valores);
+  return '<div class="grafico" style="height:120px">' + valores.map((v, i) => '<div class="col" title="' + esc(titulo(i, v)) + '"><div class="b1" style="height:' + (100 * v / max) + '%;' + (v === max && v > 0 ? 'background:var(--azul)' : '') + '"></div></div>').join('') + '</div>' +
+    '<div class="grafico-ejes">' + etiquetas.map(t => '<span>' + t + '</span>').join('') + '</div>';
+}
+
+async function vistaVisitantes(){
+  const chips = '<div class="chips">' + DIAS_VIS.map(([d, t]) => '<button class="chip' + (diasVis === d ? ' activo' : '') + '" data-dias-vis="' + d + '">' + t + '</button>').join('') + '</div>';
+  $('main').innerHTML = cabecera('Visitantes', 'Quienes entran sin iniciar sesión: cuántos son, de dónde, cuándo, qué buscan y qué productos ven. Toca una visita para ver todo lo que hizo esa persona. No se cuenta lo que haces tú como administrador.', chips) + '<div class="cargando">Cargando…</div>';
+  document.querySelectorAll('[data-dias-vis]').forEach(b => b.onclick = () => { diasVis = Number(b.dataset.diasVis); vistaVisitantes(); });
+  const { data, error } = await sb.rpc('resumen_visitantes', { dias: diasVis });
+  if (tab !== 'visitantes') return;
+  const cont = document.querySelector('#main .cargando');
+  if (error || !data){ cont.outerHTML = faltaVisitantes(error); return; }
+  datosVis = data; cuantasVis = 25;
+  const t = data.totales || {};
+  const kpi = (icono, titulo, num, pie, extra) => '<div class="kpi' + (extra || '') + '"><div class="k-cab">' + titulo + icono + '</div><div class="k-num">' + (typeof num === 'string' ? num : Number(num || 0).toLocaleString('es-VE')) + '</div><div class="k-pie">' + pie + '</div></div>';
+  const ranking = (lista, fila, vacio, n) => !lista || !lista.length ? '<div class="vacio">' + ICO.grafica + vacio + '</div>' :
+    '<ol class="ranking">' + lista.slice(0, n || 12).map((x, i) => fila(x, i, lista)).join('') + '</ol>';
+  const barra = (v, max) => '<div class="barra"><i style="width:' + Math.max(4, Math.round(100 * v / (max || 1))) + '%"></i></div>';
+  const maxDe = (l, k) => Math.max(1, ...(l || []).map(x => x[k] || 0));
+  const filaSimple = (nombre, v, max, sub) => '<li><span class="pos"></span><span class="nom"><strong>' + nombre + '</strong>' + (sub ? '<small>' + sub + '</small>' : '') + barra(v, max) + '</span><span class="num">' + v + '</span></li>';
+  const pct = (a, b) => b ? Math.round(100 * a / b) + '%' : '—';
+
+  // Visitas por día (completa los días sin datos)
+  const porDia = {}; (data.por_dia || []).forEach(d => { porDia[d.dia] = d; });
+  const dias = [];
+  const nDias = Math.max(diasVis, 7);
+  for (let i = nDias - 1; i >= 0; i--){
+    const f = new Date(Date.now() - i * 86400000);
+    const k = f.toLocaleDateString('en-CA', { timeZone: 'America/Caracas' });
+    dias.push({ f, v: (porDia[k] || {}).visitas || 0, p: (porDia[k] || {}).visitantes || 0 });
+  }
+  const maxV = Math.max(1, ...dias.map(d => d.v));
+  const cada = nDias <= 7 ? 1 : nDias <= 30 ? 5 : 15;
+  const grafico = '<div class="grafico">' + dias.map(d => '<div class="col" title="' + d.f.toLocaleDateString('es-VE', { weekday: 'short', day: 'numeric', month: 'short' }) + ': ' + d.v + ' visitas de ' + d.p + ' personas">' +
+      '<div class="b1" style="height:' + (100 * d.v / maxV) + '%"></div><div class="b2" style="height:' + (100 * d.p / maxV) + '%"></div></div>').join('') + '</div>' +
+    '<div class="grafico-ejes">' + dias.map((d, i) => '<span>' + ((dias.length - 1 - i) % cada === 0 ? d.f.getDate() : '') + '</span>').join('') + '</div>';
+
+  const horas = Array(24).fill(0); (data.por_hora || []).forEach(h => { horas[h.hora] = h.visitas; });
+  const semana = Array(7).fill(0); (data.por_semana || []).forEach(d => { semana[d.dia - 1] = d.visitas; });
+  const DSEM = ['lunes', 'martes', 'miércoles', 'jueves', 'viernes', 'sábado', 'domingo'];
+  const hTxt = (h) => (h % 12 || 12) + (h < 12 ? ' a. m.' : ' p. m.');
+  const pico = horas.indexOf(Math.max(...horas));
+
+  const maxP = maxDe(data.paises, 'visitas'), maxCi = maxDe(data.ciudades, 'visitas'), maxO = maxDe(data.origenes, 'visitas'), maxE = maxDe(data.entradas, 'visitas');
+  const maxB = maxDe(data.buscado, 'veces'), maxT = maxDe(data.tarjetas, 'veces');
+  const grupoMini = (titulo, lista, campo, nombre) => {
+    const max = maxDe(lista, 'visitas');
+    return '<div class="seccion"><h3>' + titulo + '</h3>' + (!(lista || []).length ? '<div class="muted">Sin datos.</div>' :
+      '<ol class="ranking">' + lista.slice(0, 6).map(x => filaSimple(esc(nombre ? nombre(x[campo]) : (x[campo] || 'Desconocido')), x.visitas, max, pct(x.visitas, t.visitas) + ' de las visitas')).join('') + '</ol>') + '</div>';
+  };
+
+  cont.outerHTML =
+    '<div class="kpis">' +
+      kpi(ICO.clientes, 'Visitas', t.visitas, Number(t.visitantes || 0).toLocaleString('es-VE') + ' personas distintas · ' + (t.nuevos || 0) + ' nuevas') +
+      kpi(ICO.ojo, 'En la tienda ahora', data.ahora, 'activos en los últimos 15 minutos', data.ahora ? ' destacado' : '') +
+      kpi(ICO.buscar, 'Búsquedas', t.busquedas, 'veces que usaron el buscador') +
+      kpi(ICO.tienda, 'Tarjetas vistas', t.tarjetas, (t.fichas || 0) + ' fichas de producto abiertas') +
+      kpi(ICO.whatsapp, 'Visitas con interés', t.con_interes, pct(t.con_interes, t.visitas) + ' agregó al pedido o escribió por WhatsApp') +
+      kpi(ICO.sync, 'Tiempo promedio', t.duracion_media ? duracion(t.duracion_media) : '—', 'de las visitas que hicieron algo') +
+    '</div>' +
+    '<div class="caja"><div class="caja-cab"><h2>Visitas por día</h2><div class="leyenda"><span><i style="background:var(--azul-suave)"></i>Visitas</span><span><i style="background:var(--azul)"></i>Personas distintas</span></div></div>' + grafico + '</div>' +
+    '<div class="grid-2" style="grid-template-columns:1fr 1fr;margin-bottom:18px">' +
+      '<div class="caja"><div class="caja-cab"><h2>¿A qué hora entran?</h2>' + (t.visitas ? '<span class="muted">Más visitas: ' + hTxt(pico) + '</span>' : '') + '</div>' +
+        barrasSimples(horas, horas.map((_, h) => h % 3 === 0 ? (h % 12 || 12) + (h < 12 ? 'a' : 'p') : ''), (h, v) => hTxt(h) + ': ' + v + ' visitas') + '<p class="muted" style="margin:8px 0 0">Hora de Venezuela.</p></div>' +
+      '<div class="caja"><div class="caja-cab"><h2>¿Qué días?</h2></div>' +
+        barrasSimples(semana, DSEM.map(d => d.slice(0, 3)), (i, v) => DSEM[i] + ': ' + v + ' visitas') + '</div>' +
+    '</div>' +
+    '<div class="grid-2" style="grid-template-columns:1fr 1fr;margin-bottom:18px">' +
+      '<div class="caja"><div class="caja-cab"><h2>¿De qué país?</h2></div>' +
+        ranking(data.paises, (x, i) => '<li><span class="pos">' + (i + 1) + '</span><span class="nom"><strong>' + bandera(x.pais) + esc(nomPais(x.pais)) + '</strong><small>' + x.visitantes + ' persona' + (x.visitantes === 1 ? '' : 's') + '</small>' + barra(x.visitas, maxP) + '</span><span class="num">' + x.visitas + '<small>' + pct(x.visitas, t.visitas) + '</small></span></li>', 'Todavía no hay visitas en este período.') + '</div>' +
+      '<div class="caja"><div class="caja-cab"><h2>¿De qué ciudad?</h2></div><p class="sub">Aproximado: se calcula por la conexión a internet (con datos móviles puede salir la ciudad de la antena).</p>' +
+        ranking(data.ciudades, (x, i) => '<li><span class="pos">' + (i + 1) + '</span><span class="nom"><strong>' + esc(lugarDe(x)) + '</strong><small>' + x.visitantes + ' persona' + (x.visitantes === 1 ? '' : 's') + '</small>' + barra(x.visitas, maxCi) + '</span><span class="num">' + x.visitas + '</span></li>', 'Sin ciudades todavía.', 15) + '</div>' +
+    '</div>' +
+    '<div class="grid-2" style="grid-template-columns:1fr 1fr;margin-bottom:18px">' +
+      '<div class="caja"><div class="caja-cab"><h2>¿Cómo llegan?</h2></div>' +
+        ranking(data.origenes, (x, i) => '<li><span class="pos">' + (i + 1) + '</span><span class="nom"><strong>' + esc(origenDe(x.referencia)) + '</strong>' + (x.referencia ? '' : '<small>Escribieron la dirección, un marcador o un enlace de WhatsApp</small>') + barra(x.visitas, maxO) + '</span><span class="num">' + x.visitas + '<small>' + pct(x.visitas, t.visitas) + '</small></span></li>', 'Sin datos todavía.') +
+        '<div class="seccion" style="margin:18px 0 0"><h3>Página por la que entraron</h3>' + (!(data.entradas || []).length ? '<div class="muted">Sin datos.</div>' :
+          '<ol class="ranking">' + data.entradas.slice(0, 8).map(x => filaSimple(esc(paginaBonita(x.pagina)), x.visitas, maxE)).join('') + '</ol>') + '</div></div>' +
+      '<div class="caja"><div class="caja-cab"><h2>¿Con qué equipo?</h2></div>' +
+        grupoMini('Tipo de equipo', data.dispositivos, 'dispositivo') +
+        grupoMini('Sistema', data.sistemas, 'sistema') +
+        grupoMini('Navegador', data.navegadores, 'navegador') +
+        grupoMini('Proveedor de internet', data.proveedores, 'proveedor') + '</div>' +
+    '</div>' +
+    '<div class="grid-2" style="grid-template-columns:1fr 1fr;margin-bottom:18px">' +
+      '<div class="caja"><div class="caja-cab"><h2>¿Qué buscan?</h2></div>' +
+        ranking(data.buscado, (x, i) => '<li><span class="pos">' + (i + 1) + '</span><span class="nom">' + esc(x.texto) + (x.resultados === 0 ? ' <span class="pill rojo">sin resultados</span>' : '') + '<small>' + x.personas + ' persona' + (x.personas === 1 ? '' : 's') + '</small>' + barra(x.veces, maxB) + '</span><span class="num">' + x.veces + '</span></li>', 'Todavía no hay búsquedas de visitantes.', 20) + '</div>' +
+      '<div class="caja"><div class="caja-cab"><h2>Tarjetas de producto más vistas</h2></div><p class="sub">Productos que estuvieron en pantalla (en la lista, en Inicio o en las páginas de Google) y cuántas veces abrieron la ficha.</p>' +
+        ranking(data.tarjetas, (x, i) => '<li><span class="pos">' + (i + 1) + '</span><span class="nom">' + linkProd(x.modelo) + '<small>' + esc(descProd(x.modelo)) + '</small>' + barra(x.veces, maxT) + '</span><span class="num">' + x.veces +
+          '<small>' + x.personas + ' pers. · ' + (x.abiertas ? x.abiertas + ' abierta' + (x.abiertas === 1 ? '' : 's') : 'no la abrieron') + '</small></span></li>', 'Todavía no hay tarjetas vistas.', 20) + '</div>' +
+    '</div>' +
+    '<div class="caja"><div class="caja-cab"><h2>Visitas recientes <small>' + (data.visitas || []).length + (t.visitas > (data.visitas || []).length ? ' de ' + t.visitas : '') + '</small></h2>' +
+      '<div class="buscar"><input id="vis-buscar" type="search" placeholder="Filtrar por ciudad, búsqueda, origen…" value="' + esc(buscaVis) + '"></div></div>' +
+      '<div class="tabla-wrap" id="vis-tabla"></div></div>';
+  pintarVisitas();
+  $('vis-buscar').oninput = (e) => { buscaVis = e.target.value; cuantasVis = 25; pintarVisitas(); };
+}
+
+function pintarVisitas(){
+  const q = buscaVis.trim().toLowerCase();
+  const lista = (datosVis && datosVis.visitas || []).filter(v => !q ||
+    [lugarDe(v), nomPais(v.pais), v.proveedor, equipoDe(v), origenDe(v.referencia), v.buscado, paginaBonita(v.pagina), codigoVis(v.visitante)].join(' ').toLowerCase().includes(q));
+  const el = $('vis-tabla');
+  if (!el) return;
+  if (!lista.length){ el.innerHTML = '<div class="vacio">' + ICO.clientes + (q ? 'Ninguna visita coincide con el filtro.' : 'Todavía no hay visitas en este período.') + '</div>'; return; }
+  const act = (v) => [
+    v.busquedas && '<span class="pill">' + v.busquedas + ' búsq.</span>',
+    v.tarjetas && '<span class="pill">' + v.tarjetas + ' tarjetas</span>',
+    v.fichas && '<span class="pill azul">' + v.fichas + ' fichas</span>',
+    v.carrito && '<span class="pill verde">' + v.carrito + ' al pedido</span>',
+    v.whatsapp && '<span class="pill verde">WhatsApp</span>',
+  ].filter(Boolean).join(' ') || '<span class="muted">Solo entró</span>';
+  el.innerHTML = '<table class="tabla-vis"><thead><tr><th>Cuándo</th><th>Desde dónde</th><th>Equipo</th><th>Llegó por</th><th>Qué hizo</th><th>Buscó</th></tr></thead><tbody>' +
+    lista.slice(0, cuantasVis).map(v => '<tr class="clic" data-visitante="' + esc(v.visitante) + '">' +
+      '<td><strong>' + haceCuanto(v.inicio) + '</strong><div class="muted">' + fecha(v.inicio) + (v.fin > v.inicio ? ' · ' + duracion((new Date(v.fin) - new Date(v.inicio)) / 1000) : '') + '</div>' +
+        '<div style="margin-top:3px">' + (v.nuevo ? '<span class="pill amar">Nuevo</span>' : '<span class="pill tinta">Volvió</span>') + (v.visitas_periodo > 1 ? ' <span class="muted">' + v.visitas_periodo + ' visitas</span>' : '') + '</div></td>' +
+      '<td>' + esc(lugarDe(v)) + (v.proveedor ? '<div class="muted">' + esc(v.proveedor) + '</div>' : '') + '</td>' +
+      '<td>' + esc(equipoDe(v)) + '</td>' +
+      '<td>' + esc(origenDe(v.referencia)) + '<div class="muted">' + esc(paginaBonita(v.pagina)) + '</div></td>' +
+      '<td class="vis-act">' + act(v) + '</td>' +
+      '<td>' + (v.buscado ? esc(v.buscado) : '<span class="muted">—</span>') + '</td></tr>').join('') +
+    '</tbody></table>' +
+    (lista.length > cuantasVis ? '<div style="text-align:center;padding:14px 0 4px"><button class="btn" id="vis-mas">Ver más visitas (' + (lista.length - cuantasVis) + ')</button></div>' : '');
+  if ($('vis-mas')) $('vis-mas').onclick = () => { cuantasVis += 50; pintarVisitas(); };
+  el.querySelectorAll('[data-visitante]').forEach(tr => tr.onclick = (e) => { if (!e.target.closest('a')) abrirVisitante(tr.dataset.visitante); });
+}
+
+// Panel con todo lo que hizo un visitante (todas sus visitas)
+async function abrirVisitante(id){
+  const cab = '<div class="panel-cab"><div class="avatar">' + esc(codigoVis(id).slice(0, 2)) + '</div><div><h2>Visitante ' + esc(codigoVis(id)) + '</h2><div class="muted">Sin cuenta · identificado por su navegador</div></div>' +
+    '<button class="btn chico fantasma cerrar" id="v-cerrar" aria-label="Cerrar">' + ICO.cerrar + '</button></div>';
+  const chips = '<div class="chips" style="margin-bottom:16px">' + DIAS_ACT.map(([d, t]) => '<button class="chip' + (diasAct === d ? ' activo' : '') + '" data-dias-vact="' + d + '">' + t + '</button>').join('') + '</div>';
+  abrirPanel(cab + '<div class="panel-cuerpo">' + chips + '<div class="cargando">Cargando…</div></div>', true);
+  $('panel').dataset.actividad = 'v:' + id;
+  const enlazar = () => {
+    $('v-cerrar').onclick = cerrarPanel;
+    document.querySelectorAll('[data-dias-vact]').forEach(b => b.onclick = () => { diasAct = Number(b.dataset.diasVact); abrirVisitante(id); });
+  };
+  enlazar();
+  const { data, error } = await sb.rpc('actividad_visitante', { p_visitante: id, dias: diasAct });
+  if ($('panel').dataset.actividad !== 'v:' + id) return;
+  const cuerpo = document.querySelector('#panel .panel-cuerpo');
+  if (error || !data){ cuerpo.innerHTML = chips + faltaVisitantes(error); enlazar(); return; }
+
+  const t = data.totales || {};
+  const visitas = data.visitas || [];
+  const ult = visitas[0] || {};
+  const mini = (titulo, num, pie) => '<div class="kpi"><div class="k-cab">' + titulo + '</div><div class="k-num" style="font-size:23px">' + Number(num || 0).toLocaleString('es-VE') + '</div>' + (pie ? '<div class="k-pie">' + pie + '</div>' : '') + '</div>';
+  const vacio = (txt) => '<div class="muted" style="padding:8px 0">' + txt + '</div>';
+  const barra = (v, m) => '<div class="barra"><i style="width:' + Math.max(4, Math.round(100 * v / m)) + '%"></i></div>';
+  const maxB = Math.max(1, ...(data.buscado || []).map(x => x.veces));
+  const maxV = Math.max(1, ...(data.vistos || []).map(x => x.veces));
+  const correos = data.correos || [];
+
+  // Paso a paso, agrupado por visita
+  const infoVisita = {}; visitas.forEach(v => { infoVisita[v.visita] = v; });
+  const TXT = {
+    visita: (e) => 'Entró' + (e.pagina ? ' por <strong>' + esc(paginaBonita(e.pagina)) + '</strong>' : ''),
+    busqueda: (e) => 'Buscó <strong>“' + esc(e.texto) + '”</strong>' + (e.resultados === 0 ? ' <span class="pill rojo">sin resultados</span>' : e.resultados != null ? ' <span class="muted">(' + e.resultados + ' resultados)</span>' : ''),
+    ver_producto: (e) => 'Abrió la ficha de ' + linkProd(e.modelo) + (e.origen === 'pagina' ? ' <span class="muted">(página del producto)</span>' : ''),
+    ver_tarjetas: (e) => {
+      const l = e.modelos || [];
+      return 'Vio ' + l.length + ' tarjeta' + (l.length === 1 ? '' : 's') + (e.texto ? ' en <strong>' + esc(e.texto) + '</strong>' : '') +
+        '<details class="vis-tarj"><summary>Ver cuáles</summary>' + l.map(m => linkProd(m)).join(' ') + '</details>';
+    },
+    agregar_carrito: (e) => 'Agregó ' + (e.cantidad ? e.cantidad + ' × ' : '') + linkProd(e.modelo) + ' al pedido',
+    cotizar_whatsapp: (e) => 'Pidió precio por WhatsApp de ' + linkProd(e.modelo) + (e.origen === 'pagina' ? ' <span class="muted">(página del producto)</span>' : ''),
+    pedido_whatsapp: (e) => 'Envió por WhatsApp ' + (e.cantidad ? e.cantidad + ' × ' : '') + linkProd(e.modelo),
+  };
+  const ICO_EV = { visita: ICO.tienda, busqueda: ICO.buscar, ver_producto: ICO.ojo, ver_tarjetas: ICO.grafica, agregar_carrito: ICO.tienda, cotizar_whatsapp: ICO.whatsapp, pedido_whatsapp: ICO.pedidos };
+  let visAnt = null;
+  const linea = (data.recientes || []).map(e => {
+    let cabV = '';
+    if (e.visita !== visAnt){
+      visAnt = e.visita;
+      const v = infoVisita[e.visita] || {};
+      cabV = '<li class="act-dia">' + (v.inicio ? diaLargo(v.inicio) + ' · ' + hora(v.inicio) : diaLargo(e.creado)) +
+        '<div class="vis-cabv">' + [esc(lugarDe(v)), esc(equipoDe(v)), 'llegó por ' + esc(origenDe(v.referencia)), v.fin > v.inicio ? 'estuvo ' + duracion((new Date(v.fin) - new Date(v.inicio)) / 1000) : ''].filter(Boolean).join(' · ') + '</div></li>';
+    }
+    return cabV + '<li class="act-ev t-' + e.tipo + '">' + (ICO_EV[e.tipo] || '') + '<span>' + (TXT[e.tipo] || (() => esc(e.tipo)))(e) +
+      (e.cliente_email ? ' <span class="pill azul">con su cuenta</span>' : '') + '</span><time>' + hora(e.creado) + '</time></li>';
+  }).join('');
+
+  cuerpo.innerHTML = chips +
+    (correos.length ? '<div class="aviso azul">' + ICO.info + '<div>Este navegador también entró con cuenta: ' + correos.map(c => '<a href="#" data-act-email="' + esc(c) + '"><strong>' + esc(nombreCliente(c)) + '</strong></a>' + (nombreCliente(c) !== c ? ' <span class="muted">(' + esc(c) + ')</span>' : '')).join(', ') + '.</div></div>' : '') +
+    '<div class="det-datos" style="margin-bottom:16px">' +
+      '<div><span>Última visita</span>' + (data.ultima ? haceCuanto(data.ultima) + ' <small class="muted">· ' + fecha(data.ultima) + '</small>' : '—') + '</div>' +
+      '<div><span>Primera vez</span>' + (data.primera ? fecha(data.primera) : '—') + '</div>' +
+      '<div><span>Desde dónde</span>' + esc(lugarDe(ult)) + (ult.proveedor ? ' <small class="muted">· ' + esc(ult.proveedor) + '</small>' : '') + '</div>' +
+      '<div><span>Equipo</span>' + esc(equipoDe(ult)) + '</div>' +
+    '</div>' +
+    '<div class="kpis" style="grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:10px">' +
+      mini('Visitas', visitas.length) +
+      mini('Búsquedas', t.busqueda) +
+      mini('Tarjetas', data.n_tarjetas) +
+      mini('Fichas', t.ver_producto) +
+      mini('Al pedido', t.agregar_carrito) +
+      mini('WhatsApp', (t.cotizar_whatsapp || 0) + (t.pedido_whatsapp || 0)) +
+    '</div>' +
+    '<div class="seccion"><h3>Lo que buscó</h3>' + (!(data.buscado || []).length ? vacio('No buscó nada en este período.') :
+      '<ol class="ranking">' + data.buscado.slice(0, 15).map((x, i) => '<li><span class="pos">' + (i + 1) + '</span><span class="nom">' + esc(x.texto) + (x.resultados === 0 ? ' <span class="pill rojo">sin resultados</span>' : '') +
+        '<small>' + haceCuanto(x.ultima) + '</small>' + barra(x.veces, maxB) + '</span><span class="num">' + x.veces + '</span></li>').join('') + '</ol>') + '</div>' +
+    '<div class="seccion"><h3>Fichas de producto que abrió</h3>' + (!(data.vistos || []).length ? vacio('No abrió fichas de producto en este período.') :
+      '<ol class="ranking">' + data.vistos.slice(0, 15).map((x, i) => '<li><span class="pos">' + (i + 1) + '</span><span class="nom">' + linkProd(x.modelo) + '<small>' + esc(descProd(x.modelo)) + '</small>' + barra(x.veces, maxV) + '</span><span class="num">' + x.veces + '<small>' + haceCuanto(x.ultima) + '</small></span></li>').join('') + '</ol>') + '</div>' +
+    '<div class="seccion"><h3>Tarjetas que tuvo en pantalla <small class="muted" style="text-transform:none;letter-spacing:0;font-weight:500">(' + (data.tarjetas || []).length + ' productos distintos)</small></h3>' + (!(data.tarjetas || []).length ? vacio('No hay tarjetas vistas en este período.') :
+      '<div class="vis-modelos">' + data.tarjetas.map(x => '<span title="' + esc(descProd(x.modelo)) + '">' + linkProd(x.modelo) + (x.veces > 1 ? ' <b>×' + x.veces + '</b>' : '') + '</span>').join('') + '</div>') + '</div>' +
+    '<div class="seccion"><h3>Paso a paso <small class="muted" style="text-transform:none;letter-spacing:0;font-weight:500">(lo más reciente primero)</small></h3>' + (linea ? '<ul class="act-linea">' + linea + '</ul>' : vacio('Sin actividad en este período.')) + '</div>' +
+    '<p class="muted" style="font-size:12.5px">Si la persona borra los datos del navegador o entra desde otro equipo, aparece como un visitante nuevo. El lugar es aproximado.</p>';
+  cuerpo.insertAdjacentHTML('afterend', '<div class="panel-pie"><button class="btn prim" id="v-listo" style="margin-left:auto">Cerrar</button></div>');
+  enlazar();
+  $('v-listo').onclick = cerrarPanel;
+  cuerpo.querySelectorAll('[data-act-email]').forEach(a => a.onclick = (e) => { e.preventDefault(); abrirActividad(a.dataset.actEmail); });
 }
 
 /* ---------- Existencias ---------- */

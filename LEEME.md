@@ -114,3 +114,21 @@ En Telegram:
 - 🙋 **Chat #12 — pide asesor**: la IA te pasó el chat (con sonido). Desde ahí la IA no contesta en ese chat.
 - ⚠️ **Chat #12**: la IA no pudo responder (sin clave, sin cupo gratis del día…). El cliente recibe "un asesor te escribirá" y el chat queda para ti.
 - **Si respondes cualquier chat, la IA se calla en ese chat.** `/ia 12` la vuelve a encender; `/ia 12 off` la apaga.
+
+## 13. Visitantes sin cuenta (cuántos entran, de dónde, cuándo, qué buscan y qué tarjetas ven)
+1. Supabase → **SQL Editor** → pega todo `10_visitantes.sql` → **Run** (requiere `04_estadisticas.sql`; se puede volver a correr).
+2. Publica (sube los cambios a `main`). Cloudflare publica `rastreo.js` y la función `functions/api/geo.js` (no necesita claves).
+3. Panel → **Visitantes**:
+   - Visitas, personas distintas, nuevas y cuántas hay **en la tienda ahora**.
+   - Visitas por día, **a qué hora** y **qué días** entran (hora de Venezuela).
+   - **País, ciudad y proveedor de internet** (CANTV, Movilnet, Digitel…), aproximados por la conexión.
+   - **Cómo llegan** (Google, Instagram, Facebook, MercadoLibre, directo…) y por qué página entraron.
+   - Equipo (celular o computadora), sistema y navegador.
+   - Lo que buscan y las **tarjetas de producto que tuvieron en pantalla**, con cuántas veces abrieron la ficha.
+   - **Visitas recientes**: toca una para ver todo lo que hizo esa persona, visita por visita (lo que buscó, qué tarjetas vio y dónde, qué fichas abrió, si agregó al pedido o escribió por WhatsApp).
+
+Notas:
+- Cada navegador recibe un código aleatorio; no se guardan nombres, correos ni la IP. Si la persona borra los datos del navegador o entra desde otro equipo, cuenta como nueva.
+- Una tarjeta cuenta como "vista" si estuvo al menos a la mitad en pantalla casi un segundo (una vez por visita y por sección).
+- No se cuenta a los administradores: al entrar al panel, ese navegador queda marcado para no contarse nunca más (aunque luego entre a la tienda sin sesión). Tampoco a robots como Google.
+- Si todavía no corriste `10_visitantes.sql`, la tienda sigue anotando las estadísticas de antes, sin los datos nuevos.
