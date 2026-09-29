@@ -111,11 +111,14 @@ async function responderConIA(env, turno){
     '\n\nDatos del cliente: nombre ' + (turno.nombre || 'no indicado') + (turno.email ? ', cliente registrado' : '') + '.';
 
   let pasar = false, motivo = '';
-  for (let vuelta = 0; vuelta < 4; vuelta++){
+  const VUELTAS = 5;
+  for (let vuelta = 0; vuelta < VUELTAS; vuelta++){
+    const ultima = vuelta === VUELTAS - 1;   // en la última vuelta ya no puede buscar: tiene que contestar
     const res = await gemini(env, {
       systemInstruction: { parts: [{ text: sistema }] },
       contents,
       tools: HERRAMIENTAS,
+      toolConfig: { functionCallingConfig: { mode: ultima ? 'NONE' : 'AUTO' } },
       generationConfig: { temperature: 0.3, maxOutputTokens: 2048 },
     });
     const cand = res.candidates && res.candidates[0];
@@ -143,6 +146,7 @@ async function responderConIA(env, turno){
       }
       respuestas.push({ functionResponse: { name, response: resultado } });
     }
+    if (vuelta === VUELTAS - 2) respuestas.push({ text: '(Nota del sistema: ya no puedes buscar más. Responde al cliente con lo que tienes; si no encontraste nada adecuado, dile que un asesor lo ayudará.)' });
     contents.push({ role: 'user', parts: respuestas });
   }
   return { texto: '', pasar, motivo };
