@@ -812,6 +812,100 @@
     /* El carrusel de Inicio se mantiene en movimiento, pero más lento */
     .carrusel-track{ animation-duration:80s !important; }
   }
+
+  /* ---------- Chat con un asesor (burbuja + panel) ---------- */
+  #chat-burbuja{
+    position:fixed; right:24px; bottom:24px; z-index:58;
+    display:flex; align-items:center; gap:10px; height:56px; padding:0 20px 0 16px;
+    background:var(--tinta); color:#fff; border:none; border-radius:28px; cursor:pointer;
+    font-family:var(--sans); font-size:15px; font-weight:600;
+    box-shadow:0 10px 28px rgba(9,24,34,0.32); transition:transform .15s ease, background .15s ease;
+  }
+  #chat-burbuja:hover{ background:var(--tinta-2); transform:translateY(-2px); }
+  #chat-burbuja svg{ width:24px; height:24px; flex:none; }
+  #chat-burbuja .chat-punto{
+    position:absolute; top:-4px; right:-2px; min-width:22px; height:22px; padding:0 6px; border-radius:11px;
+    background:var(--amarillo); color:var(--tinta); font-size:12.5px; font-weight:700;
+    display:none; align-items:center; justify-content:center; border:2px solid #fff;
+  }
+  #chat-burbuja.con-nuevos .chat-punto{ display:flex; }
+
+  #chat-panel{
+    position:fixed; right:24px; bottom:24px; z-index:96; width:380px; max-width:calc(100vw - 24px);
+    height:560px; max-height:calc(100vh - 48px); max-height:calc(100dvh - 48px);
+    display:none; flex-direction:column; background:var(--superficie); color:var(--texto);
+    border:1px solid var(--linea); border-radius:10px; overflow:hidden;
+    box-shadow:0 20px 60px rgba(9,24,34,0.35);
+  }
+  #chat-panel.abierto{ display:flex; animation:fadeIn .15s ease; }
+  .chat-cab{
+    display:flex; align-items:center; gap:12px; padding:14px 14px 14px 16px;
+    background:var(--tinta); color:#fff; border-bottom:3px solid var(--amarillo);
+  }
+  .chat-cab .chat-avatar{
+    width:40px; height:40px; border-radius:50%; background:var(--azul); flex:none;
+    display:flex; align-items:center; justify-content:center; font-family:var(--display); font-weight:700; font-size:19px;
+  }
+  .chat-cab h4{ margin:0; font-family:var(--display); font-size:19px; font-weight:700; line-height:1.15; }
+  .chat-cab p{ margin:2px 0 0; font-size:12.5px; color:#b9cad6; line-height:1.3; }
+  .chat-cab .chat-x{
+    margin-left:auto; background:none; border:none; color:#fff; font-size:20px; cursor:pointer;
+    width:36px; height:36px; border-radius:50%; flex:none;
+  }
+  .chat-cab .chat-x:hover{ background:rgba(255,255,255,0.12); }
+
+  #chat-mensajes{
+    flex:1; overflow-y:auto; padding:16px 14px; background:var(--fondo);
+    display:flex; flex-direction:column; gap:8px; overscroll-behavior:contain;
+  }
+  .chat-msj{
+    max-width:84%; padding:9px 12px; border-radius:12px; font-size:14.5px; line-height:1.45;
+    white-space:pre-wrap; overflow-wrap:anywhere; box-shadow:0 1px 2px rgba(9,24,34,0.06);
+  }
+  .chat-msj time{ display:block; margin-top:3px; font-size:11px; opacity:.65; text-align:right; }
+  .chat-msj.de-suin{ align-self:flex-start; background:#fff; border:1px solid var(--linea-suave); border-bottom-left-radius:4px; }
+  .chat-msj.de-cliente{ align-self:flex-end; background:var(--azul-suave); border:1px solid #cfe8f0; border-bottom-right-radius:4px; }
+  .chat-msj.pendiente{ opacity:.6; }
+  .chat-msj a{ color:var(--azul-texto); }
+  .chat-nota{
+    align-self:center; text-align:center; font-size:12.5px; color:var(--texto-3); line-height:1.4;
+    padding:4px 10px; max-width:92%;
+  }
+
+  #chat-form{ border-top:1px solid var(--linea); background:#fff; padding:10px 12px calc(10px + env(safe-area-inset-bottom, 0px)); }
+  #chat-datos{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-bottom:8px; }
+  #chat-datos input{
+    width:100%; min-width:0; border:1px solid var(--linea); border-radius:var(--radio); padding:9px 10px;
+    font:inherit; font-size:14px; color:var(--texto); background:#fff;
+  }
+  .chat-fila{ display:flex; gap:8px; align-items:flex-end; }
+  #chat-texto{
+    flex:1; min-width:0; resize:none; border:1px solid var(--linea); border-radius:var(--radio);
+    padding:10px 11px; font:inherit; font-size:15px; line-height:1.35; max-height:120px; color:var(--texto);
+  }
+  #chat-datos input:focus, #chat-texto:focus{ outline:2px solid var(--azul); outline-offset:-1px; border-color:var(--azul); }
+  #chat-enviar{
+    flex:none; height:44px; padding:0 16px; border:none; border-radius:var(--radio); cursor:pointer;
+    background:var(--amarillo); color:var(--tinta); font-weight:700; font-size:14.5px;
+  }
+  #chat-enviar:hover{ background:var(--amarillo-hover); }
+  #chat-enviar:disabled{ opacity:.55; cursor:default; }
+  .chat-pie{ margin-top:8px; font-size:12.5px; color:var(--texto-3); text-align:center; }
+  .chat-pie a{ color:var(--wa); font-weight:600; text-decoration:none; }
+  .chat-pie a:hover{ text-decoration:underline; }
+
+  @media (max-width: 640px){
+    #chat-burbuja{ right:14px; bottom:calc(76px + env(safe-area-inset-bottom, 0px)); height:52px; width:52px; padding:0; justify-content:center; }
+    #chat-burbuja .chat-etiqueta{ display:none; }
+    #chat-panel{ inset:0; right:0; bottom:0; width:100%; max-width:none; height:100%; max-height:none; border-radius:0; border:none; }
+    .chat-cab{ padding-top:calc(14px + env(safe-area-inset-top, 0px)); }
+    #chat-datos{ grid-template-columns:1fr; }
+    #chat-texto{ font-size:16px; } /* evita el zoom automático de iPhone */
+    #chat-datos input{ font-size:16px; }
+  }
+  #chat-burbuja[hidden], #chat-datos[hidden]{ display:none; }
+  body.chat-abierto{ overflow:hidden; }
+  @media (min-width: 641px){ body.chat-abierto{ overflow:auto; } }
 </style>
 
 </head>
@@ -958,6 +1052,35 @@
   </div>
   <div class="aviso-barra"></div>
 </div>
+
+<button type="button" id="chat-burbuja" aria-label="Chatear con un asesor" hidden>
+  <svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M4 3h16a2 2 0 0 1 2 2v11a2 2 0 0 1-2 2H9.4l-4.7 3.8A1 1 0 0 1 3 21V5a2 2 0 0 1 1-2zm1 2v13.9L8.7 16H20V5H5zm3 4h8v2H8V9zm0-3h8v2H8V6zm0 6h5v2H8v-2z"/></svg>
+  <span class="chat-etiqueta">¿Te ayudamos?</span>
+  <span class="chat-punto" id="chat-punto">1</span>
+</button>
+
+<section id="chat-panel" role="dialog" aria-modal="false" aria-labelledby="chat-titulo">
+  <div class="chat-cab">
+    <div class="chat-avatar" aria-hidden="true">S</div>
+    <div>
+      <h4 id="chat-titulo">Asesor Suinelectric</h4>
+      <p>Te ayudamos a elegir el equipo correcto</p>
+    </div>
+    <button type="button" class="chat-x" id="chat-cerrar" aria-label="Cerrar chat">✕</button>
+  </div>
+  <div id="chat-mensajes" aria-live="polite"></div>
+  <form id="chat-form" autocomplete="on">
+    <div id="chat-datos">
+      <input id="chat-nombre" name="name" autocomplete="name" maxlength="80" placeholder="Tu nombre *" aria-label="Tu nombre">
+      <input id="chat-contacto" name="tel" type="tel" autocomplete="tel" maxlength="40" placeholder="WhatsApp (opcional)" aria-label="Tu WhatsApp">
+    </div>
+    <div class="chat-fila">
+      <textarea id="chat-texto" rows="1" maxlength="1000" placeholder="Escribe tu consulta…" aria-label="Mensaje"></textarea>
+      <button type="submit" id="chat-enviar">Enviar</button>
+    </div>
+    <div class="chat-pie">¿Prefieres WhatsApp? <a id="chat-wa" href="#" target="_blank" rel="noopener">Escríbenos al 0412</a></div>
+  </form>
+</section>
 
 <div id="barra-movil">
   <button id="barra-inicio">⌂<span>Inicio</span></button>
@@ -2455,6 +2578,7 @@ function abrirDetalle(modelo){
         (p.disponible ? '<div class="det-agregar"><button class="btn btn-cart-add" onclick="agregarAlCarrito(\'' + modeloJs + '\', 1)">Agregar al pedido</button></div>' : '') +
         '<div class="det-wa"><a class="btn btn-wa" href="' + l.prioritario + '" target="_blank" rel="noopener">' + ICONO_WA + ' WhatsApp 0412</a>' +
           '<a class="btn btn-wa btn-wa-2" href="' + l.secundario + '" target="_blank" rel="noopener">' + ICONO_WA + ' WhatsApp 0424</a></div>' +
+        '<button class="btn btn-copiar btn-chat-prod" onclick="window.abrirChat && abrirChat(\'Hola, tengo una consulta sobre ' + modeloJs + '\')">💬 Preguntar a un asesor</button>' +
         '<div class="det-compartir">' +
           '<button class="btn btn-copiar" id="btn-compartir-prod" onclick="compartir(urlProducto(\'' + modeloJs + '\'), \'' + modeloJs + ' | Suinelectric\')">🔗 Compartir producto</button>' +
           '<button class="btn btn-copiar" id="btn-copiar-datos" onclick="copiarDatosProducto(\'' + modeloJs + '\')">Copiar datos del producto</button>' +
@@ -3641,6 +3765,189 @@ cargar();
   }
   document.addEventListener('pointerdown', armarGuardia, true);
   document.addEventListener('keydown', armarGuardia, true);
+})();
+</script>
+
+<script>
+/* =====================================================================
+   CHAT CON UN ASESOR (fase 1: chat directo, sin IA)
+   - El visitante escribe aquí; el mensaje llega al Telegram de Manuel
+     (SuinBot) y su respuesta aparece en este mismo panel.
+   - Todo pasa por dos funciones de Supabase (08_chat.sql): chat_enviar y
+     chat_leer. El visitante se identifica con un código aleatorio guardado
+     en su navegador, así puede volver luego y ver la conversación.
+   Si Supabase no está disponible, la burbuja no aparece.
+   ===================================================================== */
+(function(){
+  if (typeof sb === 'undefined' || !sb) return;
+  const $ = (id) => document.getElementById(id);
+  const panel = $('chat-panel'), burbuja = $('chat-burbuja'), lista = $('chat-mensajes');
+  const texto = $('chat-texto'), btn = $('chat-enviar'), datos = $('chat-datos');
+  const inNombre = $('chat-nombre'), inContacto = $('chat-contacto'), punto = $('chat-punto');
+
+  const CLAVE = 'suin_chat_v1';
+  let estado = { token: null, nombre: '', contacto: '', activo: false, visto: 0 };
+  try { Object.assign(estado, JSON.parse(localStorage.getItem(CLAVE)) || {}); } catch (e) {}
+  const guardar = () => { try { localStorage.setItem(CLAVE, JSON.stringify(estado)); } catch (e) {} };
+
+  let mensajes = [];          // {id, autor, texto, creado, pendiente}
+  let ultimoId = 0, abierto = false, timer = null, avisados = 0;
+  const escritorio = () => window.matchMedia('(min-width: 641px)').matches;
+
+  const BIENVENIDA = '¡Hola! 👋 Cuéntanos qué necesitas —por ejemplo: «variador para motor de 10 HP a 440 V»— y te ayudamos a elegir el equipo.';
+
+  function uuid(){
+    if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
+    return 'xxxxxxxx-xxxx-4xxx-yxxx-xxxxxxxxxxxx'.replace(/[xy]/g, (c) => {
+      const r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
+    });
+  }
+  const esc = (t) => String(t == null ? '' : t).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
+  const enlazar = (t) => esc(t).replace(/(https?:\/\/[^\s<]+)/g, '<a href="$1" target="_blank" rel="noopener">$1</a>');
+  function hora(f){
+    try {
+      const d = new Date(f), hoy = new Date();
+      const h = d.toLocaleTimeString('es-VE', { hour: 'numeric', minute: '2-digit' });
+      return d.toDateString() === hoy.toDateString() ? h : d.toLocaleDateString('es-VE', { day: '2-digit', month: '2-digit' }) + ' ' + h;
+    } catch (e) { return ''; }
+  }
+
+  function pintar(){
+    let html = '<div class="chat-msj de-suin">' + esc(BIENVENIDA) + '</div>';
+    for (const m of mensajes){
+      html += '<div class="chat-msj ' + (m.autor === 'cliente' ? 'de-cliente' : 'de-suin') + (m.pendiente ? ' pendiente' : '') + '">' +
+        enlazar(m.texto) + '<time>' + (m.pendiente ? 'enviando…' : hora(m.creado)) + '</time></div>';
+    }
+    if (estado.activo && !mensajes.some(m => m.autor === 'suinelectric')){
+      html += '<div class="chat-nota">Recibimos tu mensaje ✓ Un asesor te responderá aquí mismo lo antes posible. ' +
+              'Puedes cerrar la página: la conversación queda guardada en este equipo.</div>';
+    }
+    lista.innerHTML = html;
+    lista.scrollTop = lista.scrollHeight;
+    datos.hidden = !!estado.activo;
+  }
+
+  function marcarNuevos(){
+    const nuevos = mensajes.filter(m => m.autor === 'suinelectric' && m.id > (estado.visto || 0)).length;
+    if (abierto || !nuevos){
+      burbuja.classList.remove('con-nuevos');
+      if (abierto && ultimoId > (estado.visto || 0)){ estado.visto = ultimoId; guardar(); }
+      avisados = 0;
+      return;
+    }
+    punto.textContent = nuevos > 9 ? '9+' : String(nuevos);
+    burbuja.classList.add('con-nuevos');
+    if (nuevos > avisados && typeof mostrarToast === 'function') mostrarToast('💬 Tienes una respuesta de Suinelectric');
+    avisados = nuevos;
+  }
+
+  async function traer(){
+    if (!estado.token || !estado.activo || document.hidden) return;
+    try {
+      const { data, error } = await sb.rpc('chat_leer', { p_token: estado.token, p_desde: ultimoId });
+      if (error || !Array.isArray(data) || !data.length) return;
+      let cambio = false;
+      for (const m of data){
+        ultimoId = Math.max(ultimoId, m.id);
+        if (mensajes.some(x => x.id === m.id)) continue;
+        mensajes.push(m); cambio = true;
+      }
+      mensajes.sort((a, b) => (a.id || Infinity) - (b.id || Infinity));
+      if (cambio && abierto) pintar();
+      marcarNuevos();
+    } catch (e) { /* sin conexión: se reintenta en el próximo ciclo */ }
+  }
+
+  function programar(){
+    clearTimeout(timer);
+    if (!estado.activo) return;
+    timer = setTimeout(async () => { await traer(); programar(); }, abierto ? 4000 : 25000);
+  }
+  document.addEventListener('visibilitychange', () => { if (!document.hidden){ traer(); programar(); } });
+
+  function ajustarAlto(){ texto.style.height = 'auto'; texto.style.height = Math.min(texto.scrollHeight, 120) + 'px'; }
+
+  window.abrirChat = function(sugerido){
+    abierto = true;
+    panel.classList.add('abierto');
+    document.body.classList.add('chat-abierto');
+    burbuja.hidden = true;
+    if (!estado.activo){
+      const c = (typeof sesion !== 'undefined' && sesion.cliente) || {};
+      if (!inNombre.value) inNombre.value = estado.nombre || c.nombre || '';
+      if (!inContacto.value) inContacto.value = estado.contacto || c.telefono || '';
+    }
+    if (sugerido && !texto.value.trim()){ texto.value = sugerido; }
+    ajustarAlto();
+    pintar();
+    marcarNuevos();
+    traer(); programar();
+    if (escritorio()) setTimeout(() => (!estado.activo && !inNombre.value ? inNombre : texto).focus(), 60);
+  };
+
+  function cerrarChat(){
+    if (!abierto) return;
+    abierto = false;
+    panel.classList.remove('abierto');
+    document.body.classList.remove('chat-abierto');
+    burbuja.hidden = false;
+    programar();
+  }
+
+  async function enviar(){
+    const t = texto.value.trim();
+    if (!t){ texto.focus(); return; }
+    if (!estado.activo){
+      const n = inNombre.value.trim();
+      if (!n){ inNombre.focus(); if (typeof mostrarToast === 'function') mostrarToast('Escribe tu nombre para continuar'); return; }
+      estado.nombre = n; estado.contacto = inContacto.value.trim();
+    }
+    if (!estado.token) estado.token = uuid();
+    const primero = !estado.activo;
+    const tmp = { id: null, autor: 'cliente', texto: t, pendiente: true };
+    mensajes.push(tmp);
+    texto.value = ''; ajustarAlto();
+    btn.disabled = true;
+    pintar();
+    try {
+      const { data, error } = await sb.rpc('chat_enviar', {
+        p_token: estado.token, p_texto: t,
+        p_nombre: primero ? estado.nombre : null,
+        p_contacto: primero ? (estado.contacto || null) : null,
+        p_pagina: primero ? location.href.slice(0, 300) : null,
+      });
+      if (error) throw error;
+      tmp.id = data && data.id; tmp.pendiente = false; tmp.creado = new Date().toISOString();
+      estado.activo = true; guardar();
+    } catch (e){
+      mensajes = mensajes.filter(m => m !== tmp);
+      if (!texto.value) texto.value = t;
+      ajustarAlto();
+      const msj = e && e.message && e.message.length < 90 && !/function|schema|permission/i.test(e.message) ? e.message : 'No se pudo enviar. Revisa tu conexión o escríbenos por WhatsApp.';
+      if (typeof mostrarToast === 'function') mostrarToast(msj);
+    }
+    btn.disabled = false;
+    pintar();
+    programar();
+  }
+
+  $('chat-form').addEventListener('submit', (e) => { e.preventDefault(); enviar(); });
+  texto.addEventListener('input', ajustarAlto);
+  texto.addEventListener('keydown', (e) => {
+    if (e.key === 'Enter' && !e.shiftKey && escritorio()){ e.preventDefault(); enviar(); }
+  });
+  $('chat-cerrar').addEventListener('click', cerrarChat);
+  document.addEventListener('keydown', (e) => { if (e.key === 'Escape' && abierto) cerrarChat(); });
+  window.addEventListener('popstate', () => { if (abierto && !escritorio()) cerrarChat(); });
+  burbuja.addEventListener('click', () => window.abrirChat());
+
+  try {
+    $('chat-wa').href = 'https://wa.me/' + WHATSAPP_PRIORITARIO + '?text=' + encodeURIComponent('Hola, vengo de la tienda web de Suinelectric.');
+  } catch (e) {}
+
+  burbuja.hidden = false;
+  // Si ya había conversado, se cargan sus mensajes (y el aviso si hay respuestas nuevas).
+  if (estado.activo){ traer(); programar(); }
 })();
 </script>
 

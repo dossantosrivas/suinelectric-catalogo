@@ -83,3 +83,21 @@ Supabase → **SQL Editor** → pega todo `06_actividad_clientes.sql` → **Run*
 - Panel → **Clientes** → botón **Actividad** (o dentro de Editar → Ver actividad).
 - El detalle muestra: última visita, días activo, lo que buscó (y qué no encontró), lo que cotizó o puso en el carrito, los productos que miró, sus pedidos y el paso a paso por día.
 - Solo cuenta lo que el cliente hace con la sesión iniciada; los visitantes sin cuenta siguen en las estadísticas generales.
+
+## 11. Chat con un asesor (burbuja en la tienda → tu Telegram)
+El visitante escribe en la burbuja **¿Te ayudamos?** de la tienda (o en **💬 Preguntar a un asesor** dentro de un producto). Cada mensaje te llega a SuinBot como **💬 Chat #12**. Tú **respondes a ese mensaje** en Telegram (celular o PC) y la respuesta le aparece al cliente en la tienda. La conversación queda guardada en su navegador, así que si vuelve después la ve completa.
+
+1. Supabase → **SQL Editor** → pega todo `08_chat.sql` → **Run** (requiere `07_notificaciones.sql`).
+2. Cloudflare → **Workers & Pages** → proyecto de la tienda → **Settings → Variables and Secrets** → agrega en **Production** (tipo *Secret*):
+   - `TELEGRAM_TOKEN` = token de SuinBot
+   - `TELEGRAM_CHAT_ID` = tu chat_id (el mismo que guardaste en el Vault de Supabase)
+   - `TELEGRAM_WEBHOOK_SECRET` = una clave inventada por ti, solo letras y números (ej. `suinChat2026xyz`)
+   - `SUPABASE_URL` = `https://yqnlxhbjassrkudnhvpr.supabase.co`
+   - `SUPABASE_SECRET_KEY` = la clave `sb_secret_…` (la misma de GitHub)
+3. Publica (sube los cambios a `main`; la carpeta `functions/` la publica Cloudflare sola).
+4. Conecta SuinBot abriendo una sola vez: `https://suinelectric.com/api/telegram?configurar=TU_WEBHOOK_SECRET` → debe decir **✅ Listo** y te llega un mensaje de SuinBot.
+
+En Telegram:
+- **Responder** (deslizar el mensaje o mantener presionado → Responder) al aviso *💬 Chat #12* → le llega al cliente. SuinBot marca tu mensaje con 👍.
+- `#12 tu mensaje` → le escribe al chat 12 sin buscar el aviso.
+- `/chats` → últimos 10 chats (🟡 = el cliente espera respuesta).
