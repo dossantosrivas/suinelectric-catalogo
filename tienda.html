@@ -867,6 +867,14 @@
   .chat-msj.de-cliente{ align-self:flex-end; background:var(--azul-suave); border:1px solid #cfe8f0; border-bottom-right-radius:4px; }
   .chat-msj.pendiente{ opacity:.6; }
   .chat-msj a{ color:var(--azul-texto); }
+  .chat-autor{ display:block; margin-bottom:3px; font-size:11.5px; font-weight:700; color:var(--azul-texto); letter-spacing:.2px; }
+  .chat-msj.de-asesor{ border-left:3px solid var(--amarillo); }
+  .chat-msj.de-asesor .chat-autor{ color:var(--tinta); }
+  .chat-escribiendo{ display:flex; gap:5px; padding:13px 14px; }
+  .chat-escribiendo span{ width:7px; height:7px; border-radius:50%; background:var(--texto-3); animation:chatPunto 1.2s infinite ease-in-out; }
+  .chat-escribiendo span:nth-child(2){ animation-delay:.15s; }
+  .chat-escribiendo span:nth-child(3){ animation-delay:.3s; }
+  @keyframes chatPunto{ 0%, 80%, 100%{ opacity:.25; transform:translateY(0); } 40%{ opacity:1; transform:translateY(-3px); } }
   .chat-nota{
     align-self:center; text-align:center; font-size:12.5px; color:var(--texto-3); line-height:1.4;
     padding:4px 10px; max-width:92%;
@@ -1064,7 +1072,7 @@
     <div class="chat-avatar" aria-hidden="true">S</div>
     <div>
       <h4 id="chat-titulo">Asesor Suinelectric</h4>
-      <p>Te ayudamos a elegir el equipo correcto</p>
+      <p>Asistente virtual · te pasa con un asesor cuando lo necesites</p>
     </div>
     <button type="button" class="chat-x" id="chat-cerrar" aria-label="Cerrar chat">✕</button>
   </div>
@@ -3794,7 +3802,9 @@ cargar();
   let ultimoId = 0, abierto = false, timer = null, avisados = 0;
   const escritorio = () => window.matchMedia('(min-width: 641px)').matches;
 
-  const BIENVENIDA = '¡Hola! 👋 Cuéntanos qué necesitas —por ejemplo: «variador para motor de 10 HP a 440 V»— y te ayudamos a elegir el equipo.';
+  const BIENVENIDA = '¡Hola! 👋 Soy el asistente virtual de Suinelectric. Cuéntame qué necesitas —por ejemplo: «variador para bomba de 10 HP a 440 V»— y te ayudo a elegir. Si prefieres, te paso con un asesor.';
+  const AUTORES = { asistente: '🤖 Asistente virtual', suinelectric: 'Asesor Suinelectric' };
+  let esperandoIA = 0;        // respuestas de la IA en camino
 
   function uuid(){
     if (window.crypto && crypto.randomUUID) return crypto.randomUUID();
@@ -3813,12 +3823,15 @@ cargar();
   }
 
   function pintar(){
-    let html = '<div class="chat-msj de-suin">' + esc(BIENVENIDA) + '</div>';
+    let html = '<div class="chat-msj de-suin"><span class="chat-autor">' + AUTORES.asistente + '</span>' + esc(BIENVENIDA) + '</div>';
     for (const m of mensajes){
-      html += '<div class="chat-msj ' + (m.autor === 'cliente' ? 'de-cliente' : 'de-suin') + (m.pendiente ? ' pendiente' : '') + '">' +
+      html += '<div class="chat-msj ' + (m.autor === 'cliente' ? 'de-cliente' : 'de-suin' + (m.autor === 'suinelectric' ? ' de-asesor' : '')) + (m.pendiente ? ' pendiente' : '') + '">' +
+        (AUTORES[m.autor] ? '<span class="chat-autor">' + AUTORES[m.autor] + '</span>' : '') +
         enlazar(m.texto) + '<time>' + (m.pendiente ? 'enviando…' : hora(m.creado)) + '</time></div>';
     }
-    if (estado.activo && !mensajes.some(m => m.autor === 'suinelectric')){
+    if (esperandoIA > 0){
+      html += '<div class="chat-msj de-suin chat-escribiendo" aria-label="Escribiendo"><span></span><span></span><span></span></div>';
+    } else if (estado.activo && !mensajes.some(m => m.autor !== 'cliente')){
       html += '<div class="chat-nota">Recibimos tu mensaje ✓ Un asesor te responderá aquí mismo lo antes posible. ' +
               'Puedes cerrar la página: la conversación queda guardada en este equipo.</div>';
     }
@@ -3828,7 +3841,7 @@ cargar();
   }
 
   function marcarNuevos(){
-    const nuevos = mensajes.filter(m => m.autor === 'suinelectric' && m.id > (estado.visto || 0)).length;
+    const nuevos = mensajes.filter(m => m.autor !== 'cliente' && m.id > (estado.visto || 0)).length;
     if (abierto || !nuevos){
       burbuja.classList.remove('con-nuevos');
       if (abierto && ultimoId > (estado.visto || 0)){ estado.visto = ultimoId; guardar(); }
@@ -3864,6 +3877,24 @@ cargar();
     timer = setTimeout(async () => { await traer(); programar(); }, abierto ? 4000 : 25000);
   }
   document.addEventListener('visibilitychange', () => { if (!document.hidden){ traer(); programar(); } });
+
+  // Le pide al asistente (IA) que conteste. Si la IA está apagada en este chat
+  // (porque ya te atiende una persona) el servidor responde enseguida sin hacer nada.
+  async function pedirIA(){
+    esperandoIA++; pintar();
+    try {
+      const ctrl = window.AbortController ? new AbortController() : null;
+      const limite = setTimeout(() => ctrl && ctrl.abort(), 45000);
+      await fetch('/api/asistente', {
+        method: 'POST', headers: { 'Content-Type': 'application/json' },
+        body: JSON.stringify({ token: estado.token }), keepalive: true, signal: ctrl ? ctrl.signal : undefined,
+      });
+      clearTimeout(limite);
+    } catch (e) { /* sin IA: igual le llega a Manuel */ }
+    esperandoIA = Math.max(0, esperandoIA - 1);
+    await traer();
+    if (abierto) pintar();
+  }
 
   function ajustarAlto(){ texto.style.height = 'auto'; texto.style.height = Math.min(texto.scrollHeight, 120) + 'px'; }
 
@@ -3919,6 +3950,7 @@ cargar();
       if (error) throw error;
       tmp.id = data && data.id; tmp.pendiente = false; tmp.creado = new Date().toISOString();
       estado.activo = true; guardar();
+      pedirIA();
     } catch (e){
       mensajes = mensajes.filter(m => m !== tmp);
       if (!texto.value) texto.value = t;

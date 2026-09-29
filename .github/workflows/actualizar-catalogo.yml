@@ -88,6 +88,12 @@ jobs:
             sleep 5
           done
 
+      - name: Subir catálogo del asistente del chat a Supabase (sin precios)
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+        run: node subir-catalogo-asistente.js
+
       - name: Avisar por Telegram si algo falló
         if: failure()
         env:

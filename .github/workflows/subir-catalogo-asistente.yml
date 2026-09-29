@@ -1,0 +1,24 @@
+name: Subir catálogo del asistente (chat)
+
+# Se corre sola cuando cambias catalogo-tienda.json a mano, o desde
+# GitHub → Actions → "Subir catálogo del asistente (chat)" → Run workflow.
+# (La actualización diaria del catálogo ya la sube por su cuenta.)
+on:
+  workflow_dispatch: {}
+  push:
+    branches: [main]
+    paths: [catalogo-tienda.json, subir-catalogo-asistente.js]
+
+jobs:
+  subir:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Subir catálogo a Supabase
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+        run: node subir-catalogo-asistente.js

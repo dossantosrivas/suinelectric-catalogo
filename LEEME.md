@@ -101,3 +101,16 @@ En Telegram:
 - **Responder** (deslizar el mensaje o mantener presionado → Responder) al aviso *💬 Chat #12* → le llega al cliente. SuinBot marca tu mensaje con 👍.
 - `#12 tu mensaje` → le escribe al chat 12 sin buscar el aviso.
 - `/chats` → últimos 10 chats (🟡 = el cliente espera respuesta).
+
+## 12. Asistente con IA en el chat (Gemini, gratis)
+La IA contesta primero: hace 1 o 2 preguntas (potencia, voltaje, tipo de carga), busca en tu catálogo y recomienda hasta 3 productos **con su enlace**. **No da precios** (el precio está en el enlace). Si el cliente pide cotizar, descuentos, hablar con una persona, etc., te pasa el chat.
+
+1. **Clave de Gemini**: aistudio.google.com → **Get API key** → **Create API key**. Guárdala en Cloudflare (Settings → Variables and Secrets, Production, tipo Secret) como `GEMINI_API_KEY`.
+2. Supabase → **SQL Editor** → pega todo `09_asistente.sql` → **Run**.
+3. GitHub → **Actions** → **Subir catálogo del asistente (chat)** → **Run workflow** (sube el catálogo sin precios a Supabase; después se actualiza solo cada día).
+
+En Telegram:
+- 🤖 **Chat #12**: la IA respondió (llega en silencio, salvo el primer mensaje de cada chat). Ves lo que preguntó el cliente y lo que contestó la IA.
+- 🙋 **Chat #12 — pide asesor**: la IA te pasó el chat (con sonido). Desde ahí la IA no contesta en ese chat.
+- ⚠️ **Chat #12**: la IA no pudo responder (sin clave, sin cupo gratis del día…). El cliente recibe "un asesor te escribirá" y el chat queda para ti.
+- **Si respondes cualquier chat, la IA se calla en ese chat.** `/ia 12` la vuelve a encender; `/ia 12 off` la apaga.

@@ -6,7 +6,8 @@
    el visitante lo ve en la burbuja de chat de la tienda.
 
    Comandos:
-     /chats   → últimos 10 chats de la tienda
+     /chats      → últimos 10 chats de la tienda
+     /ia 12      → vuelve a encender la IA en el chat 12 (/ia 12 off la apaga)
 
    Variables en Cloudflare (Workers & Pages → proyecto → Settings →
    Variables and Secrets, tipo "Secret", en Production):
@@ -101,12 +102,22 @@ export async function onRequestPost({ request, env }){
       if (!lista.length) { await decir('Todavía no hay chats en la tienda.'); return ok; }
       await decir('<b>Últimos chats</b>\n\n' + lista.map(c =>
         '<b>#' + c.id + '</b> · ' + esc(c.nombre || 'Visitante') + (c.contacto ? ' · ' + esc(c.contacto) : '') +
-        ' · ' + hace(c.ultimo) + '\n' + (c.ultimo_autor === 'cliente' ? '🟡 ' : '✓ ') + esc(c.ultimo_texto || '')
+        ' · ' + hace(c.ultimo) + '\n' + (c.ultimo_autor === 'cliente' ? '🟡 ' : c.ultimo_autor === 'asistente' ? '🤖 ' : '✓ ') + esc(c.ultimo_texto || '')
       ).join('\n\n') + '\n\n<i>Para escribirle a uno sin buscar su aviso: </i><code>#12 tu mensaje</code>');
       return ok;
     }
+    // /ia 12  → vuelve a encender la IA en el chat 12   ·   /ia 12 off → la apaga
+    const ia = texto.match(/^\/ia\s+#?(\d+)(?:\s+(on|off|si|sí|no))?\s*$/i);
+    if (ia){
+      const activa = !/^(off|no)$/i.test(ia[2] || '');
+      const r = await rpc(env, 'chat_ia', { p_chat: Number(ia[1]), p_activa: activa });
+      await decir(r && r.ok
+        ? (activa ? '🤖 IA encendida en el chat #' : '🔕 IA apagada en el chat #') + ia[1] + (r.nombre ? ' (' + esc(r.nombre) + ')' : '')
+        : '✗ No existe el chat #' + ia[1]);
+      return ok;
+    }
     if (/^\/(start|ayuda|help)\b/i.test(texto)){
-      await decir('Para contestar a un cliente de la tienda, <b>responde</b> (desliza el mensaje o mantén presionado → Responder) al aviso <b>💬 Chat #…</b>.\nTambién puedes escribir <code>#12 tu mensaje</code>.\n/chats muestra los últimos chats.');
+      await decir('Para contestar a un cliente de la tienda, <b>responde</b> (desliza el mensaje o mantén presionado → Responder) al aviso <b>💬 Chat #…</b>.\nTambién puedes escribir <code>#12 tu mensaje</code>.\n/chats muestra los últimos chats.\nCuando respondes un chat, la IA deja de contestar en él. <code>/ia 12</code> la vuelve a encender (<code>/ia 12 off</code> la apaga).');
       return ok;
     }
 
