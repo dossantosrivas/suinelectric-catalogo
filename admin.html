@@ -379,6 +379,8 @@ function mensajeError(err){
   const m = (err && err.message) || String(err);
   if (/ver_existencias|existencias_reales|estado_existencias/i.test(m))
     return 'Falta instalar la parte de existencias: corre 03_existencias.sql en Supabase (SQL Editor).';
+  if (/registrar_scraping|resumen_scraping|movimientos_scraping/i.test(m))
+    return 'Falta instalar el historial del scraping: corre 11_historial_scraping.sql en Supabase (SQL Editor).';
   if (/archivado/i.test(m))
     return 'Falta instalar la opción de archivar: corre 05_pedidos_archivo.sql en Supabase (SQL Editor).';
   if (/row-level security|permission denied|JWT/i.test(m))
@@ -429,6 +431,7 @@ const VISTAS = [
   ['clientes', 'Clientes', ICO.clientes],
   ['descuentos', 'Descuentos', ICO.descuentos],
   ['existencias', 'Existencias', ICO.existencias],
+  ['scraping', 'Scraping', ICO.sync],
   ['tipos', 'Tipos de cliente', ICO.tipos],
 ];
 
@@ -541,7 +544,7 @@ function irA(t){ tab = t; mostrar(); window.scrollTo(0, 0); }
 function mostrar(){
   document.querySelectorAll('#nav button').forEach(x => x.classList.toggle('activa', x.dataset.tab === tab));
   cerrarPanel();
-  ({ resumen: vistaResumen, pedidos: vistaPedidos, estadisticas: vistaEstadisticas, visitantes: vistaVisitantes, clientes: vistaClientes, descuentos: vistaDescuentos, existencias: vistaExistencias, tipos: vistaTipos }[tab] || vistaResumen)();
+  ({ resumen: vistaResumen, pedidos: vistaPedidos, estadisticas: vistaEstadisticas, visitantes: vistaVisitantes, clientes: vistaClientes, descuentos: vistaDescuentos, existencias: vistaExistencias, scraping: vistaScraping, tipos: vistaTipos }[tab] || vistaResumen)();
 }
 function pintarBadges(){
   const nuevos = pedidos.filter(p => p.estado === 'enviado' && !p.archivado).length;
@@ -1676,6 +1679,151 @@ async function cambiarPermiso(email, dar){
   toast(dar ? nombreCliente(email) + ' ya ve las existencias reales'
             : (c && tipoVeStock(c.tipo_id) ? 'Permiso propio quitado (sigue viéndolas por su tipo)' : 'Permiso quitado'));
   vistaExistencias();
+}
+
+/* ---------- Scraping (historial de existencias) ---------- */
+let diasScr = 30, buscaScr = '', tipoScr = 'bajo', datosScr = null, movsScr = [], cuantosScr = 50;
+const DIAS_SCR = [[7, '7 días'], [30, '30 días'], [90, '90 días'], [365, '1 año']];
+const TIPOS_SCR = [['bajo', 'Se restaron'], ['subio', 'Subieron'], ['nuevo', 'Nuevos'], ['desaparecio', 'Desaparecieron'], ['', 'Todos']];
+const faltaScraping = (err) => '<div class="caja"><div class="tarjeta-sync"><div class="icono mal">' + ICO.alerta + '</div><div><strong>Falta instalar el historial del scraping</strong><div class="muted">Corre <span class="mono">11_historial_scraping.sql</span> en Supabase → SQL Editor. Desde el siguiente scraping diario se guarda la foto inicial, y a partir del otro se anota qué productos bajaron, cuánto y cuándo.' + (err ? '<br><small>' + esc(mensajeError(err)) + '</small>' : '') + '</div></div></div></div>';
+const numScr = (n) => Number(n || 0).toLocaleString('es-VE');
+const difHTML = (m) => m.diferencia == null ? '<span class="muted">—</span>'
+  : '<strong style="color:' + (m.diferencia < 0 ? 'var(--off)' : 'var(--ok)') + '">' + (m.diferencia > 0 ? '+' : '') + numScr(m.diferencia) + '</strong>';
+const pillTipoScr = (t) => ({ bajo: '<span class="pill rojo">Bajó</span>', subio: '<span class="pill verde">Subió</span>', nuevo: '<span class="pill azul">Nuevo</span>', desaparecio: '<span class="pill amar">Ya no está</span>' }[t] || esc(t));
+const cantScr = (v) => v == null ? '<span class="muted">—</span>' : (v === 0 ? '<span class="estado-stock off">0</span>' : numScr(v));
+
+async function vistaScraping(){
+  const chips = '<div class="chips">' + DIAS_SCR.map(([d, t]) => '<button class="chip' + (diasScr === d ? ' activo' : '') + '" data-dias-scr="' + d + '">' + t + '</button>').join('') + '</div>';
+  $('main').innerHTML = cabecera('Scraping', 'Cada vez que se actualiza el catálogo de grupo-electricos.com se comparan las existencias con la corrida anterior: aquí ves qué productos se restaron, cuántas unidades y cuándo. Solo productos del scraper (no los manuales).', chips) + '<div class="cargando">Cargando…</div>';
+  document.querySelectorAll('[data-dias-scr]').forEach(b => b.onclick = () => { diasScr = Number(b.dataset.diasScr); vistaScraping(); });
+  const [r, m] = await Promise.all([
+    sb.rpc('resumen_scraping', { dias: diasScr }),
+    sb.rpc('movimientos_scraping', { dias: diasScr, p_tipo: tipoScr || null, limite: 5000 }),
+  ]);
+  if (tab !== 'scraping') return;
+  const cont = document.querySelector('#main .cargando');
+  if (r.error || !r.data){ cont.outerHTML = faltaScraping(r.error); return; }
+  datosScr = r.data; movsScr = m.data || []; cuantosScr = 50;
+  const t = datosScr.totales || {};
+  const ejec = datosScr.ejecuciones || [];
+  const ult = ejec.find(e => !e.nota) || null;
+  const kpi = (icono, titulo, valor, pie, extra) => '<div class="kpi' + (extra || '') + '"><div class="k-cab">' + titulo + icono + '</div><div class="k-num">' + valor + '</div><div class="k-pie">' + pie + '</div></div>';
+
+  let aviso = '';
+  if (!ejec.length) aviso = '<div class="caja"><div class="tarjeta-sync"><div class="icono">' + ICO.sync + '</div><div><strong>Todavía no hay corridas registradas en este período</strong><div class="muted">El scraping corre solo cada día. La primera corrida guarda el punto de partida; desde la segunda verás lo que bajó.</div></div></div></div>';
+  else if (ejec.length === 1 && ejec[0].primera) aviso = '<div class="caja"><div class="tarjeta-sync"><div class="icono">' + ICO.ok + '</div><div><strong>Punto de partida guardado</strong><div class="muted">El ' + fecha(ejec[0].fecha) + ' se guardaron ' + numScr(ejec[0].productos) + ' productos. En el próximo scraping empezarás a ver qué se restó.</div></div></div></div>';
+
+  const maxR = Math.max(1, ...(datosScr.mas_restados || []).map(x => x.unidades));
+  const ranking = (datosScr.mas_restados || []).length ? '<ol class="ranking">' + datosScr.mas_restados.slice(0, 15).map(x =>
+    '<li class="clic" data-modelo-scr="' + esc(x.modelo) + '"><span class="pos"></span><span class="nom"><strong class="mono">' + esc(x.modelo) + '</strong><small>' + esc([x.marca, x.nombre].filter(Boolean).join(' · ') || '—') + ' · quedan ' + (x.queda == null ? '—' : numScr(x.queda)) + '</small>' +
+    '<div class="barra"><i style="width:' + Math.max(4, Math.round(100 * x.unidades / maxR)) + '%"></i></div></span><span class="num">−' + numScr(x.unidades) + '<small>' + x.veces + (x.veces === 1 ? ' vez' : ' veces') + '</small></span></li>').join('') + '</ol>'
+    : '<div class="vacio">' + ICO.existencias + 'Nada se ha restado en este período.</div>';
+
+  const tablaEjec = ejec.length ? '<table class="tabla-vis"><thead><tr><th>Cuándo</th><th>Productos</th><th>Bajaron</th><th>Unid. restadas</th><th>Subieron</th><th>Nuevos</th><th>Ya no están</th></tr></thead><tbody>' +
+    ejec.map(e => e.nota
+      ? '<tr><td style="white-space:nowrap"><strong>' + fecha(e.fecha) + '</strong></td><td>' + numScr(e.productos) + '</td><td colspan="5"><span class="pill amar">Omitido</span> <span class="muted">' + esc(String(e.nota).replace(/^Omitido:\s*/, '')) + '</span></td></tr>'
+      : e.primera
+      ? '<tr><td style="white-space:nowrap"><strong>' + fecha(e.fecha) + '</strong></td><td>' + numScr(e.productos) + '</td><td colspan="5"><span class="pill azul">Punto de partida</span></td></tr>'
+      : '<tr class="clic" data-ejec-scr="' + e.id + '"><td style="white-space:nowrap"><strong>' + fecha(e.fecha) + '</strong></td><td>' + numScr(e.productos) + '</td><td>' + numScr(e.bajaron) + (e.agotados ? ' <small class="muted">(' + e.agotados + ' agotados)</small>' : '') + '</td>' +
+        '<td><strong style="color:var(--off)">' + (e.unidades_restadas ? '−' + numScr(e.unidades_restadas) : '0') + '</strong></td><td>' + numScr(e.subieron) + (e.unidades_sumadas ? ' <small class="muted">(+' + numScr(e.unidades_sumadas) + ')</small>' : '') + '</td><td>' + numScr(e.nuevos) + '</td><td>' + numScr(e.desaparecidos) + '</td></tr>').join('') +
+    '</tbody></table>' : '<div class="vacio">' + ICO.sync + 'Sin corridas en este período.</div>';
+
+  cont.outerHTML = aviso +
+    '<div class="kpis">' +
+      kpi(ICO.existencias, 'Unidades restadas', '−' + numScr(t.unidades_restadas), 'en ' + numScr(t.bajaron) + ' bajas de productos', ' destacado') +
+      kpi(ICO.bloquear, 'Se agotaron', numScr(t.agotados), 'llegaron a 0 en el período') +
+      kpi(ICO.mas, 'Unidades sumadas', '+' + numScr(t.unidades_sumadas), 'reposiciones del proveedor') +
+      kpi(ICO.sync, 'Corridas', numScr(t.corridas), ult ? 'Última: ' + fecha(ult.fecha) : 'Ninguna todavía') +
+    '</div>' +
+    '<div class="caja"><div class="caja-cab"><h2>Cada scraping</h2><small class="muted">Toca una corrida para ver el detalle</small></div><div class="tabla-wrap">' + tablaEjec + '</div></div>' +
+    '<div class="caja"><div class="caja-cab"><h2>Lo que más se restó</h2><small class="muted">Toca un producto para ver su historial</small></div>' + ranking + '</div>' +
+    '<div class="caja"><div class="caja-cab"><h2>Movimientos del período</h2><div class="fila" style="align-items:center">' +
+      '<div class="chips" id="scr-tipos">' + TIPOS_SCR.map(([k, n]) => '<button class="chip' + (tipoScr === k ? ' activo' : '') + '" data-tipo-scr="' + k + '">' + n + '</button>').join('') + '</div>' +
+      '<div class="buscar">' + ICO.buscar + '<input id="scr-busca" placeholder="Buscar modelo, marca…" value="' + esc(buscaScr) + '"></div>' +
+      '<button class="btn chico" id="scr-csv">Descargar CSV</button></div></div>' +
+      '<div class="tabla-wrap" id="scr-tabla"></div></div>';
+
+  document.querySelectorAll('[data-ejec-scr]').forEach(tr => tr.onclick = () => abrirEjecucionScr(Number(tr.dataset.ejecScr)));
+  document.querySelectorAll('[data-modelo-scr]').forEach(li => li.onclick = () => abrirModeloScr(li.dataset.modeloScr));
+  document.querySelectorAll('[data-tipo-scr]').forEach(b => b.onclick = () => { tipoScr = b.dataset.tipoScr; vistaScraping(); });
+  $('scr-busca').oninput = (e) => { buscaScr = e.target.value; cuantosScr = 50; pintarMovsScr(); };
+  $('scr-csv').onclick = () => descargarCSVScr(filtrarMovsScr(), 'scraping-movimientos-' + diasScr + 'd.csv');
+  pintarMovsScr();
+}
+function filtrarMovsScr(){
+  const q = buscaScr.trim().toLowerCase();
+  return !q ? movsScr : movsScr.filter(m => [m.modelo, m.marca, m.nombre].some(v => v && String(v).toLowerCase().includes(q)));
+}
+function tablaMovsScr(lista, conFecha){
+  return '<table class="tabla-vis"><thead><tr>' + (conFecha ? '<th>Cuándo</th>' : '') + '<th>Modelo</th><th>Marca</th><th>Antes</th><th>Después</th><th>Diferencia</th><th></th></tr></thead><tbody>' +
+    lista.map(m => '<tr class="clic" data-modelo-scr="' + esc(m.modelo) + '">' + (conFecha ? '<td>' + fecha(m.fecha) + '</td>' : '') +
+      '<td><strong class="mono">' + esc(m.modelo) + '</strong>' + (m.nombre ? '<div class="muted" style="font-size:12px">' + esc(m.nombre) + '</div>' : '') + '</td>' +
+      '<td>' + esc(m.marca || '—') + '</td><td>' + cantScr(m.antes) + '</td><td>' + cantScr(m.despues) + '</td><td>' + difHTML(m) + '</td><td>' + pillTipoScr(m.tipo) + '</td></tr>').join('') +
+    '</tbody></table>';
+}
+function pintarMovsScr(){
+  const el = $('scr-tabla'); if (!el) return;
+  const lista = filtrarMovsScr();
+  if (!lista.length){ el.innerHTML = '<div class="vacio">' + ICO.existencias + (buscaScr ? 'Nada coincide con la búsqueda.' : 'Sin movimientos de este tipo en el período.') + '</div>'; return; }
+  const restadas = lista.reduce((s, m) => s + (m.diferencia < 0 ? -m.diferencia : 0), 0);
+  el.innerHTML = '<p class="muted" style="margin:0 0 8px">' + numScr(lista.length) + ' movimiento' + (lista.length === 1 ? '' : 's') + (restadas ? ' · ' + numScr(restadas) + ' unidades restadas' : '') + (movsScr.length >= 5000 ? ' · se muestran los 5.000 más recientes' : '') + '</p>' +
+    tablaMovsScr(lista.slice(0, cuantosScr), true) +
+    (lista.length > cuantosScr ? '<div style="text-align:center;margin-top:12px"><button class="btn chico" id="scr-mas">Ver más (' + numScr(lista.length - cuantosScr) + ' restantes)</button></div>' : '');
+  el.querySelectorAll('[data-modelo-scr]').forEach(tr => tr.onclick = () => abrirModeloScr(tr.dataset.modeloScr));
+  if ($('scr-mas')) $('scr-mas').onclick = () => { cuantosScr += 100; pintarMovsScr(); };
+}
+function descargarCSVScr(lista, nombre){
+  if (!lista.length) return toast('No hay movimientos para descargar');
+  const c = (v) => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+  const filas = [['Fecha', 'Modelo', 'Marca', 'Nombre', 'Antes', 'Después', 'Diferencia', 'Tipo', 'Precio proveedor']]
+    .concat(lista.map(m => [new Date(m.fecha).toLocaleString('es-VE'), m.modelo, m.marca, m.nombre, m.antes, m.despues, m.diferencia, m.tipo, m.precio]));
+  const blob = new Blob(['﻿' + filas.map(f => f.map(c).join(';')).join('\r\n')], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = nombre; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
+}
+const cabPanelScr = (titulo, sub) => '<div class="panel-cab"><div class="avatar">' + ICO.existencias + '</div><div><h2>' + titulo + '</h2><div class="muted">' + sub + '</div></div>' +
+  '<button class="btn chico fantasma cerrar" id="scr-cerrar" aria-label="Cerrar">' + ICO.cerrar + '</button></div>';
+
+// Detalle de una corrida
+async function abrirEjecucionScr(id, tipo){
+  const e = ((datosScr && datosScr.ejecuciones) || []).find(x => x.id === id) || { id };
+  tipo = tipo == null ? 'bajo' : tipo;
+  const chips = '<div class="chips" style="margin-bottom:14px">' + TIPOS_SCR.map(([k, n]) => '<button class="chip' + (tipo === k ? ' activo' : '') + '" data-tipo-ej="' + k + '">' + n + '</button>').join('') + '</div>';
+  abrirPanel(cabPanelScr('Scraping del ' + fecha(e.fecha), numScr(e.productos) + ' productos · ' + numScr(e.bajaron) + ' bajaron (−' + numScr(e.unidades_restadas) + ' unid.)') +
+    '<div class="panel-cuerpo">' + chips + '<div class="cargando">Cargando…</div></div>', true);
+  $('panel').dataset.actividad = 'scr:' + id;
+  $('scr-cerrar').onclick = cerrarPanel;
+  document.querySelectorAll('[data-tipo-ej]').forEach(b => b.onclick = () => abrirEjecucionScr(id, b.dataset.tipoEj));
+  const { data, error } = await sb.rpc('movimientos_scraping', { p_ejecucion: id, p_tipo: tipo || null, limite: 5000 });
+  if ($('panel').dataset.actividad !== 'scr:' + id) return;
+  const cont = document.querySelector('#panel .cargando');
+  if (error){ cont.outerHTML = '<p class="error">' + esc(mensajeError(error)) + '</p>'; return; }
+  const lista = data || [];
+  cont.outerHTML = !lista.length ? '<div class="vacio">' + ICO.existencias + 'Sin movimientos de este tipo.</div>'
+    : '<div style="text-align:right;margin-bottom:8px"><button class="btn chico" id="scr-csv-ej">Descargar CSV</button></div><div class="tabla-wrap">' + tablaMovsScr(lista, false) + '</div>';
+  if ($('scr-csv-ej')) $('scr-csv-ej').onclick = () => descargarCSVScr(lista, 'scraping-' + new Date(e.fecha || Date.now()).toISOString().slice(0, 10) + '.csv');
+  document.querySelectorAll('#panel [data-modelo-scr]').forEach(tr => tr.onclick = () => abrirModeloScr(tr.dataset.modeloScr));
+}
+
+// Historial de un producto
+async function abrirModeloScr(modelo){
+  abrirPanel(cabPanelScr('<span class="mono">' + esc(modelo) + '</span>', 'Historial de existencias en el scraping') + '<div class="panel-cuerpo"><div class="cargando">Cargando…</div></div>', true);
+  $('panel').dataset.actividad = 'scrm:' + modelo;
+  $('scr-cerrar').onclick = cerrarPanel;
+  const { data, error } = await sb.rpc('movimientos_scraping', { p_modelo: modelo, limite: 1000 });
+  if ($('panel').dataset.actividad !== 'scrm:' + modelo) return;
+  const cont = document.querySelector('#panel .cargando');
+  if (error){ cont.outerHTML = '<p class="error">' + esc(mensajeError(error)) + '</p>'; return; }
+  const lista = data || [];
+  const p = lista[0] || {};
+  const restadas = lista.reduce((s, m) => s + (m.diferencia < 0 ? -m.diferencia : 0), 0);
+  const sumadas = lista.reduce((s, m) => s + (m.diferencia > 0 ? m.diferencia : 0), 0);
+  const mini = (titulo, v) => '<div class="kpi"><div class="k-cab">' + titulo + '</div><div class="k-num" style="font-size:23px">' + v + '</div></div>';
+  cont.outerHTML = (p.marca || p.nombre ? '<p style="margin:0 0 14px"><strong>' + esc(p.marca || '') + '</strong> ' + esc(p.nombre || '') + (p.precio ? ' · <span class="muted">precio proveedor ' + money(p.precio) + '</span>' : '') + '</p>' : '') +
+    '<div class="kpis">' + mini('Existencia actual', p.despues == null ? '—' : numScr(p.despues)) + mini('Unidades restadas', '−' + numScr(restadas)) + mini('Unidades sumadas', '+' + numScr(sumadas)) + '</div>' +
+    (lista.length ? '<div class="tabla-wrap"><table class="tabla-vis"><thead><tr><th>Cuándo</th><th>Antes</th><th>Después</th><th>Diferencia</th><th></th></tr></thead><tbody>' +
+      lista.map(m => '<tr><td>' + fecha(m.fecha) + '</td><td>' + cantScr(m.antes) + '</td><td>' + cantScr(m.despues) + '</td><td>' + difHTML(m) + '</td><td>' + pillTipoScr(m.tipo) + '</td></tr>').join('') +
+      '</tbody></table></div>' : '<div class="vacio">' + ICO.existencias + 'Este producto no ha cambiado desde que se empezó a registrar.</div>');
 }
 
 /* ---------- Tipos de cliente ---------- */

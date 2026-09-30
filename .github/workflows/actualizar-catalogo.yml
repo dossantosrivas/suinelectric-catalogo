@@ -36,6 +36,12 @@ jobs:
           SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
         run: node subir-existencias.js
 
+      - name: Registrar el scraping (historial de lo que bajó de existencias)
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+        run: node registrar-scraping.js
+
       - name: Guardar productos.json y categorias.json (con reintentos)
         run: |
           git config user.name "github-actions[bot]"
