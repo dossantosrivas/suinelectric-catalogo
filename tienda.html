@@ -529,6 +529,12 @@
   .footer-in{ max-width:1480px; margin:0 auto; padding:32px 24px; display:flex; gap:40px; flex-wrap:wrap; justify-content:space-between; }
   .footer-marca strong{ font-family:var(--display); font-size:24px; color:#fff; display:block; }
   .footer-marca p{ margin:4px 0 0; font-size:14px; max-width:42ch; }
+  /* Logo animado (mismo video de la página de links): el fondo negro se funde con el pie */
+  .footer-logo-anim{
+    display:block; width:130px; height:130px; margin:-14px 0 0 -14px;
+    mix-blend-mode:screen; background:transparent; object-fit:cover;
+    cursor:pointer; -webkit-tap-highlight-color:transparent;
+  }
   .footer-contacto{ font-size:14px; }
   .footer-contacto h4{ margin:0 0 8px; color:#fff; font-size:15px; }
   .footer-contacto a{ color:#fff; text-decoration:none; font-weight:600; display:block; margin:3px 0; }
@@ -997,6 +1003,12 @@
 <footer>
   <div class="footer-in">
     <div class="footer-marca">
+      <video class="footer-logo-anim" id="footer-logo-anim" poster="/imagenes/logo-animado.jpg"
+        muted playsinline preload="none" width="130" height="130"
+        aria-label="Logo de Suinelectric" title="Toca para ver la animación de nuevo">
+        <source data-src="/imagenes/logo-animado.mp4" type="video/mp4">
+        <source data-src="/imagenes/logo-animado.webm" type="video/webm">
+      </video>
       <strong>SUINELECTRIC</strong>
       <p>Variadores, arrancadores, contactores, breakers y control industrial de INVT, Siemens, Schneider Electric, Allen Bradley, Hyundai, Nordic y Kinco.</p>
     </div>
@@ -1007,6 +1019,35 @@
     </div>
   </div>
 </footer>
+<script>
+/* Logo animado del pie: se descarga solo cuando el pie aparece en pantalla.
+   La intro (rayo) se ve una vez; luego repite el anillo (4s → final). Tocar repite la intro. */
+(function(){
+  const v = document.getElementById('footer-logo-anim');
+  if (!v) return;
+  const BUCLE_DESDE = 4;
+  let cargado = false;
+  v.muted = true; v.defaultMuted = true; v.playsInline = true;
+  const reproducir = () => { const p = v.play(); if (p && p.catch) p.catch(() => {}); };
+  const cargar = () => {
+    if (cargado) return; cargado = true;
+    v.querySelectorAll('source[data-src]').forEach(s => { s.src = s.dataset.src; });
+    v.load();
+    v.addEventListener('canplay', reproducir, { once:true });
+  };
+  v.addEventListener('ended', () => { reproducir(); v.currentTime = BUCLE_DESDE; });
+  v.addEventListener('timeupdate', () => { if (v.duration && v.currentTime >= v.duration - 0.08) v.currentTime = BUCLE_DESDE; });
+  v.addEventListener('click', () => { if (!cargado) return cargar(); v.currentTime = 0; reproducir(); });
+  if ('IntersectionObserver' in window) {
+    new IntersectionObserver((ents) => {
+      ents.forEach(e => {
+        if (e.isIntersecting) { if (!cargado) cargar(); else if (v.paused) reproducir(); }
+        else if (cargado && !v.paused) v.pause();
+      });
+    }, { rootMargin: '200px' }).observe(v);
+  } else cargar();
+})();
+</script>
 
 <div class="overlay" id="modal-imagen">
   <button class="overlay-cerrar" data-cerrar="modal-imagen" aria-label="Cerrar">✕</button>
