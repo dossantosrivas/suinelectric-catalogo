@@ -379,7 +379,7 @@ function mensajeError(err){
   const m = (err && err.message) || String(err);
   if (/ver_existencias|existencias_reales|estado_existencias/i.test(m))
     return 'Falta instalar la parte de existencias: corre 03_existencias.sql en Supabase (SQL Editor).';
-  if (/registrar_scraping|resumen_scraping|movimientos_scraping/i.test(m))
+  if (/registrar_scraping|resumen_scraping|movimientos_scraping|precios_scraping/i.test(m))
     return 'Falta instalar el historial del scraping: corre 11_historial_scraping.sql en Supabase (SQL Editor).';
   if (/archivado/i.test(m))
     return 'Falta instalar la opción de archivar: corre 05_pedidos_archivo.sql en Supabase (SQL Editor).';
@@ -1683,6 +1683,8 @@ async function cambiarPermiso(email, dar){
 
 /* ---------- Scraping (historial de existencias) ---------- */
 let diasScr = 30, buscaScr = '', tipoScr = 'bajo', datosScr = null, movsScr = [], cuantosScr = 50;
+let preciosScr = [], sentidoPrecio = '', buscaPrecio = '', cuantosPrecio = 50;
+const SENTIDOS_PRECIO = [['', 'Todos'], ['subio', 'Subieron'], ['bajo', 'Bajaron']];
 const DIAS_SCR = [[7, '7 días'], [30, '30 días'], [90, '90 días'], [365, '1 año']];
 const TIPOS_SCR = [['bajo', 'Se restaron'], ['subio', 'Subieron'], ['nuevo', 'Nuevos'], ['desaparecio', 'Desaparecieron'], ['', 'Todos']];
 const faltaScraping = (err) => '<div class="caja"><div class="tarjeta-sync"><div class="icono mal">' + ICO.alerta + '</div><div><strong>Falta instalar el historial del scraping</strong><div class="muted">Corre <span class="mono">11_historial_scraping.sql</span> en Supabase → SQL Editor. Desde el siguiente scraping diario se guarda la foto inicial, y a partir del otro se anota qué productos bajaron, cuánto y cuándo.' + (err ? '<br><small>' + esc(mensajeError(err)) + '</small>' : '') + '</div></div></div></div>';
@@ -1690,20 +1692,28 @@ const numScr = (n) => Number(n || 0).toLocaleString('es-VE');
 const difHTML = (m) => m.diferencia == null ? '<span class="muted">—</span>'
   : '<strong style="color:' + (m.diferencia < 0 ? 'var(--off)' : 'var(--ok)') + '">' + (m.diferencia > 0 ? '+' : '') + numScr(m.diferencia) + '</strong>';
 const pillTipoScr = (t) => ({ bajo: '<span class="pill rojo">Bajó</span>', subio: '<span class="pill verde">Subió</span>', nuevo: '<span class="pill azul">Nuevo</span>', desaparecio: '<span class="pill amar">Ya no está</span>' }[t] || esc(t));
+const precioScr = (v) => v == null ? '—' : '$' + Number(v).toLocaleString('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+const cambioPrecioHTML = (p) => {
+  const col = p.diferencia > 0 ? 'var(--off)' : 'var(--ok)', sig = p.diferencia > 0 ? '+' : '−';
+  return '<strong style="color:' + col + ';white-space:nowrap">' + sig + precioScr(Math.abs(p.diferencia)) + '</strong>' +
+    (p.porcentaje != null ? ' <small style="color:' + col + ';white-space:nowrap">(' + (p.porcentaje > 0 ? '+' : '') + Number(p.porcentaje).toLocaleString('es-VE') + ' %)</small>' : '');
+};
 const cantScr = (v) => v == null ? '<span class="muted">—</span>' : (v === 0 ? '<span class="estado-stock off">0</span>' : numScr(v));
 
 async function vistaScraping(){
   const chips = '<div class="chips">' + DIAS_SCR.map(([d, t]) => '<button class="chip' + (diasScr === d ? ' activo' : '') + '" data-dias-scr="' + d + '">' + t + '</button>').join('') + '</div>';
-  $('main').innerHTML = cabecera('Scraping', 'Cada vez que se actualiza el catálogo de grupo-electricos.com se comparan las existencias con la corrida anterior: aquí ves qué productos se restaron, cuántas unidades y cuándo. Solo productos del scraper (no los manuales).', chips) + '<div class="cargando">Cargando…</div>';
+  $('main').innerHTML = cabecera('Scraping', 'Cada vez que se actualiza el catálogo de grupo-electricos.com se comparan las existencias y los precios con la corrida anterior: aquí ves qué productos se restaron, cuántas unidades, qué precios cambiaron y cuándo. Solo productos del scraper (no los manuales).', chips) + '<div class="cargando">Cargando…</div>';
   document.querySelectorAll('[data-dias-scr]').forEach(b => b.onclick = () => { diasScr = Number(b.dataset.diasScr); vistaScraping(); });
-  const [r, m] = await Promise.all([
+  const [r, m, pr] = await Promise.all([
     sb.rpc('resumen_scraping', { dias: diasScr }),
     sb.rpc('movimientos_scraping', { dias: diasScr, p_tipo: tipoScr || null, limite: 5000 }),
+    sb.rpc('precios_scraping', { dias: diasScr, limite: 5000 }).then(x => x, e => ({ error: e })),
   ]);
   if (tab !== 'scraping') return;
   const cont = document.querySelector('#main .cargando');
   if (r.error || !r.data){ cont.outerHTML = faltaScraping(r.error); return; }
-  datosScr = r.data; movsScr = m.data || []; cuantosScr = 50;
+  datosScr = r.data; movsScr = m.data || []; cuantosScr = 50; cuantosPrecio = 50;
+  preciosScr = pr.error ? null : (pr.data || []);
   const t = datosScr.totales || {};
   const ejec = datosScr.ejecuciones || [];
   const ult = ejec.find(e => !e.nota) || null;
@@ -1719,20 +1729,21 @@ async function vistaScraping(){
     '<div class="barra"><i style="width:' + Math.max(4, Math.round(100 * x.unidades / maxR)) + '%"></i></div></span><span class="num">−' + numScr(x.unidades) + '<small>' + x.veces + (x.veces === 1 ? ' vez' : ' veces') + '</small></span></li>').join('') + '</ol>'
     : '<div class="vacio">' + ICO.existencias + 'Nada se ha restado en este período.</div>';
 
-  const tablaEjec = ejec.length ? '<table class="tabla-vis"><thead><tr><th>Cuándo</th><th>Productos</th><th>Bajaron</th><th>Unid. restadas</th><th>Subieron</th><th>Nuevos</th><th>Ya no están</th></tr></thead><tbody>' +
+  const tablaEjec = ejec.length ? '<table class="tabla-vis"><thead><tr><th>Cuándo</th><th>Productos</th><th>Bajaron</th><th>Unid. restadas</th><th>Subieron</th><th>Nuevos</th><th>Ya no están</th><th>Precios</th></tr></thead><tbody>' +
     ejec.map(e => e.nota
-      ? '<tr><td style="white-space:nowrap"><strong>' + fecha(e.fecha) + '</strong></td><td>' + numScr(e.productos) + '</td><td colspan="5"><span class="pill amar">Omitido</span> <span class="muted">' + esc(String(e.nota).replace(/^Omitido:\s*/, '')) + '</span></td></tr>'
+      ? '<tr><td style="white-space:nowrap"><strong>' + fecha(e.fecha) + '</strong></td><td>' + numScr(e.productos) + '</td><td colspan="6"><span class="pill amar">Omitido</span> <span class="muted">' + esc(String(e.nota).replace(/^Omitido:\s*/, '')) + '</span></td></tr>'
       : e.primera
-      ? '<tr><td style="white-space:nowrap"><strong>' + fecha(e.fecha) + '</strong></td><td>' + numScr(e.productos) + '</td><td colspan="5"><span class="pill azul">Punto de partida</span></td></tr>'
+      ? '<tr><td style="white-space:nowrap"><strong>' + fecha(e.fecha) + '</strong></td><td>' + numScr(e.productos) + '</td><td colspan="6"><span class="pill azul">Punto de partida</span></td></tr>'
       : '<tr class="clic" data-ejec-scr="' + e.id + '"><td style="white-space:nowrap"><strong>' + fecha(e.fecha) + '</strong></td><td>' + numScr(e.productos) + '</td><td>' + numScr(e.bajaron) + (e.agotados ? ' <small class="muted">(' + e.agotados + ' agotados)</small>' : '') + '</td>' +
-        '<td><strong style="color:var(--off)">' + (e.unidades_restadas ? '−' + numScr(e.unidades_restadas) : '0') + '</strong></td><td>' + numScr(e.subieron) + (e.unidades_sumadas ? ' <small class="muted">(+' + numScr(e.unidades_sumadas) + ')</small>' : '') + '</td><td>' + numScr(e.nuevos) + '</td><td>' + numScr(e.desaparecidos) + '</td></tr>').join('') +
+        '<td><strong style="color:var(--off)">' + (e.unidades_restadas ? '−' + numScr(e.unidades_restadas) : '0') + '</strong></td><td>' + numScr(e.subieron) + (e.unidades_sumadas ? ' <small class="muted">(+' + numScr(e.unidades_sumadas) + ')</small>' : '') + '</td><td>' + numScr(e.nuevos) + '</td><td>' + numScr(e.desaparecidos) + '</td>' +
+        '<td style="white-space:nowrap">' + (e.precios_subieron || e.precios_bajaron ? '<span style="color:var(--off)">↑' + numScr(e.precios_subieron) + '</span> · <span style="color:var(--ok)">↓' + numScr(e.precios_bajaron) + '</span>' : '<span class="muted">—</span>') + '</td></tr>').join('') +
     '</tbody></table>' : '<div class="vacio">' + ICO.sync + 'Sin corridas en este período.</div>';
 
   cont.outerHTML = aviso +
     '<div class="kpis">' +
-      kpi(ICO.existencias, 'Unidades restadas', '−' + numScr(t.unidades_restadas), 'en ' + numScr(t.bajaron) + ' bajas de productos', ' destacado') +
-      kpi(ICO.bloquear, 'Se agotaron', numScr(t.agotados), 'llegaron a 0 en el período') +
+      kpi(ICO.existencias, 'Unidades restadas', '−' + numScr(t.unidades_restadas), 'en ' + numScr(t.bajaron) + ' bajas · ' + numScr(t.agotados) + (t.agotados === 1 ? ' se agotó' : ' se agotaron'), ' destacado') +
       kpi(ICO.mas, 'Unidades sumadas', '+' + numScr(t.unidades_sumadas), 'reposiciones del proveedor') +
+      kpi(ICO.descuentos, 'Cambios de precio', numScr((t.precios_subieron || 0) + (t.precios_bajaron || 0)), '↑ ' + numScr(t.precios_subieron) + ' subieron · ↓ ' + numScr(t.precios_bajaron) + ' bajaron') +
       kpi(ICO.sync, 'Corridas', numScr(t.corridas), ult ? 'Última: ' + fecha(ult.fecha) : 'Ninguna todavía') +
     '</div>' +
     '<div class="caja"><div class="caja-cab"><h2>Cada scraping</h2><small class="muted">Toca una corrida para ver el detalle</small></div><div class="tabla-wrap">' + tablaEjec + '</div></div>' +
@@ -1741,14 +1752,62 @@ async function vistaScraping(){
       '<div class="chips" id="scr-tipos">' + TIPOS_SCR.map(([k, n]) => '<button class="chip' + (tipoScr === k ? ' activo' : '') + '" data-tipo-scr="' + k + '">' + n + '</button>').join('') + '</div>' +
       '<div class="buscar">' + ICO.buscar + '<input id="scr-busca" placeholder="Buscar modelo, marca…" value="' + esc(buscaScr) + '"></div>' +
       '<button class="btn chico" id="scr-csv">Descargar CSV</button></div></div>' +
-      '<div class="tabla-wrap" id="scr-tabla"></div></div>';
+      '<div class="tabla-wrap" id="scr-tabla"></div></div>' +
+    '<div class="caja"><div class="caja-cab"><h2>Cambios de precio</h2><div class="fila" style="align-items:center">' +
+      '<div class="chips">' + SENTIDOS_PRECIO.map(([k, n]) => '<button class="chip' + (sentidoPrecio === k ? ' activo' : '') + '" data-sentido-precio="' + k + '">' + n + '</button>').join('') + '</div>' +
+      '<div class="buscar">' + ICO.buscar + '<input id="pre-busca" placeholder="Buscar modelo, marca…" value="' + esc(buscaPrecio) + '"></div>' +
+      '<button class="btn chico" id="pre-csv">Descargar CSV</button></div></div>' +
+      '<p class="muted" style="margin:-4px 0 10px;font-size:12.5px">Precio público del proveedor (antes de tu descuento). Los centavos de diferencia por redondeo no cuentan.</p>' +
+      '<div class="tabla-wrap" id="pre-tabla"></div></div>';
 
   document.querySelectorAll('[data-ejec-scr]').forEach(tr => tr.onclick = () => abrirEjecucionScr(Number(tr.dataset.ejecScr)));
   document.querySelectorAll('[data-modelo-scr]').forEach(li => li.onclick = () => abrirModeloScr(li.dataset.modeloScr));
   document.querySelectorAll('[data-tipo-scr]').forEach(b => b.onclick = () => { tipoScr = b.dataset.tipoScr; vistaScraping(); });
   $('scr-busca').oninput = (e) => { buscaScr = e.target.value; cuantosScr = 50; pintarMovsScr(); };
   $('scr-csv').onclick = () => descargarCSVScr(filtrarMovsScr(), 'scraping-movimientos-' + diasScr + 'd.csv');
+  document.querySelectorAll('[data-sentido-precio]').forEach(b => b.onclick = () => {
+    sentidoPrecio = b.dataset.sentidoPrecio; cuantosPrecio = 50;
+    document.querySelectorAll('[data-sentido-precio]').forEach(x => x.classList.toggle('activo', x === b));
+    pintarPreciosScr();
+  });
+  $('pre-busca').oninput = (e) => { buscaPrecio = e.target.value; cuantosPrecio = 50; pintarPreciosScr(); };
+  $('pre-csv').onclick = () => descargarCSVPrecios(filtrarPreciosScr(), 'scraping-precios-' + diasScr + 'd.csv');
   pintarMovsScr();
+  pintarPreciosScr();
+}
+function filtrarPreciosScr(){
+  const q = buscaPrecio.trim().toLowerCase();
+  return (preciosScr || []).filter(p => (!sentidoPrecio || (sentidoPrecio === 'subio' ? p.diferencia > 0 : p.diferencia < 0)) &&
+    (!q || [p.modelo, p.marca, p.nombre].some(v => v && String(v).toLowerCase().includes(q))));
+}
+function tablaPreciosScr(lista, conFecha, conModelo){
+  return '<table class="tabla-vis"><thead><tr>' + (conFecha ? '<th>Cuándo</th>' : '') + (conModelo ? '<th>Modelo</th><th>Marca</th>' : '') + '<th>Antes</th><th>Después</th><th>Cambio</th></tr></thead><tbody>' +
+    lista.map(p => '<tr' + (conModelo ? ' class="clic" data-modelo-scr="' + esc(p.modelo) + '"' : '') + '>' + (conFecha ? '<td style="white-space:nowrap">' + fecha(p.fecha) + '</td>' : '') +
+      (conModelo ? '<td><strong class="mono">' + esc(p.modelo) + '</strong>' + (p.nombre ? '<div class="muted" style="font-size:12px">' + esc(p.nombre) + '</div>' : '') + '</td><td>' + esc(p.marca || '—') + '</td>' : '') +
+      '<td style="white-space:nowrap">' + precioScr(p.precio_antes) + '</td><td style="white-space:nowrap"><strong>' + precioScr(p.precio_despues) + '</strong></td><td>' + cambioPrecioHTML(p) + '</td></tr>').join('') +
+    '</tbody></table>';
+}
+function pintarPreciosScr(){
+  const el = $('pre-tabla'); if (!el) return;
+  if (preciosScr === null){ el.innerHTML = '<div class="vacio">' + ICO.alerta + 'Falta actualizar la base de datos: vuelve a correr <span class="mono">11_historial_scraping.sql</span> en Supabase (SQL Editor).</div>'; return; }
+  const lista = filtrarPreciosScr();
+  if (!lista.length){ el.innerHTML = '<div class="vacio">' + ICO.descuentos + (buscaPrecio ? 'Nada coincide con la búsqueda.' : 'Ningún precio cambió en este período.') + '</div>'; return; }
+  const sub = lista.filter(p => p.diferencia > 0).length;
+  el.innerHTML = '<p class="muted" style="margin:0 0 8px">' + numScr(lista.length) + ' cambio' + (lista.length === 1 ? '' : 's') + ' · ↑ ' + numScr(sub) + ' subieron · ↓ ' + numScr(lista.length - sub) + ' bajaron</p>' +
+    tablaPreciosScr(lista.slice(0, cuantosPrecio), true, true) +
+    (lista.length > cuantosPrecio ? '<div style="text-align:center;margin-top:12px"><button class="btn chico" id="pre-mas">Ver más (' + numScr(lista.length - cuantosPrecio) + ' restantes)</button></div>' : '');
+  el.querySelectorAll('[data-modelo-scr]').forEach(tr => tr.onclick = () => abrirModeloScr(tr.dataset.modeloScr));
+  if ($('pre-mas')) $('pre-mas').onclick = () => { cuantosPrecio += 100; pintarPreciosScr(); };
+}
+function descargarCSVPrecios(lista, nombre){
+  if (!lista.length) return toast('No hay cambios de precio para descargar');
+  const c = (v) => '"' + String(v == null ? '' : v).replace(/"/g, '""') + '"';
+  const n = (v) => v == null ? '' : String(v).replace('.', ',');
+  const filas = [['Fecha', 'Modelo', 'Marca', 'Nombre', 'Precio antes', 'Precio después', 'Diferencia', '% cambio']]
+    .concat(lista.map(p => [new Date(p.fecha).toLocaleString('es-VE'), p.modelo, p.marca, p.nombre, n(p.precio_antes), n(p.precio_despues), n(p.diferencia), n(p.porcentaje)]));
+  const blob = new Blob(['\ufeff' + filas.map(f => f.map(c).join(';')).join('\r\n')], { type: 'text/csv;charset=utf-8' });
+  const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = nombre; a.click();
+  setTimeout(() => URL.revokeObjectURL(a.href), 2000);
 }
 function filtrarMovsScr(){
   const q = buscaScr.trim().toLowerCase();
@@ -1788,12 +1847,24 @@ const cabPanelScr = (titulo, sub) => '<div class="panel-cab"><div class="avatar"
 async function abrirEjecucionScr(id, tipo){
   const e = ((datosScr && datosScr.ejecuciones) || []).find(x => x.id === id) || { id };
   tipo = tipo == null ? 'bajo' : tipo;
-  const chips = '<div class="chips" style="margin-bottom:14px">' + TIPOS_SCR.map(([k, n]) => '<button class="chip' + (tipo === k ? ' activo' : '') + '" data-tipo-ej="' + k + '">' + n + '</button>').join('') + '</div>';
-  abrirPanel(cabPanelScr('Scraping del ' + fecha(e.fecha), numScr(e.productos) + ' productos · ' + numScr(e.bajaron) + ' bajaron (−' + numScr(e.unidades_restadas) + ' unid.)') +
+  const chips = '<div class="chips" style="margin-bottom:14px">' + TIPOS_SCR.concat([['precios', 'Precios (' + numScr((e.precios_subieron || 0) + (e.precios_bajaron || 0)) + ')']]).map(([k, n]) => '<button class="chip' + (tipo === k ? ' activo' : '') + (k === 'precios' ? ' sep' : '') + '" data-tipo-ej="' + k + '">' + n + '</button>').join('') + '</div>';
+  abrirPanel(cabPanelScr('Scraping del ' + fecha(e.fecha), numScr(e.productos) + ' productos · ' + numScr(e.bajaron) + ' bajaron (−' + numScr(e.unidades_restadas) + ' unid.) · ' + numScr((e.precios_subieron || 0) + (e.precios_bajaron || 0)) + ' cambios de precio') +
     '<div class="panel-cuerpo">' + chips + '<div class="cargando">Cargando…</div></div>', true);
   $('panel').dataset.actividad = 'scr:' + id;
   $('scr-cerrar').onclick = cerrarPanel;
   document.querySelectorAll('[data-tipo-ej]').forEach(b => b.onclick = () => abrirEjecucionScr(id, b.dataset.tipoEj));
+  if (tipo === 'precios'){
+    const { data, error } = await sb.rpc('precios_scraping', { p_ejecucion: id, limite: 5000 });
+    if ($('panel').dataset.actividad !== 'scr:' + id) return;
+    const cont = document.querySelector('#panel .cargando');
+    if (error){ cont.outerHTML = '<p class="error">' + esc(mensajeError(error)) + '</p>'; return; }
+    const lista = data || [];
+    cont.outerHTML = !lista.length ? '<div class="vacio">' + ICO.descuentos + 'Ningún precio cambió en esta corrida.</div>'
+      : '<div style="text-align:right;margin-bottom:8px"><button class="btn chico" id="pre-csv-ej">Descargar CSV</button></div><div class="tabla-wrap">' + tablaPreciosScr(lista, false, true) + '</div>';
+    if ($('pre-csv-ej')) $('pre-csv-ej').onclick = () => descargarCSVPrecios(lista, 'precios-' + new Date(e.fecha || Date.now()).toISOString().slice(0, 10) + '.csv');
+    document.querySelectorAll('#panel [data-modelo-scr]').forEach(tr => tr.onclick = () => abrirModeloScr(tr.dataset.modeloScr));
+    return;
+  }
   const { data, error } = await sb.rpc('movimientos_scraping', { p_ejecucion: id, p_tipo: tipo || null, limite: 5000 });
   if ($('panel').dataset.actividad !== 'scr:' + id) return;
   const cont = document.querySelector('#panel .cargando');
@@ -1807,23 +1878,31 @@ async function abrirEjecucionScr(id, tipo){
 
 // Historial de un producto
 async function abrirModeloScr(modelo){
-  abrirPanel(cabPanelScr('<span class="mono">' + esc(modelo) + '</span>', 'Historial de existencias en el scraping') + '<div class="panel-cuerpo"><div class="cargando">Cargando…</div></div>', true);
+  abrirPanel(cabPanelScr('<span class="mono">' + esc(modelo) + '</span>', 'Historial de existencias y precio en el scraping') + '<div class="panel-cuerpo"><div class="cargando">Cargando…</div></div>', true);
   $('panel').dataset.actividad = 'scrm:' + modelo;
   $('scr-cerrar').onclick = cerrarPanel;
-  const { data, error } = await sb.rpc('movimientos_scraping', { p_modelo: modelo, limite: 1000 });
+  const [{ data, error }, pr] = await Promise.all([
+    sb.rpc('movimientos_scraping', { p_modelo: modelo, limite: 1000 }),
+    sb.rpc('precios_scraping', { p_modelo: modelo, limite: 1000 }).then(x => x, e => ({ error: e })),
+  ]);
   if ($('panel').dataset.actividad !== 'scrm:' + modelo) return;
   const cont = document.querySelector('#panel .cargando');
   if (error){ cont.outerHTML = '<p class="error">' + esc(mensajeError(error)) + '</p>'; return; }
   const lista = data || [];
-  const p = lista[0] || {};
+  const precios = (pr && !pr.error && pr.data) || [];
+  const p = Object.assign({}, precios[0] || {}, lista[0] || {});
+  const precioActual = precios.length ? precios[0].precio_despues : p.precio;
   const restadas = lista.reduce((s, m) => s + (m.diferencia < 0 ? -m.diferencia : 0), 0);
   const sumadas = lista.reduce((s, m) => s + (m.diferencia > 0 ? m.diferencia : 0), 0);
   const mini = (titulo, v) => '<div class="kpi"><div class="k-cab">' + titulo + '</div><div class="k-num" style="font-size:23px">' + v + '</div></div>';
-  cont.outerHTML = (p.marca || p.nombre ? '<p style="margin:0 0 14px"><strong>' + esc(p.marca || '') + '</strong> ' + esc(p.nombre || '') + (p.precio ? ' · <span class="muted">precio proveedor ' + money(p.precio) + '</span>' : '') + '</p>' : '') +
+  cont.outerHTML = (p.marca || p.nombre ? '<p style="margin:0 0 14px"><strong>' + esc(p.marca || '') + '</strong> ' + esc(p.nombre || '') + (precioActual ? ' · <span class="muted">precio proveedor ' + precioScr(precioActual) + '</span>' : '') + '</p>' : '') +
     '<div class="kpis">' + mini('Existencia actual', p.despues == null ? '—' : numScr(p.despues)) + mini('Unidades restadas', '−' + numScr(restadas)) + mini('Unidades sumadas', '+' + numScr(sumadas)) + '</div>' +
     (lista.length ? '<div class="tabla-wrap"><table class="tabla-vis"><thead><tr><th>Cuándo</th><th>Antes</th><th>Después</th><th>Diferencia</th><th></th></tr></thead><tbody>' +
       lista.map(m => '<tr><td>' + fecha(m.fecha) + '</td><td>' + cantScr(m.antes) + '</td><td>' + cantScr(m.despues) + '</td><td>' + difHTML(m) + '</td><td>' + pillTipoScr(m.tipo) + '</td></tr>').join('') +
-      '</tbody></table></div>' : '<div class="vacio">' + ICO.existencias + 'Este producto no ha cambiado desde que se empezó a registrar.</div>');
+      '</tbody></table></div>' : '<div class="vacio">' + ICO.existencias + 'Sus existencias no han cambiado desde que se empezó a registrar.</div>') +
+    '<div class="seccion" style="margin-top:22px"><h3>Historial de precio</h3>' +
+    (precios.length ? '<div class="tabla-wrap">' + tablaPreciosScr(precios, true, false) + '</div>'
+      : '<div class="muted" style="padding:8px 0">El precio no ha cambiado desde que se empezó a registrar.</div>') + '</div>';
 }
 
 /* ---------- Tipos de cliente ---------- */

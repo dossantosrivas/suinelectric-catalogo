@@ -11,6 +11,8 @@
 --    · scraping_movimientos → cada producto que cambió: antes, después y
 --                             la diferencia (negativa = se restaron)
 --  La primera corrida solo guarda la foto inicial (no hay con qué comparar).
+--    · scraping_precios     → cada producto al que le cambió el precio
+--                             (antes, después, diferencia y %)
 --  Solo los administradores pueden verlo (panel → Scraping).
 -- =====================================================================
 
@@ -30,6 +32,8 @@ create table if not exists public.scraping_ejecuciones (
   primera           boolean not null default false,
   nota              text
 );
+alter table public.scraping_ejecuciones add column if not exists precios_subieron integer not null default 0;
+alter table public.scraping_ejecuciones add column if not exists precios_bajaron  integer not null default 0;
 create index if not exists scraping_ejecuciones_fecha on public.scraping_ejecuciones (fecha desc);
 
 create table if not exists public.scraping_movimientos (
@@ -49,6 +53,22 @@ create index if not exists scraping_mov_ejecucion on public.scraping_movimientos
 create index if not exists scraping_mov_modelo    on public.scraping_movimientos (modelo, fecha desc);
 create index if not exists scraping_mov_fecha     on public.scraping_movimientos (fecha desc);
 
+create table if not exists public.scraping_precios (
+  id             bigserial primary key,
+  ejecucion_id   bigint not null references public.scraping_ejecuciones(id) on delete cascade,
+  fecha          timestamptz not null default now(),
+  modelo         text not null,
+  marca          text,
+  nombre         text,
+  precio_antes   numeric not null,
+  precio_despues numeric not null,
+  diferencia     numeric not null,   -- despues - antes
+  porcentaje     numeric             -- % de cambio sobre el precio anterior
+);
+create index if not exists scraping_precios_ejecucion on public.scraping_precios (ejecucion_id);
+create index if not exists scraping_precios_modelo    on public.scraping_precios (modelo, fecha desc);
+create index if not exists scraping_precios_fecha     on public.scraping_precios (fecha desc);
+
 -- Última foto de existencias del scraper (para comparar con la siguiente).
 create table if not exists public.scraping_ultimo (
   modelo   text primary key,
@@ -61,8 +81,9 @@ create table if not exists public.scraping_ultimo (
 alter table public.scraping_ejecuciones enable row level security;
 alter table public.scraping_movimientos enable row level security;
 alter table public.scraping_ultimo      enable row level security;
+alter table public.scraping_precios     enable row level security;
 -- Sin políticas: nadie lee ni escribe directo desde la web; solo con las funciones de abajo.
-revoke all on public.scraping_ejecuciones, public.scraping_movimientos, public.scraping_ultimo from anon, authenticated;
+revoke all on public.scraping_ejecuciones, public.scraping_movimientos, public.scraping_ultimo, public.scraping_precios from anon, authenticated;
 
 -- ---------- La llama GitHub después de cada scraping (clave secreta) ----------
 -- productos: [{"modelo":"X","cantidad":5,"marca":"…","nombre":"…","precio":12.3}, …]
@@ -118,7 +139,22 @@ begin
     from _scr_nuevo n
     full join public.scraping_ultimo u on u.modelo = n.modelo
     where u.modelo is null or n.modelo is null or n.cantidad <> u.cantidad;
+
+    -- Cambios de precio (solo si hay precio antes y después; se ignoran diferencias de centavos por redondeo).
+    insert into public.scraping_precios (ejecucion_id, modelo, marca, nombre, precio_antes, precio_despues, diferencia, porcentaje)
+    select eid, n.modelo, coalesce(n.marca, u.marca), coalesce(n.nombre, u.nombre),
+           u.precio, n.precio, round(n.precio - u.precio, 2),
+           case when u.precio > 0 then round(100 * (n.precio - u.precio) / u.precio, 1) end
+    from _scr_nuevo n
+    join public.scraping_ultimo u on u.modelo = n.modelo
+    where n.precio is not null and u.precio is not null
+      and abs(n.precio - u.precio) >= 0.01;
   end if;
+
+  -- Si esta vez un producto vino sin precio, conserva el anterior para la próxima comparación.
+  update _scr_nuevo n set precio = u.precio
+  from public.scraping_ultimo u
+  where u.modelo = n.modelo and n.precio is null;
 
   -- Reemplaza la foto con la de ahora.
   delete from public.scraping_ultimo where true;
@@ -133,7 +169,9 @@ begin
     desaparecidos     = s.desaparecidos,
     agotados          = s.agotados,
     unidades_restadas = s.restadas,
-    unidades_sumadas  = s.sumadas
+    unidades_sumadas  = s.sumadas,
+    precios_subieron  = (select count(*) from public.scraping_precios where ejecucion_id = eid and diferencia > 0),
+    precios_bajaron   = (select count(*) from public.scraping_precios where ejecucion_id = eid and diferencia < 0)
   from (
     select count(*) filter (where tipo = 'bajo')                      as bajaron,
            count(*) filter (where tipo = 'subio')                     as subieron,
@@ -173,7 +211,9 @@ begin
         'unidades_restadas', coalesce(sum(unidades_restadas), 0),
         'unidades_sumadas',  coalesce(sum(unidades_sumadas), 0),
         'bajaron',           coalesce(sum(bajaron), 0),
-        'agotados',          coalesce(sum(agotados), 0))
+        'agotados',          coalesce(sum(agotados), 0),
+        'precios_subieron',  coalesce(sum(precios_subieron), 0),
+        'precios_bajaron',   coalesce(sum(precios_bajaron), 0))
       from public.scraping_ejecuciones where fecha >= desde),
     'mas_restados', coalesce((
       select jsonb_agg(t order by t.unidades desc)
@@ -220,3 +260,32 @@ begin
 end $$;
 revoke all on function public.movimientos_scraping(bigint, text, integer, text, integer) from public, anon;
 grant execute on function public.movimientos_scraping(bigint, text, integer, text, integer) to authenticated;
+
+-- Cambios de precio: de una corrida, de un modelo o de los últimos N días.
+create or replace function public.precios_scraping(
+  p_ejecucion bigint  default null,
+  p_modelo    text    default null,
+  dias        integer default 30,
+  p_sentido   text    default null,   -- 'subio' | 'bajo' | null = todos
+  limite      integer default 1000
+)
+returns jsonb
+language plpgsql stable security definer set search_path = public as $$
+begin
+  if not public.es_admin() then return null; end if;
+  return coalesce((
+    select jsonb_agg(to_jsonb(p) order by p.fecha desc, abs(p.porcentaje) desc nulls last)
+    from (
+      select id, ejecucion_id, fecha, modelo, marca, nombre, precio_antes, precio_despues, diferencia, porcentaje
+      from public.scraping_precios
+      where (p_ejecucion is null or ejecucion_id = p_ejecucion)
+        and (p_modelo is null or modelo = p_modelo)
+        and (p_ejecucion is not null or p_modelo is not null
+             or fecha >= now() - make_interval(days => greatest(1, least(dias, 400))))
+        and (p_sentido is null or (p_sentido = 'subio' and diferencia > 0) or (p_sentido = 'bajo' and diferencia < 0))
+      order by fecha desc, abs(porcentaje) desc nulls last
+      limit greatest(1, least(limite, 5000))
+    ) p), '[]'::jsonb);
+end $$;
+revoke all on function public.precios_scraping(bigint, text, integer, text, integer) from public, anon;
+grant execute on function public.precios_scraping(bigint, text, integer, text, integer) to authenticated;

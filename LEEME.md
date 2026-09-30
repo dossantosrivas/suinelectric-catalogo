@@ -133,16 +133,19 @@ Notas:
 - No se cuenta a los administradores: al entrar al panel, ese navegador queda marcado para no contarse nunca más (aunque luego entre a la tienda sin sesión). Tampoco a robots como Google.
 - Si todavía no corriste `10_visitantes.sql`, la tienda sigue anotando las estadísticas de antes, sin los datos nuevos.
 
-## 14. Historial del scraping (qué se restó de existencias y cuándo)
+## 14. Historial del scraping (qué se restó de existencias, cambios de precio y cuándo)
 Supabase → **SQL Editor** → pega todo `11_historial_scraping.sql` → **Run** (se puede volver a correr).
 
 Desde ahí, cada scraping diario (GitHub Actions, paso "Registrar el scraping") manda las existencias de los productos de grupo-electricos.com y Supabase las compara con la corrida anterior. En el panel → **Scraping** ves:
 - Cada corrida: cuántos productos bajaron, unidades restadas, cuáles subieron, nuevos y los que ya no están. Toca una para ver el detalle.
 - Lo que más se restó en 7 / 30 / 90 días o 1 año. Toca un producto para ver su historial.
 - Todos los movimientos, con buscador y botón **Descargar CSV** (abre en Excel).
+- **Cambios de precio**: cada producto al que le subió o bajó el precio del proveedor (antes, después, diferencia y %), con buscador y CSV. También aparece en el detalle de cada corrida (pestaña *Precios*) y en el historial de cada producto.
 
 Notas:
 - La primera corrida solo guarda el punto de partida; desde la segunda ya se ven las restas.
 - Solo cuenta productos del scraper, no los de `productos_manuales.json`.
 - Si un scraping trae menos del 60 % de los productos de la corrida anterior (falló a medias), se marca como "Omitido" y no se registran bajas falsas.
+- Se compara el precio público del proveedor (antes de tu descuento); diferencias menores a un centavo no cuentan.
+- Si ya habías corrido `11_historial_scraping.sql` antes, vuelve a correrlo para activar los precios (no se pierde nada).
 - Se guarda un año de historial. Usa los mismos secrets `SUPABASE_URL` y `SUPABASE_SECRET_KEY`.
