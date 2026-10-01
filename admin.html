@@ -451,6 +451,44 @@
   @keyframes brillo{ to{ background-position:-200% 0; } }
   @media (prefers-reduced-motion:reduce){ *{ animation:none !important; transition:none !important; } }
 
+
+  /* En vivo */
+  .nav .badge.verde{ background:#22c55e; color:#06240f; }
+  .estado-vivo.latiendo .punto{ animation:latido 1.6s ease-in-out infinite; }
+  @keyframes latido{ 0%,100%{ box-shadow:0 0 0 0 color-mix(in srgb, var(--ok) 55%, transparent); } 50%{ box-shadow:0 0 0 5px transparent; } }
+  .vivo-grid{ grid-template-columns:minmax(0,1.25fr) minmax(0,1fr); margin-bottom:18px; }
+  .vivo-card{ display:grid; grid-template-columns:40px minmax(0,1fr) auto; gap:12px; padding:12px; margin:0 -12px; border-radius:10px; border-bottom:1px solid var(--linea-suave); cursor:pointer; transition:background .12s, opacity .2s; }
+  .vivo-card:last-child{ border-bottom:none; }
+  .vivo-card:hover{ background:var(--superficie-2); }
+  .vivo-card.segundo-plano{ opacity:.55; }
+  .vivo-card .avatar{ width:40px; height:40px; position:relative; }
+  .vivo-card .avatar.anon{ background:var(--linea-suave); color:var(--texto-2); font-family:var(--mono); font-size:12px; }
+  .vivo-card .avatar i{ position:absolute; right:-1px; bottom:-1px; width:12px; height:12px; border-radius:50%; border:2px solid var(--superficie); }
+  .vivo-card .avatar i.on{ background:#22c55e; } .vivo-card .avatar i.off{ background:var(--texto-3); }
+  .vc-nom{ display:flex; align-items:center; gap:6px; flex-wrap:wrap; }
+  .vc-lugar{ font-size:12.5px; margin-top:1px; }
+  .vc-pag{ display:flex; gap:6px; align-items:flex-start; margin-top:6px; font-size:13.5px; }
+  .vc-pag svg{ width:15px; height:15px; color:var(--azul-texto); flex:none; margin-top:2px; }
+  .vc-pag a{ font-weight:600; text-decoration:none; }
+  .vc-pag a:hover{ text-decoration:underline; }
+  .vc-pag small{ display:block; color:var(--texto-3); font-size:12px; }
+  .vc-acc{ font-size:13px; margin-top:4px; color:var(--texto-2); }
+  .vc-der{ text-align:right; white-space:nowrap; font-variant-numeric:tabular-nums; }
+  .vc-der strong{ display:block; color:var(--titulo); font-size:14px; }
+  .vc-der small{ display:block; color:var(--texto-3); font-size:11.5px; }
+  .feed{ list-style:none; margin:0; padding:0; max-height:620px; overflow-y:auto; }
+  .feed li{ display:grid; grid-template-columns:18px minmax(0,1fr) auto; gap:10px; padding:9px 6px; margin:0 -6px; border-radius:8px; border-bottom:1px dashed var(--linea-suave); font-size:13.5px; cursor:pointer; }
+  .feed li.vacio{ display:block; cursor:default; border:none; }
+  .feed li:hover{ background:var(--superficie-2); }
+  .feed li > svg{ width:16px; height:16px; color:var(--texto-3); margin-top:2px; }
+  .feed li.caliente > svg{ color:var(--ok); }
+  .feed li.caliente{ background:color-mix(in srgb, var(--ok) 6%, transparent); }
+  .feed li small{ display:block; font-size:12px; margin-top:1px; }
+  .feed li time{ color:var(--texto-3); font-size:12px; font-variant-numeric:tabular-nums; }
+  .feed li.nuevo{ animation:entrar 1.6s ease; }
+  @keyframes entrar{ from{ background:color-mix(in srgb, var(--amarillo) 35%, transparent); transform:translateY(-4px); } }
+  .avisos-grid{ display:grid; grid-template-columns:repeat(auto-fit,minmax(280px,1fr)); }
+  @media (max-width:1100px){ .vivo-grid{ grid-template-columns:1fr; } }
   @media (max-width:1100px){
     .grid-2{ grid-template-columns:1fr; }
   }
@@ -572,6 +610,7 @@ const ICO = {
   borrar:    I('<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13M9 7V4h6v3"/>'),
   globo:     I('<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>'),
   whatsapp:  I('<path d="M20.5 11.6a8.5 8.5 0 0 1-12.6 7.4L3.5 20.5l1.5-4.3a8.5 8.5 0 1 1 15.5-4.6z"/>'),
+  vivo:      I('<circle cx="12" cy="12" r="2.5"/><path d="M7.8 7.8a6 6 0 0 0 0 8.4M16.2 7.8a6 6 0 0 1 0 8.4M4.9 4.9a10 10 0 0 0 0 14.2M19.1 4.9a10 10 0 0 1 0 14.2"/>'),
   enlace:    I('<path d="M10 14a5 5 0 0 0 7.1 0l3-3a5 5 0 0 0-7.1-7.1l-1.7 1.7"/><path d="M14 10a5 5 0 0 0-7.1 0l-3 3a5 5 0 0 0 7.1 7.1l1.7-1.7"/>'),
   menu:      I('<path d="M4 6h16M4 12h16M4 18h16"/>'),
   sol:       I('<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>'),
@@ -613,6 +652,7 @@ const VISTAS = [
   ['pedidos', 'Pedidos', ICO.pedidos, 'Ventas'],
   ['clientes', 'Clientes', ICO.clientes, 'Ventas'],
   ['descuentos', 'Descuentos', ICO.descuentos, 'Ventas'],
+  ['envivo', 'En vivo', ICO.vivo, 'Análisis'],
   ['estadisticas', 'Estadísticas', ICO.grafica, 'Análisis'],
   ['visitantes', 'Visitantes', ICO.globo, 'Análisis'],
   ['enlaces', 'Enlaces', ICO.enlace, 'Análisis'],
@@ -664,9 +704,11 @@ async function iniciar(){
   // Este navegador es de un administrador: la tienda no lo cuenta como visitante.
   try { localStorage.setItem('suin_no_contar', '1'); } catch (e) {}
   armarApp();
+  if (location.hash === '#envivo') tab = 'envivo';        // enlace de los avisos de Telegram
   await Promise.all([cargarProductos(), recargarBase(), cargarPedidos(), cargarEstadoStock()]);
   pintarBadges();
   mostrar();
+  iniciarVivo().catch(e => { vivoEstado = 'error'; vivoError = e; refrescarVivo(); });
 }
 const marcaHTML = () => '<div class="marca"><div class="marca-logo">S</div><div class="marca-txt"><strong>SUINELECTRIC</strong><span>Panel de administrador</span></div></div>';
 
@@ -756,7 +798,7 @@ function mostrar(){
   document.querySelectorAll('#nav button').forEach(x => x.classList.toggle('activa', x.dataset.tab === tab));
   const v = VISTAS.find(x => x[0] === tab); if ($('top-titulo')) $('top-titulo').textContent = v ? v[1] : 'Panel';
   cerrarPanel();
-  ({ resumen: vistaResumen, pedidos: vistaPedidos, estadisticas: vistaEstadisticas, visitantes: vistaVisitantes, enlaces: vistaEnlaces, clientes: vistaClientes, descuentos: vistaDescuentos, existencias: vistaExistencias, scraping: vistaScraping, tipos: vistaTipos }[tab] || vistaResumen)();
+  ({ resumen: vistaResumen, pedidos: vistaPedidos, estadisticas: vistaEstadisticas, envivo: vistaEnVivo, visitantes: vistaVisitantes, enlaces: vistaEnlaces, clientes: vistaClientes, descuentos: vistaDescuentos, existencias: vistaExistencias, scraping: vistaScraping, tipos: vistaTipos }[tab] || vistaResumen)();
 }
 function pintarBadges(){
   const nuevos = pedidos.filter(p => p.estado === 'enviado' && !p.archivado).length;
@@ -1615,8 +1657,11 @@ const paginaBonita = (p) => {
   if (/^\/links/.test(p)) return 'Página de enlaces';
   const h = p.replace(/^\/(tienda)?(\.html)?/, '');
   if (!h || h === '#' || h === '#/') return 'Inicio de la tienda';
-  const q = h.match(/buscar\?q=([^&]+)/); if (q) return 'Búsqueda “' + q[1] + '”';
   const pr = h.match(/[?&]p=([^&]+)/); if (pr) return 'Producto ' + pr[1];
+  const q = h.match(/buscar\?q=([^&]+)/); if (q) return 'Búsqueda “' + q[1] + '”';
+  const mc = h.match(/^#\/marca\/([^?&]+)/); if (mc) return 'Marca ' + mc[1].toUpperCase().replace(/-/g, ' ');
+  if (/^#\/catalogos/.test(h)) return 'Catálogos';
+  if (/^#\/todo/.test(h)) return 'Todos los productos';
   return 'Tienda ' + h.replace(/^#\/?/, '').replace(/\//g, ' › ');
 };
 
@@ -1836,6 +1881,145 @@ async function abrirVisitante(id){
   enlazar();
   $('v-listo').onclick = cerrarPanel;
   cuerpo.querySelectorAll('[data-act-email]').forEach(a => a.onclick = (e) => { e.preventDefault(); abrirActividad(a.dataset.actEmail); });
+}
+
+/* ---------- En vivo (13_en_vivo.sql): quién está ahora y qué hace ---------- */
+const VIVO_SEG = 100;                    // sin señal en 100 s → ya no está
+let vivos = {}, feed = [], vivoEstado = 'conectando', vivoError = null, vivoCanal = null, avisos = null, nuevosFeed = new Set();
+const vivoReciente = (r) => r && (Date.now() - new Date(r.visto)) / 1000 < (r.activo ? VIVO_SEG : 60);
+const listaVivos = () => Object.values(vivos).filter(vivoReciente).sort((a, b) => (b.activo - a.activo) || new Date(b.visto) - new Date(a.visto));
+const segs = (d) => Math.max(0, Math.round((Date.now() - new Date(d)) / 1000));
+const haceSeg = (d) => { const s = segs(d); return s < 10 ? 'ahora' : s < 60 ? 'hace ' + s + ' s' : haceCuanto(d); };
+const durVivo = (d) => { const m = Math.floor(segs(d) / 60); return m < 1 ? 'recién llegó' : m < 60 ? m + ' min' : Math.floor(m / 60) + ' h ' + (m % 60) + ' min'; };
+const nombreVivo = (r) => r.cliente_email ? nombreCliente(r.cliente_email) : 'Visitante ' + codigoVis(r.visitante);
+const zonaDe = (p) => !p ? 'otro' : /^\/links/.test(p) ? 'links' : /^\/(p|c)\//.test(p) || /[?&]p=/.test(p) ? 'producto' : /^\/tienda/.test(p) ? 'tienda' : 'otro';
+
+async function iniciarVivo(){
+  const hace = new Date(Date.now() - 3 * 60000).toISOString(), hora = new Date(Date.now() - 60 * 60000).toISOString();
+  const [a, b] = await Promise.all([
+    sb.from('en_linea').select('*').gte('visto', hace),
+    sb.from('eventos').select('id,tipo,texto,modelo,resultados,cantidad,cliente_email,origen,visitante,visita,pagina,pais,region,ciudad,dispositivo,referencia,creado')
+      .gte('creado', hora).neq('tipo', 'ver_tarjetas').order('creado', { ascending: false }).limit(80),
+  ]);
+  if (a.error){ vivoEstado = 'falta'; vivoError = a.error; pintarVivoBadge(); if (tab === 'envivo') vistaEnVivo(); return; }
+  (a.data || []).forEach(r => { vivos[r.visitante] = r; });
+  feed = b.data || [];
+  vivoCanal = sb.channel('panel-en-vivo')
+    .on('postgres_changes', { event: '*', schema: 'public', table: 'en_linea' }, (m) => {
+      if (m.eventType === 'DELETE'){ if (m.old && m.old.visitante) delete vivos[m.old.visitante]; }
+      else if (m.new && m.new.visitante) vivos[m.new.visitante] = m.new;
+      refrescarVivo();
+    })
+    .on('postgres_changes', { event: 'INSERT', schema: 'public', table: 'eventos' }, (m) => {
+      const e = m.new; if (!e || e.tipo === 'ver_tarjetas') return;
+      if (e.cliente_email && (clientes.find(c => c.email === e.cliente_email) || {}).es_admin) return;
+      feed.unshift(e); nuevosFeed.add(e.id); if (feed.length > 150) feed.length = 150;
+      refrescarVivo();
+    })
+    .subscribe((st) => { vivoEstado = st === 'SUBSCRIBED' ? 'conectado' : st === 'CLOSED' ? 'desconectado' : st === 'CHANNEL_ERROR' || st === 'TIMED_OUT' ? 'error' : 'conectando'; refrescarVivo(); });
+  setInterval(refrescarVivo, 5000);
+  refrescarVivo();
+}
+let tRefVivo = null;
+function refrescarVivo(){
+  clearTimeout(tRefVivo);
+  tRefVivo = setTimeout(() => { pintarVivoBadge(); if (tab === 'envivo' && $('vivo-lista')) pintarVivo(); }, 120);
+}
+function pintarVivoBadge(){
+  const n = listaVivos().filter(r => r.activo).length;
+  const b = document.querySelector('[data-badge=envivo]');
+  if (b){ b.textContent = n; b.hidden = !n; b.classList.add('verde'); }
+}
+function estadoVivoHTML(){
+  const t = { conectado: ['verde', 'En vivo'], conectando: ['amar', 'Conectando…'], error: ['rojo', 'Sin conexión, reintentando'], desconectado: ['rojo', 'Desconectado'], falta: ['rojo', 'Falta instalar'] }[vivoEstado] || ['', vivoEstado];
+  return '<span class="pill ' + t[0] + ' estado-vivo' + (vivoEstado === 'conectado' ? ' latiendo' : '') + '"><span class="punto"></span>' + t[1] + '</span>';
+}
+
+function vistaEnVivo(){
+  $('main').innerHTML = cabecera('En vivo', 'Quién está en la web ahora mismo, en qué página y qué va haciendo. Se actualiza solo, al instante. Toca a una persona para ver todo su recorrido.', '<span id="vivo-estado">' + estadoVivoHTML() + '</span>') +
+    (vivoEstado === 'falta' ? '<div class="caja"><div class="tarjeta-sync"><div class="icono mal">' + ICO.alerta + '</div><div><strong>Falta instalar "En vivo" en Supabase</strong><div class="muted">Corre <span class="mono">13_en_vivo.sql</span> en Supabase → SQL Editor (después de <span class="mono">12_enlaces.sql</span>) y vuelve a abrir el panel.' + (vivoError ? '<br><small>' + esc(mensajeError(vivoError)) + '</small>' : '') + '</div></div></div></div>' : '') +
+    '<div class="kpis" id="vivo-kpis"></div>' +
+    '<div class="grid-2 vivo-grid"><div class="caja"><div class="caja-cab"><h2>Ahora en la web <small id="vivo-n">0</small></h2><span class="muted">En gris: dejó la pestaña en segundo plano</span></div><div id="vivo-lista"></div></div>' +
+    '<div class="caja"><div class="caja-cab"><h2>Lo que va pasando</h2><span class="muted">Última hora</span></div><ol class="feed" id="vivo-feed"></ol></div></div>' +
+    '<div class="caja" id="vivo-avisos"><div class="caja-cab"><h2>Avisos a Telegram</h2><span class="muted">Te llegan por SuinBot</span></div><div class="cargando">Cargando…</div></div>';
+  pintarVivo();
+  cargarAvisos();
+}
+function pintarVivo(){
+  if ($('vivo-estado')) $('vivo-estado').innerHTML = estadoVivoHTML();
+  const l = listaVivos(), act = l.filter(r => r.activo);
+  const n = (z) => act.filter(r => zonaDe(r.pagina) === z).length;
+  const kpi = (icono, titulo, num, pie, extra) => '<div class="kpi' + (extra || '') + '"><div class="k-cab">' + titulo + icono + '</div><div class="k-num">' + num + '</div><div class="k-pie">' + pie + '</div></div>';
+  const enHora = feed.filter(e => Date.now() - new Date(e.creado) < 3600000);
+  $('vivo-kpis').innerHTML =
+    kpi(ICO.clientes, 'En línea ahora', act.length, l.length > act.length ? (l.length - act.length) + ' en segundo plano' : 'personas con la web abierta', act.length ? ' destacado' : '') +
+    kpi(ICO.tienda, 'En la tienda', n('tienda'), 'buscando o viendo la lista') +
+    kpi(ICO.ojo, 'En un producto', n('producto'), 'páginas /p/ y /c/') +
+    kpi(ICO.enlace, 'En enlaces', n('links'), 'suinelectric.com/links') +
+    kpi(ICO.grafica, 'Acciones', enHora.filter(e => e.tipo !== 'visita').length, enHora.filter(e => e.tipo === 'visita').length + ' visitas en la última hora');
+  $('vivo-n').textContent = act.length;
+  $('vivo-lista').innerHTML = !l.length ? '<div class="vacio">' + ICO.globo + (vivoEstado === 'falta' ? 'Esperando la instalación.' : 'Nadie en la web en este momento.<br><small>Aparecerán aquí apenas entren.</small>') + '</div>' :
+    l.map(r => {
+      const c = r.cliente_email ? clientes.find(x => x.email === r.cliente_email) : null;
+      const sitio = r.pagina ? '<a href="' + esc(r.pagina) + '" target="_blank" rel="noopener" title="Abrir la página que está viendo">' + esc(paginaBonita(r.pagina)) + '</a>' : '—';
+      return '<div class="vivo-card' + (r.activo ? '' : ' segundo-plano') + '" data-vivo="' + esc(r.visitante) + '"' + (r.cliente_email ? ' data-email="' + esc(r.cliente_email) + '"' : '') + '>' +
+        '<div class="avatar' + (c ? '' : ' anon') + '">' + esc(c ? iniciales(c) : codigoVis(r.visitante).slice(0, 2)) + '<i class="' + (r.activo ? 'on' : 'off') + '"></i></div>' +
+        '<div class="vc-cuerpo"><div class="vc-nom"><strong>' + esc(nombreVivo(r)) + '</strong>' + (c && c.empresa ? ' <span class="muted">· ' + esc(c.empresa) + '</span>' : '') + (r.cliente_email ? ' <span class="pill azul">Con cuenta</span>' : '') + '</div>' +
+          '<div class="vc-lugar muted">' + esc([lugarDe(r), equipoDe(r), r.referencia ? 'llegó por ' + r.referencia : 'entró directo'].filter(Boolean).join(' · ')) + '</div>' +
+          '<div class="vc-pag">' + ICO.ojo + '<span>' + sitio + (r.titulo && !/^\/(tienda)?(\.html)?$/.test(r.pagina || '') ? '<small>' + esc(r.titulo.replace(/\s*\|\s*Suinelectric.*$/i, '')) + '</small>' : '') + '</span></div>' +
+          (r.accion ? '<div class="vc-acc">↳ ' + esc(r.accion) + ' <span class="muted">· ' + haceSeg(r.accion_en) + '</span></div>' : '') + '</div>' +
+        '<div class="vc-der"><strong>' + durVivo(r.entro) + '</strong><small>' + r.paginas + ' pág.</small><small>' + (r.activo ? haceSeg(r.visto) : 'segundo plano') + '</small></div></div>';
+    }).join('');
+  $('vivo-lista').querySelectorAll('[data-vivo]').forEach(el => el.onclick = (e) => {
+    if (e.target.closest('a')) return;
+    if (el.dataset.email) abrirActividad(el.dataset.email); else abrirVisitante(el.dataset.vivo);
+  });
+  pintarFeed();
+}
+function textoFeed(e){
+  const lp = (m) => m ? linkProd(m) : 'un producto';
+  switch (e.tipo){
+    case 'visita': return 'Entró' + (e.origen === 'links' ? ' a la página de enlaces' : e.pagina ? ' por <strong>' + esc(paginaBonita(e.pagina)) + '</strong>' : '') + (e.referencia ? ' <span class="muted">desde ' + esc(e.referencia) + '</span>' : '');
+    case 'busqueda': return 'Buscó <strong>“' + esc(e.texto) + '”</strong>' + (e.resultados === 0 ? ' <span class="pill rojo">sin resultados</span>' : e.resultados != null ? ' <span class="muted">(' + e.resultados + ')</span>' : '');
+    case 'ver_producto': return 'Abrió ' + lp(e.modelo);
+    case 'agregar_carrito': return 'Agregó ' + (e.cantidad ? e.cantidad + ' × ' : '') + lp(e.modelo) + ' al pedido';
+    case 'cotizar_whatsapp': return 'Pidió precio por WhatsApp de ' + lp(e.modelo);
+    case 'pedido_whatsapp': return 'Envió por WhatsApp ' + (e.cantidad ? e.cantidad + ' × ' : '') + lp(e.modelo);
+    case 'clic_enlace': return 'Tocó <strong>' + esc(e.texto || 'un botón') + '</strong> en enlaces';
+  }
+  return esc(e.tipo);
+}
+function pintarFeed(){
+  const el = $('vivo-feed'); if (!el) return;
+  const ICO_F = { visita: ICO.globo, busqueda: ICO.buscar, ver_producto: ICO.ojo, agregar_carrito: ICO.tienda, cotizar_whatsapp: ICO.whatsapp, pedido_whatsapp: ICO.whatsapp, clic_enlace: ICO.enlace };
+  const lugares = {}; feed.forEach(e => { if (e.tipo === 'visita' && e.visita) lugares[e.visita] = e; });
+  const lista = feed.filter(e => Date.now() - new Date(e.creado) < 3600000).slice(0, 60);
+  el.innerHTML = !lista.length ? '<li class="vacio">' + ICO.grafica + 'Sin movimiento en la última hora.</li>' : lista.map(e => {
+    const r = vivos[e.visitante], v = lugares[e.visita] || r || {};
+    const quien = e.cliente_email ? nombreCliente(e.cliente_email) : 'Visitante ' + codigoVis(e.visitante);
+    const caliente = /carrito|whatsapp/.test(e.tipo) || (e.tipo === 'clic_enlace' && /whatsapp/i.test(e.texto || ''));
+    return '<li class="f-' + e.tipo + (caliente ? ' caliente' : '') + (nuevosFeed.has(e.id) ? ' nuevo' : '') + '" data-vis="' + esc(e.visitante || '') + '"' + (e.cliente_email ? ' data-email="' + esc(e.cliente_email) + '"' : '') + '>' +
+      (ICO_F[e.tipo] || ICO.info) + '<div><div>' + textoFeed(e) + '</div><small class="muted">' + esc(quien) + (v.ciudad || v.pais ? ' · ' + esc(lugarDe(v)) : '') + '</small></div><time>' + hora(e.creado) + '</time></li>';
+  }).join('');
+  nuevosFeed.clear();
+  el.querySelectorAll('li[data-vis]').forEach(li => li.onclick = (ev) => {
+    if (ev.target.closest('a') || !li.dataset.vis) return;
+    if (li.dataset.email) abrirActividad(li.dataset.email); else abrirVisitante(li.dataset.vis);
+  });
+}
+async function cargarAvisos(){
+  const { data, error } = await sb.from('avisos_eventos').select('*').order('orden');
+  const caja = $('vivo-avisos'); if (!caja || tab !== 'envivo') return;
+  const cuerpo = caja.querySelector('.cargando') || caja.querySelector('.interruptores');
+  if (error){ cuerpo.outerHTML = '<p class="muted" style="margin:0">Se activan al correr <span class="mono">13_en_vivo.sql</span> en Supabase. Usan el mismo SuinBot de los avisos de pedidos.</p>'; return; }
+  avisos = data || [];
+  cuerpo.outerHTML = '<p class="sub" style="margin-top:-6px">Elige qué te avisa SuinBot al celular. Cada aviso trae quién es (o de qué ciudad), qué hizo y un enlace a esta pantalla.</p>' +
+    '<div class="interruptores avisos-grid">' + avisos.map(a => interruptor('aviso-' + a.clave, esc(a.nombre), esc(a.detalle || ''), a.activo).replace('<input', '<input data-aviso="' + esc(a.clave) + '"')).join('') + '</div>';
+  caja.querySelectorAll('[data-aviso]').forEach(ch => ch.onchange = async () => {
+    const { error } = await sb.from('avisos_eventos').update({ activo: ch.checked }).eq('clave', ch.dataset.aviso);
+    if (error){ ch.checked = !ch.checked; return toast('Error: ' + mensajeError(error)); }
+    toast((ch.checked ? 'Aviso activado: ' : 'Aviso apagado: ') + (avisos.find(a => a.clave === ch.dataset.aviso) || {}).nombre);
+  });
 }
 
 /* ---------- Página de enlaces /links (12_enlaces.sql) ---------- */

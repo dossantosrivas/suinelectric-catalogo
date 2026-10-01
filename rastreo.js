@@ -15,6 +15,10 @@
    No se anota a los administradores (ni en este navegador después de
    que un administrador entró), ni a robots como Google.
    Clave pública de Supabase: es segura en la página.
+   EN VIVO (13_en_vivo.sql, panel → En vivo): además avisa a Supabase en
+   qué página está la persona y lo último que hizo, al cambiar de página y
+   cada ~40 s mientras la pestaña está abierta (una sola fila por
+   navegador, no se acumula).
    ===================================================================== */
 (function(){
   if (window.suinRastreo) return;
@@ -163,6 +167,11 @@
       if (hecho) return; hecho = true;
       if (geo) ['pais', 'region', 'ciudad', 'proveedor'].forEach(function(k){ if (geo[k]) fila[k] = String(geo[k]); });
       enviar(fila);
+      // Para "En vivo": lugar, equipo y origen de esta visita.
+      var info = { visita: v.id };
+      ['pais', 'region', 'ciudad', 'proveedor', 'dispositivo', 'navegador', 'sistema', 'referencia'].forEach(function(k){ if (fila[k]) info[k] = fila[k]; });
+      ls('suin_vivo_info', JSON.stringify(info));
+      vivo({});
     };
     var ctrl = window.AbortController ? new AbortController() : null;
     setTimeout(function(){ if (ctrl) ctrl.abort(); listo(null); }, 3000);
@@ -184,6 +193,64 @@
     var fila = { tipo: tipo, visitante: visitante, visita: v.id, origen: origen() };
     for (var k in (datos || {})) if (datos[k] !== undefined) fila[k] = datos[k];
     enviar(fila);
+    var acc = textoAccion(tipo, fila);
+    if (acc) vivo({ accion: acc });
+  }
+
+  /* ---------- En vivo: dónde está ahora y qué hizo ---------- */
+  var URL_VIVO = BASE + '/rest/v1/rpc/marcar_en_linea';
+  var sinVivo = false, vivoPag = null, tRuta = null, latido = null;
+  function textoAccion(tipo, d){
+    var m = d.modelo ? String(d.modelo) : '';
+    switch (tipo){
+      case 'busqueda': return d.texto ? 'Buscó “' + d.texto + '”' + (d.resultados === 0 ? ' (sin resultados)' : '') : null;
+      case 'ver_producto': return m ? 'Abrió ' + m : null;
+      case 'agregar_carrito': return 'Agregó ' + (d.cantidad ? d.cantidad + ' × ' : '') + m + ' al pedido';
+      case 'cotizar_whatsapp': return 'Pidió precio por WhatsApp de ' + m;
+      case 'pedido_whatsapp': return 'Envió su pedido por WhatsApp';
+      case 'clic_enlace': return d.texto ? 'Tocó «' + d.texto + '»' : null;
+    }
+    return null;
+  }
+  function vivo(extra){
+    if (!arrancado || sinVivo || noContar()) return;
+    var v = null;
+    try { v = JSON.parse(ls('suin_visita') || 'null'); } catch (e) {}
+    if (!v || !v.id) return;
+    var info = null;
+    try { info = JSON.parse(ls('suin_vivo_info') || 'null'); } catch (e) {}
+    var p = { visitante: visitante, visita: v.id, pagina: pagina(), titulo: (document.title || '').slice(0, 160) };
+    if (info && info.visita === v.id){ for (var k in info) if (k !== 'visita') p[k] = info[k]; }
+    else { p.dispositivo = dispositivo(); p.navegador = navegador(); p.sistema = sistema(); }
+    for (var x in (extra || {})) p[x] = extra[x];
+    vivoPag = p.pagina;
+    var t = token();
+    var h = { 'Content-Type': 'application/json', apikey: CLAVE };
+    if (t) h.Authorization = 'Bearer ' + t;
+    try {
+      fetch(URL_VIVO, { method: 'POST', keepalive: true, headers: h, body: JSON.stringify({ p: p }) })
+        .then(function(r){ if (r.status === 404) sinVivo = true; }, function(){});
+    } catch (e) {}
+  }
+  // La tienda cambia de página sin recargar: se vigila el historial.
+  function cambioRuta(){
+    clearTimeout(tRuta);
+    tRuta = setTimeout(function(){ if (pagina() !== vivoPag) vivo({}); }, 700);
+  }
+  ['pushState', 'replaceState'].forEach(function(f){
+    var orig = history[f];
+    if (typeof orig !== 'function') return;
+    history[f] = function(){ var r = orig.apply(this, arguments); cambioRuta(); return r; };
+  });
+  window.addEventListener('popstate', cambioRuta);
+  window.addEventListener('hashchange', cambioRuta);
+  document.addEventListener('visibilitychange', function(){
+    if (document.visibilityState === 'hidden') vivo({ salir: true }); else vivo({});
+  });
+  window.addEventListener('pagehide', function(){ vivo({ salir: true }); });
+  function latir(){
+    if (latido) return;
+    latido = setInterval(function(){ if (document.visibilityState === 'visible') vivo({}); }, 40000);
   }
 
   /* ---------- Tarjetas de producto que se vieron ---------- */
@@ -259,6 +326,7 @@
       if (noContar()) return;
       anunciar(visitaActual());
       pend.forEach(function(e){ evento(e[0], e[1]); });
+      vivo({}); latir();
       vigilarTarjetas();
     },
     evento: evento,
