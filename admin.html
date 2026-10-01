@@ -472,6 +472,7 @@
     .cab p{ font-size:13.5px; }
     .kpis{ grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
     .kpi{ padding:13px 14px; }
+    .kpis > .kpi:last-child:nth-child(odd){ grid-column:1 / -1; }
     .kpi .k-num{ font-size:23px; }
     .kpi .k-cab{ font-size:10.5px; }
     .kpi .k-cab svg{ width:26px; height:26px; padding:5px; }
@@ -567,6 +568,7 @@ const ICO = {
   borrar:    I('<path d="M4 7h16M10 11v6M14 11v6M6 7l1 13a1 1 0 0 0 1 1h8a1 1 0 0 0 1-1l1-13M9 7V4h6v3"/>'),
   globo:     I('<circle cx="12" cy="12" r="9"/><path d="M3 12h18M12 3a14 14 0 0 1 0 18M12 3a14 14 0 0 0 0 18"/>'),
   whatsapp:  I('<path d="M20.5 11.6a8.5 8.5 0 0 1-12.6 7.4L3.5 20.5l1.5-4.3a8.5 8.5 0 1 1 15.5-4.6z"/>'),
+  enlace:    I('<path d="M10 14a5 5 0 0 0 7.1 0l3-3a5 5 0 0 0-7.1-7.1l-1.7 1.7"/><path d="M14 10a5 5 0 0 0-7.1 0l-3 3a5 5 0 0 0 7.1 7.1l1.7-1.7"/>'),
   menu:      I('<path d="M4 6h16M4 12h16M4 18h16"/>'),
   sol:       I('<circle cx="12" cy="12" r="4"/><path d="M12 2v2M12 20v2M4.9 4.9l1.4 1.4M17.7 17.7l1.4 1.4M2 12h2M20 12h2M4.9 19.1l1.4-1.4M17.7 6.3l1.4-1.4"/>'),
   luna:      I('<path d="M21 12.8A9 9 0 1 1 11.2 3a7 7 0 0 0 9.8 9.8z"/>'),
@@ -609,6 +611,7 @@ const VISTAS = [
   ['descuentos', 'Descuentos', ICO.descuentos, 'Ventas'],
   ['estadisticas', 'Estadísticas', ICO.grafica, 'Análisis'],
   ['visitantes', 'Visitantes', ICO.globo, 'Análisis'],
+  ['enlaces', 'Enlaces', ICO.enlace, 'Análisis'],
   ['scraping', 'Scraping', ICO.sync, 'Análisis'],
   ['existencias', 'Existencias', ICO.existencias, 'Ajustes'],
   ['tipos', 'Tipos de cliente', ICO.tipos, 'Ajustes'],
@@ -749,7 +752,7 @@ function mostrar(){
   document.querySelectorAll('#nav button').forEach(x => x.classList.toggle('activa', x.dataset.tab === tab));
   const v = VISTAS.find(x => x[0] === tab); if ($('top-titulo')) $('top-titulo').textContent = v ? v[1] : 'Panel';
   cerrarPanel();
-  ({ resumen: vistaResumen, pedidos: vistaPedidos, estadisticas: vistaEstadisticas, visitantes: vistaVisitantes, clientes: vistaClientes, descuentos: vistaDescuentos, existencias: vistaExistencias, scraping: vistaScraping, tipos: vistaTipos }[tab] || vistaResumen)();
+  ({ resumen: vistaResumen, pedidos: vistaPedidos, estadisticas: vistaEstadisticas, visitantes: vistaVisitantes, enlaces: vistaEnlaces, clientes: vistaClientes, descuentos: vistaDescuentos, existencias: vistaExistencias, scraping: vistaScraping, tipos: vistaTipos }[tab] || vistaResumen)();
 }
 function pintarBadges(){
   const nuevos = pedidos.filter(p => p.estado === 'enviado' && !p.archivado).length;
@@ -1526,6 +1529,7 @@ async function abrirActividad(email){
     pedido_whatsapp: (e) => 'Envió por WhatsApp ' + (e.cantidad ? e.cantidad + ' × ' : '') + linkProd(e.modelo),
   };
   TXT.visita = () => 'Entró a la tienda';
+  TXT.clic_enlace = (e) => 'Tocó <strong>' + esc(e.texto || 'un botón') + '</strong> en la página de enlaces';
   TXT.ver_tarjetas = (e) => 'Vio tarjetas de productos' + (e.texto ? ' en <strong>' + esc(e.texto) + '</strong>' : '');
   const ICO_EV = { busqueda: ICO.buscar, ver_producto: ICO.ojo, agregar_carrito: ICO.tienda, cotizar_whatsapp: ICO.whatsapp, pedido_whatsapp: ICO.pedidos, visita: ICO.tienda, ver_tarjetas: ICO.grafica };
   let diaAnt = '';
@@ -1604,6 +1608,7 @@ const paginaBonita = (p) => {
   if (!p) return '—';
   if (/^\/p\//.test(p)) return 'Página de producto ' + p.slice(3);
   if (/^\/c\//.test(p)) return 'Página de categoría ' + p.slice(3).replace(/\//g, ' › ');
+  if (/^\/links/.test(p)) return 'Página de enlaces';
   const h = p.replace(/^\/(tienda)?(\.html)?/, '');
   if (!h || h === '#' || h === '#/') return 'Inicio de la tienda';
   const q = h.match(/buscar\?q=([^&]+)/); if (q) return 'Búsqueda “' + q[1] + '”';
@@ -1782,8 +1787,9 @@ async function abrirVisitante(id){
     agregar_carrito: (e) => 'Agregó ' + (e.cantidad ? e.cantidad + ' × ' : '') + linkProd(e.modelo) + ' al pedido',
     cotizar_whatsapp: (e) => 'Pidió precio por WhatsApp de ' + linkProd(e.modelo) + (e.origen === 'pagina' ? ' <span class="muted">(página del producto)</span>' : ''),
     pedido_whatsapp: (e) => 'Envió por WhatsApp ' + (e.cantidad ? e.cantidad + ' × ' : '') + linkProd(e.modelo),
+    clic_enlace: (e) => 'Tocó <strong>' + esc(e.texto || 'un botón') + '</strong> en la página de enlaces',
   };
-  const ICO_EV = { visita: ICO.tienda, busqueda: ICO.buscar, ver_producto: ICO.ojo, ver_tarjetas: ICO.grafica, agregar_carrito: ICO.tienda, cotizar_whatsapp: ICO.whatsapp, pedido_whatsapp: ICO.pedidos };
+  const ICO_EV = { visita: ICO.tienda, busqueda: ICO.buscar, ver_producto: ICO.ojo, ver_tarjetas: ICO.grafica, agregar_carrito: ICO.tienda, cotizar_whatsapp: ICO.whatsapp, pedido_whatsapp: ICO.pedidos, clic_enlace: ICO.enlace };
   let visAnt = null;
   const linea = (data.recientes || []).map(e => {
     let cabV = '';
@@ -1826,6 +1832,98 @@ async function abrirVisitante(id){
   enlazar();
   $('v-listo').onclick = cerrarPanel;
   cuerpo.querySelectorAll('[data-act-email]').forEach(a => a.onclick = (e) => { e.preventDefault(); abrirActividad(a.dataset.actEmail); });
+}
+
+/* ---------- Página de enlaces /links (12_enlaces.sql) ---------- */
+let diasLnk = 30, datosLnk = null, buscaLnk = '', cuantasLnk = 25;
+const faltaEnlaces = (err) => '<div class="caja"><div class="tarjeta-sync"><div class="icono mal">' + ICO.alerta + '</div><div><strong>Falta instalar el registro de la página de enlaces</strong><div class="muted">Corre <span class="mono">12_enlaces.sql</span> en Supabase → SQL Editor (después de <span class="mono">10_visitantes.sql</span>). Desde ese momento se anota quién entra a suinelectric.com/links, de dónde llega y qué botones toca.' + (err ? '<br><small>' + esc(mensajeError(err)) + '</small>' : '') + '</div></div></div></div>';
+async function vistaEnlaces(){
+  const chips = '<div class="chips">' + DIAS_VIS.map(([d, t]) => '<button class="chip' + (diasLnk === d ? ' activo' : '') + '" data-dias-lnk="' + d + '">' + t + '</button>').join('') + '</div>';
+  $('main').innerHTML = cabecera('Página de enlaces', 'Quién entra a <a href="/links" target="_blank" rel="noopener">suinelectric.com/links</a>, de dónde llega, qué botones toca y si sigue a la tienda. Toca una visita para ver todo lo que hizo esa persona.', chips) + '<div class="cargando">Cargando…</div>';
+  document.querySelectorAll('[data-dias-lnk]').forEach(b => b.onclick = () => { diasLnk = Number(b.dataset.diasLnk); vistaEnlaces(); });
+  const { data, error } = await sb.rpc('resumen_links', { dias: diasLnk });
+  if (tab !== 'enlaces') return;
+  const cont = document.querySelector('#main .cargando');
+  if (error || !data){ cont.outerHTML = faltaEnlaces(error); return; }
+  datosLnk = data; cuantasLnk = 25;
+  const t = data.totales || {};
+  const n = (x) => Number(x || 0).toLocaleString('es-VE');
+  const pct = (a, b) => b ? Math.round(100 * a / b) + '%' : '—';
+  const kpi = (icono, titulo, num, pie, extra) => '<div class="kpi' + (extra || '') + '"><div class="k-cab">' + titulo + icono + '</div><div class="k-num">' + num + '</div><div class="k-pie">' + pie + '</div></div>';
+  const barra = (v, max) => '<div class="barra"><i style="width:' + Math.max(4, Math.round(100 * v / (max || 1))) + '%"></i></div>';
+  const maxDe = (l, k) => Math.max(1, ...(l || []).map(x => x[k] || 0));
+  const ranking = (lista, fila, vacio, cuantos) => !lista || !lista.length ? '<div class="vacio">' + ICO.enlace + vacio + '</div>' :
+    '<ol class="ranking">' + lista.slice(0, cuantos || 12).map(fila).join('') + '</ol>';
+
+  // Visitas y clics por día (completa los días sin datos)
+  const porDia = {}; (data.por_dia || []).forEach(d => { porDia[d.dia] = d; });
+  const nDias = Math.max(diasLnk, 7), dias = [];
+  for (let i = nDias - 1; i >= 0; i--){
+    const f = new Date(Date.now() - i * 86400000);
+    const k = f.toLocaleDateString('en-CA', { timeZone: 'America/Caracas' });
+    dias.push({ f, v: (porDia[k] || {}).visitas || 0, c: (porDia[k] || {}).clics || 0 });
+  }
+  const maxV = Math.max(1, ...dias.map(d => Math.max(d.v, d.c)));
+  const cada = nDias <= 7 ? 1 : nDias <= 30 ? 5 : 15;
+  const grafico = '<div class="grafico">' + dias.map(d => '<div class="col" data-tip="' + d.f.toLocaleDateString('es-VE', { weekday: 'short', day: 'numeric', month: 'short' }) + ': ' + d.v + ' visitas · ' + d.c + ' clics">' +
+      '<div class="b1" style="height:' + (100 * d.v / maxV) + '%"></div><div class="b2" style="height:' + (100 * d.c / maxV) + '%"></div></div>').join('') + '</div>' +
+    '<div class="grafico-ejes">' + dias.map((d, i) => '<span>' + ((dias.length - 1 - i) % cada === 0 ? d.f.getDate() : '') + '</span>').join('') + '</div>';
+  const horas = Array(24).fill(0); (data.por_hora || []).forEach(h => { horas[h.hora] = h.visitas; });
+  const hTxt = (h) => (h % 12 || 12) + (h < 12 ? ' a. m.' : ' p. m.');
+
+  const maxBt = maxDe(data.botones, 'clics'), maxO = maxDe(data.origenes, 'visitas'), maxP = maxDe(data.paises, 'visitas'), maxCi = maxDe(data.ciudades, 'visitas');
+  const mini = (titulo, lista, campo) => { const max = maxDe(lista, 'visitas');
+    return '<div class="seccion"><h3>' + titulo + '</h3>' + (!(lista || []).length ? '<div class="muted">Sin datos.</div>' :
+      '<ol class="ranking">' + lista.slice(0, 6).map(x => '<li><span class="pos"></span><span class="nom"><strong>' + esc(x[campo] || 'Desconocido') + '</strong>' + barra(x.visitas, max) + '</span><span class="num">' + x.visitas + '<small>' + pct(x.visitas, t.visitas) + '</small></span></li>').join('') + '</ol>') + '</div>'; };
+
+  cont.outerHTML =
+    '<div class="kpis">' +
+      kpi(ICO.clientes, 'Visitas', n(t.visitas), n(t.visitantes) + ' personas · ' + n(t.nuevos) + ' nuevas') +
+      kpi(ICO.ojo, 'Ahora mismo', n(data.ahora), 'en los últimos 15 minutos', data.ahora ? ' destacado' : '') +
+      kpi(ICO.enlace, 'Clics en botones', n(t.clics), pct(t.con_clic, t.visitas) + ' de las visitas tocó algo') +
+      kpi(ICO.whatsapp, 'Fueron a WhatsApp', n(t.whatsapp), pct(t.whatsapp, t.visitas) + ' de las visitas') +
+      kpi(ICO.tienda, 'Siguieron a la tienda', n(t.a_tienda), pct(t.a_tienda, t.visitas) + ' de las visitas') +
+    '</div>' +
+    '<div class="grid-2" style="grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);margin-bottom:18px">' +
+      '<div class="caja"><div class="caja-cab"><h2>Botones más tocados</h2><span class="muted">' + n(t.clics) + ' clics</span></div>' +
+        ranking(data.botones, (x, i) => '<li><span class="pos">' + (i + 1) + '</span><span class="nom"><strong>' + esc(x.texto) + '</strong><small>' + x.personas + ' persona' + (x.personas === 1 ? '' : 's') + ' · último ' + haceCuanto(x.ultima) + '</small>' + barra(x.clics, maxBt) + '</span><span class="num">' + x.clics + '<small>' + pct(x.clics, t.clics) + '</small></span></li>', 'Todavía nadie ha tocado un botón en este período.', 20) + '</div>' +
+      '<div class="caja"><div class="caja-cab"><h2>¿De dónde llegan?</h2></div>' +
+        ranking(data.origenes, (x, i) => '<li><span class="pos">' + (i + 1) + '</span><span class="nom"><strong>' + esc(origenDe(x.referencia)) + '</strong><small>' + (x.referencia ? '' : 'Enlace en la bio, un QR, WhatsApp o escribieron la dirección · ') + pct(x.con_clic, x.visitas) + ' tocó algún botón</small>' + barra(x.visitas, maxO) + '</span><span class="num">' + x.visitas + '<small>' + pct(x.visitas, t.visitas) + '</small></span></li>', 'Sin datos todavía.') +
+        '<p class="muted" style="margin:12px 0 0;font-size:12.5px">Para saber exactamente de dónde viene cada visita, usa enlaces con etiqueta, por ejemplo <span class="mono">suinelectric.com/links?utm_source=instagram</span> en la bio de Instagram o <span class="mono">?utm_source=qr</span> en un QR impreso.</p></div>' +
+    '</div>' +
+    '<div class="caja"><div class="caja-cab"><h2>Visitas y clics por día</h2><div class="leyenda"><span><i style="background:color-mix(in srgb, var(--azul) 28%, var(--superficie))"></i>Visitas</span><span><i style="background:var(--azul)"></i>Clics en botones</span></div></div>' + grafico + '</div>' +
+    '<div class="grid-2" style="grid-template-columns:1fr 1fr;margin-bottom:18px">' +
+      '<div class="caja"><div class="caja-cab"><h2>¿Desde dónde?</h2></div>' +
+        ranking(data.paises, (x, i) => '<li><span class="pos">' + (i + 1) + '</span><span class="nom"><strong>' + bandera(x.pais) + esc(nomPais(x.pais)) + '</strong>' + barra(x.visitas, maxP) + '</span><span class="num">' + x.visitas + '<small>' + pct(x.visitas, t.visitas) + '</small></span></li>', 'Sin datos todavía.', 5) +
+        '<div class="seccion" style="margin:16px 0 0"><h3>Ciudades (aproximado)</h3>' + ranking(data.ciudades, (x, i) => '<li><span class="pos">' + (i + 1) + '</span><span class="nom"><strong>' + esc(lugarDe(x)) + '</strong>' + barra(x.visitas, maxCi) + '</span><span class="num">' + x.visitas + '</span></li>', 'Sin ciudades todavía.', 8) + '</div></div>' +
+      '<div class="caja"><div class="caja-cab"><h2>¿Con qué equipo y a qué hora?</h2></div>' +
+        mini('Tipo de equipo', data.dispositivos, 'dispositivo') + mini('Navegador o app', data.navegadores, 'navegador') +
+        '<div class="seccion" style="margin:0"><h3>Hora de entrada (Venezuela)</h3>' + barrasSimples(horas, horas.map((_, h) => h % 3 === 0 ? (h % 12 || 12) + (h < 12 ? 'a' : 'p') : ''), (h, v) => hTxt(h) + ': ' + v + ' visitas') + '</div></div>' +
+    '</div>' +
+    '<div class="caja"><div class="caja-cab"><h2>Visitas recientes <small>' + (data.visitas || []).length + '</small></h2>' +
+      '<div class="buscar">' + ICO.buscar + '<input id="lnk-buscar" type="search" placeholder="Filtrar por ciudad, botón, origen…" value="' + esc(buscaLnk) + '"></div></div>' +
+      '<div class="tabla-wrap" id="lnk-tabla"></div></div>';
+  pintarEnlaces();
+  $('lnk-buscar').oninput = (e) => { buscaLnk = e.target.value; cuantasLnk = 25; pintarEnlaces(); };
+}
+function pintarEnlaces(){
+  const el = $('lnk-tabla'); if (!el) return;
+  const q = buscaLnk.trim().toLowerCase();
+  const lista = (datosLnk && datosLnk.visitas || []).filter(v => !q || [lugarDe(v), nomPais(v.pais), v.proveedor, equipoDe(v), origenDe(v.referencia), v.botones, codigoVis(v.visitante)].join(' ').toLowerCase().includes(q));
+  if (!lista.length){ el.innerHTML = '<div class="vacio">' + ICO.enlace + (q ? 'Ninguna visita coincide con el filtro.' : 'Todavía no hay visitas en este período.') + '</div>'; return; }
+  el.innerHTML = '<table class="tabla-vis"><thead><tr><th>Cuándo</th><th>Desde dónde</th><th>Equipo</th><th>Llegó por</th><th>Qué tocó</th></tr></thead><tbody>' +
+    lista.slice(0, cuantasLnk).map(v => '<tr class="clic" data-visitante="' + esc(v.visitante) + '">' +
+      '<td><strong>' + haceCuanto(v.inicio) + '</strong><div class="muted">' + fecha(v.inicio) + '</div>' +
+        '<div style="margin-top:3px">' + (v.nuevo ? '<span class="pill amar">Nuevo</span>' : '<span class="pill tinta">Volvió</span>') + (v.cliente_email ? ' <span class="pill azul">' + esc(nombreCliente(v.cliente_email)) + '</span>' : '') + '</div></td>' +
+      '<td>' + esc(lugarDe(v)) + (v.proveedor ? '<div class="muted">' + esc(v.proveedor) + '</div>' : '') + '</td>' +
+      '<td>' + esc(equipoDe(v)) + '</td>' +
+      '<td>' + esc(origenDe(v.referencia)) + '</td>' +
+      '<td class="vis-act">' + (v.botones ? v.botones.split(' · ').map(b => '<span class="pill' + (/^whatsapp/i.test(b) ? ' verde' : '') + '">' + esc(b) + '</span>').join(' ') : '<span class="muted">No tocó nada</span>') +
+        (v.a_tienda ? ' <span class="pill azul">' + ICO.tienda.replace('<svg', '<svg width="12" height="12"') + 'Siguió a la tienda</span>' : '') + '</td></tr>').join('') +
+    '</tbody></table>' +
+    (lista.length > cuantasLnk ? '<div style="text-align:center;padding:14px 0 4px"><button class="btn" id="lnk-mas">Ver más visitas (' + (lista.length - cuantasLnk) + ')</button></div>' : '');
+  if ($('lnk-mas')) $('lnk-mas').onclick = () => { cuantasLnk += 50; pintarEnlaces(); };
+  el.querySelectorAll('[data-visitante]').forEach(tr => tr.onclick = () => abrirVisitante(tr.dataset.visitante));
 }
 
 /* ---------- Existencias ---------- */

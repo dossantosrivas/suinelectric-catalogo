@@ -1,7 +1,8 @@
 /* =====================================================================
    REGISTRO DE VISITAS  (panel → Visitantes y panel → Estadísticas)
    ---------------------------------------------------------------------
-   Lo usan la tienda (/tienda) y las páginas públicas (/p/…, /c/…).
+   Lo usan la tienda (/tienda), las páginas públicas (/p/…, /c/…) y la
+   página de enlaces (/links, panel → Enlaces; ver 12_enlaces.sql).
    Anota en Supabase (tabla eventos, ver 04_estadisticas.sql y
    10_visitantes.sql):
      · visita         al entrar: lugar (Cloudflare, /api/geo), equipo,
@@ -149,7 +150,7 @@
     try { h = decodeURIComponent(h); } catch (e) {}
     return (location.pathname.replace(/\.html$/, '') + h).slice(0, 200);
   }
-  function origen(){ return /^\/tienda/.test(location.pathname) ? 'tienda' : 'pagina'; }
+  function origen(){ return /^\/tienda/.test(location.pathname) ? 'tienda' : /^\/links/.test(location.pathname) ? 'links' : 'pagina'; }
 
   // Primera acción de cada visita: la anota con lugar y equipo.
   function anunciar(v){
@@ -165,6 +166,8 @@
     };
     var ctrl = window.AbortController ? new AbortController() : null;
     setTimeout(function(){ if (ctrl) ctrl.abort(); listo(null); }, 3000);
+    // Si se va de la página antes de saber el lugar, la visita se anota igual (sin lugar).
+    window.addEventListener('pagehide', function(){ listo(null); }, { once: true });
     try {
       fetch('/api/geo', { cache: 'no-store', signal: ctrl ? ctrl.signal : undefined })
         .then(function(r){ return r.ok ? r.json() : null; })

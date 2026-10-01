@@ -618,6 +618,28 @@ document.getElementById('btn-compartir').addEventListener('click', async () => {
     avisar(datos.url);
   }
 });
+
+/* ---------- Registro de visitas y clics (panel → Enlaces) ----------
+   rastreo.js anota la visita (de dónde llega, lugar y equipo) y aquí se
+   anota cada botón que tocan, con su nombre. No se guardan datos personales. */
+(function(){
+  const nombre = (el) => {
+    if (el.id === 'btn-contacto') return 'Guardar contacto';
+    if (el.id === 'btn-compartir') return 'Compartir página';
+    if (el.classList.contains('marca-logo')) return 'Marca ' + (el.title || '').replace(/^Ver productos\s*/i, '').replace(/\s*en la tienda$/i, '');
+    if (el.classList.contains('red')){ const c = el.dataset.cfg || ''; return c.charAt(0).toUpperCase() + c.slice(1); }
+    const b = el.querySelector('.txt b');
+    const t = (b ? b.textContent : el.textContent).replace(/\s+/g, ' ').trim();
+    return el.dataset.wa ? 'WhatsApp ' + t : t;
+  };
+  document.addEventListener('click', (e) => {
+    const el = e.target.closest('a[href], button');
+    if (!el || !window.suinRastreo) return;
+    const t = nombre(el);
+    if (t) window.suinRastreo.evento('clic_enlace', { texto: t.slice(0, 120) });
+  }, true);
+})();
 </script>
+<script src="/rastreo.js?v=2" defer></script>
 </body>
 </html>
