@@ -317,6 +317,7 @@
 
   /* Detalle del pedido (panel lateral ancho) */
   .panel.ancho{ width:min(760px,100%); }
+  .panel .kpis{ grid-template-columns:repeat(auto-fit,minmax(118px,1fr)); gap:10px; }
   .det-datos{ display:grid; grid-template-columns:1fr 1fr; gap:12px 18px; font-size:14px; }
   .det-datos div span{ display:block; font-size:11px; color:var(--texto-3); font-weight:600; text-transform:uppercase; letter-spacing:.5px; margin-bottom:3px; }
   .det-items{ list-style:none; margin:0; padding:0; }
@@ -366,6 +367,9 @@
   .estado-stock.off{ background:var(--off-suave); color:var(--off); }
   .permisos li{ padding:13px 8px; }
   .tarjeta-sync{ display:flex; align-items:center; gap:14px; }
+  a.ir-prod{ display:inline-grid; place-items:center; width:22px; height:22px; border-radius:6px; color:var(--azul-texto); vertical-align:-5px; margin-left:2px; }
+  a.ir-prod:hover{ background:var(--azul-suave); }
+  a.ir-prod svg{ width:14px; height:14px; }
   .tarjeta-sync .icono{ width:44px; height:44px; border-radius:11px; display:grid; place-items:center; background:var(--ok-suave); color:var(--ok); flex:none; }
   .tarjeta-sync .icono.mal{ background:var(--amarillo-suave); color:var(--amarillo-texto); }
   .tarjeta-sync .icono svg{ width:22px; height:22px; }
@@ -2016,6 +2020,18 @@ const cambioPrecioHTML = (p) => {
   return '<strong style="color:' + col + ';white-space:nowrap">' + sig + precioScr(Math.abs(p.diferencia)) + '</strong>' +
     (p.porcentaje != null ? ' <small style="color:' + col + ';white-space:nowrap">(' + (p.porcentaje > 0 ? '+' : '') + Number(p.porcentaje).toLocaleString('es-VE') + ' %)</small>' : '');
 };
+// Enlace a la página del producto en la tienda (solo si sigue en el catálogo)
+const enTienda = (m) => productos.some(p => p.modelo === m);
+const linkTiendaScr = (m) => enTienda(m) ? ' <a class="ir-prod" href="/p/' + slugDe(m) + '" target="_blank" rel="noopener" title="Abrir la página del producto" aria-label="Abrir la página del producto">' + ICO.externo + '</a>' : '';
+// Cambios de precio por corrida y modelo, para mostrarlos junto al movimiento de existencias
+const clavePre = (ej, m) => ej + '|' + m;
+const mapaPrecios = (lista) => { const r = {}; (lista || []).forEach(p => { r[clavePre(p.ejecucion_id, p.modelo)] = p; }); return r; };
+let precioPorMov = {};
+const precioMovHTML = (m) => {
+  const p = precioPorMov[clavePre(m.ejecucion_id, m.modelo)];
+  if (p) return '<span style="white-space:nowrap"><span class="muted" style="text-decoration:line-through">' + precioScr(p.precio_antes) + '</span> → <strong>' + precioScr(p.precio_despues) + '</strong></span><br>' + cambioPrecioHTML(p);
+  return m.precio != null ? '<span class="muted" style="white-space:nowrap">' + precioScr(m.precio) + '</span>' : '<span class="muted">—</span>';
+};
 const cantScr = (v) => v == null ? '<span class="muted">—</span>' : (v === 0 ? '<span class="estado-stock off">0</span>' : numScr(v));
 
 async function vistaScraping(){
@@ -2032,6 +2048,7 @@ async function vistaScraping(){
   if (r.error || !r.data){ cont.outerHTML = faltaScraping(r.error); return; }
   datosScr = r.data; movsScr = m.data || []; cuantosScr = 50; cuantosPrecio = 50;
   preciosScr = pr.error ? null : (pr.data || []);
+  precioPorMov = mapaPrecios(preciosScr);
   const t = datosScr.totales || {};
   const ejec = datosScr.ejecuciones || [];
   const ult = ejec.find(e => !e.nota) || null;
@@ -2043,7 +2060,7 @@ async function vistaScraping(){
 
   const maxR = Math.max(1, ...(datosScr.mas_restados || []).map(x => x.unidades));
   const ranking = (datosScr.mas_restados || []).length ? '<ol class="ranking">' + datosScr.mas_restados.slice(0, 15).map(x =>
-    '<li class="clic" data-modelo-scr="' + esc(x.modelo) + '"><span class="pos"></span><span class="nom"><strong class="mono">' + esc(x.modelo) + '</strong><small>' + esc([x.marca, x.nombre].filter(Boolean).join(' · ') || '—') + ' · quedan ' + (x.queda == null ? '—' : numScr(x.queda)) + '</small>' +
+    '<li class="clic" data-modelo-scr="' + esc(x.modelo) + '"><span class="pos"></span><span class="nom"><strong class="mono">' + esc(x.modelo) + '</strong>' + linkTiendaScr(x.modelo) + '<small>' + esc([x.marca, x.nombre].filter(Boolean).join(' · ') || '—') + ' · quedan ' + (x.queda == null ? '—' : numScr(x.queda)) + '</small>' +
     '<div class="barra"><i style="width:' + Math.max(4, Math.round(100 * x.unidades / maxR)) + '%"></i></div></span><span class="num">−' + numScr(x.unidades) + '<small>' + x.veces + (x.veces === 1 ? ' vez' : ' veces') + '</small></span></li>').join('') + '</ol>'
     : '<div class="vacio">' + ICO.existencias + 'Nada se ha restado en este período.</div>';
 
@@ -2079,7 +2096,7 @@ async function vistaScraping(){
       '<div class="tabla-wrap" id="pre-tabla"></div></div>';
 
   document.querySelectorAll('[data-ejec-scr]').forEach(tr => tr.onclick = () => abrirEjecucionScr(Number(tr.dataset.ejecScr)));
-  document.querySelectorAll('[data-modelo-scr]').forEach(li => li.onclick = () => abrirModeloScr(li.dataset.modeloScr));
+  document.querySelectorAll('[data-modelo-scr]').forEach(li => li.onclick = (e) => { if (!e.target.closest('a')) abrirModeloScr(li.dataset.modeloScr); });
   document.querySelectorAll('[data-tipo-scr]').forEach(b => b.onclick = () => { tipoScr = b.dataset.tipoScr; vistaScraping(); });
   $('scr-busca').oninput = (e) => { buscaScr = e.target.value; cuantosScr = 50; pintarMovsScr(); };
   $('scr-csv').onclick = () => descargarCSVScr(filtrarMovsScr(), 'scraping-movimientos-' + diasScr + 'd.csv');
@@ -2101,7 +2118,7 @@ function filtrarPreciosScr(){
 function tablaPreciosScr(lista, conFecha, conModelo){
   return '<table class="tabla-vis"><thead><tr>' + (conFecha ? '<th>Cuándo</th>' : '') + (conModelo ? '<th>Modelo</th><th>Marca</th>' : '') + '<th>Antes</th><th>Después</th><th>Cambio</th></tr></thead><tbody>' +
     lista.map(p => '<tr' + (conModelo ? ' class="clic" data-modelo-scr="' + esc(p.modelo) + '"' : '') + '>' + (conFecha ? '<td style="white-space:nowrap">' + fecha(p.fecha) + '</td>' : '') +
-      (conModelo ? '<td><strong class="mono">' + esc(p.modelo) + '</strong>' + (p.nombre ? '<div class="muted" style="font-size:12px">' + esc(p.nombre) + '</div>' : '') + '</td><td>' + esc(p.marca || '—') + '</td>' : '') +
+      (conModelo ? '<td><strong class="mono">' + esc(p.modelo) + '</strong>' + linkTiendaScr(p.modelo) + (p.nombre ? '<div class="muted" style="font-size:12px">' + esc(p.nombre) + '</div>' : '') + '</td><td>' + esc(p.marca || '—') + '</td>' : '') +
       '<td style="white-space:nowrap">' + precioScr(p.precio_antes) + '</td><td style="white-space:nowrap"><strong>' + precioScr(p.precio_despues) + '</strong></td><td>' + cambioPrecioHTML(p) + '</td></tr>').join('') +
     '</tbody></table>';
 }
@@ -2114,7 +2131,7 @@ function pintarPreciosScr(){
   el.innerHTML = '<p class="muted" style="margin:0 0 8px">' + numScr(lista.length) + ' cambio' + (lista.length === 1 ? '' : 's') + ' · ↑ ' + numScr(sub) + ' subieron · ↓ ' + numScr(lista.length - sub) + ' bajaron</p>' +
     tablaPreciosScr(lista.slice(0, cuantosPrecio), true, true) +
     (lista.length > cuantosPrecio ? '<div style="text-align:center;margin-top:12px"><button class="btn chico" id="pre-mas">Ver más (' + numScr(lista.length - cuantosPrecio) + ' restantes)</button></div>' : '');
-  el.querySelectorAll('[data-modelo-scr]').forEach(tr => tr.onclick = () => abrirModeloScr(tr.dataset.modeloScr));
+  el.querySelectorAll('[data-modelo-scr]').forEach(tr => tr.onclick = (e) => { if (!e.target.closest('a')) abrirModeloScr(tr.dataset.modeloScr); });
   if ($('pre-mas')) $('pre-mas').onclick = () => { cuantosPrecio += 100; pintarPreciosScr(); };
 }
 function descargarCSVPrecios(lista, nombre){
@@ -2132,10 +2149,10 @@ function filtrarMovsScr(){
   return !q ? movsScr : movsScr.filter(m => [m.modelo, m.marca, m.nombre].some(v => v && String(v).toLowerCase().includes(q)));
 }
 function tablaMovsScr(lista, conFecha){
-  return '<table class="tabla-vis"><thead><tr>' + (conFecha ? '<th>Cuándo</th>' : '') + '<th>Modelo</th><th>Marca</th><th>Antes</th><th>Después</th><th>Diferencia</th><th></th></tr></thead><tbody>' +
+  return '<table class="tabla-vis"><thead><tr>' + (conFecha ? '<th>Cuándo</th>' : '') + '<th>Modelo</th><th>Marca</th><th>Antes</th><th>Después</th><th>Diferencia</th><th>Precio proveedor</th><th></th></tr></thead><tbody>' +
     lista.map(m => '<tr class="clic" data-modelo-scr="' + esc(m.modelo) + '">' + (conFecha ? '<td>' + fecha(m.fecha) + '</td>' : '') +
-      '<td><strong class="mono">' + esc(m.modelo) + '</strong>' + (m.nombre ? '<div class="muted" style="font-size:12px">' + esc(m.nombre) + '</div>' : '') + '</td>' +
-      '<td>' + esc(m.marca || '—') + '</td><td>' + cantScr(m.antes) + '</td><td>' + cantScr(m.despues) + '</td><td>' + difHTML(m) + '</td><td>' + pillTipoScr(m.tipo) + '</td></tr>').join('') +
+      '<td><strong class="mono">' + esc(m.modelo) + '</strong>' + linkTiendaScr(m.modelo) + (m.nombre ? '<div class="muted" style="font-size:12px">' + esc(m.nombre) + '</div>' : '') + '</td>' +
+      '<td>' + esc(m.marca || '—') + '</td><td>' + cantScr(m.antes) + '</td><td>' + cantScr(m.despues) + '</td><td>' + difHTML(m) + '</td><td>' + precioMovHTML(m) + '</td><td>' + pillTipoScr(m.tipo) + '</td></tr>').join('') +
     '</tbody></table>';
 }
 function pintarMovsScr(){
@@ -2146,7 +2163,7 @@ function pintarMovsScr(){
   el.innerHTML = '<p class="muted" style="margin:0 0 8px">' + numScr(lista.length) + ' movimiento' + (lista.length === 1 ? '' : 's') + (restadas ? ' · ' + numScr(restadas) + ' unidades restadas' : '') + (movsScr.length >= 5000 ? ' · se muestran los 5.000 más recientes' : '') + '</p>' +
     tablaMovsScr(lista.slice(0, cuantosScr), true) +
     (lista.length > cuantosScr ? '<div style="text-align:center;margin-top:12px"><button class="btn chico" id="scr-mas">Ver más (' + numScr(lista.length - cuantosScr) + ' restantes)</button></div>' : '');
-  el.querySelectorAll('[data-modelo-scr]').forEach(tr => tr.onclick = () => abrirModeloScr(tr.dataset.modeloScr));
+  el.querySelectorAll('[data-modelo-scr]').forEach(tr => tr.onclick = (e) => { if (!e.target.closest('a')) abrirModeloScr(tr.dataset.modeloScr); });
   if ($('scr-mas')) $('scr-mas').onclick = () => { cuantosScr += 100; pintarMovsScr(); };
 }
 function descargarCSVScr(lista, nombre){
@@ -2180,10 +2197,14 @@ async function abrirEjecucionScr(id, tipo){
     cont.outerHTML = !lista.length ? '<div class="vacio">' + ICO.descuentos + 'Ningún precio cambió en esta corrida.</div>'
       : '<div style="text-align:right;margin-bottom:8px"><button class="btn chico" id="pre-csv-ej">Descargar CSV</button></div><div class="tabla-wrap">' + tablaPreciosScr(lista, false, true) + '</div>';
     if ($('pre-csv-ej')) $('pre-csv-ej').onclick = () => descargarCSVPrecios(lista, 'precios-' + new Date(e.fecha || Date.now()).toISOString().slice(0, 10) + '.csv');
-    document.querySelectorAll('#panel [data-modelo-scr]').forEach(tr => tr.onclick = () => abrirModeloScr(tr.dataset.modeloScr));
+    document.querySelectorAll('#panel [data-modelo-scr]').forEach(tr => tr.onclick = (e) => { if (!e.target.closest('a')) abrirModeloScr(tr.dataset.modeloScr); });
     return;
   }
-  const { data, error } = await sb.rpc('movimientos_scraping', { p_ejecucion: id, p_tipo: tipo || null, limite: 5000 });
+  const [{ data, error }, prEj] = await Promise.all([
+    sb.rpc('movimientos_scraping', { p_ejecucion: id, p_tipo: tipo || null, limite: 5000 }),
+    sb.rpc('precios_scraping', { p_ejecucion: id, limite: 5000 }).then(x => x, e => ({ error: e })),
+  ]);
+  if (!prEj.error) precioPorMov = Object.assign({}, precioPorMov, mapaPrecios(prEj.data));
   if ($('panel').dataset.actividad !== 'scr:' + id) return;
   const cont = document.querySelector('#panel .cargando');
   if (error){ cont.outerHTML = '<p class="error">' + esc(mensajeError(error)) + '</p>'; return; }
@@ -2191,7 +2212,7 @@ async function abrirEjecucionScr(id, tipo){
   cont.outerHTML = !lista.length ? '<div class="vacio">' + ICO.existencias + 'Sin movimientos de este tipo.</div>'
     : '<div style="text-align:right;margin-bottom:8px"><button class="btn chico" id="scr-csv-ej">Descargar CSV</button></div><div class="tabla-wrap">' + tablaMovsScr(lista, false) + '</div>';
   if ($('scr-csv-ej')) $('scr-csv-ej').onclick = () => descargarCSVScr(lista, 'scraping-' + new Date(e.fecha || Date.now()).toISOString().slice(0, 10) + '.csv');
-  document.querySelectorAll('#panel [data-modelo-scr]').forEach(tr => tr.onclick = () => abrirModeloScr(tr.dataset.modeloScr));
+  document.querySelectorAll('#panel [data-modelo-scr]').forEach(tr => tr.onclick = (e) => { if (!e.target.closest('a')) abrirModeloScr(tr.dataset.modeloScr); });
 }
 
 // Historial de un producto
@@ -2213,14 +2234,23 @@ async function abrirModeloScr(modelo){
   const restadas = lista.reduce((s, m) => s + (m.diferencia < 0 ? -m.diferencia : 0), 0);
   const sumadas = lista.reduce((s, m) => s + (m.diferencia > 0 ? m.diferencia : 0), 0);
   const mini = (titulo, v) => '<div class="kpi"><div class="k-cab">' + titulo + '</div><div class="k-num" style="font-size:23px">' + v + '</div></div>';
-  cont.outerHTML = (p.marca || p.nombre ? '<p style="margin:0 0 14px"><strong>' + esc(p.marca || '') + '</strong> ' + esc(p.nombre || '') + (precioActual ? ' · <span class="muted">precio proveedor ' + precioScr(precioActual) + '</span>' : '') + '</p>' : '') +
-    '<div class="kpis">' + mini('Existencia actual', p.despues == null ? '—' : numScr(p.despues)) + mini('Unidades restadas', '−' + numScr(restadas)) + mini('Unidades sumadas', '+' + numScr(sumadas)) + '</div>' +
-    (lista.length ? '<div class="tabla-wrap"><table class="tabla-vis"><thead><tr><th>Cuándo</th><th>Antes</th><th>Después</th><th>Diferencia</th><th></th></tr></thead><tbody>' +
-      lista.map(m => '<tr><td>' + fecha(m.fecha) + '</td><td>' + cantScr(m.antes) + '</td><td>' + cantScr(m.despues) + '</td><td>' + difHTML(m) + '</td><td>' + pillTipoScr(m.tipo) + '</td></tr>').join('') +
-      '</tbody></table></div>' : '<div class="vacio">' + ICO.existencias + 'Sus existencias no han cambiado desde que se empezó a registrar.</div>') +
-    '<div class="seccion" style="margin-top:22px"><h3>Historial de precio</h3>' +
-    (precios.length ? '<div class="tabla-wrap">' + tablaPreciosScr(precios, true, false) + '</div>'
-      : '<div class="muted" style="padding:8px 0">El precio no ha cambiado desde que se empezó a registrar.</div>') + '</div>';
+  // Una sola línea de tiempo: cada corrida en la que cambió la existencia, el precio o ambos.
+  const filas = {};
+  lista.forEach(m => { filas[m.ejecucion_id] = { fecha: m.fecha, mov: m }; });
+  precios.forEach(x => { (filas[x.ejecucion_id] = filas[x.ejecucion_id] || { fecha: x.fecha }).pre = x; });
+  const orden = Object.values(filas).sort((a, b) => new Date(b.fecha) - new Date(a.fecha));
+  const subidas = precios.filter(x => x.diferencia > 0).length;
+  cont.outerHTML = (p.marca || p.nombre ? '<p style="margin:0 0 14px"><strong>' + esc(p.marca || '') + '</strong> ' + esc(p.nombre || '') + '</p>' : '') +
+    (enTienda(modelo) ? '<p style="margin:-4px 0 14px"><a class="btn chico" href="/p/' + slugDe(modelo) + '" target="_blank" rel="noopener">' + ICO.externo + 'Ver la página del producto</a></p>' : '<p class="muted" style="margin:-4px 0 14px">Este modelo ya no está en el catálogo de la tienda.</p>') +
+    '<div class="kpis">' + mini('Existencia actual', p.despues == null ? '—' : numScr(p.despues)) + mini('Unidades restadas', '−' + numScr(restadas)) + mini('Unidades sumadas', '+' + numScr(sumadas)) +
+      mini('Precio proveedor', precioActual ? precioScr(precioActual) : '—') + mini('Cambios de precio', precios.length ? numScr(precios.length) + ' <small class="muted" style="font-size:12px;font-weight:500">↑' + subidas + ' ↓' + (precios.length - subidas) + '</small>' : '0') + '</div>' +
+    (orden.length ? '<div class="tabla-wrap"><table class="tabla-vis"><thead><tr><th>Cuándo</th><th>Antes</th><th>Después</th><th>Diferencia</th><th>Precio proveedor</th><th></th></tr></thead><tbody>' +
+      orden.map(f => { const m = f.mov, x = f.pre;
+        return '<tr><td style="white-space:nowrap">' + fecha(f.fecha) + '</td>' +
+          (m ? '<td>' + cantScr(m.antes) + '</td><td>' + cantScr(m.despues) + '</td><td>' + difHTML(m) + '</td>' : '<td colspan="3" class="muted">Existencia sin cambio</td>') +
+          '<td>' + (x ? '<span style="white-space:nowrap"><span class="muted" style="text-decoration:line-through">' + precioScr(x.precio_antes) + '</span> → <strong>' + precioScr(x.precio_despues) + '</strong></span><br>' + cambioPrecioHTML(x) : '<span class="muted">' + (m && m.precio != null ? precioScr(m.precio) : 'Sin cambio') + '</span>') + '</td>' +
+          '<td>' + (m ? pillTipoScr(m.tipo) : '') + (x ? ' <span class="pill ' + (x.diferencia > 0 ? 'rojo' : 'verde') + '">Precio ' + (x.diferencia > 0 ? '↑' : '↓') + '</span>' : '') + '</td></tr>'; }).join('') +
+      '</tbody></table></div>' : '<div class="vacio">' + ICO.existencias + 'Ni la existencia ni el precio han cambiado desde que se empezó a registrar.</div>');
 }
 
 /* ---------- Tipos de cliente ---------- */
