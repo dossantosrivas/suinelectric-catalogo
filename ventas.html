@@ -13,7 +13,7 @@
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Mono:wght@400;500;600&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
 <script src="https://cdnjs.cloudflare.com/ajax/libs/jspdf/2.5.1/jspdf.umd.min.js"></script>
-<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2.45.4/dist/umd/supabase.min.js"></script>
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root{
   --plate:#0E2233; --plate-2:#17334A; --plate-ink:#E6EEF5; --plate-mute:#8FA6BA;
@@ -257,8 +257,8 @@ select.orig{font-size:13px;padding:6px 6px}
 
 /* Si quieres dejar la conexión fija en el archivo, pon aquí tus datos de Supabase.
    (También se pueden escribir desde Ajustes → Conexión.) */
-const SUPABASE_URL_FIJA = '';
-const SUPABASE_KEY_FIJA = '';
+const SUPABASE_URL_FIJA = 'https://yqnlxhbjassrkudnhvpr.supabase.co';   // mismo proyecto de la tienda
+const SUPABASE_KEY_FIJA = 'sb_publishable_LOYjM5sqvQbBLIkH4KJTKQ_UfxrpTeC';  // clave pública (la misma de la tienda)
 
 /* ---------------- utilidades ---------------- */
 const $ = (s, r = document) => r.querySelector(s);
@@ -409,7 +409,7 @@ const Sync = {
   init() {
     if (!this.configured() || !window.supabase) { this.sb = null; return; }
     const c = this.conf();
-    try { this.sb = window.supabase.createClient(c.url, c.key, { auth: { persistSession: true, autoRefreshToken: true, storageKey: 'suinadm-auth' } }); }
+    try { this.sb = window.supabase.createClient(c.url, c.key, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, flowType: 'implicit' } } /* misma sesión que la tienda */); }
     catch (e) { console.error(e); this.sb = null; this.set('err', 'Datos de Supabase inválidos'); }
   },
   set(state, msg) { this.state = state; this.msg = msg; Bus.emit('sync'); },
@@ -421,6 +421,15 @@ const Sync = {
   },
   async login(email, pass) {
     const { data, error } = await this.sb.auth.signInWithPassword({ email, password: pass });
+    if (error) throw error;
+    this.user = data.user; return data.user;
+  },
+  async sendCode(email) {
+    const { error } = await this.sb.auth.signInWithOtp({ email, options: { shouldCreateUser: false, emailRedirectTo: location.href.split('#')[0] } });
+    if (error) throw error;
+  },
+  async verifyCode(email, token) {
+    const { data, error } = await this.sb.auth.verifyOtp({ email, token, type: 'email' });
     if (error) throw error;
     this.user = data.user; return data.user;
   },
@@ -437,7 +446,7 @@ const Sync = {
     } catch (e) {
       console.error(e);
       const m = String(e && (e.message || e.error_description) || e);
-      this.set('err', /relation|does not exist|schema cache/i.test(m) ? 'Falta crear la tabla en Supabase' : /JWT|auth|permission|denied|policy/i.test(m) ? 'Sin permiso: revisa tu usuario' : navigator.onLine ? 'Error al sincronizar' : 'Sin internet: se guarda en este equipo');
+      this.set('err', /relation|does not exist|schema cache/i.test(m) ? 'Falta crear la tabla en Supabase' : /JWT|auth|permission|denied|policy|row-level/i.test(m) ? 'Sin permiso: tu correo no es administrador' : navigator.onLine ? 'Error al sincronizar' : 'Sin internet: se guarda en este equipo');
     } finally { this.busy = false; if (Pend.size) this.schedule(); }
   },
   async push() {
@@ -1996,9 +2005,11 @@ create index if not exists adm_registros_actualizado on public.adm_registros (ac
 -- Quién puede usar el panel (tú y tu papá)
 create table if not exists public.adm_usuarios (email text primary key);
 
+-- Entra quien sea administrador de la tienda (clientes.es_admin) o esté en adm_usuarios
 create or replace function public.adm_es_admin() returns boolean
 language sql stable security definer set search_path = public as $$
-  select exists (select 1 from public.adm_usuarios u where lower(u.email) = lower(auth.jwt() ->> 'email'));
+  select coalesce(public.es_admin(), false)
+      or exists (select 1 from public.adm_usuarios u where lower(u.email) = lower(auth.jwt() ->> 'email'));
 $$;
 
 create or replace function public.adm_tocar() returns trigger language plpgsql as $$
@@ -2148,21 +2159,48 @@ Views.ajustes = (v, tab = 'empresa') => {
 function showLogin() {
   return new Promise((resolve) => {
     const wrap = document.createElement('div'); wrap.className = 'ov'; wrap.style.background = 'var(--plate)'; wrap.style.alignItems = 'center';
-    wrap.innerHTML = `<div class="md" style="width:min(380px,100%);min-height:0;border-radius:8px"><div class="md-b" style="padding:26px">
-      <img src="${DEFAULT_LOGO}" alt="" style="width:72px;display:block;margin:0 auto 10px"><h1 style="text-align:center;font-size:19px;margin:0 0 18px">Administración Suinelectric</h1>
-      <form class="stack" style="gap:10px"><label class="fld"><span>Correo</span><input class="inp" type="email" autocomplete="username" required></label>
-      <label class="fld"><span>Contraseña</span><input class="inp" type="password" autocomplete="current-password" required></label>
-      <div class="small" style="color:var(--red);min-height:1em" data-err></div>
-      <button class="btn pri" type="submit">Entrar</button>
-      <button class="btn ghost small" type="button" data-skip>Seguir sin conexión en este equipo</button></form></div></div>`;
-    document.body.appendChild(wrap);
-    const [em, pw] = $$('input', wrap); setTimeout(() => em.focus(), 30);
-    $('form', wrap).onsubmit = async (e) => {
-      e.preventDefault(); $('[data-err]', wrap).textContent = '';
-      try { await Sync.login(em.value.trim(), pw.value); wrap.remove(); Sync.listen(); Sync.run(); App.render(); resolve(true); }
-      catch (err) { $('[data-err]', wrap).textContent = /invalid/i.test(err.message) ? 'Correo o contraseña incorrectos.' : err.message; }
+    let modo = 'clave', emailPend = '';
+    const done = () => { wrap.remove(); Sync.listen(); Sync.run(); App.render(); resolve(true); };
+    App.loginDone = () => { if (document.body.contains(wrap)) done(); };
+    const paint = () => {
+      const cuerpo = emailPend ? `<p class="small" style="margin:0 0 10px">Te enviamos un correo a <b>${esc(emailPend)}</b>. Escribe el código o toca el enlace del correo.</p>
+          <form class="stack" style="gap:10px" data-f="cod"><label class="fld"><span>Código</span><input class="inp mono" inputmode="numeric" autocomplete="one-time-code" required></label>
+          <div class="small" style="color:var(--red);min-height:1em" data-err></div><button class="btn pri" type="submit">Entrar</button>
+          <button class="btn ghost small" type="button" data-back>Usar otro correo</button></form>`
+        : modo === 'codigo' ? `<form class="stack" style="gap:10px" data-f="mail"><label class="fld"><span>Correo de administrador</span><input class="inp" type="email" autocomplete="email" required></label>
+          <div class="small" style="color:var(--red);min-height:1em" data-err></div><button class="btn pri" type="submit">Enviarme un código</button>
+          <button class="btn ghost small" type="button" data-modo="clave">Entrar con clave</button></form>`
+        : `<form class="stack" style="gap:10px" data-f="clave"><label class="fld"><span>Correo</span><input class="inp" type="email" autocomplete="username" required></label>
+          <label class="fld"><span>Clave</span><input class="inp" type="password" autocomplete="current-password" required></label>
+          <div class="small" style="color:var(--red);min-height:1em" data-err></div><button class="btn pri" type="submit">Entrar</button>
+          <p class="small muted" style="margin:4px 0 0;line-height:1.5">Es el mismo acceso del panel de la tienda. ¿No tienes clave o la olvidaste? <button class="btn sm" type="button" data-modo="codigo">Entrar con un código</button></p></form>`;
+      wrap.innerHTML = `<div class="md" style="width:min(380px,100%);min-height:0;border-radius:8px"><div class="md-b" style="padding:26px">
+        <img src="${DEFAULT_LOGO}" alt="" style="width:72px;display:block;margin:0 auto 10px"><h1 style="text-align:center;font-size:19px;margin:0 0 18px">Administración Suinelectric</h1>
+        ${cuerpo}<button class="btn ghost small" type="button" data-skip style="width:100%;margin-top:6px">Seguir sin conexión en este equipo</button></div></div>`;
+      const f = $('form', wrap), ins = $$('input', f), err = $('[data-err]', wrap);
+      setTimeout(() => ins[0].focus(), 30);
+      $$('[data-modo]', wrap).forEach(b => b.onclick = () => { modo = b.dataset.modo; paint(); });
+      const back = $('[data-back]', wrap); if (back) back.onclick = () => { emailPend = ''; modo = 'codigo'; paint(); };
+      $('[data-skip]', wrap).onclick = () => { wrap.remove(); Sync.set('local', 'Sin sesión: solo este equipo'); resolve(false); };
+      f.onsubmit = async (e) => {
+        e.preventDefault(); err.textContent = ''; const btn = $('button[type=submit]', f); btn.disabled = true;
+        try {
+          if (f.dataset.f === 'clave') { await Sync.login(ins[0].value.trim().toLowerCase(), ins[1].value); done(); }
+          else if (f.dataset.f === 'mail') { emailPend = ins[0].value.trim().toLowerCase(); await Sync.sendCode(emailPend); paint(); }
+          else { await Sync.verifyCode(emailPend, ins[0].value.trim()); done(); }
+        } catch (er) {
+          const m = String(er && er.message || er);
+          if (f.dataset.f === 'mail') emailPend = '';
+          err.textContent = /invalid login/i.test(m) ? 'Correo o clave incorrectos. Si nunca creaste una clave, entra con un código.'
+            : /signups? not allowed|not found|user not/i.test(m) ? 'Ese correo no tiene cuenta. Usa el mismo correo con el que entras al panel de la tienda.'
+            : /expired|invalid|token/i.test(m) && f.dataset.f === 'cod' ? 'Código no válido o vencido.'
+            : /rate|seconds/i.test(m) ? 'Espera un minuto antes de pedir otro código.'
+            : /fetch|network/i.test(m) ? 'Sin conexión con Supabase. Revisa el internet.' : m;
+          btn.disabled = false;
+        }
+      };
     };
-    $('[data-skip]', wrap).onclick = () => { wrap.remove(); Sync.set('local', 'Sin sesión: solo este equipo'); resolve(false); };
+    paint(); document.body.appendChild(wrap);
   });
 }
 
@@ -2180,6 +2218,7 @@ function showLogin() {
   if (!Rates.data.bcv_usd) Rates.fetch();
   Rapidas.toCloud();
   if (Sync.sb && !Sync.user) showLogin();
+  if (Sync.sb) Sync.sb.auth.onAuthStateChange((ev, ses) => { if (ev === 'SIGNED_IN' && ses && !Sync.online()) { Sync.user = ses.user; if (App.loginDone) App.loginDone(); } });
   Bus.on('data', (c) => { if (c === 'rapidas' && App.route.name !== 'rapida') Rapidas.toLocal(); });
 })();
 
