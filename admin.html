@@ -367,6 +367,9 @@
   .estado-stock.off{ background:var(--off-suave); color:var(--off); }
   .permisos li{ padding:13px 8px; }
   .tarjeta-sync{ display:flex; align-items:center; gap:14px; }
+  a.lnk{ color:var(--azul-texto); text-decoration:none; border-bottom:1px dotted color-mix(in srgb, var(--azul-texto) 45%, transparent); }
+  a.lnk:hover{ border-bottom-style:solid; }
+  strong a.lnk{ font-weight:inherit; }
   a.ir-prod{ display:inline-grid; place-items:center; width:22px; height:22px; border-radius:6px; color:var(--azul-texto); vertical-align:-5px; margin-left:2px; }
   a.ir-prod:hover{ background:var(--azul-suave); }
   a.ir-prod svg{ width:14px; height:14px; }
@@ -1486,9 +1489,9 @@ async function vistaEstadisticas(){
     '<div class="caja"><div class="caja-cab"><h2>Actividad por día</h2><div class="leyenda"><span><i style="background:var(--azul-suave)"></i>Productos vistos</span><span><i style="background:var(--azul)"></i>Cotizaciones y carrito</span></div></div>' + grafico + '</div>' +
     '<div class="grid-2" style="grid-template-columns:1fr 1fr;margin-bottom:18px">' +
       '<div class="caja"><div class="caja-cab"><h2>Lo más buscado</h2></div>' +
-        ranking(data.buscado, (x, i) => '<li><span class="pos">' + (i + 1) + '</span><span class="nom">' + esc(x.texto) + (x.resultados === 0 ? ' <span class="pill rojo">sin resultados</span>' : '') + barra(x.veces, maxB) + '</span><span class="num">' + x.veces + '</span></li>', 'Todavía no hay búsquedas en este período.') + '</div>' +
+        ranking(data.buscado, (x, i) => '<li><span class="pos">' + (i + 1) + '</span><span class="nom">' + linkBusq(x.texto) + (x.resultados === 0 ? ' <span class="pill rojo">sin resultados</span>' : '') + barra(x.veces, maxB) + '</span><span class="num">' + x.veces + '</span></li>', 'Todavía no hay búsquedas en este período.') + '</div>' +
       '<div class="caja"><div class="caja-cab"><h2>Buscan y no encuentran</h2></div><p class="sub">Oportunidades: productos que te piden y no están en la tienda (o están escritos distinto).</p>' +
-        ranking(data.sin_resultados, (x, i) => '<li><span class="pos">' + (i + 1) + '</span><span class="nom">' + esc(x.texto) + '<small>Última vez: ' + fecha(x.ultima) + '</small>' + barra(x.veces, maxS) + '</span><span class="num">' + x.veces + '</span></li>', 'Nadie se ha quedado sin resultados. 👍') + '</div>' +
+        ranking(data.sin_resultados, (x, i) => '<li><span class="pos">' + (i + 1) + '</span><span class="nom">' + linkBusq(x.texto) + '<small>Última vez: ' + fecha(x.ultima) + '</small>' + barra(x.veces, maxS) + '</span><span class="num">' + x.veces + '</span></li>', 'Nadie se ha quedado sin resultados. 👍') + '</div>' +
     '</div>' +
     '<div class="grid-2" style="grid-template-columns:1fr 1fr">' +
       '<div class="caja"><div class="caja-cab"><h2>Productos más vistos</h2></div>' +
@@ -1515,6 +1518,26 @@ const haceCuanto = (d) => {
   return fecha(d, false);
 };
 const linkProd = (m) => '<a href="/p/' + slugDe(m) + '" target="_blank" rel="noopener" class="mono">' + esc(m) + '</a>';
+/* Enlaces a la tienda: búsquedas, marcas, categorías y páginas (abren en otra pestaña) */
+const TIENDA = '/tienda.html';
+const aWeb = (href, texto, titulo) => '<a class="lnk" href="' + esc(href) + '" target="_blank" rel="noopener"' + (titulo ? ' title="' + esc(titulo) + '"' : '') + '>' + texto + '</a>';
+const linkBusq = (q) => q ? aWeb(TIENDA + '#/buscar?q=' + encodeURIComponent(q), esc(q), 'Ver esta búsqueda en la tienda') : '';
+const linkMarca = (m) => aWeb(TIENDA + '#/marca/' + slugDe(m), esc(m), 'Ver la marca en la tienda');
+const linkRuta = (partes) => partes.map((x, i) => aWeb(TIENDA + '#/c/' + partes.slice(0, i + 1).map(slugDe).join('/'), esc(x), 'Ver la categoría en la tienda')).join(' › ');
+// Convierte el texto de "dónde estaba" (Búsqueda: x · Marca X · Cat › Sub · Ficha de M) en enlaces.
+function enlaceContexto(t){
+  t = String(t || '').trim();
+  if (!t) return '';
+  let m;
+  if ((m = t.match(/^Ficha de (.+)$/))) return 'la ficha de ' + linkProd(m[1]);
+  if ((m = t.match(/^Búsqueda:\s*(.+)$/i))) return 'la búsqueda “' + linkBusq(m[1]) + '”';
+  if (t === 'Inicio') return aWeb(TIENDA, 'Inicio');
+  if (t === 'Catálogos') return aWeb(TIENDA + '#/catalogos', 'Catálogos');
+  if (t === 'Todo el catálogo') return aWeb(TIENDA + '#/todo', 'Todo el catálogo');
+  return t.split(' · ').map(p => (m = p.match(/^Marca (.+)$/)) ? 'marca ' + linkMarca(m[1]) : p.includes(' › ') || /^[^:]+$/.test(p) ? linkRuta(p.split(' › ')) : esc(p)).join(' · ');
+}
+// Una página registrada (/tienda#/…, /p/…, /c/…, /links) como enlace con su nombre legible.
+const linkPagina = (p) => p ? aWeb(p.replace(/^\/tienda(?=#|$)/, TIENDA), esc(paginaBonita(p)), 'Abrir esta página') : '—';
 const descProd = (m) => { const p = productos.find(x => x.modelo === m); return p ? [p.marca, p.descripcion || p.nombre].filter(Boolean).join(' · ') : 'Ya no está en el catálogo'; };
 
 // Caja "Clientes más activos" dentro de Estadísticas
@@ -1568,7 +1591,7 @@ async function abrirActividad(email){
 
   // Línea de tiempo agrupada por día
   const TXT = {
-    busqueda: (e) => 'Buscó <strong>“' + esc(e.texto) + '”</strong>' + (e.resultados === 0 ? ' <span class="pill rojo">sin resultados</span>' : e.resultados != null ? ' <span class="muted">(' + e.resultados + ' resultados)</span>' : ''),
+    busqueda: (e) => 'Buscó <strong>“' + linkBusq(e.texto) + '”</strong>' + (e.resultados === 0 ? ' <span class="pill rojo">sin resultados</span>' : e.resultados != null ? ' <span class="muted">(' + e.resultados + ' resultados)</span>' : ''),
     ver_producto: (e) => 'Vio ' + linkProd(e.modelo),
     agregar_carrito: (e) => 'Agregó ' + (e.cantidad ? e.cantidad + ' × ' : '') + linkProd(e.modelo) + ' al carrito',
     cotizar_whatsapp: (e) => 'Pidió cotización por WhatsApp de ' + linkProd(e.modelo) + (e.origen === 'pagina' ? ' <span class="muted">(desde la página del producto)</span>' : ''),
@@ -1576,7 +1599,8 @@ async function abrirActividad(email){
   };
   TXT.visita = () => 'Entró a la tienda';
   TXT.clic_enlace = (e) => 'Tocó <strong>' + esc(e.texto || 'un botón') + '</strong> en la página de enlaces';
-  TXT.ver_tarjetas = (e) => 'Vio tarjetas de productos' + (e.texto ? ' en <strong>' + esc(e.texto) + '</strong>' : '');
+  TXT.ver_tarjetas = (e) => 'Vio tarjetas de productos' + (e.texto ? ' en <strong>' + enlaceContexto(e.texto) + '</strong>' : '') +
+    ((e.modelos || []).length ? '<details class="vis-tarj"><summary>Ver cuáles (' + e.modelos.length + ')</summary>' + e.modelos.map(m => linkProd(m)).join(' ') + '</details>' : '');
   const ICO_EV = { busqueda: ICO.buscar, ver_producto: ICO.ojo, agregar_carrito: ICO.tienda, cotizar_whatsapp: ICO.whatsapp, pedido_whatsapp: ICO.pedidos, visita: ICO.tienda, ver_tarjetas: ICO.grafica };
   let diaAnt = '';
   const linea = (data.recientes || []).map(e => {
@@ -1601,7 +1625,7 @@ async function abrirActividad(email){
       mini('Pedidos', pedPer.length, money(montoPer)) +
     '</div>' +
     '<div class="seccion"><h3>Lo que buscó</h3>' + (!(data.buscado || []).length ? vacio('No buscó nada en este período.') :
-      '<ol class="ranking">' + data.buscado.slice(0, 15).map((x, i) => '<li><span class="pos">' + (i + 1) + '</span><span class="nom">' + esc(x.texto) + (x.resultados === 0 ? ' <span class="pill rojo">sin resultados</span>' : '') +
+      '<ol class="ranking">' + data.buscado.slice(0, 15).map((x, i) => '<li><span class="pos">' + (i + 1) + '</span><span class="nom">' + linkBusq(x.texto) + (x.resultados === 0 ? ' <span class="pill rojo">sin resultados</span>' : '') +
         '<small>' + haceCuanto(x.ultima) + '</small>' + barra(x.veces, maxB) + '</span><span class="num">' + x.veces + '</span></li>').join('') + '</ol>') + '</div>' +
     '<div class="seccion"><h3>Lo que cotizó o puso en el carrito</h3>' + (!(data.cotizados || []).length ? vacio('No cotizó nada en este período.') :
       '<ol class="ranking">' + data.cotizados.slice(0, 15).map((x, i) => '<li><span class="pos">' + (i + 1) + '</span><span class="nom">' + linkProd(x.modelo) + '<small>' + esc(descProd(x.modelo)) + '</small>' + barra(totC(x), maxC) + '</span>' +
@@ -1653,7 +1677,9 @@ const codigoVis = (v) => String(v || '').replace(/-/g, '').slice(0, 6).toUpperCa
 const paginaBonita = (p) => {
   if (!p) return '—';
   if (/^\/p\//.test(p)) return 'Página de producto ' + p.slice(3);
-  if (/^\/c\//.test(p)) return 'Página de categoría ' + p.slice(3).replace(/\//g, ' › ');
+  const bonito = (x) => { x = x.replace(/-/g, ' '); return x.charAt(0).toUpperCase() + x.slice(1); };
+  if (/^\/c\//.test(p)) return 'Categoría ' + p.slice(3).split(/[?#]/)[0].split('/').filter(Boolean).map(bonito).join(' › ');
+  const hc = p.match(/#\/c\/([^?&]+)/); if (hc && !/[?&]p=/.test(p)) return 'Categoría ' + hc[1].split('/').filter(Boolean).map(bonito).join(' › ');
   if (/^\/links/.test(p)) return 'Página de enlaces';
   const h = p.replace(/^\/(tienda)?(\.html)?/, '');
   if (!h || h === '#' || h === '#/') return 'Inicio de la tienda';
@@ -1745,7 +1771,7 @@ async function vistaVisitantes(){
       '<div class="caja"><div class="caja-cab"><h2>¿Cómo llegan?</h2></div>' +
         ranking(data.origenes, (x, i) => '<li><span class="pos">' + (i + 1) + '</span><span class="nom"><strong>' + esc(origenDe(x.referencia)) + '</strong>' + (x.referencia ? '' : '<small>Escribieron la dirección, un marcador o un enlace de WhatsApp</small>') + barra(x.visitas, maxO) + '</span><span class="num">' + x.visitas + '<small>' + pct(x.visitas, t.visitas) + '</small></span></li>', 'Sin datos todavía.') +
         '<div class="seccion" style="margin:18px 0 0"><h3>Página por la que entraron</h3>' + (!(data.entradas || []).length ? '<div class="muted">Sin datos.</div>' :
-          '<ol class="ranking">' + data.entradas.slice(0, 8).map(x => filaSimple(esc(paginaBonita(x.pagina)), x.visitas, maxE)).join('') + '</ol>') + '</div></div>' +
+          '<ol class="ranking">' + data.entradas.slice(0, 8).map(x => filaSimple(linkPagina(x.pagina), x.visitas, maxE)).join('') + '</ol>') + '</div></div>' +
       '<div class="caja"><div class="caja-cab"><h2>¿Con qué equipo?</h2></div>' +
         grupoMini('Tipo de equipo', data.dispositivos, 'dispositivo') +
         grupoMini('Sistema', data.sistemas, 'sistema') +
@@ -1754,7 +1780,7 @@ async function vistaVisitantes(){
     '</div>' +
     '<div class="grid-2" style="grid-template-columns:1fr 1fr;margin-bottom:18px">' +
       '<div class="caja"><div class="caja-cab"><h2>¿Qué buscan?</h2></div>' +
-        ranking(data.buscado, (x, i) => '<li><span class="pos">' + (i + 1) + '</span><span class="nom">' + esc(x.texto) + (x.resultados === 0 ? ' <span class="pill rojo">sin resultados</span>' : '') + '<small>' + x.personas + ' persona' + (x.personas === 1 ? '' : 's') + '</small>' + barra(x.veces, maxB) + '</span><span class="num">' + x.veces + '</span></li>', 'Todavía no hay búsquedas de visitantes.', 20) + '</div>' +
+        ranking(data.buscado, (x, i) => '<li><span class="pos">' + (i + 1) + '</span><span class="nom">' + linkBusq(x.texto) + (x.resultados === 0 ? ' <span class="pill rojo">sin resultados</span>' : '') + '<small>' + x.personas + ' persona' + (x.personas === 1 ? '' : 's') + '</small>' + barra(x.veces, maxB) + '</span><span class="num">' + x.veces + '</span></li>', 'Todavía no hay búsquedas de visitantes.', 20) + '</div>' +
       '<div class="caja"><div class="caja-cab"><h2>Tarjetas de producto más vistas</h2></div><p class="sub">Productos que estuvieron en pantalla (en la lista, en Inicio o en las páginas de Google) y cuántas veces abrieron la ficha.</p>' +
         ranking(data.tarjetas, (x, i) => '<li><span class="pos">' + (i + 1) + '</span><span class="nom">' + linkProd(x.modelo) + '<small>' + esc(descProd(x.modelo)) + '</small>' + barra(x.veces, maxT) + '</span><span class="num">' + x.veces +
           '<small>' + x.personas + ' pers. · ' + (x.abiertas ? x.abiertas + ' abierta' + (x.abiertas === 1 ? '' : 's') : 'no la abrieron') + '</small></span></li>', 'Todavía no hay tarjetas vistas.', 20) + '</div>' +
@@ -1786,9 +1812,9 @@ function pintarVisitas(){
         '<div style="margin-top:3px">' + (v.nuevo ? '<span class="pill amar">Nuevo</span>' : '<span class="pill tinta">Volvió</span>') + (v.visitas_periodo > 1 ? ' <span class="muted">' + v.visitas_periodo + ' visitas</span>' : '') + '</div></td>' +
       '<td>' + esc(lugarDe(v)) + (v.proveedor ? '<div class="muted">' + esc(v.proveedor) + '</div>' : '') + '</td>' +
       '<td>' + esc(equipoDe(v)) + '</td>' +
-      '<td>' + esc(origenDe(v.referencia)) + '<div class="muted">' + esc(paginaBonita(v.pagina)) + '</div></td>' +
+      '<td>' + esc(origenDe(v.referencia)) + '<div class="muted">' + linkPagina(v.pagina) + '</div></td>' +
       '<td class="vis-act">' + act(v) + '</td>' +
-      '<td>' + (v.buscado ? esc(v.buscado) : '<span class="muted">—</span>') + '</td></tr>').join('') +
+      '<td>' + (v.buscado ? v.buscado.split(' · ').map(linkBusq).join(' · ') : '<span class="muted">—</span>') + '</td></tr>').join('') +
     '</tbody></table>' +
     (lista.length > cuantasVis ? '<div style="text-align:center;padding:14px 0 4px"><button class="btn" id="vis-mas">Ver más visitas (' + (lista.length - cuantasVis) + ')</button></div>' : '');
   if ($('vis-mas')) $('vis-mas').onclick = () => { cuantasVis += 50; pintarVisitas(); };
@@ -1825,12 +1851,12 @@ async function abrirVisitante(id){
   // Paso a paso, agrupado por visita
   const infoVisita = {}; visitas.forEach(v => { infoVisita[v.visita] = v; });
   const TXT = {
-    visita: (e) => 'Entró' + (e.pagina ? ' por <strong>' + esc(paginaBonita(e.pagina)) + '</strong>' : ''),
-    busqueda: (e) => 'Buscó <strong>“' + esc(e.texto) + '”</strong>' + (e.resultados === 0 ? ' <span class="pill rojo">sin resultados</span>' : e.resultados != null ? ' <span class="muted">(' + e.resultados + ' resultados)</span>' : ''),
+    visita: (e) => 'Entró' + (e.pagina ? ' por <strong>' + linkPagina(e.pagina) + '</strong>' : ''),
+    busqueda: (e) => 'Buscó <strong>“' + linkBusq(e.texto) + '”</strong>' + (e.resultados === 0 ? ' <span class="pill rojo">sin resultados</span>' : e.resultados != null ? ' <span class="muted">(' + e.resultados + ' resultados)</span>' : ''),
     ver_producto: (e) => 'Abrió la ficha de ' + linkProd(e.modelo) + (e.origen === 'pagina' ? ' <span class="muted">(página del producto)</span>' : ''),
     ver_tarjetas: (e) => {
       const l = e.modelos || [];
-      return 'Vio ' + l.length + ' tarjeta' + (l.length === 1 ? '' : 's') + (e.texto ? ' en <strong>' + esc(e.texto) + '</strong>' : '') +
+      return 'Vio ' + l.length + ' tarjeta' + (l.length === 1 ? '' : 's') + (e.texto ? ' en <strong>' + enlaceContexto(e.texto) + '</strong>' : '') +
         '<details class="vis-tarj"><summary>Ver cuáles</summary>' + l.map(m => linkProd(m)).join(' ') + '</details>';
     },
     agregar_carrito: (e) => 'Agregó ' + (e.cantidad ? e.cantidad + ' × ' : '') + linkProd(e.modelo) + ' al pedido',
@@ -1869,7 +1895,7 @@ async function abrirVisitante(id){
       mini('WhatsApp', (t.cotizar_whatsapp || 0) + (t.pedido_whatsapp || 0)) +
     '</div>' +
     '<div class="seccion"><h3>Lo que buscó</h3>' + (!(data.buscado || []).length ? vacio('No buscó nada en este período.') :
-      '<ol class="ranking">' + data.buscado.slice(0, 15).map((x, i) => '<li><span class="pos">' + (i + 1) + '</span><span class="nom">' + esc(x.texto) + (x.resultados === 0 ? ' <span class="pill rojo">sin resultados</span>' : '') +
+      '<ol class="ranking">' + data.buscado.slice(0, 15).map((x, i) => '<li><span class="pos">' + (i + 1) + '</span><span class="nom">' + linkBusq(x.texto) + (x.resultados === 0 ? ' <span class="pill rojo">sin resultados</span>' : '') +
         '<small>' + haceCuanto(x.ultima) + '</small>' + barra(x.veces, maxB) + '</span><span class="num">' + x.veces + '</span></li>').join('') + '</ol>') + '</div>' +
     '<div class="seccion"><h3>Fichas de producto que abrió</h3>' + (!(data.vistos || []).length ? vacio('No abrió fichas de producto en este período.') :
       '<ol class="ranking">' + data.vistos.slice(0, 15).map((x, i) => '<li><span class="pos">' + (i + 1) + '</span><span class="nom">' + linkProd(x.modelo) + '<small>' + esc(descProd(x.modelo)) + '</small>' + barra(x.veces, maxV) + '</span><span class="num">' + x.veces + '<small>' + haceCuanto(x.ultima) + '</small></span></li>').join('') + '</ol>') + '</div>' +
@@ -1961,7 +1987,7 @@ function pintarVivo(){
   $('vivo-lista').innerHTML = !l.length ? '<div class="vacio">' + ICO.globo + (vivoEstado === 'falta' ? 'Esperando la instalación.' : 'Nadie en la web en este momento.<br><small>Aparecerán aquí apenas entren.</small>') + '</div>' :
     l.map(r => {
       const c = r.cliente_email ? clientes.find(x => x.email === r.cliente_email) : null;
-      const sitio = r.pagina ? '<a href="' + esc(r.pagina) + '" target="_blank" rel="noopener" title="Abrir la página que está viendo">' + esc(paginaBonita(r.pagina)) + '</a>' : '—';
+      const sitio = linkPagina(r.pagina);
       return '<div class="vivo-card' + (r.activo ? '' : ' segundo-plano') + '" data-vivo="' + esc(r.visitante) + '"' + (r.cliente_email ? ' data-email="' + esc(r.cliente_email) + '"' : '') + '>' +
         '<div class="avatar' + (c ? '' : ' anon') + '">' + esc(c ? iniciales(c) : codigoVis(r.visitante).slice(0, 2)) + '<i class="' + (r.activo ? 'on' : 'off') + '"></i></div>' +
         '<div class="vc-cuerpo"><div class="vc-nom"><strong>' + esc(nombreVivo(r)) + '</strong>' + (c && c.empresa ? ' <span class="muted">· ' + esc(c.empresa) + '</span>' : '') + (r.cliente_email ? ' <span class="pill azul">Con cuenta</span>' : '') + '</div>' +
@@ -1979,8 +2005,8 @@ function pintarVivo(){
 function textoFeed(e){
   const lp = (m) => m ? linkProd(m) : 'un producto';
   switch (e.tipo){
-    case 'visita': return 'Entró' + (e.origen === 'links' ? ' a la página de enlaces' : e.pagina ? ' por <strong>' + esc(paginaBonita(e.pagina)) + '</strong>' : '') + (e.referencia ? ' <span class="muted">desde ' + esc(e.referencia) + '</span>' : '');
-    case 'busqueda': return 'Buscó <strong>“' + esc(e.texto) + '”</strong>' + (e.resultados === 0 ? ' <span class="pill rojo">sin resultados</span>' : e.resultados != null ? ' <span class="muted">(' + e.resultados + ')</span>' : '');
+    case 'visita': return 'Entró' + (e.origen === 'links' ? ' a la página de enlaces' : e.pagina ? ' por <strong>' + linkPagina(e.pagina) + '</strong>' : '') + (e.referencia ? ' <span class="muted">desde ' + esc(e.referencia) + '</span>' : '');
+    case 'busqueda': return 'Buscó <strong>“' + linkBusq(e.texto) + '”</strong>' + (e.resultados === 0 ? ' <span class="pill rojo">sin resultados</span>' : e.resultados != null ? ' <span class="muted">(' + e.resultados + ')</span>' : '');
     case 'ver_producto': return 'Abrió ' + lp(e.modelo);
     case 'agregar_carrito': return 'Agregó ' + (e.cantidad ? e.cantidad + ' × ' : '') + lp(e.modelo) + ' al pedido';
     case 'cotizar_whatsapp': return 'Pidió precio por WhatsApp de ' + lp(e.modelo);
