@@ -310,6 +310,16 @@
   .dto-badge.dto-chico{ font-size:11px; padding:3px 5px; }
   .precio{ font-size:24px; font-weight:700; color:var(--tinta); line-height:1.15; font-variant-numeric:tabular-nums; }
   .precio-nota{ font-size:12px; color:var(--texto-3); font-style:italic; }
+  /* Precio para clientes registrados (solo lo ven los visitantes sin sesión) */
+  .precio-registro{ display:flex; flex-direction:column; align-items:flex-start; gap:1px; margin-top:6px; padding:5px 8px;
+    background:var(--azul-suave); border:1px dashed var(--azul-texto); border-radius:var(--radio); cursor:pointer;
+    font-family:inherit; text-align:left; color:var(--tinta); line-height:1.2; }
+  .precio-registro:hover{ border-style:solid; }
+  .precio-registro .pr-etq{ font-size:11.5px; font-weight:600; color:var(--azul-texto); }
+  .precio-registro .pr-monto{ font-size:16px; font-weight:700; font-variant-numeric:tabular-nums; }
+  .precio-registro .pr-cta{ font-size:11.5px; color:var(--texto-2); text-decoration:underline; }
+  .precio-registro.pr-grande{ margin-top:10px; padding:8px 12px; }
+  .precio-registro.pr-grande .pr-monto{ font-size:20px; }
 
   .actions{ margin-top:12px; display:flex; gap:8px; }
   .btn{
@@ -662,7 +672,12 @@
   #aviso-registro .aviso-cuerpo{ padding:16px 44px 16px 18px; }
   #aviso-registro h4{ margin:0 0 4px; font-family:var(--display); font-size:19px; font-weight:700; color:var(--tinta); line-height:1.2; }
   #aviso-registro p{ margin:0 0 12px; font-size:13.5px; line-height:1.45; color:var(--texto-2); }
+  #aviso-registro p strong{ color:var(--tinta); }
+  #aviso-registro .aviso-lista{ list-style:none; margin:0 0 14px; padding:0; font-size:13.5px; line-height:1.5; color:var(--texto); }
+  #aviso-registro .aviso-lista li{ position:relative; padding-left:22px; }
+  #aviso-registro .aviso-lista li::before{ content:"✔"; position:absolute; left:2px; color:var(--ok); font-weight:700; }
   #aviso-registro .aviso-acciones{ display:flex; gap:10px; align-items:center; flex-wrap:wrap; }
+  #aviso-registro .aviso-gratis{ flex-basis:100%; font-size:12px; color:var(--texto-3); }
   #aviso-registro .aviso-crear{
     background:var(--amarillo); color:var(--tinta); border:none; border-radius:var(--radio);
     padding:9px 14px; font-weight:700; font-size:14px; cursor:pointer; font-family:inherit;
@@ -676,7 +691,7 @@
   }
   #aviso-registro .aviso-x:hover{ background:var(--fondo); color:var(--tinta); }
   #aviso-registro .aviso-barra{ height:3px; background:var(--amarillo); transform-origin:left; }
-  #aviso-registro.corriendo .aviso-barra{ animation:avisoBarra 5s linear forwards; }
+  #aviso-registro.corriendo .aviso-barra{ animation:avisoBarra 10s linear forwards; }
   #aviso-registro.corriendo:hover .aviso-barra{ animation-play-state:paused; }
   @keyframes avisoBarra{ from{ transform:scaleX(1); } to{ transform:scaleX(0); } }
 
@@ -1093,11 +1108,17 @@
 <div id="aviso-registro" role="dialog" aria-live="polite" aria-labelledby="aviso-registro-titulo" hidden>
   <button type="button" class="aviso-x" id="aviso-registro-x" aria-label="Cerrar aviso">✕</button>
   <div class="aviso-cuerpo">
-    <h4 id="aviso-registro-titulo">Regístrate gratis</h4>
-    <p>Crea tu cuenta para ver tus precios de cliente y llevar el registro de tus pedidos.</p>
+    <h4 id="aviso-registro-titulo">¿Aún no tienes cuenta en Suinelectric?</h4>
+    <p>Regístrate <strong>gratis</strong> en menos de un minuto y obtén automáticamente <strong>precios preferenciales con descuento adicional</strong> en variadores, protecciones y equipos eléctricos industriales.</p>
+    <ul class="aviso-lista">
+      <li>Descuento adicional desde tu primera compra</li>
+      <li>Historial de tus pedidos en tu cuenta</li>
+      <li>Atención personalizada</li>
+    </ul>
     <div class="aviso-acciones">
-      <button type="button" class="aviso-crear" id="aviso-registro-crear">Crear cuenta</button>
+      <button type="button" class="aviso-crear" id="aviso-registro-crear">Quiero mi descuento</button>
       <button type="button" class="aviso-entrar" id="aviso-registro-entrar">Ya tengo cuenta</button>
+      <span class="aviso-gratis">Registro 100% gratis · sin compromiso</span>
     </div>
   </div>
   <div class="aviso-barra"></div>
@@ -1224,9 +1245,9 @@ function badgeDescuento(p, extraCls){
   return '<span class="dto-badge' + (d.propio || d.fijo ? ' dto-propio' : '') + (extraCls ? ' ' + extraCls : '') + '" title="' + titulo + '">-' +
          String(d.pct).replace('.', ',') + '%' + (d.fijo ? ' · especial' : '') + '</span>';
 }
-function precioMostrado(p){
+function precioMostrado(p, tipoSimulado){
   // Precio según las reglas de descuento de quien está viendo (ver CUENTAS DE CLIENTES).
-  const r = (typeof reglaPara === 'function') ? reglaPara(p) : null;
+  const r = (typeof reglaPara === 'function') ? reglaPara(p, tipoSimulado) : null;
   if (r && r.precio_fijo != null) return Number(r.precio_fijo);
   if (p.precio == null) return null;
   const n = Number(p.precio);
@@ -1236,6 +1257,33 @@ function precioMostrado(p){
     return n * (1 - (esGeneral ? descuentoPct : Number(r.descuento_pct)) / 100);
   }
   return esManual(p) ? n : precioConDescuento(n);
+}
+// Tipo de cliente que reciben las cuentas nuevas al registrarse.
+const TIPO_REGISTRO = 'final';
+// Precio que tendría un visitante si se registra (null si no hay sesión-anónima
+// o si registrarse no le baja el precio). Requiere 14_precio_registro.sql.
+function precioRegistro(p){
+  if (typeof sesion === 'undefined' || sesion.email || !sb) return null;
+  const actual = precioMostrado(p);
+  const conCuenta = precioMostrado(p, TIPO_REGISTRO);
+  if (actual == null || conCuenta == null || Math.ceil(conCuenta) >= Math.ceil(actual)) return null;
+  return conCuenta;
+}
+function bloquePrecioRegistro(p, grande){
+  const pr = precioRegistro(p);
+  if (pr == null) return '';
+  return '<button type="button" class="precio-registro' + (grande ? ' pr-grande' : '') + '" onclick="registroDesdePrecio(event)" title="Regístrate gratis para comprar a este precio">' +
+    '<span class="pr-etq">Precio para clientes registrados</span>' +
+    '<span class="pr-monto">' + formatoMoneda(pr) + '</span>' +
+    '<span class="pr-cta">Regístrate gratis y obtenlo</span></button>';
+}
+function registroDesdePrecio(ev){
+  if (ev){ ev.preventDefault(); ev.stopPropagation(); }
+  if (typeof ocultarAvisoRegistro === 'function') ocultarAvisoRegistro();
+  const det = document.getElementById('modal-detalle');
+  const cerrar = det && det.classList.contains('abierto') ? det.querySelector('[data-cerrar="modal-detalle"]') : null;
+  if (cerrar) cerrar.click();
+  modoLogin = 'crear'; abrirCuenta();
 }
 /* ---------- Existencias ----------
    El catálogo público solo trae un rango (p.stock: "+10" o "pocas").
@@ -2098,6 +2146,7 @@ function tarjetaHTML(p){
             ${precioTachado != null ? '<span class="precio-original">'+formatoMoneda(precioTachado)+'</span>' : ''}
             <span class="precio-linea"><span class="precio">${formatoMoneda(precioFinal)}</span>${badgeDescuento(p)}</span>
             ${(esManual(p) && precioFinal != null) ? '<span class="precio-nota">precio de catálogo</span>' : ''}
+            ${bloquePrecioRegistro(p)}
           </div>
         </div>
         <div class="actions">
@@ -2647,6 +2696,7 @@ function abrirDetalle(modelo){
             badgeDescuento(p, 'dto-grande') +
           '</div>' +
           (esManual(p) && precioFinal != null ? '<span class="precio-nota">precio de catálogo</span>' : '') +
+          bloquePrecioRegistro(p, true) +
           '<div><span class="estado ' + (p.disponible ? 'ok' : 'off') + '">' + (p.disponible ? estadoTexto : 'Agotado') + '</span></div>' +
         '</div>' +
         '<span class="det-desc-label">Descripción</span>' +
@@ -3051,15 +3101,17 @@ function refrescarPrecios(){
    modelo+cliente > modelo+tipo > modelo (todos) > marca+cliente > cliente >
    marca+tipo > tipo > marca (todos) > descuento general. */
 const RANGO_REGLA = { '00': 1, '01': 2, '02': 3, '10': 4, '20': 5, '11': 6, '21': 7, '12': 8, '22': 9 };
-function reglaPara(p){
+function reglaPara(p, tipoSimulado){
   if (!reglasDescuento.length) return null;
   const marca = String(p.marca || '').toUpperCase().trim();
   const modelo = String(p.modelo || '').toUpperCase().trim();
-  const tipo = sesion.cliente ? sesion.cliente.tipo_id : null;
+  // tipoSimulado: calcula el precio "como si" fuera un cliente de ese tipo (sin reglas por cuenta).
+  const simulando = tipoSimulado !== undefined;
+  const tipo = simulando ? tipoSimulado : (sesion.cliente ? sesion.cliente.tipo_id : null);
   let mejor = null, mejorRango = 99;
   for (const r of reglasDescuento){
     let quien, que;
-    if (r.cliente_email){ if (!sesion.email || r.cliente_email !== sesion.email) continue; quien = 0; }
+    if (r.cliente_email){ if (simulando || !sesion.email || r.cliente_email !== sesion.email) continue; quien = 0; }
     else if (r.tipo_id){ if (!tipo || r.tipo_id !== tipo) continue; quien = 1; }
     else quien = 2;
     if (r.modelo){ if (String(r.modelo).toUpperCase().trim() !== modelo) continue; que = 0; }
@@ -3491,9 +3543,9 @@ async function registrarPedido(){
 });
 
 /* ---------- Aviso de registro ----------
-   Solo para visitantes sin sesión. Se cierra solo a los 5 s (se pausa si
+   Solo para visitantes sin sesión. Se cierra solo a los 10 s (se pausa si
    el mouse está encima) o con la X. Si el cliente ya entró, no aparece. */
-const AVISO_DURACION = 5000;
+const AVISO_DURACION = 10000;
 const aviso = {
   el: document.getElementById('aviso-registro'),
   timer: null, inicio: 0, restante: AVISO_DURACION,
