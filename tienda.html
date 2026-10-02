@@ -150,6 +150,7 @@
   .cta-sub{ color:var(--texto-2); font-size:14px; margin:0 0 16px; }
   .cta-cabecera{ display:flex; justify-content:space-between; align-items:flex-start; gap:12px; padding-right:40px; }
   .cta-cabecera .btn-enlace{ margin-left:0; flex:none; }
+  .cta-admin-links{ display:flex; flex-wrap:wrap; gap:6px 18px; }
   .cta-admin{ display:inline-block; margin:4px 0 8px; font-weight:600; color:var(--azul-texto); }
   .cta-nota{ font-size:13.5px; color:var(--ok); background:var(--ok-suave); border-radius:var(--radio); padding:8px 12px; margin:8px 0 14px; }
   .cta-tabs{ display:flex; gap:4px; border-bottom:1px solid var(--linea); margin-bottom:14px; }
@@ -3138,7 +3139,8 @@ async function renderCuenta(pestana){
       '<div class="cta-sub">' + escHtml(sesion.email) + (tipo ? ' · ' + escHtml(tipo) : '') + (c.empresa ? ' · ' + escHtml(c.empresa) : '') + '</div></div>' +
       '<button type="button" class="btn-enlace" id="cta-salir">Cerrar sesión</button>' +
     '</div>' +
-    (sesion.admin ? '<a class="cta-admin" href="admin.html" target="_blank" rel="noopener">⚙ Panel de administrador →</a>' : '') +
+    (sesion.admin ? '<div class="cta-admin-links"><a class="cta-admin" href="admin.html" target="_blank" rel="noopener">⚙ Panel de administrador →</a>' +
+      '<a class="cta-admin" href="/ventas" target="_blank" rel="noopener">📊 Ventas →</a></div>' : '') +
     '<p class="cta-nota">Los precios de la tienda ya muestran tu descuento de cliente.</p>' +
     '<div class="cta-tabs">' +
       '<button type="button" data-tab="pedidos" class="' + (pestana === 'pedidos' ? 'activa' : '') + '">Mis pedidos</button>' +
