@@ -786,7 +786,7 @@ function armarApp(){
     '<aside class="side" id="side">' + marcaHTML() +
     '<nav class="nav" id="nav">' + nav + '</nav>' +
     '<div class="side-pie"><div class="yo"><div class="avatar">' + esc(iniciales(yo)) + '</div><div><strong>' + esc(yo.nombre || 'Administrador') + '</strong><span>' + esc(yo.email) + '</span></div></div>' +
-      '<div class="acciones"><a href="tienda.html" target="_blank" rel="noopener">' + ICO.externo + 'Tienda</a><button id="salir">' + ICO.salir + 'Salir</button>' +
+      '<div class="acciones"><a href="/ventas" target="_blank" rel="noopener" style="grid-column:1/-1">' + ICO.externo + 'Ventas y administración</a><a href="tienda.html" target="_blank" rel="noopener">' + ICO.externo + 'Tienda</a><button id="salir">' + ICO.salir + 'Salir</button>' +
       '<button id="tema" title="Tema: ' + temaTxt + '" aria-label="Cambiar tema">' + botonTema() + '</button></div></div>' +
     '</aside><div class="velo-menu" id="velo-menu"></div><main class="contenido" id="main"></main></div>';
   document.querySelectorAll('#nav button').forEach(b => b.onclick = () => irA(b.dataset.tab));
@@ -853,7 +853,7 @@ function vistaResumen(){
   const stockPie = estadoStock && !estadoStock.error && estadoStock.actualizado ? 'Existencias al ' + fecha(estadoStock.actualizado) : 'Existencias sin sincronizar';
 
   $('main').innerHTML = cabecera('Hola' + (yo.nombre ? ', ' + esc(yo.nombre.split(' ')[0]) : ''), 'Así va la tienda hoy, ' + new Date().toLocaleDateString('es-VE', { weekday: 'long', day: 'numeric', month: 'long' }) + '.',
-      '<a class="btn" href="tienda.html" target="_blank" rel="noopener">' + ICO.tienda + 'Ver tienda</a>') +
+      '<a class="btn" href="/ventas" target="_blank" rel="noopener">' + ICO.externo + 'Ventas</a><a class="btn" href="tienda.html" target="_blank" rel="noopener">' + ICO.tienda + 'Ver tienda</a>') +
     '<div class="kpis">' +
       kpi('pedidos', ICO.pedidos, 'Por atender', nuevos.length, nuevos.length ? 'Toca para revisarlos' : 'Todo al día', nuevos.length ? ' destacado' : '') +
       kpi('pedidos', ICO.caja, 'Pedidos del mes', delMes.length, money(totalMes) + ' en total (sin cancelados)') +

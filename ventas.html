@@ -786,7 +786,7 @@ const App = {
       <div class="shell">
         <aside class="plate">
           <div class="brand"><img src="${DEFAULT_LOGO}" alt=""><div><b>SUINELECTRIC</b><span>Administración</span></div></div>
-          <nav class="nav">${navHtml}</nav>
+          <nav class="nav">${navHtml}<div class="sep"></div><a href="/admin" target="_blank" rel="noopener" title="Panel de la tienda">${ico('gear')}<span>Panel de la tienda ↗</span></a></nav>
           <div class="sync" id="sync-d"><i></i><span></span><button type="button" data-sync title="Sincronizar ahora">${'↻'}</button></div>
         </aside>
         <div style="min-width:0">
@@ -804,7 +804,7 @@ const App = {
     $$('[data-sync]').forEach(b => b.onclick = () => { if (!Sync.online()) { Route.nav('#/ajustes/conexion'); return; } Sync.run(); });
     $('[data-new]').onclick = () => App.newMenu();
     $('[data-more]').onclick = () => {
-      const m = UI.modal({ title: 'Ir a', foot: false, body: `<div class="stack">${NAV.map(([id, label, ic]) => `<a class="btn" style="justify-content:flex-start" href="#/${id}">${ico(ic)} ${label}</a>`).join('')}</div>` });
+      const m = UI.modal({ title: 'Ir a', foot: false, body: `<div class="stack">${NAV.map(([id, label, ic]) => `<a class="btn" style="justify-content:flex-start" href="#/${id}">${ico(ic)} ${label}</a>`).join('')}<a class="btn" style="justify-content:flex-start" href="/admin" target="_blank" rel="noopener">${ico('gear')} Panel de la tienda ↗</a></div>` });
       $$('a', m.body).forEach(a => a.addEventListener('click', () => m.close()));
     };
     this.paintSync(); Bus.on('sync', () => this.paintSync());
