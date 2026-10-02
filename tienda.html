@@ -3139,7 +3139,7 @@ async function renderCuenta(pestana){
       '<div class="cta-sub">' + escHtml(sesion.email) + (tipo ? ' · ' + escHtml(tipo) : '') + (c.empresa ? ' · ' + escHtml(c.empresa) : '') + '</div></div>' +
       '<button type="button" class="btn-enlace" id="cta-salir">Cerrar sesión</button>' +
     '</div>' +
-    (sesion.admin ? '<div class="cta-admin-links"><a class="cta-admin" href="admin.html" target="_blank" rel="noopener">⚙ Panel de administrador →</a>' +
+    (sesion.admin ? '<div class="cta-admin-links"><a class="cta-admin" href="/admin" target="_blank" rel="noopener">⚙ Panel de administrador →</a>' +
       '<a class="cta-admin" href="/ventas" target="_blank" rel="noopener">📊 Ventas →</a></div>' : '') +
     '<p class="cta-nota">Los precios de la tienda ya muestran tu descuento de cliente.</p>' +
     '<div class="cta-tabs">' +
