@@ -130,3 +130,8 @@ h2{ font-family:var(--display); font-weight:700; font-size:24px; color:var(--tin
   .c-cab h1{ font-size:28px; }
   .rejilla{ grid-template-columns:repeat(2,minmax(0,1fr)); gap:10px; }
 }
+/* Precio del cliente con sesión abierta (publico.js) */
+.dto-badge{ display:inline-block; font-family:var(--sans); font-size:12px; font-weight:700; line-height:1; padding:4px 7px; margin-left:8px; border-radius:4px; background:#f5c518; color:var(--tinta); vertical-align:middle; white-space:nowrap; }
+.p-precio .dto-badge{ font-size:15px; padding:6px 9px; margin-left:10px; }
+.t-pie .dto-badge{ font-size:10.5px; padding:3px 5px; margin-left:5px; }
+.p-nota-cli{ font-size:13px; font-weight:600; color:var(--t3); margin-top:4px; }

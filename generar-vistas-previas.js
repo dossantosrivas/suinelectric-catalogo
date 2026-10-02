@@ -26,7 +26,7 @@ const MOSTRAR_PRECIO = true;                           // false = no poner preci
 const MAX_EN_CATEGORIA = 120;
 // Súbelo cada vez que cambies publico.css o publico.js: el navegador los guarda un día
 // (ver _headers) y sin esto las páginas nuevas se ven con el estilo viejo.
-const VERSION_ESTILOS = 3;                          // más de esto: se muestran subcategorías + una muestra
+const VERSION_ESTILOS = 4;                          // más de esto: se muestran subcategorías + una muestra
 
 /* ---------- Cargar la organización de categorías desde tienda.html ----------
    Así hay una sola fuente: si cambias las familias en tienda.html, las páginas
@@ -63,6 +63,12 @@ const dinero = (n) => '$' + Math.ceil(n).toLocaleString('en-US');
 function precioVisitante(p){
   if (!MOSTRAR_PRECIO || p.precio == null || isNaN(Number(p.precio))) return null;
   return Math.ceil(p._manual ? Number(p.precio) : Number(p.precio) * (1 - DESCUENTO_GENERAL / 100));
+}
+// Datos para que publico.js recalcule el precio si el cliente tiene la sesión abierta
+// (mismas reglas de descuento que la tienda: por cliente, tipo, marca o modelo).
+function datosPrecio(p){
+  const lista = (p.precio != null && !isNaN(Number(p.precio))) ? Number(p.precio) : '';
+  return ' data-lista="' + esc(lista) + '" data-marca="' + esc(p.marca || '') + '" data-modelo="' + esc(p.modelo) + '"' + (p._manual ? ' data-manual="1"' : '');
 }
 function imagenAbsoluta(src){
   if (!src) return IMAGEN_GENERAL;
@@ -171,7 +177,7 @@ function tarjeta(p){
     '<span class="t-marca">' + esc(p.marca || '') + '</span>' +
     '<strong>' + esc(p.modelo) + '</strong>' +
     '<span class="t-desc">' + esc(corto(p.descripcion || p.nombre, 90)) + '</span>' +
-    '<span class="t-pie"><b>' + (precio != null ? dinero(precio) : 'Consultar') + '</b><em class="' + (p.disponible === false ? 'off' : 'ok') + '">' + esc(textoStock(p)) + '</em></span></a>';
+    '<span class="t-pie"><b class="precio-cli"' + datosPrecio(p) + '>' + (precio != null ? dinero(precio) : 'Consultar') + '</b><em class="' + (p.disponible === false ? 'off' : 'ok') + '">' + esc(textoStock(p)) + '</em></span></a>';
 }
 
 /* ---------- Limpiar lo generado antes ---------- */
@@ -234,7 +240,7 @@ for (const p of productos){
         (marca ? '<div class="p-marca">' + esc(marca) + '</div>' : '') +
         '<h1>' + esc(p.modelo) + '</h1>' +
         (sep.texto ? '<p class="p-desc">' + esc(sep.texto) + '</p>' : '') +
-        '<div class="p-precio">' + (precio != null ? dinero(precio) + ' <small>USD</small>' : 'Consultar precio') + '</div>' +
+        '<div class="p-precio precio-cli"' + datosPrecio(p) + '>' + (precio != null ? dinero(precio) + ' <small>USD</small>' : 'Consultar precio') + '</div>' +
         '<div class="p-stock ' + (p.disponible === false ? 'off' : 'ok') + '">' + esc(textoStock(p)) + '</div>' +
         '<div class="p-botones">' +
           '<a class="btn wa" href="' + esc(waLink(textoWa)) + '" data-modelo="' + esc(p.modelo) + '" rel="noopener">Cotizar por WhatsApp</a>' +
