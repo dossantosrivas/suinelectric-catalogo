@@ -1,3 +1,6 @@
 # La portada lleva directo a la tienda (redirección permanente, la entiende Google)
 /            /tienda   301
 /index.html  /tienda   301
+
+# Panel de ventas: cada sección tiene su propio link (suinelectric.com/ventas/clientes, /ventas/ofertas…)
+/ventas/*    /ventas    200

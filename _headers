@@ -10,3 +10,9 @@
   Cache-Control: public, max-age=86400
 /rastreo.js
   Cache-Control: public, max-age=86400
+/ventas
+  X-Robots-Tag: noindex
+/ventas.html
+  X-Robots-Tag: noindex
+/ventas/*
+  X-Robots-Tag: noindex
