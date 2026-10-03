@@ -354,6 +354,8 @@ const CONFIG_DEFAULT = {
 };
 const deepMerge = (base, over) => { const out = Array.isArray(base) ? base.slice() : Object.assign({}, base); if (!over) return out; Object.keys(over).forEach(k => { const v = over[k]; if (v && typeof v === 'object' && !Array.isArray(v) && base && typeof base[k] === 'object' && !Array.isArray(base[k]) && base[k]) out[k] = deepMerge(base[k], v); else if (v !== undefined) out[k] = v; }); return out; };
 const ORIGENES = ['manuel', 'papa', 'dist', 'libre'];
+/* opciones del selector de origen: tu inventario, el de tu papá, cada distribuidor por nombre, libre */
+const origenOpts = (it) => { const ds = Dists(); const cur = it.origen === 'dist' ? 'dist|' + (itDist(it) || '') : it.origen; const o = [['manuel', origenNombre('manuel')], ['papa', origenNombre('papa')]].concat(ds.map(d => ['dist|' + d.id, d.nombre])); if (!ds.length || cur === 'dist|') o.push(['dist|', 'Distribuidor (sin asignar)']); o.push(['libre', 'Libre']); return o.map(([v, l]) => `<option value="${esc(v)}" ${cur === v ? 'selected' : ''}>${esc(l)}</option>`).join(''); };
 const origenNombre = (o) => o === 'manuel' || o === 'papa' ? (CFG().inventarios[o] || o) : o === 'dist' ? 'Distribuidor' : 'Libre';
 const TIPOS = { oferta: 'Oferta', nota: 'Nota de entrega', venta: 'Venta', compra: 'Compra', ajuste: 'Ajuste' };
 const esVenta = (d) => d.tipo === 'nota' || d.tipo === 'venta';
@@ -593,7 +595,11 @@ const distDeCat = (c) => {
   return (mk && ds.find(d => d.surte && marcasDe(d.surte.marcas).includes(mk))) || (c.src === 's' ? ds.find(d => d.surte && d.surte.scraping) : null) || null;
 };
 const distNombre = (id) => { const d = id ? Store.get('proveedores', id) : null; return d ? d.nombre : 'Sin asignar'; };
-const itDist = (it) => it.dist || ((distDeCat(catalogoByCodigo(it.codigo)) || {}).id) || '';
+const modeloDesc = (desc) => { const m = String(desc || '').match(/Ref\s*\/\s*Modelo:\s*\*?\s*([^*\n—]+)/i); return m ? m[1].trim() : ''; };
+/* marca de una línea: la guardada, o la que sale en "*Ref / Modelo: X* — MARCA" */
+const marcaLinea = (it) => it.marca || ((String(it.desc || '').split('\n')[0].match(/\*\s*[—-]\s*([^\n*]+)$/) || [])[1] || '').trim();
+const distDeLinea = (it) => { const c = catalogoByCodigo(it.codigo || modeloDesc(it.desc)); const mk = marcaLinea(it); return distDeCat(c) || (mk ? distDeCat({ marca: mk, src: 'm' }) : null); };
+const itDist = (it) => it.dist || (distDeLinea(it) || {}).id || '';
 const descDist = (d) => { if (!d) return null; if (num(d.descuento) > 0) return num(d.descuento); const l = CFG().descCostoDist; return d.surte && d.surte.scraping && l != null && l !== '' ? num(l) : null; };
 const costoDist = (p, d) => { if (d === undefined) d = distDeCat(p); const pct = descDist(d); if (pct == null || !(p.precio > 0)) return null; return round2(p.precio * (1 - pct / 100)); };
 /* crea (una sola vez) Grupos Eléctricos, SAER y EMI, o completa los que ya tengas con ese nombre */
@@ -1158,7 +1164,7 @@ function docListView(v, { titulo, tipos, nuevo, sub }) {
       <select class="inp" style="width:auto" data-f="per">${periodoOpts().map(([k, l]) => `<option value="${k}" ${F.per === k ? 'selected' : ''}>${l}</option>`).join('')}</select>
       <select class="inp" style="width:auto" data-f="est">${(tipos.includes('oferta') ? [['', 'Todos los estados'], ['abierta', 'Abiertas'], ['aceptada', 'Aceptadas'], ['rechazada', 'Rechazadas']] : [['', 'Todos'], ['cobrar', tipos.includes('compra') ? 'Por pagar' : 'Por cobrar'], ['anulada', 'Anuladas']]).map(([k, l]) => `<option value="${k}" ${F.est === k ? 'selected' : ''}>${l}</option>`).join('')}</select>
       ${tipos.includes('compra') ? '' : `<select class="inp" style="width:auto" data-f="vend"><option value="">Todos los vendedores</option>${Array.from(new Set(vendedoresActivos().concat(Store.all('docs').filter(x => tipos.includes(x.tipo)).map(x => x.vendedor).filter(Boolean)))).sort().map(n => `<option ${F.vend === n ? 'selected' : ''}>${esc(n)}</option>`).join('')}<option value="-" ${F.vend === '-' ? 'selected' : ''}>Sin vendedor</option></select>`}
-      <select class="inp" style="width:auto" data-f="inv"><option value="">Todos los orígenes</option>${(tipos.includes('compra') ? ['manuel', 'papa'] : ORIGENES).map(o => `<option value="${o}" ${F.inv === o ? 'selected' : ''}>${esc(origenNombre(o))}</option>`).join('')}</select>
+      <select class="inp" style="width:auto" data-f="inv"><option value="">Todos los orígenes</option>${(tipos.includes('compra') ? ['manuel', 'papa'] : ORIGENES).map(o => `<option value="${o}" ${F.inv === o ? 'selected' : ''}>${esc(o === 'dist' ? 'Cualquier distribuidor' : origenNombre(o))}</option>`).join('')}${tipos.includes('compra') ? '' : Dists().map(d => `<option value="dist|${esc(d.id)}" ${F.inv === 'dist|' + d.id ? 'selected' : ''}>— ${esc(d.nombre)}</option>`).join('')}</select>
     </div>
     <div id="lst"></div>`;
   const paint = () => {
@@ -1168,7 +1174,8 @@ function docListView(v, { titulo, tipos, nuevo, sub }) {
     if (F.est === 'anulada') rows = rows.filter(d => d.estado === 'anulada');
     else if (F.est === 'cobrar') rows = rows.filter(d => d.estado !== 'anulada' && Calc.totals(d).saldo > 0.005);
     else if (F.est) rows = rows.filter(d => (d.estado || 'abierta') === F.est);
-    if (F.inv) rows = rows.filter(d => docOrigins(d).includes(F.inv));
+    if (F.inv && F.inv.startsWith('dist|')) { const id = F.inv.slice(5); rows = rows.filter(d => (d.items || []).some(i => i.origen === 'dist' && itDist(i) === id)); }
+    else if (F.inv) rows = rows.filter(d => docOrigins(d).includes(F.inv));
     if (F.vend) rows = rows.filter(d => F.vend === '-' ? !d.vendedor : d.vendedor === F.vend);
     if (q) rows = rows.filter(d => normTxt([d.numero, docParty(d), d.notas, d.vendedor].concat((d.items || []).map(i => i.codigo + ' ' + i.desc)).join(' ')).includes(q));
     rows.sort((a, b) => (b.fecha || '').localeCompare(a.fecha || '') || (b.numero || '').localeCompare(a.numero || ''));
@@ -1426,7 +1433,6 @@ function docEditor(v, D, isNew) {
         if (it.productoId) { const s = Calc.st(it.productoId); const disp = s[it.origen].cant + prevQty(it.productoId, it.origen); const otro = it.origen === 'manuel' ? 'papa' : 'manuel'; parts.push(`<span class="${num(it.cant) > disp ? 'warn' : ''}">Disponible ${esc(origenNombre(it.origen))}: ${fmtQty(disp)}</span>`); if (s[otro].cant > 0) parts.push(`<span>${esc(origenNombre(otro))}: ${fmtQty(s[otro].cant)}</span>`); }
         else parts.push('<span class="warn">No está en el inventario: no descuenta existencia</span>');
       }
-      if (it.origen === 'dist') { const cur = itDist(it); const ds = Dists(); parts.push(`<label>Distribuidor: <select class="inp" style="width:auto;padding:2px 6px;font-size:12.5px" data-lk="dist"><option value="" ${cur ? '' : 'selected'}>Sin asignar</option>${ds.map(d => `<option value="${esc(d.id)}" ${cur === d.id ? 'selected' : ''}>${esc(d.nombre)}</option>`).join('')}</select></label>`); }
       if (it.origen === 'dist' && it.listPrice) parts.push(`<span>Lista ${fmtUSD(it.listPrice)}</span>`);
       const c = it.costo === '' || it.costo == null ? null : num(it.costo), p = num(it.precio);
       if (c != null && p > 0) parts.push(`<span>Ganancia ${fmtUSD((p - c) * num(it.cant))} (${fmtNum((p - c) / p * 100, 1)}%)</span>`);
@@ -1444,7 +1450,7 @@ function docEditor(v, D, isNew) {
       ${D.items.map((it, i) => `<div class="ln o-${esc(compra ? D.inventario : (it.origen || 'libre'))}" data-li="${i}">
         <div class="idx">${i > 0 ? `<button data-up title="Subir">▲</button>` : ''}${i + 1}${i < D.items.length - 1 ? `<button data-down title="Bajar">▼</button>` : ''}</div>
         <div class="c-code"><input class="inp mono" style="font-size:13px" data-lk="codigo" value="${esc(it.codigo || '')}" placeholder="Código"></div>
-        <div class="c-orig">${venta || oferta ? `<select class="inp orig" data-lk="origen" aria-label="Origen">${ORIGENES.map(o => `<option value="${o}" ${it.origen === o ? 'selected' : ''}>${esc(origenNombre(o))}</option>`).join('')}</select>` : ''}</div>
+        <div class="c-orig">${venta || oferta ? `<select class="inp orig" data-lk="origen" aria-label="Origen">${origenOpts(it)}</select>` : ''}</div>
         <label><span class="lbl-m">Cantidad</span><input class="inp num" inputmode="decimal" data-lk="cant" value="${esc(fmtQty(num(it.cant)))}"></label>
         <label><span class="lbl-m">${compra ? 'Costo unit.' : 'Precio unit.'}</span><input class="inp num" inputmode="decimal" data-lk="precio" value="${esc(it.precio === '' ? '' : round2(num(it.precio)))}"></label>
         <label>${showCost ? `<span class="lbl-m">Costo unit.</span><input class="inp num" inputmode="decimal" data-lk="costo" value="${it.costo === '' || it.costo == null ? '' : esc(round2(num(it.costo)))}" placeholder="—" title="Tu costo (no sale en el PDF)">` : ''}</label>
@@ -1467,12 +1473,12 @@ function docEditor(v, D, isNew) {
     const row = e.target.closest('[data-li]'); const k = e.target.dataset.lk; if (!row || !k) return;
     const it = D.items[+row.dataset.li];
     if (k === 'origen') {
-      it.origen = e.target.value;
+      const [ov, did] = e.target.value.split('|'); it.origen = ov; if (ov === 'dist') it.dist = did || '';
       if (it.origen === 'manuel' || it.origen === 'papa') {
         if (!it.productoId) { const p = findProductoByCodigo(it.codigo); if (p) it.productoId = p.id; }
         if (it.productoId) { const s = Calc.st(it.productoId); if (s[it.origen].costo) it.costo = round2(s[it.origen].costo); }
       } else if (it.origen === 'dist') {
-        const c = catalogoByCodigo(it.codigo); if (!it.dist) it.dist = itDist(it); if (c) { it.listPrice = c.precio; const cd = costoDist(c, Store.get('proveedores', it.dist) || null); if (cd != null) it.costo = cd; }
+        const c = catalogoByCodigo(it.codigo); if (venta && !it.pedido) it.pedido = 'por pedir'; if (c) { it.listPrice = c.precio; const cd = costoDist(c, Store.get('proveedores', it.dist) || null); if (cd != null) it.costo = cd; }
       } else if (it.origen === 'libre') { /* sin existencia */ }
       setDirty(); paintLines(); return;
     }
@@ -2028,13 +2034,33 @@ Views.distribuidor = (v, sel) => {
   v.innerHTML = `<div class="vh"><h1>${cur ? esc(cur.nombre) : 'Distribuidores'}</h1><div class="act"><a class="btn" href="#/proveedores">${ico('truck')} Editar distribuidores</a></div>
     <div class="sub">${cur && cur.id ? `Surte ${esc(surteTxt(cur))} · ${descDist(cur) != null ? `te da ${fmtNum(descDist(cur))}% sobre lista` : 'sin descuento definido'} · <a href="#/proveedor/${esc(cur.id)}">ficha</a>` : cur ? 'Líneas del catálogo que no corresponden a ningún distribuidor: asígnales uno en la venta o en el pedido.' : 'Lo que vendiste del catálogo y falta pedir o entregar, separado por distribuidor, y el catálogo con tus precios y costos.'}</div></div>
     <div class="row" style="margin-bottom:12px"><div class="seg scroll" data-seg>${chips.map(([k, l, n]) => `<a href="#/distribuidor${k ? '/' + esc(k) : ''}" class="${selKey === k ? 'on' : ''}">${esc(l)}${n ? ` <span class="muted small">${n}</span>` : ''}</a>`).join('')}</div></div>
-    <div class="tabs" data-tabs><button data-t="pedidos">Pedidos</button><button data-t="catalogo">Catálogo</button></div><div id="body"></div>`;
+    <div class="tabs" data-tabs><button data-t="pedidos">Pedidos</button><button data-t="ventas">Ventas</button><button data-t="catalogo">Catálogo</button></div><div id="body"></div>`;
   const enSel = (id) => !cur || cur.id === id;
   const paint = () => {
     lsSet('suinadm_f_dist', F.tab);
     $$('[data-t]', v).forEach(b => b.classList.toggle('on', b.dataset.t === F.tab));
     const box = $('#body', v);
-    if (F.tab === 'pedidos') {
+    if (F.tab === 'ventas') {
+      const lin = []; ventasActivas().forEach(d => (d.items || []).forEach(it => { if (it.origen === 'dist') { const id = itDist(it); if (enSel(id)) lin.push({ d, it, dist: id }); } }));
+      lin.sort((a, b) => (b.d.fecha || '').localeCompare(a.d.fecha || ''));
+      /* líneas que no se marcaron como de distribuidor, pero su producto es del catálogo de uno (y no salió de tu inventario) */
+      const pos = []; ventasActivas().forEach(d => (d.items || []).forEach(it => { if (it.origen === 'dist' || ((it.origen === 'manuel' || it.origen === 'papa') && it.productoId)) return; const dd = distDeLinea(it); if (dd && enSel(dd.id)) pos.push({ d, it, dd }); }));
+      pos.sort((a, b) => (b.d.fecha || '').localeCompare(a.d.fecha || ''));
+      const tv = lin.reduce((a, x) => a + num(x.it.cant) * num(x.it.precio), 0), tc = lin.reduce((a, x) => a + (x.it.costo === '' || x.it.costo == null ? 0 : num(x.it.cant) * num(x.it.costo)), 0);
+      const PL = { 'por pedir': 'Por pedir', pedido: 'Pedido', entregado: 'Entregado' };
+      box.innerHTML = (pos.length ? `<section class="panel" style="margin-bottom:14px;border-color:var(--amber,#d97706)"><div class="ph"><h2>¿Son ${cur ? 'de ' + esc(cur.nombre) : 'de un distribuidor'}? (${pos.length})</h2><div class="act"><button class="btn sm pri" data-asg-all>Asignar todas</button></div></div>
+          <p class="muted small" style="margin:0 0 8px">Estas ventas tienen productos del catálogo ${cur ? 'de ' + esc(cur.nombre) : 'de un distribuidor'}, pero su origen está como ${esc(origenNombre('manuel'))}, ${esc(origenNombre('papa'))} o Libre, por eso no aparecen aquí.</p>
+          <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Fecha</th><th>Producto</th><th class="r">Cant.</th><th class="hm">Cliente</th><th>Origen</th><th></th></tr></thead><tbody>
+          ${pos.map(({ d, it, dd }, i) => `<tr><td class="mono small">${esc(fmtFecha(d.fecha))}<div><a class="mono small" href="#/doc/${esc(d.id)}">${esc(d.numero)}</a></div></td><td><span class="code">${esc(it.codigo || modeloDesc(it.desc) || '')}</span><div class="muted small">${esc(it.marca || '')}</div></td><td class="num">${fmtQty(num(it.cant))}</td><td class="hm">${esc(docParty(d))}</td><td>${ownTag(it.origen || 'libre')}</td><td><button class="btn sm" data-asg="${i}">Es de ${esc(dd.nombre)}</button></td></tr>`).join('')}
+          </tbody></table></div></section>` : '') +
+        (lin.length ? `<section class="panel"><div class="ph"><h2>Ventas (${lin.length} líneas)</h2><div class="act"><span class="muted small">venta ${fmtUSD(tv)} · costo ${fmtUSD(tc)} · ganancia ${fmtUSD(tv - tc)}</span></div></div>
+          <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Fecha</th><th>Producto</th><th class="r">Cant.</th><th class="hm">Cliente</th>${cur ? '' : '<th class="hm">Distribuidor</th>'}<th class="r">Venta</th><th class="r hm">Costo</th><th>Pedido</th></tr></thead><tbody>
+          ${lin.map(({ d, it, dist }) => `<tr><td class="mono small">${esc(fmtFecha(d.fecha))}<div><a class="mono small" href="#/doc/${esc(d.id)}">${esc(d.numero)}</a></div></td><td><span class="code">${esc(it.codigo || '')}</span><div class="clip small muted">${esc(plainFirst(it.desc).replace(/^Ref \/ Modelo:\s*/i, ''))}</div></td><td class="num">${fmtQty(num(it.cant))}</td><td class="hm">${esc(docParty(d))}</td>${cur ? '' : `<td class="hm small">${esc(distNombre(dist))}</td>`}<td class="num">${fmtUSD(num(it.cant) * num(it.precio))}</td><td class="num hm">${it.costo === '' || it.costo == null ? '—' : fmtUSD(num(it.cant) * num(it.costo))}</td><td class="small">${esc(PL[it.pedido || 'por pedir'] || it.pedido)}</td></tr>`).join('')}
+          </tbody></table></div></section>` : `<div class="panel empty">Todavía no hay ventas${cur ? ' de ' + esc(cur.nombre) : ' de distribuidores'}.</div>`);
+      const asignar = (x) => { const d = Store.get('docs', x.d.id); const it = d && d.items.find(y => y.id === x.it.id); if (!it) return false; const c = catalogoByCodigo(it.codigo || modeloDesc(it.desc)); it.origen = 'dist'; it.dist = x.dd.id; it.productoId = null; if (!it.pedido) it.pedido = 'por pedir'; if (c) { it.listPrice = c.precio; if (!it.codigo) it.codigo = c.m; if (it.costo === '' || it.costo == null) { const cd = costoDist(c, x.dd); if (cd != null) it.costo = cd; } } Store.put('docs', d, { quiet: true }); return true; };
+      $$('[data-asg]', box).forEach(b => b.onclick = () => { if (asignar(pos[+b.dataset.asg])) { Bus.emit('data', 'docs'); UI.toast('Asignada'); App.render(); App.paintCounts(); } });
+      const all = $('[data-asg-all]', box); if (all) all.onclick = async () => { if (!(await UI.confirm(`¿Marcar estas ${pos.length} líneas como del distribuidor? Quedan "por pedir"; las que ya entregaste las marcas como entregadas en Pedidos.`, { ok: 'Asignar' }))) return; pos.forEach(asignar); Bus.emit('data', 'docs'); UI.toast('Asignadas'); App.render(); App.paintCounts(); };
+    } else if (F.tab === 'pedidos') {
       const mine = ped.filter(x => enSel(x.dist));
       const grupos = [['por pedir', 'Por pedir'], ['pedido', 'Pedidos, sin entregar']];
       const quienes = (cur ? [cur] : ds.concat(sinAsig ? [{ id: '', nombre: 'Sin asignar' }] : [])).filter(d => mine.some(x => x.dist === d.id));
