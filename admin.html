@@ -455,6 +455,38 @@
   @media (prefers-reduced-motion:reduce){ *{ animation:none !important; transition:none !important; } }
 
 
+
+  /* Ventanas plegables */
+  .pleg-barra{ display:flex; align-items:center; gap:4px; margin:-4px 0 10px; flex-wrap:wrap; }
+  .pleg-barra .muted{ margin-right:auto; font-size:12.5px; }
+  .plegables{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; grid-auto-flow:row dense; align-items:start; margin-bottom:18px; }
+  .plegable{ margin:0; padding:0; overflow:hidden; transition:box-shadow .15s, border-color .15s; }
+  .plegable.abierta{ grid-column:1 / -1; }
+  .plegable:not(.abierta):hover{ border-color:var(--azul); box-shadow:var(--sombra-media); }
+  .pleg-cab{ display:flex; align-items:center; gap:14px; width:100%; background:none; border:none; padding:16px 20px; cursor:pointer; text-align:left; color:inherit; font:inherit; }
+  .pleg-ico{ width:36px; height:36px; border-radius:9px; display:grid; place-items:center; background:var(--azul-suave); color:var(--azul-texto); flex:none; }
+  .pleg-ico svg{ width:18px; height:18px; }
+  .pleg-tit{ flex:1; min-width:0; }
+  .pleg-tit h2{ margin:0; font-size:15.5px; color:var(--titulo); }
+  .pleg-res{ display:block; margin-top:2px; font-size:13px; color:var(--texto-3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .plegable.abierta .pleg-res{ white-space:normal; }
+  .pleg-chev{ width:30px; height:30px; border-radius:8px; display:grid; place-items:center; color:var(--texto-3); flex:none; transition:transform .2s, background .12s; }
+  .pleg-chev svg{ width:18px; height:18px; }
+  .pleg-cab:hover .pleg-chev{ background:var(--linea-suave); color:var(--texto); }
+  .plegable.abierta .pleg-chev{ transform:rotate(180deg); }
+  .plegable.abierta .pleg-cab{ border-bottom:1px solid var(--linea-suave); }
+  .pleg-cuerpo{ display:none; padding:16px 20px 20px; }
+  .plegable.abierta .pleg-cuerpo{ display:block; animation:abrirPleg .2s ease; }
+  .pleg-cuerpo .tabla-wrap{ margin:0 -20px; padding:0 20px; }
+  .pleg-2{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:8px 28px; }
+  @keyframes abrirPleg{ from{ opacity:0; transform:translateY(-4px); } }
+  @media (max-width:860px){
+    .plegables{ grid-template-columns:1fr; gap:10px; }
+    .pleg-cab{ padding:14px 16px; gap:12px; }
+    .pleg-cuerpo{ padding:14px 16px 16px; }
+    .pleg-cuerpo .tabla-wrap{ margin:0 -16px; padding:0 16px; }
+    .pleg-2{ grid-template-columns:1fr; }
+  }
   /* En vivo */
   .nav .badge.verde{ background:#22c55e; color:#06240f; }
   .estado-vivo.latiendo .punto{ animation:latido 1.6s ease-in-out infinite; }
@@ -1698,6 +1730,38 @@ function barrasSimples(valores, etiquetas, titulo){
     '<div class="grafico-ejes">' + etiquetas.map(t => '<span>' + t + '</span>').join('') + '</div>';
 }
 
+/* ---------- Ventanas plegables (Visitantes) ----------
+   Cerradas muestran el título y un resumen; al tocarlas se abren a todo el
+   ancho. Este navegador recuerda cuáles dejaste abiertas. */
+const PLEG_DEF = { vis: ['recientes'] };
+function plegAbiertas(grupo){
+  try { const v = JSON.parse(localStorage.getItem('suin_pleg_' + grupo) || 'null'); if (Array.isArray(v)) return v; } catch (e) {}
+  return (PLEG_DEF[grupo] || []).slice();
+}
+function plegGuardar(grupo){
+  const ab = [...document.querySelectorAll('[data-pleg-grupo="' + grupo + '"].abierta')].map(x => x.dataset.pleg);
+  try { localStorage.setItem('suin_pleg_' + grupo, JSON.stringify(ab)); } catch (e) {}
+}
+function plegable(grupo, id, icono, titulo, resumen, contenido){
+  const ab = plegAbiertas(grupo).includes(id);
+  return '<section class="caja plegable' + (ab ? ' abierta' : '') + '" data-pleg-grupo="' + grupo + '" data-pleg="' + id + '">' +
+    '<button type="button" class="pleg-cab" aria-expanded="' + ab + '"><span class="pleg-ico">' + icono + '</span>' +
+      '<span class="pleg-tit"><h2>' + titulo + '</h2><span class="pleg-res">' + resumen + '</span></span>' +
+      '<span class="pleg-chev" aria-hidden="true">' + I('<path d="m6 9 6 6 6-6"/>') + '</span></button>' +
+    '<div class="pleg-cuerpo">' + contenido + '</div></section>';
+}
+function activarPlegables(grupo){
+  const secs = document.querySelectorAll('[data-pleg-grupo="' + grupo + '"]');
+  const poner = (sec, abrir) => { sec.classList.toggle('abierta', abrir); sec.querySelector('.pleg-cab').setAttribute('aria-expanded', abrir); };
+  secs.forEach(sec => sec.querySelector('.pleg-cab').onclick = (e) => {
+    if (e.target.closest('a')) return;
+    const abrir = !sec.classList.contains('abierta');
+    poner(sec, abrir); plegGuardar(grupo);
+    if (abrir) setTimeout(() => sec.scrollIntoView({ behavior: 'smooth', block: 'start' }), 60);
+  });
+  document.querySelectorAll('[data-pleg-todo]').forEach(b => b.onclick = () => { secs.forEach(sec => poner(sec, b.dataset.plegTodo === '1')); plegGuardar(grupo); });
+}
+
 async function vistaVisitantes(){
   const chips = '<div class="chips">' + DIAS_VIS.map(([d, t]) => '<button class="chip' + (diasVis === d ? ' activo' : '') + '" data-dias-vis="' + d + '">' + t + '</button>').join('') + '</div>';
   $('main').innerHTML = cabecera('Visitantes', 'Quienes entran sin iniciar sesión: cuántos son, de dónde, cuándo, qué buscan y qué productos ven. Toca una visita para ver todo lo que hizo esa persona. No se cuenta lo que haces tú como administrador.', chips) + '<div class="cargando">Cargando…</div>';
@@ -1745,6 +1809,24 @@ async function vistaVisitantes(){
       '<ol class="ranking">' + lista.slice(0, 6).map(x => filaSimple(esc(nombre ? nombre(x[campo]) : (x[campo] || 'Desconocido')), x.visitas, max, pct(x.visitas, t.visitas) + ' de las visitas')).join('') + '</ol>') + '</div>';
   };
 
+  // Resúmenes de una línea para cuando la ventana está cerrada
+  const top = (l, k) => (l || [])[0] ? l[0][k] : null;
+  const diaMax = dias.reduce((m, d) => d.v > m.v ? d : m, { v: -1 });
+  const iSem = semana.indexOf(Math.max(...semana));
+  const ult = (data.visitas || [])[0];
+  const res = {
+    recientes: (data.visitas || []).length ? (data.visitas || []).length + ' visitas · la última ' + haceCuanto(ult.inicio) + (ult ? ' desde ' + esc(lugarDe(ult)) : '') : 'Sin visitas en este período',
+    dia: t.visitas ? Number(t.visitas).toLocaleString('es-VE') + ' visitas · el día con más: ' + diaMax.f.toLocaleDateString('es-VE', { weekday: 'short', day: 'numeric', month: 'short' }) + ' (' + diaMax.v + ')' : 'Sin visitas',
+    hora: t.visitas ? 'Más visitas a las ' + hTxt(pico) : 'Sin datos',
+    semana: t.visitas ? 'Más visitas los ' + DSEM[iSem] : 'Sin datos',
+    pais: top(data.paises, 'pais') ? bandera(data.paises[0].pais) + esc(nomPais(data.paises[0].pais)) + ' · ' + pct(data.paises[0].visitas, t.visitas) + ' de las visitas' : 'Sin datos',
+    ciudad: (data.ciudades || [])[0] ? esc(lugarDe(data.ciudades[0])) + ' · ' + data.ciudades[0].visitas + ' visitas' : 'Sin ciudades todavía',
+    origen: (data.origenes || [])[0] ? esc(origenDe(data.origenes[0].referencia)) + ' · ' + pct(data.origenes[0].visitas, t.visitas) + ' de las visitas' : 'Sin datos',
+    equipo: top(data.dispositivos, 'dispositivo') ? esc(data.dispositivos[0].dispositivo) + ' ' + pct(data.dispositivos[0].visitas, t.visitas) + (top(data.sistemas, 'sistema') ? ' · ' + esc(data.sistemas[0].sistema) : '') : 'Sin datos',
+    buscan: (data.buscado || [])[0] ? '“' + esc(data.buscado[0].texto) + '” · ' + data.buscado[0].veces + ' veces' : 'Sin búsquedas todavía',
+    tarjetas: (data.tarjetas || [])[0] ? esc(data.tarjetas[0].modelo) + ' · ' + data.tarjetas[0].veces + ' veces en pantalla' : 'Sin tarjetas vistas',
+  };
+
   cont.outerHTML =
     '<div class="kpis">' +
       kpi(ICO.clientes, 'Visitas', t.visitas, Number(t.visitantes || 0).toLocaleString('es-VE') + ' personas distintas · ' + (t.nuevos || 0) + ' nuevas') +
@@ -1754,40 +1836,37 @@ async function vistaVisitantes(){
       kpi(ICO.whatsapp, 'Visitas con interés', t.con_interes, pct(t.con_interes, t.visitas) + ' agregó al pedido o escribió por WhatsApp') +
       kpi(ICO.sync, 'Tiempo promedio', t.duracion_media ? duracion(t.duracion_media) : '—', 'de las visitas que hicieron algo') +
     '</div>' +
-    '<div class="caja"><div class="caja-cab"><h2>Visitas por día</h2><div class="leyenda"><span><i style="background:var(--azul-suave)"></i>Visitas</span><span><i style="background:var(--azul)"></i>Personas distintas</span></div></div>' + grafico + '</div>' +
-    '<div class="grid-2" style="grid-template-columns:1fr 1fr;margin-bottom:18px">' +
-      '<div class="caja"><div class="caja-cab"><h2>¿A qué hora entran?</h2>' + (t.visitas ? '<span class="muted">Más visitas: ' + hTxt(pico) + '</span>' : '') + '</div>' +
-        barrasSimples(horas, horas.map((_, h) => h % 3 === 0 ? (h % 12 || 12) + (h < 12 ? 'a' : 'p') : ''), (h, v) => hTxt(h) + ': ' + v + ' visitas') + '<p class="muted" style="margin:8px 0 0">Hora de Venezuela.</p></div>' +
-      '<div class="caja"><div class="caja-cab"><h2>¿Qué días?</h2></div>' +
-        barrasSimples(semana, DSEM.map(d => d.slice(0, 3)), (i, v) => DSEM[i] + ': ' + v + ' visitas') + '</div>' +
-    '</div>' +
-    '<div class="grid-2" style="grid-template-columns:1fr 1fr;margin-bottom:18px">' +
-      '<div class="caja"><div class="caja-cab"><h2>¿De qué país?</h2></div>' +
-        ranking(data.paises, (x, i) => '<li><span class="pos">' + (i + 1) + '</span><span class="nom"><strong>' + bandera(x.pais) + esc(nomPais(x.pais)) + '</strong><small>' + x.visitantes + ' persona' + (x.visitantes === 1 ? '' : 's') + '</small>' + barra(x.visitas, maxP) + '</span><span class="num">' + x.visitas + '<small>' + pct(x.visitas, t.visitas) + '</small></span></li>', 'Todavía no hay visitas en este período.') + '</div>' +
-      '<div class="caja"><div class="caja-cab"><h2>¿De qué ciudad?</h2></div><p class="sub">Aproximado: se calcula por la conexión a internet (con datos móviles puede salir la ciudad de la antena).</p>' +
-        ranking(data.ciudades, (x, i) => '<li><span class="pos">' + (i + 1) + '</span><span class="nom"><strong>' + esc(lugarDe(x)) + '</strong><small>' + x.visitantes + ' persona' + (x.visitantes === 1 ? '' : 's') + '</small>' + barra(x.visitas, maxCi) + '</span><span class="num">' + x.visitas + '</span></li>', 'Sin ciudades todavía.', 15) + '</div>' +
-    '</div>' +
-    '<div class="grid-2" style="grid-template-columns:1fr 1fr;margin-bottom:18px">' +
-      '<div class="caja"><div class="caja-cab"><h2>¿Cómo llegan?</h2></div>' +
-        ranking(data.origenes, (x, i) => '<li><span class="pos">' + (i + 1) + '</span><span class="nom"><strong>' + esc(origenDe(x.referencia)) + '</strong>' + (x.referencia ? '' : '<small>Escribieron la dirección, un marcador o un enlace de WhatsApp</small>') + barra(x.visitas, maxO) + '</span><span class="num">' + x.visitas + '<small>' + pct(x.visitas, t.visitas) + '</small></span></li>', 'Sin datos todavía.') +
-        '<div class="seccion" style="margin:18px 0 0"><h3>Página por la que entraron</h3>' + (!(data.entradas || []).length ? '<div class="muted">Sin datos.</div>' :
-          '<ol class="ranking">' + data.entradas.slice(0, 8).map(x => filaSimple(linkPagina(x.pagina), x.visitas, maxE)).join('') + '</ol>') + '</div></div>' +
-      '<div class="caja"><div class="caja-cab"><h2>¿Con qué equipo?</h2></div>' +
-        grupoMini('Tipo de equipo', data.dispositivos, 'dispositivo') +
-        grupoMini('Sistema', data.sistemas, 'sistema') +
-        grupoMini('Navegador', data.navegadores, 'navegador') +
-        grupoMini('Proveedor de internet', data.proveedores, 'proveedor') + '</div>' +
-    '</div>' +
-    '<div class="grid-2" style="grid-template-columns:1fr 1fr;margin-bottom:18px">' +
-      '<div class="caja"><div class="caja-cab"><h2>¿Qué buscan?</h2></div>' +
-        ranking(data.buscado, (x, i) => '<li><span class="pos">' + (i + 1) + '</span><span class="nom">' + linkBusq(x.texto) + (x.resultados === 0 ? ' <span class="pill rojo">sin resultados</span>' : '') + '<small>' + x.personas + ' persona' + (x.personas === 1 ? '' : 's') + '</small>' + barra(x.veces, maxB) + '</span><span class="num">' + x.veces + '</span></li>', 'Todavía no hay búsquedas de visitantes.', 20) + '</div>' +
-      '<div class="caja"><div class="caja-cab"><h2>Tarjetas de producto más vistas</h2></div><p class="sub">Productos que estuvieron en pantalla (en la lista, en Inicio o en las páginas de Google) y cuántas veces abrieron la ficha.</p>' +
+    '<div class="pleg-barra"><span class="muted">Toca una ventana para abrirla completa</span><button class="btn chico fantasma" data-pleg-todo="1">Abrir todas</button><button class="btn chico fantasma" data-pleg-todo="0">Cerrar todas</button></div>' +
+    '<div class="plegables" id="vis-plegables">' +
+      plegable('vis', 'recientes', ICO.clientes, 'Visitas recientes <small>' + (data.visitas || []).length + (t.visitas > (data.visitas || []).length ? ' de ' + t.visitas : '') + '</small>', res.recientes,
+        '<div class="buscar" style="margin-bottom:12px">' + ICO.buscar + '<input id="vis-buscar" type="search" placeholder="Filtrar por ciudad, búsqueda, origen…" value="' + esc(buscaVis) + '"></div>' +
+        '<div class="tabla-wrap" id="vis-tabla"></div>') +
+      plegable('vis', 'dia', ICO.grafica, 'Visitas por día', res.dia,
+        '<div class="leyenda" style="margin-bottom:6px"><span><i style="background:color-mix(in srgb, var(--azul) 28%, var(--superficie))"></i>Visitas</span><span><i style="background:var(--azul)"></i>Personas distintas</span></div>' + grafico) +
+      plegable('vis', 'hora', ICO.sync, '¿A qué hora entran?', res.hora,
+        barrasSimples(horas, horas.map((_, h) => h % 3 === 0 ? (h % 12 || 12) + (h < 12 ? 'a' : 'p') : ''), (h, v) => hTxt(h) + ': ' + v + ' visitas') + '<p class="muted" style="margin:8px 0 0">Hora de Venezuela.</p>') +
+      plegable('vis', 'semana', ICO.grafica, '¿Qué días?', res.semana,
+        barrasSimples(semana, DSEM.map(d => d.slice(0, 3)), (i, v) => DSEM[i] + ': ' + v + ' visitas')) +
+      plegable('vis', 'pais', ICO.globo, '¿De qué país?', res.pais,
+        ranking(data.paises, (x, i) => '<li><span class="pos">' + (i + 1) + '</span><span class="nom"><strong>' + bandera(x.pais) + esc(nomPais(x.pais)) + '</strong><small>' + x.visitantes + ' persona' + (x.visitantes === 1 ? '' : 's') + '</small>' + barra(x.visitas, maxP) + '</span><span class="num">' + x.visitas + '<small>' + pct(x.visitas, t.visitas) + '</small></span></li>', 'Todavía no hay visitas en este período.')) +
+      plegable('vis', 'ciudad', ICO.globo, '¿De qué ciudad?', res.ciudad,
+        '<p class="sub" style="margin:0 0 10px">Aproximado: se calcula por la conexión a internet (con datos móviles puede salir la ciudad de la antena).</p>' +
+        ranking(data.ciudades, (x, i) => '<li><span class="pos">' + (i + 1) + '</span><span class="nom"><strong>' + esc(lugarDe(x)) + '</strong><small>' + x.visitantes + ' persona' + (x.visitantes === 1 ? '' : 's') + '</small>' + barra(x.visitas, maxCi) + '</span><span class="num">' + x.visitas + '</span></li>', 'Sin ciudades todavía.', 25)) +
+      plegable('vis', 'origen', ICO.enlace, '¿Cómo llegan?', res.origen,
+        '<div class="pleg-2">' + '<div>' + ranking(data.origenes, (x, i) => '<li><span class="pos">' + (i + 1) + '</span><span class="nom"><strong>' + esc(origenDe(x.referencia)) + '</strong>' + (x.referencia ? '' : '<small>Escribieron la dirección, un marcador o un enlace de WhatsApp</small>') + barra(x.visitas, maxO) + '</span><span class="num">' + x.visitas + '<small>' + pct(x.visitas, t.visitas) + '</small></span></li>', 'Sin datos todavía.') + '</div>' +
+        '<div class="seccion" style="margin:0"><h3>Página por la que entraron</h3>' + (!(data.entradas || []).length ? '<div class="muted">Sin datos.</div>' :
+          '<ol class="ranking">' + data.entradas.slice(0, 10).map(x => filaSimple(linkPagina(x.pagina), x.visitas, maxE)).join('') + '</ol>') + '</div></div>') +
+      plegable('vis', 'equipo', ICO.ojo, '¿Con qué equipo?', res.equipo,
+        '<div class="pleg-2">' + grupoMini('Tipo de equipo', data.dispositivos, 'dispositivo') + grupoMini('Sistema', data.sistemas, 'sistema') +
+        grupoMini('Navegador', data.navegadores, 'navegador') + grupoMini('Proveedor de internet', data.proveedores, 'proveedor') + '</div>') +
+      plegable('vis', 'buscan', ICO.buscar, '¿Qué buscan?', res.buscan,
+        ranking(data.buscado, (x, i) => '<li><span class="pos">' + (i + 1) + '</span><span class="nom">' + linkBusq(x.texto) + (x.resultados === 0 ? ' <span class="pill rojo">sin resultados</span>' : '') + '<small>' + x.personas + ' persona' + (x.personas === 1 ? '' : 's') + '</small>' + barra(x.veces, maxB) + '</span><span class="num">' + x.veces + '</span></li>', 'Todavía no hay búsquedas de visitantes.', 30)) +
+      plegable('vis', 'tarjetas', ICO.tienda, 'Tarjetas de producto más vistas', res.tarjetas,
+        '<p class="sub" style="margin:0 0 10px">Productos que estuvieron en pantalla (en la lista, en Inicio o en las páginas de Google) y cuántas veces abrieron la ficha.</p>' +
         ranking(data.tarjetas, (x, i) => '<li><span class="pos">' + (i + 1) + '</span><span class="nom">' + linkProd(x.modelo) + '<small>' + esc(descProd(x.modelo)) + '</small>' + barra(x.veces, maxT) + '</span><span class="num">' + x.veces +
-          '<small>' + x.personas + ' pers. · ' + (x.abiertas ? x.abiertas + ' abierta' + (x.abiertas === 1 ? '' : 's') : 'no la abrieron') + '</small></span></li>', 'Todavía no hay tarjetas vistas.', 20) + '</div>' +
-    '</div>' +
-    '<div class="caja"><div class="caja-cab"><h2>Visitas recientes <small>' + (data.visitas || []).length + (t.visitas > (data.visitas || []).length ? ' de ' + t.visitas : '') + '</small></h2>' +
-      '<div class="buscar"><input id="vis-buscar" type="search" placeholder="Filtrar por ciudad, búsqueda, origen…" value="' + esc(buscaVis) + '"></div></div>' +
-      '<div class="tabla-wrap" id="vis-tabla"></div></div>';
+          '<small>' + x.personas + ' pers. · ' + (x.abiertas ? x.abiertas + ' abierta' + (x.abiertas === 1 ? '' : 's') : 'no la abrieron') + '</small></span></li>', 'Todavía no hay tarjetas vistas.', 40)) +
+    '</div>';
+  activarPlegables('vis');
   pintarVisitas();
   $('vis-buscar').oninput = (e) => { buscaVis = e.target.value; cuantasVis = 25; pintarVisitas(); };
 }
