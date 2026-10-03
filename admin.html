@@ -2501,5 +2501,90 @@ function vistaTipos(){
 
 iniciar();
 </script>
+<style>th.ord{cursor:pointer;user-select:none;-webkit-user-select:none;white-space:nowrap}th.ord::after{content:"↕";opacity:.3;margin-left:4px;font-size:11px}th.ord-asc::after{content:"▲";opacity:1}th.ord-desc::after{content:"▼";opacity:1}</style>
+<script>
+(function () {
+/* ---------------- tablas ordenables ----------------
+   Toca el encabezado de una columna para ordenar por ella; tócalo otra vez para invertir.
+   Montos, cantidades y fechas empiezan de mayor a menor (la fecha más reciente primero);
+   el texto, de la A a la Z. Lo vacío (—) siempre queda al final. El orden se recuerda.
+   Las listas largas registran su propio orden (ext) para ordenar todos sus datos, no solo lo visible. */
+const TablaOrden = (() => {
+  const LS = 'suin_orden_tablas';
+  let st = {}; try { st = JSON.parse(localStorage.getItem(LS)) || {}; } catch (e) { st = {}; }
+  const save = () => { try { localStorage.setItem(LS, JSON.stringify(st)); } catch (e) { /* sin almacenamiento */ } };
+  const ext = {};
+  const rxFecha = /^(\d{1,2})\/(\d{1,2})\/(\d{4}|\d{2})(?:[ ,]+(\d{1,2}):(\d{2})(?:\s*([ap])\.?\s?m\.?)?)?/i, rxIso = /^(\d{4})-(\d{2})-(\d{2})(?:[ T](\d{2}):(\d{2}))?/;
+  const rxNum = /^[-−+]?\s*(?:Bs\.?S?\s*)?\$?\s*[-−]?\d[\d.,]*/;
+  const MES = { ene: 1, feb: 2, mar: 3, abr: 4, may: 5, jun: 6, jul: 7, ago: 8, sep: 9, oct: 10, nov: 11, dic: 12 };
+  const rxCorta = /^(\d{1,2}) (ene|feb|mar|abr|may|jun|jul|ago|sep|oct|nov|dic)(?: (\d{4}))?/i;
+  const vacio = (t) => !t || /^[—–\-]+$/.test(t) || /^(s\/c|sin costo|sin precio)$/i.test(t);
+  const txtDe = (td) => !td ? '' : td.dataset.s != null ? String(td.dataset.s) : td.textContent.replace(/\s+/g, ' ').trim();
+  const aNum = (t) => {
+    const m = t.match(rxNum); if (!m) return NaN;
+    const raw = m[0].trim(), dolar = /\$/.test(raw), neg = /^[-−]/.test(raw) || /\$\s*[-−]/.test(raw);
+    let s = raw.replace(/[^\d.,]/g, '');
+    if (s.includes(',') && s.includes('.')) s = s.lastIndexOf(',') > s.lastIndexOf('.') ? s.replace(/\./g, '').replace(',', '.') : s.replace(/,/g, '');
+    else if (s.includes(',')) s = dolar && /^\d{1,3}(,\d{3})+$/.test(s) ? s.replace(/,/g, '') : s.replace(/\./g, '').replace(',', '.');
+    else if (s.includes('.') && !dolar && /^\d{1,3}(\.\d{3})+$/.test(s)) s = s.replace(/\./g, '');
+    const n = parseFloat(s); return isFinite(n) ? (neg ? -n : n) : NaN;
+  };
+  const aFecha = (t) => {
+    let m = t.match(rxFecha); if (m) { const y = +m[3] < 100 ? 2000 + +m[3] : +m[3]; let h = +m[4] || 0; if (m[6] && /p/i.test(m[6]) && h < 12) h += 12; if (m[6] && /a/i.test(m[6]) && h === 12) h = 0; return y * 1e8 + +m[2] * 1e6 + +m[1] * 1e4 + h * 100 + (+m[5] || 0); }
+    m = t.match(rxIso); if (m) return +m[1] * 1e8 + +m[2] * 1e6 + +m[3] * 1e4 + (+m[4] || 0) * 100 + (+m[5] || 0);
+    m = t.match(rxCorta); if (m) return (+(m[3] || new Date().getFullYear())) * 1e8 + MES[m[2].toLowerCase()] * 1e6 + +m[1] * 1e4;
+    return NaN;
+  };
+  const tipoTxt = (t) => vacio(t) ? '' : (rxFecha.test(t) || rxIso.test(t) || rxCorta.test(t)) ? 'd' : rxNum.test(t) ? 'n' : 's';
+  const filas = (t) => Array.from((t.tBodies[0] || { rows: [] }).rows);
+  const esSeparador = (tr) => tr.classList.contains('grp-h') || (tr.cells.length === 1 && tr.cells[0].colSpan > 1);
+  const tipoCol = (t, col) => {
+    const c = { d: 0, n: 0, s: 0 }; let k = 0;
+    for (const tr of filas(t)) { if (esSeparador(tr)) continue; const x = tipoTxt(txtDe(tr.cells[col])); if (x) { c[x]++; if (++k >= 40) break; } }
+    if (!k) return 's'; if (c.d >= k * 0.6) return 'd'; if (c.n + c.d >= k * 0.7) return 'n'; return 's';
+  };
+  const valor = (td, tipo) => { const t = txtDe(td); if (vacio(t)) return null; if (tipo === 'd') { const v = aFecha(t); return isNaN(v) ? null : v; } if (tipo === 'n') { const v = aNum(t); return isNaN(v) ? null : v; } return t.toLowerCase(); };
+  const cmp = (a, b, d) => { if (a == null && b == null) return 0; if (a == null) return 1; if (b == null) return -1; return (typeof a === 'number' && typeof b === 'number' ? a - b : String(a).localeCompare(String(b), 'es', { numeric: true, sensitivity: 'base' })) * d; };
+  const heads = (t) => t.tHead && t.tHead.rows[0] ? Array.from(t.tHead.rows[0].cells) : [];
+  let prefijo = () => '';
+  const clave = (t) => t.dataset.sort || (prefijo() + '|' + heads(t).map(th => th.textContent.trim()).join('·'));
+  const marcar = (t) => {
+    const s = st[clave(t)];
+    heads(t).forEach((th, i) => { if (!th.textContent.trim()) return; th.classList.add('ord'); th.classList.toggle('ord-asc', !!s && s.c === i && s.d > 0); th.classList.toggle('ord-desc', !!s && s.c === i && s.d < 0); if (!th.title) th.title = 'Ordenar'; });
+  };
+  const ordenarDom = (t) => {
+    const s = st[clave(t)]; if (!s) return; const tb = t.tBodies[0]; if (!tb) return;
+    const tipo = s.t || tipoCol(t, s.c);
+    const rows = filas(t); const grupos = [[null, []]];
+    rows.forEach(tr => { if (esSeparador(tr)) grupos.push([tr, []]); else grupos[grupos.length - 1][1].push(tr); });
+    const frag = document.createDocumentFragment();
+    grupos.forEach(([sep, rs]) => { if (sep) frag.appendChild(sep); rs.map((tr, i) => ({ tr, i, v: valor(tr.cells[s.c], tipo) })).sort((a, b) => cmp(a.v, b.v, s.d) || a.i - b.i).forEach(x => frag.appendChild(x.tr)); });
+    tb.appendChild(frag);
+  };
+  const preparar = (t) => { if (t.dataset.ord === '1') return; t.dataset.ord = '1'; marcar(t); if (!t.dataset.sort || !ext[t.dataset.sort]) ordenarDom(t); };
+  const escanear = () => document.querySelectorAll('table').forEach(t => { if (t.tHead && t.dataset.ord !== '1' && !t.classList.contains('no-orden')) preparar(t); });
+  let pend = false;
+  new MutationObserver(() => { if (pend) return; pend = true; Promise.resolve().then(() => { pend = false; escanear(); }); }).observe(document.documentElement, { childList: true, subtree: true });
+  document.addEventListener('click', (e) => {
+    const th = e.target.closest && e.target.closest('thead th'); if (!th || e.target.closest('input,select,button,a,label')) return;
+    const t = th.closest('table'); if (!t || t.classList.contains('no-orden') || !th.textContent.trim()) return;
+    const col = Array.from(th.parentElement.cells).indexOf(th); const k = clave(t); const cur = st[k];
+    const tipo = tipoCol(t, col);
+    st[k] = { c: col, d: cur && cur.c === col ? -cur.d : (tipo === 's' ? 1 : -1), t: tipo }; save();
+    if (t.dataset.sort && ext[t.dataset.sort]) { ext[t.dataset.sort](st[k]); return; }
+    marcar(t); ordenarDom(t);
+  });
+  return {
+    /* listas con datos propios: fn se llama al tocar un encabezado */
+    ext(id, fn) { ext[id] = fn; },
+    get(id) { return st[id] || null; },
+    clear(id) { delete st[id]; save(); },
+    set prefijo(fn) { prefijo = fn; },
+    cmp, aNum, aFecha
+  };
+})();
+
+})();
+</script>
 </body>
 </html>
