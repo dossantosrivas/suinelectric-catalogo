@@ -2071,6 +2071,23 @@ const pedidosPendientes = () => {
   return out.sort((a, b) => (a.d.fecha || '').localeCompare(b.d.fecha || ''));
 };
 const COLOR_O = { manuel: '#15803D', dist: '#1D4ED8', papa: '#C2410C', libre: '#64748B' };
+// Ventas de un documento por origen, con cada distribuidor por separado (claves 'manuel', 'papa', 'libre', 'dist|<id>').
+const porOrigenDet = (d) => {
+  const T = Calc.totals(d), f = T.sub ? T.base / T.sub : 1, out = {};
+  (d.items || []).forEach(it => {
+    const o = it.origen || 'libre'; const k = o === 'dist' ? 'dist|' + (itDist(it) || '') : o;
+    const g = out[k] || (out[k] = { venta: 0, costo: 0, gan: 0, sinCosto: false });
+    const imp = num(it.cant) * num(it.precio) * f; g.venta += imp;
+    const c = it.costo === '' || it.costo == null ? null : num(it.costo);
+    if (c == null){ if (o !== 'libre') g.sinCosto = true; } else g.costo += num(it.cant) * c;
+  });
+  Object.values(out).forEach(g => { g.gan = g.venta - g.costo; });
+  return out;
+};
+// Orden fijo: inventarios, cada distribuidor (en el orden de la lista), sin asignar y libre.
+const ordenOrigenes = (keys) => { const ds = Dists().map(x => 'dist|' + x.id); const rank = (k) => k === 'manuel' ? 0 : k === 'papa' ? 1 : k.startsWith('dist|') ? (ds.indexOf(k) < 0 ? 90 : 2 + ds.indexOf(k)) : 99; return keys.slice().sort((a, b) => rank(a) - rank(b)); };
+const TONOS_DIST = ['#1D4ED8', '#0891B2', '#7C3AED', '#0F766E', '#4338CA', '#0369A1', '#6D28D9'];
+const colorOrigen = (k) => { if (!k.startsWith('dist|')) return COLOR_O[k] || '#64748B'; const ds = Dists().map(x => 'dist|' + x.id); const i = ds.indexOf(k); return i < 0 ? '#94A3B8' : TONOS_DIST[i % TONOS_DIST.length]; };
 
 /* ---------------- Resumen ---------------- */
 Views.resumen = (v) => {
@@ -2078,7 +2095,7 @@ Views.resumen = (v) => {
   const docs = ventasActivas();
   const enPer = docs.filter(d => enPeriodo(d.fecha, F.per));
   let ventas = 0, gan = 0, sinCosto = 0; const porO = {};
-  enPer.forEach(d => { const T = Calc.totals(d); ventas += T.base; Object.entries(T.porOrigen).forEach(([o, g]) => { const x = porO[o] || (porO[o] = { venta: 0, costo: 0, gan: 0, sc: false, n: 0 }); x.venta += g.venta; x.costo += g.costo; x.gan += g.gan; x.sc = x.sc || g.sinCosto; }); if (T.sinCosto) sinCosto++; });
+  enPer.forEach(d => { const T = Calc.totals(d); ventas += T.base; Object.entries(porOrigenDet(d)).forEach(([o, g]) => { const x = porO[o] || (porO[o] = { venta: 0, costo: 0, gan: 0, sc: false, n: 0 }); x.venta += g.venta; x.costo += g.costo; x.gan += g.gan; x.sc = x.sc || g.sinCosto; }); if (T.sinCosto) sinCosto++; });
   Object.values(porO).forEach(x => gan += x.gan);
   const cobrar = docs.map(d => ({ d, T: Calc.totals(d) })).filter(x => x.T.saldo > 0.005).sort((a, b) => (a.d.fecha || '').localeCompare(b.d.fecha || ''));
   const totCobrar = cobrar.reduce((a, x) => a + x.T.saldo, 0);
@@ -2104,7 +2121,7 @@ Views.resumen = (v) => {
     <section class="panel"><div class="ph"><h2>Ventas por mes</h2><div class="act"><span class="muted small">últimos 12 meses, sin I.V.A.</span></div></div><div id="chart"></div></section>
     <section class="panel"><h2>Por origen · ${esc(perLabel)}</h2>
       ${Object.keys(porO).length ? `<table class="tbl"><thead><tr><th>Origen</th><th class="r">Ventas</th><th class="r">Ganancia</th><th class="r hm">Margen</th></tr></thead><tbody>
-      ${['manuel', 'papa', 'dist', 'libre'].filter(o => porO[o]).map(o => { const x = porO[o]; return `<tr><td>${ownTag(o)}</td><td class="num">${fmtUSD(x.venta)}</td><td class="num">${fmtUSD(x.gan)}${x.sc ? ' <span class="muted" title="Hay líneas sin costo">*</span>' : ''}</td><td class="num hm">${x.venta ? fmtNum(x.gan / x.venta * 100, 1) + '%' : '—'}</td></tr>`; }).join('')}
+      ${ordenOrigenes(Object.keys(porO)).map(o => { const x = porO[o]; const did = o.startsWith('dist|') ? o.slice(5) : ''; return `<tr${did ? ` class="click" data-dist="${esc(did)}" title="Ver la ficha del distribuidor"` : ''}><td>${tagOrigen(o)}</td><td class="num">${fmtUSD(x.venta)}</td><td class="num">${fmtUSD(x.gan)}${x.sc ? ' <span class="muted" title="Hay líneas sin costo">*</span>' : ''}</td><td class="num hm">${x.venta ? fmtNum(x.gan / x.venta * 100, 1) + '%' : '—'}</td></tr>`; }).join('')}
       </tbody></table>${Object.values(porO).some(x => x.sc) ? '<p class="muted small" style="margin:8px 0 0">* Hay líneas sin costo: su ganancia cuenta como el precio completo. Pon el descuento de cada distribuidor en su ficha (Distribuidores).</p>' : ''}` : '<div class="empty">Sin ventas en este período.</div>'}
     </section>
   </div>
@@ -2122,6 +2139,7 @@ Views.resumen = (v) => {
   $('[data-cobrar]', v).addEventListener('click', () => lsSet('suinadm_f_notaventa', Object.assign(lsGet('suinadm_f_notaventa', {}), { est: 'cobrar', per: 'todo' })));
   $$('[data-doc]', v).forEach(tr => tr.onclick = () => Route.nav('#/doc/' + tr.dataset.doc));
   $$('[data-emp]', v).forEach(tr => tr.onclick = () => Route.nav('#/empleado/' + tr.dataset.emp));
+  $$('[data-dist]', v).forEach(tr => tr.onclick = () => Route.nav('#/distribuidores/' + tr.dataset.dist));
   monthlyChart($('#chart', v), docs);
 };
 
@@ -2129,9 +2147,10 @@ Views.resumen = (v) => {
 function monthlyChart(host, docs) {
   const now = new Date(); const months = [];
   for (let i = 11; i >= 0; i--) { const d = new Date(now.getFullYear(), now.getMonth() - i, 1); months.push(`${d.getFullYear()}-${pad(d.getMonth() + 1)}`); }
-  const data = months.map(m => ({ m, o: { manuel: 0, dist: 0, papa: 0, libre: 0 }, gan: 0 }));
-  docs.forEach(d => { const k = (d.fecha || '').slice(0, 7); const row = data.find(x => x.m === k); if (!row) return; const T = Calc.totals(d); Object.entries(T.porOrigen).forEach(([o, g]) => { row.o[o] = (row.o[o] || 0) + g.venta; }); row.gan += T.gan; });
-  const order = ['manuel', 'dist', 'papa', 'libre'].filter(o => data.some(r => r.o[o] > 0));
+  const data = months.map(m => ({ m, o: {}, gan: 0 }));
+  docs.forEach(d => { const k = (d.fecha || '').slice(0, 7); const row = data.find(x => x.m === k); if (!row) return; const T = Calc.totals(d); Object.entries(porOrigenDet(d)).forEach(([o, g]) => { row.o[o] = (row.o[o] || 0) + g.venta; }); row.gan += T.gan; });
+  const order = ordenOrigenes([...new Set(data.flatMap(r => Object.keys(r.o)))].filter(o => data.some(r => r.o[o] > 0)));
+  data.forEach(r => order.forEach(o => { r.o[o] = r.o[o] || 0; }));
   const max = Math.max(1, ...data.map(r => order.reduce((a, o) => a + r.o[o], 0)));
   const step = (() => { const raw = max / 4; const p = Math.pow(10, Math.floor(Math.log10(raw))); const n = raw / p; return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10) * p; })();
   const top = step * Math.ceil(max / step);
@@ -2148,20 +2167,20 @@ function monthlyChart(host, docs) {
       const y0 = y(v0), y1 = y(v1); const h = Math.max(0, y0 - y1 - (j > 0 ? 2 : 0));
       const isTop = j === segs.length - 1, rr = isTop ? Math.min(4, h / 2) : 0;
       const yy = y1, bot = yy + h;
-      g += isTop && rr > 0 ? `<path d="M${x},${bot} V${yy + rr} Q${x},${yy} ${x + rr},${yy} H${x + bw - rr} Q${x + bw},${yy} ${x + bw},${yy + rr} V${bot} Z" fill="${COLOR_O[o]}"/>` : `<rect x="${x}" y="${yy}" width="${bw}" height="${h}" fill="${COLOR_O[o]}"/>`;
+      g += isTop && rr > 0 ? `<path d="M${x},${bot} V${yy + rr} Q${x},${yy} ${x + rr},${yy} H${x + bw - rr} Q${x + bw},${yy} ${x + bw},${yy + rr} V${bot} Z" fill="${colorOrigen(o)}"/>` : `<rect x="${x}" y="${yy}" width="${bw}" height="${h}" fill="${colorOrigen(o)}"/>`;
     });
     const [yy, mm] = r.m.split('-');
     g += `<text x="${L + i * cw + cw / 2}" y="${H - 8}" text-anchor="middle" font-size="11" fill="#5B6778">${mes[+mm - 1]}${mm === '01' || i === 0 ? ' ' + yy.slice(2) : ''}</text>`;
     g += `<rect x="${L + i * cw}" y="${T}" width="${cw}" height="${H - T - B}" fill="transparent" data-i="${i}"/>`;
   });
-  host.innerHTML = `<div class="legend">${order.map(o => `<span><i style="background:${COLOR_O[o]}"></i>${esc(origenNombre(o))}</span>`).join('')}</div>
+  host.innerHTML = `<div class="legend">${order.map(o => `<span><i style="background:${colorOrigen(o)}"></i>${esc(nombreOrigen(o))}</span>`).join('')}</div>
     <div class="chart"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Ventas por mes y origen">${g}</svg><div class="tip hide"></div></div>
-    <details style="margin-top:8px"><summary class="small muted" style="cursor:pointer">Ver como tabla</summary><table class="tbl" style="margin-top:6px"><thead><tr><th>Mes</th>${order.map(o => `<th class="r">${esc(origenNombre(o))}</th>`).join('')}<th class="r">Total</th></tr></thead><tbody>${data.slice().reverse().map(r => `<tr><td data-s="${r.m.replace('-', '')}">${r.m}</td>${order.map(o => `<td class="num">${fmtUSD0(r.o[o])}</td>`).join('')}<td class="num">${fmtUSD0(order.reduce((a, o) => a + r.o[o], 0))}</td></tr>`).join('')}</tbody></table></details>`;
+    <details style="margin-top:8px"><summary class="small muted" style="cursor:pointer">Ver como tabla</summary><table class="tbl" style="margin-top:6px"><thead><tr><th>Mes</th>${order.map(o => `<th class="r">${esc(nombreOrigen(o))}</th>`).join('')}<th class="r">Total</th></tr></thead><tbody>${data.slice().reverse().map(r => `<tr><td data-s="${r.m.replace('-', '')}">${r.m}</td>${order.map(o => `<td class="num">${fmtUSD0(r.o[o])}</td>`).join('')}<td class="num">${fmtUSD0(order.reduce((a, o) => a + r.o[o], 0))}</td></tr>`).join('')}</tbody></table></details>`;
   const svg = $('svg', host), tip = $('.tip', host);
   svg.addEventListener('mousemove', (e) => {
     const t = e.target.closest('[data-i]'); if (!t) { tip.classList.add('hide'); return; }
     const r = data[+t.dataset.i]; const [yy, mm] = r.m.split('-'); const tot = order.reduce((a, o) => a + r.o[o], 0);
-    tip.innerHTML = `<b>${mes[+mm - 1]} ${yy}</b><br>${order.map(o => `<span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${COLOR_O[o]};margin-right:6px"></span>${esc(origenNombre(o))}: <span class="num">${fmtUSD0(r.o[o])}</span>`).join('<br>')}<br>Total: <span class="num">${fmtUSD0(tot)}</span> · ganancia <span class="num">${fmtUSD0(r.gan)}</span>`;
+    tip.innerHTML = `<b>${mes[+mm - 1]} ${yy}</b><br>${order.map(o => `<span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${colorOrigen(o)};margin-right:6px"></span>${esc(nombreOrigen(o))}: <span class="num">${fmtUSD0(r.o[o])}</span>`).join('<br>')}<br>Total: <span class="num">${fmtUSD0(tot)}</span> · ganancia <span class="num">${fmtUSD0(r.gan)}</span>`;
     const box = host.querySelector('.chart').getBoundingClientRect(); const sb = t.getBoundingClientRect();
     tip.style.left = Math.min(Math.max(sb.left - box.left + sb.width / 2, 80), box.width - 80) + 'px'; tip.style.top = '20px'; tip.classList.remove('hide');
   });
@@ -2559,7 +2578,7 @@ const lineasPorOrigen = (d, acc) => {
   return acc;
 };
 const nombreOrigen = (k) => k.startsWith('dist|') ? distNombre(k.slice(5)) : origenNombre(k);
-const tagOrigen = (k) => k.startsWith('dist|') ? `<span class="own dist">${esc(distNombre(k.slice(5)))}</span>` : ownTag(k);
+const tagOrigen = (k) => k.startsWith('dist|') ? `<span class="own dist" style="--c:${colorOrigen(k)}">${esc(distNombre(k.slice(5)))}</span>` : ownTag(k);
 
 /* Lotes FIFO: cada compra al inventario es un lote; las ventas de ese inventario se comen los lotes
    del más viejo al más nuevo. Así se sabe cuánto se vendió de lo que compró cada quien. */
