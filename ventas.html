@@ -958,7 +958,8 @@ const Catalog = {
       src, m: String(p.modelo || p.sku || '').trim(), n: String(p.nombre || p.modelo || '').trim(), marca: String(p.marca || '').trim(),
       cat: String(p.categoria_principal || '').trim(), precio: typeof p.precio === 'number' ? p.precio : parseFloat(p.precio) || null,
       disp: p.disponible !== false, exist: p.existencias != null ? p.existencias : null, desc: String(p.descripcion || '').trim(), sku: String(p.sku || '').trim(), url: p.url || '',
-      subs: Array.isArray(p.subcategorias) ? p.subcategorias.filter(Boolean).map(String) : (p.subcategoria ? String(p.subcategoria).split(' > ').filter(Boolean) : [])
+      subs: Array.isArray(p.subcategorias) ? p.subcategorias.filter(Boolean).map(String) : (p.subcategoria ? String(p.subcategoria).split(' > ').filter(Boolean) : []),
+      img: String(p.imagen || (Array.isArray(p.imagenes) ? p.imagenes[0] || '' : '') || '')
     };
   },
   apply(docs, origen) {
@@ -991,7 +992,7 @@ const Catalog = {
       if (!r.ok) return [];
       const rows = await r.json();
       return (Array.isArray(rows) ? rows : []).map(x => ({ modelo: x.modelo, sku: x.modelo, nombre: x.nombre || x.modelo, marca: x.marca, categoria_principal: x.categoria_principal,
-        subcategorias: x.subcategorias || [], precio: x.precio, disponible: x.disponible !== false && x.existencias !== 0, existencias: x.existencias, descripcion: x.descripcion || '' }));
+        subcategorias: x.subcategorias || [], precio: x.precio, imagen: (x.imagenes || [])[0] || '', disponible: x.disponible !== false && x.existencias !== 0, existencias: x.existencias, descripcion: x.descripcion || '' }));
     } catch (e) { return []; }
   },
   async mezclarPanel() {
@@ -1992,7 +1993,7 @@ function docEditor(v, D, isNew) {
         if (it.productoId || !String(it.codigo || '').trim()) return;
         const ex = findProductoByCodigo(it.codigo);
         if (ex) { it.productoId = ex.id; return; }
-        const np = Object.assign({ id: uid('p_'), codigo: it.codigo.trim(), nombre: '', descripcion: '', marca: it.marca || '', categoria: '', unidad: 'UND', precio: 0, inv: {}, activo: true, notas: '' }, it.nuevoProd || {});
+        const np = Object.assign({ id: uid('p_'), codigo: it.codigo.trim(), nombre: '', descripcion: '', marca: it.marca || '', categoria: '', unidad: 'UND', precio: 0, inv: {}, activo: true, notas: '', tienda: 'borrador' }, it.nuevoProd || {});
         if (!np.nombre && !np.descripcion) np.nombre = plainFirst(it.desc).replace(/^Ref \/ Modelo:\s*/i, '').replace(it.codigo, '').replace(/^[\s—-]+/, '');
         np.inv[D.inventario] = { cant: 0, costo: 0 };
         Store.put('productos', np); it.productoId = np.id; delete it.nuevoProd;
@@ -2393,7 +2394,9 @@ Views.cliente = (v, id) => {
     Store.all('docs').filter(d => d.clienteId === c.id && d.cliente && d.cliente.nombre !== c.nombre && normKey(d.cliente.nombre) === normKey(nombreOrig)).forEach(d => { d.cliente.nombre = c.nombre; Store.put('docs', d, { quiet: true }); });
     nombreOrig = c.nombre;
     App.guard = null;
-    if (c.tiendaEmail) {
+    if (!c.tiendaEmail && c.correo && /@/.test(c.correo) && Sync.online()) {
+      Tienda.crear(c).then(r => { UI.toast(r.ok ? 'Cliente guardado aquí y creado en la tienda (lo ves en /admin)' : 'Cliente guardado (no se pudo crear en la tienda: ' + r.msg + ')', 3500); if (document.body.contains(v)) App.render(); });
+    } else if (c.tiendaEmail) {
       UI.toast('Guardando también en la tienda…');
       Tienda.guardar(c).then(r => { UI.toast(r.ok ? 'Cliente guardado aquí y en su cuenta de la tienda' : 'Guardado aquí, pero no en la tienda: ' + r.msg, 3500); if (document.body.contains(v)) App.render(); });
     } else { UI.toast('Cliente guardado'); App.render(); }
@@ -2418,7 +2421,7 @@ Views.inventario = (v, invArg) => {
   // ventas por producto (cantidad y última fecha)
   Calc.build(); const vend = new Map();
   Calc.movs.forEach((ms, pid) => { let q = 0, ult = ''; ms.forEach(x => { if (esVenta(x.doc) && x.doc.estado !== 'anulada') { q += -x.delta; if ((x.doc.fecha || '') > ult) ult = x.doc.fecha; } else if ((x.doc.fecha || '') > ult && x.doc.tipo === 'compra') { /* compras no cuentan como venta */ } }); vend.set(pid, { q, ult, mov: ms.reduce((a, x) => (x.doc.fecha || '') > a ? x.doc.fecha : a, '') }); });
-  v.innerHTML = `<div class="vh"><h1>Inventario</h1><div class="act"><button class="btn" data-csv>Exportar CSV</button><button class="btn pri" data-np>${ico('plus')} Producto</button></div><div class="sub">Las existencias se calculan con las compras, ventas y ajustes. Para corregir una, abre el producto.</div></div>
+  v.innerHTML = `<div class="vh"><h1>Inventario</h1><div class="act"><button class="btn" data-desc>Mejorar descripciones</button><button class="btn" data-csv>Exportar CSV</button><button class="btn pri" data-np>${ico('plus')} Producto</button></div><div class="sub">Las existencias se calculan con las compras, ventas y ajustes. Para corregir una, abre el producto.</div></div>
     <div class="row" style="margin-bottom:8px">
       <input class="inp" style="flex:1 1 260px" type="search" placeholder="Buscar: código, nombre, descripción, marca (varias palabras)" value="${esc(F.q)}" data-f="q">
       <div class="seg" data-seg>${[['', 'Ambos'], ['manuel', origenNombre('manuel')], ['papa', origenNombre('papa')]].map(([k, l]) => `<button type="button" data-v="${k}" class="${F.inv === k ? 'on' : ''}">${esc(l)}</button>`).join('')}</div>
@@ -2479,6 +2482,8 @@ Views.inventario = (v, invArg) => {
   $$('[data-f]', v).forEach(el => el.addEventListener(el.tagName === 'INPUT' ? 'input' : 'change', debounce(() => { F[el.dataset.f] = el.value; if (el.dataset.f === 'orden') { TablaOrden.clear('inventario1'); TablaOrden.clear('inventario2'); } if (el.dataset.f === 'q' && el.value && F.orden === 'codigo') { F.orden = 'relevancia'; const o = $('[data-f="orden"]', v); if (o) o.value = 'relevancia'; } F.lim = 0; paint(); }, 150)));
   $('[data-seg]', v).addEventListener('click', e => { const b = e.target.closest('[data-v]'); if (!b) return; F.inv = b.dataset.v; $$('[data-v]', v).forEach(x => x.classList.toggle('on', x === b)); if (invArg) Route.nav('#/inventario', { replace: true, silent: true }); paint(); });
   $('[data-np]', v).onclick = () => productoModal(null);
+  $('[data-desc]', v).onclick = () => descripcionesModal();
+  WebProd.cargar();
   $('[data-csv]', v).onclick = () => {
     const head = ['codigo', 'nombre', 'descripcion', 'marca', 'categoria', 'precio', 'exist_manuel', 'costo_manuel', 'exist_papa', 'costo_papa', 'vendidos'];
     const lines = [head.join(';')].concat(rowsCache.map(({ p, s, vd }) => [p.codigo, p.nombre, p.descripcion, p.marca, p.categoria, num(p.precio), s.manuel.cant, round2(s.manuel.costo), s.papa.cant, round2(s.papa.costo), vd.q].map(x => `"${String(x == null ? '' : x).replace(/"/g, '""').replace(/\n/g, ' ')}"`).join(';')));
@@ -2489,17 +2494,21 @@ Views.inventario = (v, invArg) => {
 
 function productoModal(p) {
   const isNew = !p;
-  p = p ? clone(p) : { id: uid('p_'), codigo: '', nombre: '', descripcion: '', marca: '', categoria: '', unidad: 'UND', precio: 0, inv: {}, activo: true, notas: '' };
+  p = p ? clone(p) : { id: uid('p_'), codigo: '', nombre: '', descripcion: '', marca: '', categoria: '', unidad: 'UND', precio: 0, inv: {}, activo: true, notas: '', tienda: 'borrador', imagenes: [] };
+  let fotos = (p.imagenes || []).slice();
+  const tiendaEst = WebProd.estado(p);
   const s = isNew ? { manuel: { cant: 0, costo: 0 }, papa: { cant: 0, costo: 0 } } : Calc.st(p.id);
   Calc.build(); const movs = (Calc.movs.get(p.id) || []).slice().sort((a, b) => (b.doc.fecha || '').localeCompare(a.doc.fecha || ''));
   const cats = Array.from(new Set(Store.all('productos').map(x => x.categoria).filter(Boolean))).sort();
   const cat = catalogoByCodigo(p.codigo);
+  const mc = MatchCat.de(p);
+  const marcasL = Array.from(new Set(Catalog.items.map(c => (c.marca || '').toUpperCase()).concat(Store.all('productos').map(x => (x.marca || '').toUpperCase())).filter(Boolean))).sort();
   const m = UI.modal({
     title: isNew ? 'Nuevo producto' : p.codigo, wide: true, body: `
     <div class="grid g3">
       <label class="fld"><span>Código / modelo</span><input class="inp mono" data-k="codigo" value="${esc(p.codigo)}"></label>
-      <label class="fld"><span>Marca</span><input class="inp" data-k="marca" value="${esc(p.marca || '')}"></label>
-      <label class="fld"><span>Categoría</span><input class="inp" data-k="categoria" value="${esc(p.categoria || '')}" list="dl-cat"></label>
+      <label class="fld"><span>Marca${WebProd.publicado(p) || tiendaEst === 'borrador' ? ' *' : ''}</span><input class="inp" data-k="marca" value="${esc(p.marca || '')}" list="dl-marcas"></label>
+      <label class="fld"><span>Grupo en tu inventario</span><input class="inp" data-k="categoria" value="${esc(p.categoria || '')}" list="dl-cat"></label>
       <label class="fld" style="grid-column:1/-1"><span>Nombre</span><input class="inp" data-k="nombre" value="${esc(p.nombre || '')}"></label>
       <label class="fld" style="grid-column:1/-1"><span>Descripción</span><textarea class="inp" data-k="descripcion" rows="3">${esc(p.descripcion || '')}</textarea></label>
       <label class="fld"><span>Precio de venta ($)</span><input class="inp num" inputmode="decimal" data-k="precio" value="${p.precio ? esc(p.precio) : ''}"></label>
@@ -2507,6 +2516,16 @@ function productoModal(p) {
       <label class="fld"><span>&nbsp;</span><label class="chk"><input type="checkbox" data-k="activo" ${p.activo !== false ? 'checked' : ''}> Activo</label></label>
     </div>
     <datalist id="dl-cat">${cats.map(c => `<option value="${esc(c)}">`).join('')}</datalist>
+    <datalist id="dl-marcas">${marcasL.map(c => `<option value="${esc(c)}">`).join('')}</datalist>
+    ${mc ? `<div class="row small" style="margin:8px 0 0"><span class="muted">En el catálogo (${esc(mc.como === 'texto' ? 'por texto: ' + mc.c.m : 'por ' + mc.como)}):</span> <b>${esc(mc.c.n || mc.c.m)}</b> <button type="button" class="btn sm" data-copcat>Copiar nombre, descripción, marca, categoría y foto</button></div>` : ''}
+    <div class="panel" style="margin-top:14px;padding:14px;background:var(--panel-2)">
+      <div class="ph" style="margin-bottom:8px"><h2 style="font-size:16px">En la tienda y en /admin</h2><div class="act"><div class="seg" data-tienda>${[['publicado', 'Publicado'], ['borrador', 'Borrador'], ['oculto', 'Oculto']].map(([k, l]) => `<button type="button" data-v="${k}" class="${tiendaEst === k ? 'on' : ''}">${l}</button>`).join('')}</div></div></div>
+      <p class="muted small" style="margin:0 0 10px">Publicado: sale en la tienda (si no tienes existencia, como <b>A pedido</b>). Borrador: lo ves en /admin → Productos para revisarlo, pero no sale en la tienda. Oculto: no sale en ningún lado de la tienda.</p>
+      <label class="fld"><span>Categoría en la tienda *</span><input class="inp" data-ruta value="${esc(WebProd.ruta(p).join(' › '))}" list="dl-rutas" placeholder="Escribe para buscar, ej. Contactores" autocomplete="off"></label>
+      <datalist id="dl-rutas">${WebProd.rutas().slice(0, 3000).map(([r, c]) => `<option value="${esc(r)}">${c} producto${c === 1 ? '' : 's'}</option>`).join('')}</datalist>
+      <div style="margin-top:10px"><span class="small muted">Fotos (hasta 8)</span><div class="row" data-fotos style="margin-top:6px"></div>
+        <div class="row" style="margin-top:6px"><label class="btn sm" style="cursor:pointer">Subir foto<input type="file" accept="image/*" multiple hidden data-subir></label><input class="inp" style="flex:1 1 220px" data-url placeholder="o pega el enlace de una foto (https://…)"><button type="button" class="btn sm" data-url-ok>Agregar</button></div></div>
+    </div>
     ${cat ? `<p class="small muted">En el catálogo del distribuidor: lista ${fmtUSD(cat.precio)} · venta web ${fmtUSD(precioWeb(cat))}${cat.exist != null ? ' · existencia ' + esc(cat.exist) : ''}</p>` : ''}
     <h3 style="font-size:17.5px;margin:18px 0 8px">Existencias</h3>
     <div class="grid g2">${['manuel', 'papa'].map(i => `<div class="panel" style="padding:12px"><div style="margin-bottom:8px">${ownTag(i)}</div><div class="grid g2">
@@ -2519,6 +2538,11 @@ function productoModal(p) {
       .concat([['Cancelar', '', c => c()], ['Guardar', 'pri', (close) => {
         $$('[data-k]', m.body).forEach(i => { const k = i.dataset.k; p[k] = i.type === 'checkbox' ? i.checked : k === 'precio' ? num(i.value) : i.value.trim(); });
         if (!p.codigo) { UI.toast('Escribe el código'); return; }
+        const partes = $('[data-ruta]', m.body).value.split(/\s*[›>]\s*/).map(x => x.trim()).filter(Boolean);
+        p.webCat = partes[0] || ''; p.webSubs = partes.slice(1); p.imagenes = fotos.slice(0, 8);
+        p.tienda = ($('[data-tienda] .on', m.body) || {}).dataset ? $('[data-tienda] .on', m.body).dataset.v : 'borrador';
+        if (p.marca) p.marca = p.marca.toUpperCase();
+        if (p.tienda === 'publicado' && WebProd.faltan(p).length) { UI.toast('Para publicarlo en la tienda falta ' + WebProd.faltan(p).join(' y '), 3500); return; }
         const dup = Store.all('productos').find(x => x.id !== p.id && normKey(x.codigo) === normKey(p.codigo)); if (dup) { UI.toast('Ya existe un producto con ese código'); return; }
         p.inv = p.inv || {}; const ajustes = [];
         ['manuel', 'papa'].forEach(i => {
@@ -2535,9 +2559,27 @@ function productoModal(p) {
           Store.put('docs', d);
         });
         UI.toast(ajustes.length ? 'Guardado y existencia ajustada' : 'Producto guardado'); close(); App.refresh();
+        WebProd.guardar(Store.get('productos', p.id) || p).then(r => { if (r.ok) UI.toast(p.tienda === 'publicado' ? 'Guardado también en la tienda y en /admin' : p.tienda === 'oculto' ? 'Guardado: oculto en la tienda' : 'Guardado como borrador en /admin → Productos', 3000); else if (r.msg) UI.toast('Guardado aquí; ' + r.msg, 4000); });
       }]])
   });
   $$('[data-doc]', m.body).forEach(tr => tr.onclick = () => { m.close(); Route.nav('#/doc/' + tr.dataset.doc); });
+  /* fotos y estado en la tienda */
+  const pintarFotos = () => { $('[data-fotos]', m.body).innerHTML = fotos.length ? fotos.map((u, i) => `<span style="position:relative;display:inline-block"><img src="${esc(u)}" alt="" style="width:72px;height:72px;object-fit:contain;border:1px solid var(--line);border-radius:6px;background:#fff"><button type="button" data-qf="${i}" title="Quitar" style="position:absolute;top:-6px;right:-6px;border:none;border-radius:50%;width:20px;height:20px;background:var(--red);color:#fff;font-size:12px;line-height:20px;padding:0">✕</button></span>`).join('') : '<span class="muted small">Sin fotos</span>';
+    $$('[data-qf]', m.body).forEach(b => b.onclick = () => { fotos.splice(+b.dataset.qf, 1); pintarFotos(); }); };
+  pintarFotos();
+  $('[data-tienda]', m.body).addEventListener('click', e => { const b = e.target.closest('[data-v]'); if (!b) return; $$('[data-tienda] [data-v]', m.body).forEach(x => x.classList.toggle('on', x === b)); });
+  $('[data-subir]', m.body).onchange = async (e) => {
+    const cod = $('[data-k="codigo"]', m.body).value.trim(); if (!cod) { UI.toast('Escribe primero el código'); return; }
+    for (const f of Array.from(e.target.files).slice(0, 8 - fotos.length)) { try { UI.toast('Subiendo ' + f.name + '…'); fotos.push(await WebProd.subirFoto(cod, f)); pintarFotos(); } catch (er) { UI.toast('No se pudo subir: ' + (er.message || er), 3500); } }
+    e.target.value = '';
+  };
+  $('[data-url-ok]', m.body).onclick = () => { const u = $('[data-url]', m.body).value.trim(); if (!/^https?:\/\/\S+$/i.test(u)) { UI.toast('Pega un enlace que empiece con https://'); return; } if (fotos.length >= 8) { UI.toast('Máximo 8 fotos'); return; } fotos.push(u); $('[data-url]', m.body).value = ''; pintarFotos(); };
+  const cc = $('[data-copcat]', m.body);
+  if (cc) cc.onclick = () => { const c = mc.c; const set = (k, v) => { const el = $(`[data-k="${k}"]`, m.body); if (el && v) el.value = v; };
+    if (c.n && c.n !== c.m) set('nombre', c.n); set('descripcion', c.desc); set('marca', (c.marca || '').toUpperCase());
+    if (c.cat) $('[data-ruta]', m.body).value = [c.cat].concat(c.subs || []).join(' › ');
+    if (c.img && !fotos.includes(c.img) && fotos.length < 8) { fotos.push(c.img); pintarFotos(); }
+    UI.toast('Copiado del catálogo: revisa y guarda'); };
 }
 
 /* ---------------- Distribuidores ---------------- */
@@ -3129,9 +3171,32 @@ const Tienda = (() => {
       });
       if (n) Bus.emit('data', 'clientes');
       ok = true; last = Date.now();
+      setTimeout(() => subirNuevos(), 50);
     } catch (e) { console.warn('Tienda', e); error = /permission|policy|denied|JWT/i.test(e.message || '') ? 'Sin permiso para leer los clientes de la tienda' : 'No se pudo leer la tienda'; ok = false; }
     loading = false; Bus.emit('tienda');
     return ok;
+  };
+
+  /* cliente creado en /ventas con correo → también en la tienda (así lo ves en /admin y,
+     cuando se registre con ese correo, su cuenta queda enlazada a esta ficha) */
+  const crear = async (c) => {
+    const s = sb(); const email = String(c.correo || '').trim().toLowerCase();
+    if (!s || !/^[^@\s]+@[^@\s]+\.[^@\s]+$/.test(email)) return { ok: false, msg: 'sin correo' };
+    const tp = tipos.find(x => normKey(x.nombre) === normKey(c.tipo) || x.id === c.tipo);
+    const empresa = !!(c.contacto && c.contacto.trim());
+    const fila = { email, nombre: (empresa ? c.contacto : c.nombre) || null, empresa: empresa ? c.nombre : null, rif: c.rif || null, telefono: c.telefono || null, direccion: c.direccion || null };
+    if (tp) fila.tipo_id = tp.id;
+    let { data, error: er } = await s.from('clientes').insert(fila).select().maybeSingle();
+    if (er && /duplicate|unique|already exists/i.test(er.message || '')) { const r = await s.from('clientes').select('*').eq('email', email).maybeSingle(); data = r.data; er = r.error; }
+    if (er || !data) { const r1 = Store.get('clientes', c.id); if (r1) { r1.tiendaError = Date.now(); Store.put('clientes', r1, { quiet: true }); } return { ok: false, msg: er ? er.message : 'no se pudo crear' }; }
+    const rec = Store.get('clientes', c.id) || c; Object.assign(rec, { tiendaEmail: email, tiendaModo: data.empresa ? 'empresa' : 'nombre', tiendaAct: data.actualizado, tiendaCreado: data.creado, tiendaActivo: data.activo !== false });
+    Store.put('clientes', rec, { quiet: true });
+    return { ok: true };
+  };
+  const subirNuevos = async () => {
+    const pend = Store.all('clientes').filter(c => !c.tiendaEmail && c.correo && /@/.test(c.correo) && !(c.tiendaError && Date.now() - c.tiendaError < 864e5));
+    for (const c of pend) { try { await crear(c); } catch (e) { /* sigue con el próximo */ } }
+    if (pend.length) Bus.emit('data', 'clientes');
   };
 
   /* ficha del panel → cuenta de la tienda */
@@ -3166,8 +3231,177 @@ const Tienda = (() => {
     const d = newDoc(tipo, { clienteId: c ? c.id : null, cliente: c ? docClienteSnap(c) : { nombre: p.cliente_email, rif: '', direccion: '', extras: [] }, items, pedidoWeb: p.id, notas: [p.nota_cliente ? 'Nota del cliente: ' + p.nota_cliente : '', `Pedido web #${p.id}`].filter(Boolean).join('\n') });
     App.pendingDoc = d; App.pendingEditor = true; Route.nav('#/nuevo/' + tipo);
   };
-  return { cargar, guardar, pedidosDe, cambiarEstado, aDocumento, get tipos() { return tipos; }, get error() { return error; }, get ok() { return ok; } };
+  return { cargar, guardar, crear, pedidosDe, cambiarEstado, aDocumento, get tipos() { return tipos; }, get error() { return error; }, get ok() { return ok; } };
 })();
+/* =====================================================================
+   PRODUCTOS: /ventas ⇄ /admin ⇄ /tienda (tabla productos_web, la de /admin → Productos)
+   - Lo público (nombre, marca, categoría de la tienda, descripción, precio, fotos, publicado/borrador)
+     vive en productos_web: /admin lo edita, la tienda lo muestra, /ventas lo lee y lo escribe.
+   - Lo privado (existencia, costos, dueño) sigue solo en /ventas.
+   - Un producto nuevo hecho en /ventas nace como BORRADOR: no sale en la tienda hasta publicarlo.
+   - Se compara por modelo (sin guiones, espacios ni mayúsculas). Si se edita en dos lados, gana lo más reciente.
+   ===================================================================== */
+const WebProd = (() => {
+  let ocultos = new Set(), last = 0, loading = false, error = '', filas = 0;
+  const sb = () => Sync.online() ? Sync.sb : null;
+  const estado = (p) => p.tienda || 'publicado';           // los que ya tenías antes de esto: publicados (como hasta ahora)
+  const publicado = (p) => estado(p) === 'publicado';
+  const ruta = (p) => [p.webCat || '', ...(p.webSubs || [])].filter(Boolean);
+  const faltan = (p) => [!String(p.marca || '').trim() && 'marca', !p.webCat && 'categoría de la tienda'].filter(Boolean);
+  const cargar = async ({ force } = {}) => {
+    const s = sb(); if (!s || loading) return false;
+    if (!force && Date.now() - last < 120000) return true;
+    loading = true; error = '';
+    try {
+      const [rw, ro] = await Promise.all([s.from('productos_web').select('*'), s.from('productos_ocultos').select('modelo')]);
+      if (rw.error) throw rw.error;
+      ocultos = new Set((ro.data || []).map(x => normKey(x.modelo)));
+      const porClave = new Map(Store.all('productos').map(p => [normKey(p.codigo), p]));
+      let n = 0;
+      (rw.data || []).forEach(r => {
+        const k = normKey(r.modelo); if (!k) return;
+        const cur = porClave.get(k);
+        if (cur && cur.webAct && r.actualizado && r.actualizado <= cur.webAct) return;     // ya estaba al día
+        const p = cur ? clone(cur) : { id: 'p_web_' + k, codigo: r.modelo, unidad: 'UND', inv: {}, activo: true, notas: '', deWeb: true };
+        Object.assign(p, {
+          nombre: r.nombre || p.nombre || '', marca: r.marca || p.marca || '', descripcion: r.descripcion || p.descripcion || '',
+          webCat: r.categoria_principal || '', webSubs: r.subcategorias || [], imagenes: r.imagenes || [],
+          precio: r.precio != null ? num(r.precio) : num(p.precio), tienda: r.activo ? 'publicado' : 'borrador', webAct: r.actualizado
+        });
+        if (!p.categoria) p.categoria = r.categoria_principal || '';
+        Store.put('productos', p, { quiet: true }); n++;
+      });
+      Store.all('productos').forEach(p => {
+        const oc = ocultos.has(normKey(p.codigo));
+        if (oc && estado(p) !== 'oculto') { p.tiendaAntes = estado(p); p.tienda = 'oculto'; p.ocultoWeb = true; Store.put('productos', p, { quiet: true }); n++; }
+        else if (!oc && estado(p) === 'oculto' && p.ocultoWeb) { p.tienda = p.tiendaAntes || 'publicado'; delete p.ocultoWeb; Store.put('productos', p, { quiet: true }); n++; }
+      });
+      filas = (rw.data || []).length;
+      if (n) Bus.emit('data', 'productos');
+      last = Date.now();
+    } catch (e) { console.warn('Productos web', e); error = /productos_web|schema cache|does not exist/i.test(e.message || '') ? 'Falta instalar "Productos" (14_productos_web.sql) en Supabase' : 'No se pudo leer los productos de la tienda'; }
+    loading = false; Bus.emit('tienda');
+    return !error;
+  };
+  /* ficha de /ventas → productos_web (y productos_ocultos) */
+  const guardar = async (p) => {
+    const s = sb(); if (!s) return { ok: false, msg: 'sin conexión: se guardó solo aquí' };
+    const out = { ok: true, msg: '' };
+    const oc = estado(p) === 'oculto';
+    try {
+      if (oc) await s.from('productos_ocultos').upsert({ modelo: String(p.codigo).trim() }, { onConflict: 'modelo' });
+      else if (ocultos.has(normKey(p.codigo))) { await s.from('productos_ocultos').delete().eq('modelo', String(p.codigo).trim()); ocultos.delete(normKey(p.codigo)); }
+    } catch (e) { /* tabla de ocultos opcional */ }
+    if (oc) { ocultos.add(normKey(p.codigo)); const r0 = Store.get('productos', p.id); if (r0 && !r0.ocultoWeb) { r0.ocultoWeb = true; Store.put('productos', r0, { quiet: true }); } }
+    const falta = faltan(p);
+    if (falta.length) return { ok: false, msg: 'falta ' + falta.join(' y ') + ' para que aparezca en /admin y en la tienda' };
+    const d = { modelo: String(p.codigo).trim(), nombre: (p.nombre && p.nombre !== p.codigo ? p.nombre : null), marca: String(p.marca).trim().toUpperCase(),
+      categoria_principal: p.webCat, subcategorias: p.webSubs || [], descripcion: p.descripcion || null, precio: num(p.precio) > 0 ? num(p.precio) : null,
+      disponible: true, imagenes: (p.imagenes || []).slice(0, 8), activo: estado(p) === 'publicado' };
+    const { data, error: er } = await s.from('productos_web').upsert(d, { onConflict: 'modelo' }).select().maybeSingle();
+    if (er) return { ok: false, msg: er.message };
+    const rec = Store.get('productos', p.id); if (rec && data) { rec.webAct = data.actualizado; Store.put('productos', rec, { quiet: true }); }
+    return out;
+  };
+  /* fotos: el mismo almacén que usa /admin */
+  const foto = (file) => new Promise((res, rej) => {
+    const img = new Image(), url = URL.createObjectURL(file);
+    img.onload = () => { const k = Math.min(1, 1200 / Math.max(img.width, img.height)); const c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+      const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); x.drawImage(img, 0, 0, c.width, c.height); URL.revokeObjectURL(url);
+      c.toBlob(b => b ? res(b) : rej(new Error('No se pudo leer la foto')), 'image/jpeg', 0.86); };
+    img.onerror = () => { URL.revokeObjectURL(url); rej(new Error('Ese archivo no es una imagen')); };
+    img.src = url;
+  });
+  const subirFoto = async (modelo, file) => {
+    const s = sb(); if (!s) throw new Error('Inicia sesión para subir fotos');
+    const blob = await foto(file);
+    const slug = String(modelo).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'x';
+    const path = slug + '/' + Date.now() + '-' + Math.random().toString(36).slice(2, 6) + '.jpg';
+    const { error: er } = await s.storage.from('productos').upload(path, blob, { contentType: 'image/jpeg', upsert: false, cacheControl: '31536000' });
+    if (er) throw er;
+    return s.storage.from('productos').getPublicUrl(path).data.publicUrl;
+  };
+  /* rutas de categorías que ya existen en la tienda (para elegir) */
+  const rutas = () => {
+    const m = new Map();
+    Catalog.items.forEach(c => { if (!c.cat) return; const r = [c.cat].concat(c.subs || []).join(' › '); m.set(r, (m.get(r) || 0) + 1); });
+    Store.all('productos').forEach(p => { const r = ruta(p).join(' › '); if (r) m.set(r, (m.get(r) || 0) + 1); });
+    return Array.from(m.entries()).sort((a, b) => a[0].localeCompare(b[0]));
+  };
+  return { cargar, guardar, subirFoto, rutas, ruta, faltan, estado, publicado, get error() { return error; } };
+})();
+
+/* ---------------- tu producto ↔ catálogo (scraping, manuales o /admin) ---------------- */
+const MatchCat = (() => {
+  let idx = null, n = -1;
+  const build = () => {
+    if (idx && n === Catalog.items.length) return idx;
+    const mod = new Map(), sku = new Map();
+    Catalog.items.forEach(c => { const k = normKey(c.m); if (k && !mod.has(k)) mod.set(k, c); const s2 = normKey(c.sku); if (s2 && s2.length >= 8 && !sku.has(s2)) sku.set(s2, c); });
+    idx = { mod, sku }; n = Catalog.items.length; return idx;
+  };
+  /* devuelve { c, como: 'modelo' | 'código de barras' | 'texto' } o null */
+  const de = (p) => {
+    const { mod, sku } = build(); const k = normKey(p.codigo);
+    if (k && mod.has(k)) return { c: mod.get(k), como: 'modelo' };
+    if (k && sku.has(k)) return { c: sku.get(k), como: 'código de barras' };
+    const toks = String((p.codigo || '') + ' ' + (p.nombre || '') + ' ' + (p.descripcion || '')).match(/[A-Za-z0-9][A-Za-z0-9\-./]{4,}/g) || [];
+    for (const t of toks) { const kk = normKey(t); if (kk.length >= 6 && /\d/.test(kk) && /[a-z]/.test(kk) && mod.has(kk)) return { c: mod.get(kk), como: 'texto' }; }
+    return null;
+  };
+  return { de };
+})();
+/* ¿la descripción actual está vacía, muy corta o mal escrita? */
+const descFloja = (t) => {
+  t = String(t || '').trim(); if (t.length < 15) return true;
+  if (/[�?]{1}/.test(t.replace(/\?\s/g, ''))) return true;
+  const letras = t.replace(/[^A-Za-zÁÉÍÓÚÑáéíóúñ]/g, ''); if (letras.length > 10 && letras.replace(/[^a-záéíóúñ]/g, '').length / letras.length < 0.15) return true;   // todo en mayúsculas (Mi Negocio)
+  return false;
+};
+function descripcionesModal() {
+  if (!Catalog.items.length) { UI.toast('El catálogo aún se está cargando; intenta en unos segundos'); Catalog.refresh(); return; }
+  const filas = Store.all('productos').map(p => ({ p, m: MatchCat.de(p) })).filter(x => x.m && (x.m.c.desc || (x.m.c.n && x.m.c.n !== x.m.c.m)))
+    .map(x => { const c = x.m.c; const nuevaDesc = c.desc || '';
+      const corto = (t) => { t = String(t || '').replace(/\s+/g, ' ').trim(); if (t.length <= 90) return t; const u = t.slice(0, 90); return u.slice(0, Math.max(40, u.lastIndexOf(' '))).replace(/[,;:\-–—\s]+$/, '').replace(/(\s+(en|de|del|para|con|y|a|la|el|los|las|por|o|u|sin|al))+$/i, ''); };
+      const nuevoNombre = c.n && c.n !== c.m ? c.n : (c.desc && descFloja(x.p.nombre) ? corto(c.desc) : '');
+      const cambia = (nuevaDesc && nuevaDesc !== x.p.descripcion) || (nuevoNombre && nuevoNombre !== x.p.nombre);
+      return Object.assign(x, { nuevaDesc, nuevoNombre, cambia, sugerida: x.m.como !== 'texto' && (descFloja(x.p.descripcion) || descFloja(x.p.nombre)) }); })
+    .filter(x => x.cambia).sort((a, b) => (b.sugerida - a.sugerida) || a.p.codigo.localeCompare(b.p.codigo));
+  const sinMatch = Store.all('productos').filter(p => !MatchCat.de(p) && descFloja(p.descripcion)).length;
+  const F = { ver: 'sugeridas' };
+  const sel = new Set(filas.filter(x => x.sugerida).map(x => x.p.id));
+  const m = UI.modal({ title: 'Mejorar descripciones con el catálogo', wide: true, body: `<p class="small" style="margin-top:0">Busqué cada producto de tu inventario en el catálogo (scraping, productos manuales y /admin) por <b>modelo</b>, <b>código de barras</b> o el <b>modelo escrito en su nombre</b>. Vienen marcados los que hoy no tienen descripción, la tienen muy corta o en mayúsculas de Mi Negocio. Revisa y aplica.</p>
+      <div class="row" style="margin-bottom:10px"><div class="seg" data-ver><button type="button" data-v="sugeridas" class="on">Sugeridas (${filas.filter(x => x.sugerida).length})</button><button type="button" data-v="todas">Todas las coincidencias (${filas.length})</button></div>
+      <button class="btn sm" data-all>Marcar todas las visibles</button><button class="btn sm ghost" data-none>Desmarcar</button><span class="muted small" data-cnt></span></div>
+      <div data-l style="max-height:58vh;overflow:auto"></div>
+      ${sinMatch ? `<p class="muted small" style="margin:10px 0 0">${sinMatch} productos con descripción floja no aparecen en ningún catálogo: esos hay que corregirlos a mano en su ficha.</p>` : ''}`,
+    foot: [['Cancelar', '', c => c()], ['Aplicar a los marcados', 'pri', (close) => {
+      let n = 0;
+      filas.forEach(x => { if (!sel.has(x.p.id)) return; const p = Store.get('productos', x.p.id); if (!p) return;
+        if (x.nuevaDesc) p.descripcion = x.nuevaDesc;
+        if (x.nuevoNombre && (!p.nombre || descFloja(p.nombre) || p.nombre === p.codigo)) p.nombre = x.nuevoNombre;
+        const c = x.m.c; if (!p.marca && c.marca) p.marca = c.marca;
+        if (!p.webCat && c.cat) { p.webCat = c.cat; p.webSubs = (c.subs || []).slice(); }
+        if ((!p.imagenes || !p.imagenes.length) && c.img) p.imagenes = [c.img];
+        p.descDe = x.m.como; Store.put('productos', p, { quiet: true }); n++; });
+      Bus.emit('data', 'productos'); close(); UI.toast(`Descripciones actualizadas en ${n} productos`, 3500); App.render();
+    }]] });
+  const paint = () => {
+    const vis = F.ver === 'todas' ? filas : filas.filter(x => x.sugerida);
+    $('[data-l]', m.body).innerHTML = vis.length ? vis.map(x => `<label class="panel" style="display:grid;grid-template-columns:24px minmax(0,1fr) minmax(0,1fr);gap:12px;padding:10px 12px;margin-bottom:8px;cursor:pointer;align-items:start">
+        <input type="checkbox" data-id="${esc(x.p.id)}" ${sel.has(x.p.id) ? 'checked' : ''} style="margin-top:4px">
+        <div><span class="code">${esc(x.p.codigo)}</span> <span class="muted small">ahora</span><div class="small">${esc(x.p.nombre || '')}</div><div class="small muted clip">${esc(x.p.descripcion || '— sin descripción —')}</div></div>
+        <div><span class="pill ${x.m.como === 'texto' ? 'warn' : 'ok'}" title="Cómo se encontró">${esc(x.m.como === 'texto' ? 'por texto: ' + x.m.c.m : 'por ' + x.m.como)}</span> <span class="muted small">${esc(x.m.c.marca || '')}</span><div class="small">${esc(x.nuevoNombre || '')}</div><div class="small clip">${esc(x.nuevaDesc)}</div></div></label>`).join('')
+      : '<div class="empty">No hay sugerencias: tus descripciones ya coinciden con el catálogo.</div>';
+    $('[data-cnt]', m.body).textContent = `${sel.size} marcadas`;
+    $$('[data-id]', m.body).forEach(i => i.onchange = () => { if (i.checked) sel.add(i.dataset.id); else sel.delete(i.dataset.id); $('[data-cnt]', m.body).textContent = `${sel.size} marcadas`; });
+  };
+  $('[data-ver]', m.body).addEventListener('click', e => { const b = e.target.closest('[data-v]'); if (!b) return; F.ver = b.dataset.v; $$('[data-ver] [data-v]', m.body).forEach(x => x.classList.toggle('on', x === b)); paint(); });
+  $('[data-all]', m.body).onclick = () => { (F.ver === 'todas' ? filas : filas.filter(x => x.sugerida)).forEach(x => sel.add(x.p.id)); paint(); };
+  $('[data-none]', m.body).onclick = () => { sel.clear(); paint(); };
+  paint();
+}
+
 const ESTADOS_PEDIDO = { enviado: ['Nuevo', 'warn'], cotizado: ['Cotizado', 'info'], aprobado: ['Aprobado', 'info'], pagado: ['Pagado', 'ok'], entregado: ['Entregado', 'ok'], cancelado: ['Cancelado', 'bad'] };
 
 /* =====================================================================
@@ -4030,11 +4264,15 @@ function aplicarFixCostos() {
 const InvWeb = {
   ultimo: lsGet('suinadm_invweb', ''), corriendo: false, falta: false,
   datos() {
-    return Store.all('productos').filter(p => p.activo !== false && String(p.codigo || '').trim()).map(p => {
+    /* Solo lo publicado (los borradores y ocultos no salen) y solo productos tuyos de verdad
+       (con existencia o historial en tu inventario). Sin existencia se publican igual: la tienda
+       los muestra "A pedido" (16_inventario_a_pedido.sql). */
+    Calc.build();
+    return Store.all('productos').filter(p => p.activo !== false && String(p.codigo || '').trim() && WebProd.publicado(p) && (Object.keys(p.inv || {}).length || (Calc.movs.get(p.id) || []).length)).map(p => {
       const s = Calc.st(p.id);
       const cant = Math.max(0, num(s.manuel.cant)) + Math.max(0, num(s.papa.cant));
-      return { modelo: String(p.codigo).trim(), marca: p.marca || '', nombre: p.nombre && p.nombre !== p.codigo ? p.nombre : '', descripcion: p.descripcion || '', categoria: p.categoria || '', precio: num(p.precio) > 0 ? num(p.precio) : null, cantidad: Math.floor(cant) };
-    }).filter(x => x.cantidad >= 1).sort((a, b) => a.modelo.localeCompare(b.modelo));
+      return { modelo: String(p.codigo).trim(), marca: p.marca || '', nombre: p.nombre && p.nombre !== p.codigo ? p.nombre : '', descripcion: p.descripcion || '', categoria: p.webCat || p.categoria || '', precio: num(p.precio) > 0 ? num(p.precio) : null, cantidad: Math.floor(cant) };
+    }).filter(x => x.cantidad >= 0).sort((a, b) => a.modelo.localeCompare(b.modelo));
   },
   async publicar() {
     if (this.corriendo || this.falta || !Sync.online() || !Store.ready || Pend.size) return;
@@ -4072,7 +4310,8 @@ Bus.on('sync', () => { if (Sync.state === 'ok') InvWeb.programar(); });
   setTimeout(() => { if (!document.querySelector('.ov')) Yo.check(); }, 1200);
   if (CFG().nubeCotizador && !localStorage.getItem('suin_nube_v1')) localStorage.setItem('suin_nube_v1', CFG().nubeCotizador);
   Cot.sync(); Cot.pullDrive();
-  setTimeout(() => Tienda.cargar(), 1500); setInterval(() => { if (document.visibilityState === 'visible') Tienda.cargar(); }, 180000);
+  setTimeout(() => Tienda.cargar(), 1500); setTimeout(() => WebProd.cargar(), 2500);
+  setInterval(() => { if (document.visibilityState === 'visible') WebProd.cargar(); }, 300000); setInterval(() => { if (document.visibilityState === 'visible') Tienda.cargar(); }, 180000);
   Bus.on('remote', () => setTimeout(() => Cot.sync(), 200));
   if (Sync.sb && !Sync.user) showLogin();
   if (Sync.sb && typeof Sync.sb.auth.onAuthStateChange === 'function') Sync.sb.auth.onAuthStateChange((ev, ses) => { if (ev === 'SIGNED_IN' && ses && !Sync.online()) { Sync.user = ses.user; if (App.loginDone) App.loginDone(); } });

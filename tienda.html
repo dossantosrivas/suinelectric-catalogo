@@ -1301,6 +1301,7 @@ function textoStock(p, siAgotado){
   if (!p.disponible) return siAgotado || 'Agotado';
   const real = cantidadReal(p);
   if (real != null && real > 0) return real + ' disponible' + (real === 1 ? '' : 's');
+  if (p.stock === 'pedido') return 'A pedido';   // tu producto sin existencia (16_inventario_a_pedido.sql)
   let rango = p.stock;
   if (!rango && p.existencias != null && !isNaN(Number(p.existencias)) && Number(p.existencias) > 0)
     rango = Number(p.existencias) > 10 ? '+10' : 'pocas';   // respaldo (catálogo viejo)
@@ -2918,8 +2919,22 @@ function claveModelo(m){ return normalizarBusqueda(m).replace(/[^a-z0-9]/g, '');
 function esDeInventario(p){ return !!(p && p._inv); }
 function unirInventario(lista, inventario, ocultos){
   if (!inventario.length) return lista;
-  const inv = new Map(), ocultosClave = new Set([...ocultos].map(claveModelo));
-  for (const r of inventario){ const k = claveModelo(r.modelo); if (k && !ocultosClave.has(k)) inv.set(k, r); }
+  const inv = new Map(), pedido = new Map(), ocultosClave = new Set([...ocultos].map(claveModelo));
+  // "pedido" = tuyo pero sin existencia: si el producto ya está en la tienda (distribuidor o panel) se deja
+  // tal cual, con su disponibilidad; si solo lo tienes tú, se agrega como "A pedido".
+  for (const r of inventario){ const k = claveModelo(r.modelo); if (!k || ocultosClave.has(k)) continue; (r.stock === 'pedido' ? pedido : inv).set(k, r); }
+  if (pedido.size){
+    const enLista = new Set(lista.map(p => claveModelo(p.modelo)));
+    for (const [k, r] of pedido){
+      if (enLista.has(k) || inv.has(k)) continue;
+      const cat = r.categoria || r.marca || 'Inventario';
+      const p = { modelo: r.modelo, sku: r.modelo, nombre: r.nombre || r.modelo, marca: String(r.marca || '').toUpperCase(), descripcion: r.descripcion || '',
+        categoria_principal: cat, subcategorias: [], subcategoria: '', categoria: [cat, r.modelo].join(' > '), categorias: [cat, r.modelo],
+        disponible: true, stock: 'pedido', _inv: true, _invClave: k, _manual: true };
+      if (r.precio != null && Number(r.precio) > 0) p.precio = Number(r.precio);
+      lista = lista.concat([p]);
+    }
+  }
   if (!inv.size) return lista;
   const elegido = new Map();   // clave -> índice del producto de la tienda que se queda
   const puntos = (p) => (p._manual ? 2 : 0) + (p.imagen ? 1 : 0);
