@@ -135,6 +135,38 @@ async function enParalelo(tareas, n){
   await Promise.all(Array.from({ length: n }, trabajador));
 }
 
+/* ---------- Productos del panel (14_productos_web.sql) ----------
+   Los que agregas o corriges en el panel → Productos, y los modelos ocultos.
+   Usa los mismos secrets que subir-existencias.js; si faltan o Supabase no
+   responde, se sigue solo con los archivos (la tienda igual los lee al instante). */
+async function traerDelPanel(){
+  const url = (process.env.SUPABASE_URL || '').replace(/\/+$/, '');
+  const clave = process.env.SUPABASE_SECRET_KEY || process.env.SUPABASE_SERVICE_KEY || '';
+  if (!url || !clave){ console.log('Productos del panel: sin SUPABASE_URL/SUPABASE_SECRET_KEY, se omiten.'); return { web: [], ocultos: [] }; }
+  const h = { apikey: clave };
+  if (!clave.startsWith('sb_')) h.Authorization = 'Bearer ' + clave;
+  const pedir = async (q) => { const r = await fetch(url + '/rest/v1/' + q, { headers: h }); if (!r.ok) throw new Error(q.split('?')[0] + ' ' + r.status); return r.json(); };
+  try {
+    const [web, ocultos] = await Promise.all([pedir('productos_web?select=*&activo=eq.true'), pedir('productos_ocultos?select=modelo')]);
+    console.log('Productos del panel: ' + web.length + ' publicados · ' + ocultos.length + ' modelos ocultos');
+    return { web, ocultos: ocultos.map(x => x.modelo) };
+  } catch (e){
+    console.log('Productos del panel: no se pudieron leer (' + e.message + '). ¿Ya corriste 14_productos_web.sql?');
+    return { web: [], ocultos: [] };
+  }
+}
+// Mismo formato que productos_manuales.json
+function formaManualDePanel(r){
+  const subs = (r.subcategorias || []).filter(Boolean);
+  const cats = [r.categoria_principal].concat(subs);
+  const imgs = (r.imagenes || []).filter(Boolean);
+  return { modelo: r.modelo, nombre: r.nombre || r.modelo, sku: r.modelo, marca: r.marca,
+    categoria_principal: r.categoria_principal, subcategorias: subs, subcategoria: subs.join(' > '),
+    categoria: cats.concat(r.modelo).join(' > '), categorias: cats.concat(r.modelo),
+    precio: r.precio == null ? null : Number(r.precio), disponible: r.disponible !== false && r.existencias !== 0,
+    existencias: r.existencias, descripcion: r.descripcion || '', imagen: imgs[0] || null, imagenes: imgs };
+}
+
 /* ---------- Principal ---------- */
 (async () => {
   const scraper = leer('productos.json');
@@ -142,8 +174,15 @@ async function enParalelo(tareas, n){
   try { manuales = (leer('productos_manuales.json').productos || []).filter(p => p.modelo && p.modelo !== 'EJEMPLO-BORRAR'); }
   catch (e) { console.log('productos_manuales.json no se pudo leer; sigo sin manuales.'); }
 
-  const listaScraper = (scraper.productos || []).filter(p => p.modelo).map(reducir);
-  const listaManuales = manuales.map(reducir);
+  const panel = await traerDelPanel();
+  const ocultos = new Set(panel.ocultos);
+  const delPanel = panel.web.map(formaManualDePanel);
+  const setPanel = new Set(delPanel.map(p => p.modelo));
+  manuales = delPanel.concat(manuales.filter(p => !setPanel.has(p.modelo)));      // lo del panel gana
+
+  const listaScraper = (scraper.productos || []).filter(p => p.modelo && !ocultos.has(p.modelo)).map(reducir);
+  const listaManuales = manuales.filter(p => !ocultos.has(p.modelo)).map(reducir);
+  if (ocultos.size) console.log('Ocultos (no salen en la web): ' + ocultos.size);
   const todos = listaManuales.concat(listaScraper);
 
   // 1) Reunir todas las fotos externas y decidir su archivo propio

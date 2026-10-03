@@ -2866,6 +2866,34 @@ async function traerCatalogo(silencioso){
   return { data, manuales };
 }
 
+// Productos agregados o corregidos desde el panel (14_productos_web.sql) y modelos ocultos.
+// Se leen de Supabase en cada carga, así un producto nuevo aparece al instante
+// (cada noche además se pasan al catálogo fijo). Si Supabase no responde en 4 s,
+// la tienda sigue con lo de siempre.
+function formaTiendaDePanel(r){
+  const subs = (r.subcategorias || []).filter(Boolean);
+  const cats = [r.categoria_principal].concat(subs);
+  const imgs = (r.imagenes || []).filter(Boolean);
+  const p = { modelo: r.modelo, nombre: r.nombre || r.modelo, marca: r.marca, sku: r.modelo,
+    disponible: r.disponible !== false && r.existencias !== 0, descripcion: r.descripcion || '',
+    categoria: cats.concat(r.modelo).join(' > '), categoria_principal: r.categoria_principal,
+    categorias: cats.concat(r.modelo), subcategoria: subs.join(' > '), subcategorias: subs, _panel: true };
+  if (r.precio != null) p.precio = Number(r.precio);
+  if (imgs.length){ p.imagen = imgs[0]; p.imagenes = imgs; }
+  const n = Number(r.existencias);
+  if (r.existencias != null && n > 0 && p.disponible) p.stock = n > 10 ? '+10' : 'pocas';
+  return p;
+}
+async function traerDelPanel(){
+  const base = 'https://yqnlxhbjassrkudnhvpr.supabase.co/rest/v1/';
+  const h = { apikey: 'sb_publishable_LOYjM5sqvQbBLIkH4KJTKQ_UfxrpTeC' };
+  const pedir = (q) => fetch(base + q, { headers: h, cache: 'no-store' }).then(r => r.ok ? r.json() : []).catch(() => []);
+  const limite = new Promise(res => setTimeout(() => res(null), 4000));
+  const r = await Promise.race([Promise.all([pedir('productos_web?select=*&activo=eq.true'), pedir('productos_ocultos?select=modelo')]), limite]);
+  if (!r) return { web: [], ocultos: [] };
+  return { web: Array.isArray(r[0]) ? r[0] : [], ocultos: Array.isArray(r[1]) ? r[1].map(x => x.modelo) : [] };
+}
+
 let catalogoEnProgreso = false;   // true mientras el scraper está trabajando
 let ultimaRevision = 0;           // cuándo se revisó el catálogo por última vez
 
@@ -2873,11 +2901,18 @@ async function cargar(silencioso){
   const metaBar = document.getElementById('meta-bar');
   try {
     ultimaRevision = Date.now();
-    const { data, manuales } = await traerCatalogo(silencioso);
+    const [{ data, manuales: manualesJson }, panel] = await Promise.all([traerCatalogo(silencioso), traerDelPanel()]);
     catalogoEnProgreso = !!data.en_progreso;
+    // Lo del panel gana sobre productos_manuales.json; los ocultos no se muestran.
+    const ocultos = new Set(panel.ocultos);
+    const delPanel = panel.web.map(formaTiendaDePanel);
+    const setPanel = new Set(delPanel.map(p => p.modelo));
+    const manuales = delPanel.concat(manualesJson.filter(p => !setPanel.has(p.modelo))).filter(p => !ocultos.has(p.modelo));
+    data.productos = (data.productos || []).filter(p => !ocultos.has(p.modelo));
 
     // ¿Cambió algo desde la última vez? (para no re-renderizar de gratis)
-    const firma = (data.generado || '') + '|' + (data.total_productos || 0) + '|' + manuales.length;
+    const firma = (data.generado || '') + '|' + (data.total_productos || 0) + '|' + manuales.length + '|' + ocultos.size + '|' +
+      panel.web.reduce((m, r) => r.actualizado > m ? r.actualizado : m, '');
     if (silencioso && firma === ultimoEstado) return;
     ultimoEstado = firma;
 

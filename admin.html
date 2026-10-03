@@ -456,6 +456,39 @@
 
 
 
+
+  /* Productos */
+  .tabla-pro td{ vertical-align:middle; }
+  .pro-foto{ width:56px; }
+  .pro-foto img{ width:48px; height:48px; object-fit:contain; border:1px solid var(--linea); border-radius:8px; background:#fff; display:block; }
+  .pro-foto .muted{ font-size:11px; }
+  .pro-desc{ font-size:12px; max-width:360px; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; }
+  .pro-cat{ font-size:12.5px; color:var(--texto-2); max-width:260px; }
+  .pf-cuerpo{ display:grid; grid-template-columns:minmax(0,1fr) 230px; gap:22px; align-items:start; }
+  .pf-previa{ position:sticky; top:0; }
+  .pf-previa h3{ font-size:11.5px; text-transform:uppercase; letter-spacing:.6px; color:var(--texto-3); margin:0 0 10px; }
+  .pf-tarjeta{ border:1px solid var(--linea); border-radius:12px; overflow:hidden; background:var(--superficie); box-shadow:var(--sombra); }
+  .pf-t-img{ aspect-ratio:1; background:#fff; display:grid; place-items:center; color:#94a3b8; border-bottom:1px solid var(--linea-suave); }
+  .pf-t-img img{ width:100%; height:100%; object-fit:contain; }
+  .pf-t-img svg{ width:40px; height:40px; opacity:.5; }
+  .pf-t-cuerpo{ padding:10px 12px 12px; }
+  .pf-t-marca{ font-size:11px; font-weight:700; letter-spacing:.6px; color:var(--texto-3); }
+  .pf-t-mod{ font-family:var(--mono); font-weight:600; color:var(--titulo); margin-top:2px; word-break:break-all; }
+  .pf-t-nom{ font-size:13px; font-weight:600; margin-top:4px; }
+  .pf-t-desc{ font-size:12px; color:var(--texto-2); margin-top:4px; display:-webkit-box; -webkit-line-clamp:3; -webkit-box-orient:vertical; overflow:hidden; }
+  .pf-t-precio{ font-size:18px; font-weight:700; color:var(--titulo); margin-top:8px; }
+  .pf-t-stock{ display:inline-block; font-size:11.5px; font-weight:600; border-radius:6px; padding:2px 8px; margin-top:6px; }
+  .pf-t-stock.ok{ background:var(--ok-suave); color:var(--ok); } .pf-t-stock.off{ background:var(--off-suave); color:var(--off); }
+  .pf-fotos{ display:flex; flex-wrap:wrap; gap:10px; }
+  .pf-foto{ position:relative; width:92px; height:92px; border:1px solid var(--linea); border-radius:10px; background:#fff; overflow:hidden; cursor:grab; }
+  .pf-foto.principal{ border:2px solid var(--azul); }
+  .pf-foto img{ width:100%; height:100%; object-fit:contain; }
+  .pf-foto b{ position:absolute; left:0; right:0; bottom:0; background:var(--azul); color:#fff; font-size:10.5px; text-align:center; padding:1px 0; }
+  .pf-foto button{ position:absolute; top:4px; right:4px; width:22px; height:22px; border-radius:50%; border:none; background:rgba(14,42,59,.75); color:#fff; display:grid; place-items:center; cursor:pointer; padding:0; }
+  .pf-foto button svg{ width:12px; height:12px; }
+  .pf-sinfoto{ display:flex; align-items:center; gap:8px; color:var(--texto-3); font-size:13px; padding:14px; border:1px dashed var(--linea); border-radius:10px; width:100%; }
+  .pf-sinfoto svg{ width:20px; height:20px; opacity:.6; }
+  @media (max-width:760px){ .pf-cuerpo{ grid-template-columns:1fr; } .pf-previa{ position:static; max-width:260px; } }
   /* Ventanas plegables */
   .pleg-barra{ display:flex; align-items:center; gap:4px; margin:-4px 0 10px; flex-wrap:wrap; }
   .pleg-barra .muted{ margin-right:auto; font-size:12.5px; }
@@ -687,6 +720,7 @@ const VISTAS = [
   ['pedidos', 'Pedidos', ICO.pedidos, 'Ventas'],
   ['clientes', 'Clientes', ICO.clientes, 'Ventas'],
   ['descuentos', 'Descuentos', ICO.descuentos, 'Ventas'],
+  ['productos', 'Productos', ICO.caja, 'Ventas'],
   ['envivo', 'En vivo', ICO.vivo, 'Análisis'],
   ['estadisticas', 'Estadísticas', ICO.grafica, 'Análisis'],
   ['visitantes', 'Visitantes', ICO.globo, 'Análisis'],
@@ -740,7 +774,7 @@ async function iniciar(){
   try { localStorage.setItem('suin_no_contar', '1'); } catch (e) {}
   armarApp();
   if (location.hash === '#envivo') tab = 'envivo';        // enlace de los avisos de Telegram
-  await Promise.all([cargarProductos(), recargarBase(), cargarPedidos(), cargarEstadoStock()]);
+  await Promise.all([cargarProductos(), recargarBase(), cargarPedidos(), cargarEstadoStock(), cargarPanelProductos().catch(e => { prodErr = e; })]);
   pintarBadges();
   mostrar();
   iniciarVivo().catch(e => { vivoEstado = 'error'; vivoError = e; refrescarVivo(); });
@@ -833,7 +867,7 @@ function mostrar(){
   document.querySelectorAll('#nav button').forEach(x => x.classList.toggle('activa', x.dataset.tab === tab));
   const v = VISTAS.find(x => x[0] === tab); if ($('top-titulo')) $('top-titulo').textContent = v ? v[1] : 'Panel';
   cerrarPanel();
-  ({ resumen: vistaResumen, pedidos: vistaPedidos, estadisticas: vistaEstadisticas, envivo: vistaEnVivo, visitantes: vistaVisitantes, enlaces: vistaEnlaces, clientes: vistaClientes, descuentos: vistaDescuentos, existencias: vistaExistencias, scraping: vistaScraping, tipos: vistaTipos }[tab] || vistaResumen)();
+  ({ resumen: vistaResumen, pedidos: vistaPedidos, estadisticas: vistaEstadisticas, envivo: vistaEnVivo, visitantes: vistaVisitantes, enlaces: vistaEnlaces, clientes: vistaClientes, descuentos: vistaDescuentos, productos: vistaProductos, existencias: vistaExistencias, scraping: vistaScraping, tipos: vistaTipos }[tab] || vistaResumen)();
 }
 function pintarBadges(){
   const nuevos = pedidos.filter(p => p.estado === 'enviado' && !p.archivado).length;
@@ -2217,6 +2251,265 @@ function pintarEnlaces(){
     (lista.length > cuantasLnk ? '<div style="text-align:center;padding:14px 0 4px"><button class="btn" id="lnk-mas">Ver más visitas (' + (lista.length - cuantasLnk) + ')</button></div>' : '');
   if ($('lnk-mas')) $('lnk-mas').onclick = () => { cuantasLnk += 50; pintarEnlaces(); };
   el.querySelectorAll('[data-visitante]').forEach(tr => tr.onclick = () => abrirVisitante(tr.dataset.visitante));
+}
+
+/* ---------- Productos de la web (14_productos_web.sql) ----------
+   Directorio de todo lo publicado + agregar / editar productos propios + ocultar.
+   Lo que se guarda aquí sale en la tienda al instante; cada noche pasa al
+   catálogo fijo (página /p/ para Google y WhatsApp, fotos en tu dominio). */
+let prodWeb = [], prodOcultos = new Map(), prodErr = null;
+let fPro = { origen: '', marca: '', familia: '', q: '', orden: 'modelo' }, cuantosPro = 50;
+async function cargarPanelProductos(){
+  const [w, o] = await Promise.all([
+    sb.from('productos_web').select('*').order('actualizado', { ascending: false }),
+    sb.from('productos_ocultos').select('*'),
+  ]);
+  prodErr = w.error || o.error || null;
+  prodWeb = w.data || [];
+  prodOcultos = new Map((o.data || []).map(x => [x.modelo, x]));
+}
+const formaDePanel = (r) => {
+  const subs = (r.subcategorias || []).filter(Boolean), imgs = (r.imagenes || []).filter(Boolean);
+  return { modelo: r.modelo, nombre: r.nombre || r.modelo, marca: r.marca, precio: r.precio == null ? null : Number(r.precio),
+    disponible: r.disponible !== false && r.existencias !== 0, descripcion: r.descripcion || '', imagen: imgs[0] || null, imagenes: imgs,
+    categoria_principal: r.categoria_principal, subcategorias: subs, _manual: true };
+};
+// Todos los productos con su origen: 'panel' (agregado o corregido aquí), 'manual' (productos_manuales.json) o 'proveedor'.
+function directorio(){
+  const web = new Map(prodWeb.map(r => [r.modelo, r]));
+  const lista = productos.filter(p => !web.has(p.modelo)).map(p => ({ p, origen: p._manual ? 'manual' : 'proveedor' }));
+  prodWeb.forEach(r => lista.unshift({ p: formaDePanel(r), origen: 'panel', row: r, enCatalogo: productos.some(x => x.modelo === r.modelo) }));
+  lista.forEach(x => { x.oculto = prodOcultos.has(x.p.modelo); x.borrador = x.row ? !x.row.activo : false; });
+  return lista;
+}
+const rutaCruda = (p) => [p.categoria_principal || p.marca || 'Otros'].concat(Array.isArray(p.subcategorias) ? p.subcategorias : (p.subcategoria ? String(p.subcategoria).split(' > ') : [])).filter(Boolean);
+const urlEnWeb = (x) => x.origen === 'panel' && !x.enCatalogo ? TIENDA + '#/todo?p=' + encodeURIComponent(x.p.modelo) : '/p/' + slugDe(x.p.modelo);
+const imgSrc = (u) => !u ? '' : /^(https?:)?\/\//.test(u) || u.startsWith('/') ? u : '/' + u;
+const PILL_ORIGEN = { panel: '<span class="pill azul">Del panel</span>', manual: '<span class="pill amar">Manual</span>', proveedor: '<span class="pill">Proveedor</span>' };
+
+function vistaProductos(){
+  const todos = directorio();
+  const vis = todos.filter(x => !x.oculto && !x.borrador);
+  const n = (f) => todos.filter(f).length;
+  const kpi = (icono, titulo, num, pie, f) => '<button class="kpi" data-kf="' + f + '"><div class="k-cab">' + titulo + icono + '</div><div class="k-num">' + Number(num).toLocaleString('es-VE') + '</div><div class="k-pie">' + pie + '</div></button>';
+  const ORIG = [['', 'Todos'], ['proveedor', 'Del proveedor'], ['manual', 'Manuales'], ['panel', 'Agregados aquí'], ['ocultos', 'Ocultos'], ['borradores', 'Borradores'], ['sinfoto', 'Sin foto'], ['sinprecio', 'Sin precio']];
+  const cuentaO = { '': todos.length, proveedor: n(x => x.origen === 'proveedor'), manual: n(x => x.origen === 'manual'), panel: n(x => x.origen === 'panel'), ocultos: n(x => x.oculto), borradores: n(x => x.borrador), sinfoto: n(x => !x.p.imagen), sinprecio: n(x => x.p.precio == null) };
+  const marcasL = [...new Set(todos.map(x => (x.p.marca || '').toUpperCase()).filter(Boolean))].sort();
+  const familias = [...new Set(todos.map(x => rutaCruda(x.p)[0]))].sort((a, b) => a.localeCompare(b));
+  $('main').innerHTML = cabecera('Productos', 'Todo lo que está en la tienda. Agrega productos propios (salen en la web al instante), corrige los tuyos u oculta los que no quieras mostrar. Los del proveedor los actualiza el scraper cada día.',
+      '<button class="btn prim" id="pro-nuevo">' + ICO.mas + 'Agregar producto</button>') +
+    (prodErr ? '<div class="caja"><div class="tarjeta-sync"><div class="icono mal">' + ICO.alerta + '</div><div><strong>Falta instalar "Productos" en Supabase</strong><div class="muted">Corre <span class="mono">14_productos_web.sql</span> en Supabase → SQL Editor. Mientras tanto puedes ver el directorio, pero no agregar, editar ni ocultar.<br><small>' + esc(mensajeError(prodErr)) + '</small></div></div></div></div>' : '') +
+    '<div class="kpis">' +
+      kpi(ICO.tienda, 'En la web', vis.length, 'productos visibles en la tienda', '') +
+      kpi(ICO.sync, 'Del proveedor', cuentaO.proveedor, 'los trae el scraper cada día', 'proveedor') +
+      kpi(ICO.caja, 'Manuales', cuentaO.manual, 'de productos_manuales.json', 'manual') +
+      kpi(ICO.mas, 'Agregados aquí', cuentaO.panel, cuentaO.borradores ? cuentaO.borradores + ' en borrador' : 'desde este panel', 'panel') +
+      kpi(ICO.bloquear, 'Ocultos', cuentaO.ocultos, 'no se muestran en la web', 'ocultos') +
+      kpi(ICO.alerta, 'Sin foto', cuentaO.sinfoto, cuentaO.sinprecio + ' sin precio', 'sinfoto') +
+    '</div>' +
+    '<div class="caja"><div class="caja-cab"><div class="chips" id="pro-chips">' + ORIG.map(([k, t]) => '<button class="chip' + (fPro.origen === k ? ' activo' : '') + '" data-o="' + k + '">' + t + ' <b>' + Number(cuentaO[k]).toLocaleString('es-VE') + '</b></button>').join('') + '</div></div>' +
+      '<div class="fila" style="margin-bottom:14px">' +
+        '<div class="buscar" style="flex:2 1 260px">' + ICO.buscar + '<input id="pro-q" type="search" placeholder="Buscar modelo, nombre, descripción…" value="' + esc(fPro.q) + '"></div>' +
+        '<label class="campo" style="flex:1 1 150px">Marca<select id="pro-marca"><option value="">Todas</option>' + marcasL.map(m => '<option' + (fPro.marca === m ? ' selected' : '') + '>' + esc(m) + '</option>').join('') + '</select></label>' +
+        '<label class="campo" style="flex:1 1 180px">Familia<select id="pro-fam"><option value="">Todas</option>' + familias.map(f => '<option' + (fPro.familia === f ? ' selected' : '') + '>' + esc(f) + '</option>').join('') + '</select></label>' +
+        '<label class="campo" style="flex:0 1 170px">Orden<select id="pro-orden">' + [['modelo', 'Modelo A-Z'], ['precio_a', 'Precio menor'], ['precio_d', 'Precio mayor'], ['recientes', 'Agregados recientes']].map(([k, t]) => '<option value="' + k + '"' + (fPro.orden === k ? ' selected' : '') + '>' + t + '</option>').join('') + '</select></label>' +
+      '</div><div class="tabla-wrap" id="pro-tabla"></div></div>';
+  $('pro-nuevo').onclick = () => abrirProducto(null);
+  document.querySelectorAll('#pro-chips .chip').forEach(c => c.onclick = () => { fPro.origen = c.dataset.o; cuantosPro = 50; vistaProductos(); });
+  document.querySelectorAll('[data-kf]').forEach(c => c.onclick = () => { fPro.origen = c.dataset.kf; cuantosPro = 50; vistaProductos(); });
+  $('pro-q').oninput = (e) => { fPro.q = e.target.value; cuantosPro = 50; pintarProductos(); };
+  $('pro-marca').onchange = (e) => { fPro.marca = e.target.value; cuantosPro = 50; pintarProductos(); };
+  $('pro-fam').onchange = (e) => { fPro.familia = e.target.value; cuantosPro = 50; pintarProductos(); };
+  $('pro-orden').onchange = (e) => { fPro.orden = e.target.value; pintarProductos(); };
+  pintarProductos();
+}
+function pintarProductos(){
+  const el = $('pro-tabla'); if (!el) return;
+  const q = fPro.q.trim().toLowerCase();
+  const filtroO = { '': x => true, proveedor: x => x.origen === 'proveedor', manual: x => x.origen === 'manual', panel: x => x.origen === 'panel', ocultos: x => x.oculto, borradores: x => x.borrador, sinfoto: x => !x.p.imagen, sinprecio: x => x.p.precio == null }[fPro.origen] || (() => true);
+  let lista = directorio().filter(x => filtroO(x) && (!fPro.marca || (x.p.marca || '').toUpperCase() === fPro.marca) && (!fPro.familia || rutaCruda(x.p)[0] === fPro.familia) &&
+    (!q || [x.p.modelo, x.p.nombre, x.p.marca, x.p.descripcion, rutaCruda(x.p).join(' ')].join(' ').toLowerCase().includes(q)));
+  const ord = { modelo: (a, b) => String(a.p.modelo).localeCompare(String(b.p.modelo)), precio_a: (a, b) => (a.p.precio ?? 1e12) - (b.p.precio ?? 1e12), precio_d: (a, b) => (b.p.precio ?? -1) - (a.p.precio ?? -1),
+    recientes: (a, b) => String((b.row || {}).actualizado || '').localeCompare(String((a.row || {}).actualizado || '')) }[fPro.orden];
+  if (ord) lista.sort(ord);
+  if (!lista.length){ el.innerHTML = '<div class="vacio">' + ICO.caja + 'No hay productos con este filtro.</div>'; return; }
+  el.innerHTML = '<p class="muted" style="margin:0 0 8px">' + lista.length.toLocaleString('es-VE') + ' producto' + (lista.length === 1 ? '' : 's') + '</p>' +
+    '<table class="tabla-pro"><thead><tr><th></th><th>Modelo</th><th>Marca</th><th>Categoría</th><th>Precio</th><th>Estado</th><th></th></tr></thead><tbody>' +
+    lista.slice(0, cuantosPro).map(x => {
+      const p = x.p, ruta = rutaCruda(p);
+      const estado = x.oculto ? '<span class="pill rojo">Oculto</span>' : x.borrador ? '<span class="pill">Borrador</span>' : p.disponible === false ? '<span class="pill amar">Agotado</span>' : '<span class="pill verde">En la web</span>';
+      const editable = !prodErr && (x.origen !== 'proveedor');
+      return '<tr class="' + (x.oculto || x.borrador ? 'inactivo' : '') + '" data-mod="' + esc(p.modelo) + '">' +
+        '<td class="pro-foto">' + (p.imagen ? '<img src="' + esc(imgSrc(p.imagen)) + '" alt="" loading="lazy" onerror="this.replaceWith(document.createTextNode(\'—\'))">' : '<span class="muted">sin foto</span>') + '</td>' +
+        '<td><strong class="mono">' + esc(p.modelo) + '</strong> ' + PILL_ORIGEN[x.origen] + (p.nombre && p.nombre !== p.modelo ? '<div class="muted pro-desc">' + esc(p.nombre) + '</div>' : p.descripcion ? '<div class="muted pro-desc">' + esc(p.descripcion) + '</div>' : '') + '</td>' +
+        '<td>' + esc(p.marca || '—') + '</td>' +
+        '<td class="pro-cat">' + esc(ruta.join(' › ')) + '</td>' +
+        '<td style="white-space:nowrap">' + (p.precio != null ? '<strong>' + money(p.precio) + '</strong>' : '<span class="muted">Sin precio</span>') + '</td>' +
+        '<td>' + estado + '</td>' +
+        '<td class="acciones">' +
+          (x.oculto || x.borrador ? '' : '<a class="btn chico icono" href="' + esc(urlEnWeb(x)) + '" target="_blank" rel="noopener" title="Ver en la web">' + ICO.externo + '</a> ') +
+          (editable ? '<button class="btn chico" data-editar="' + esc(p.modelo) + '">Editar</button> ' : '<button class="btn chico fantasma" data-copiar="' + esc(p.modelo) + '" title="Crear un producto nuevo a partir de este">' + ICO.copiar + 'Copiar</button> ') +
+          (prodErr ? '' : '<button class="btn chico ' + (x.oculto ? '' : 'fantasma') + '" data-ocultar="' + esc(p.modelo) + '" title="' + (x.oculto ? 'Volver a mostrar en la web' : 'No mostrar en la web') + '">' + (x.oculto ? ICO.ojo + 'Mostrar' : ICO.bloquear + 'Ocultar') + '</button>') +
+        '</td></tr>';
+    }).join('') + '</tbody></table>' +
+    (lista.length > cuantosPro ? '<div style="text-align:center;padding:14px 0 4px"><button class="btn" id="pro-mas">Ver más (' + (lista.length - cuantosPro).toLocaleString('es-VE') + ')</button></div>' : '');
+  if ($('pro-mas')) $('pro-mas').onclick = () => { cuantosPro += 100; pintarProductos(); };
+  el.querySelectorAll('[data-editar]').forEach(b => b.onclick = () => abrirProducto(b.dataset.editar));
+  el.querySelectorAll('[data-copiar]').forEach(b => b.onclick = () => abrirProducto(b.dataset.copiar, true));
+  el.querySelectorAll('[data-ocultar]').forEach(b => b.onclick = () => cambiarOculto(b.dataset.ocultar));
+}
+async function cambiarOculto(modelo){
+  const oculto = prodOcultos.has(modelo);
+  if (!oculto && !await confirmar({ titulo: '¿Ocultar ' + modelo + ' de la web?', boton: 'Ocultar', texto: 'Deja de verse en la tienda al instante (y esta noche sale de Google y del mapa del sitio). No se borra nada: puedes volver a mostrarlo cuando quieras.' })) return;
+  const { error } = oculto ? await sb.from('productos_ocultos').delete().eq('modelo', modelo) : await sb.from('productos_ocultos').insert({ modelo });
+  if (error) return toast('Error: ' + mensajeError(error));
+  await cargarPanelProductos(); toast(oculto ? modelo + ' vuelve a la web' : modelo + ' oculto'); if (tab === 'productos') vistaProductos();
+}
+
+// Reduce la foto a máx. 1200 px en JPG (fondo blanco) antes de subirla.
+function prepararFoto(file){
+  return new Promise((res, rej) => {
+    const img = new Image(), url = URL.createObjectURL(file);
+    img.onload = () => {
+      const k = Math.min(1, 1200 / Math.max(img.width, img.height));
+      const c = document.createElement('canvas'); c.width = Math.round(img.width * k); c.height = Math.round(img.height * k);
+      const x = c.getContext('2d'); x.fillStyle = '#fff'; x.fillRect(0, 0, c.width, c.height); x.drawImage(img, 0, 0, c.width, c.height);
+      URL.revokeObjectURL(url); c.toBlob(b => b ? res(b) : rej(new Error('No se pudo leer la foto')), 'image/jpeg', 0.86);
+    };
+    img.onerror = () => { URL.revokeObjectURL(url); rej(new Error('Ese archivo no es una imagen')); };
+    img.src = url;
+  });
+}
+
+function abrirProducto(modelo, copiar){
+  const todos = directorio();
+  const x = modelo ? todos.find(y => y.p.modelo === modelo) : null;
+  const base = x ? (x.row ? Object.assign({}, x.row) : { modelo: x.p.modelo, nombre: x.p.nombre && x.p.nombre !== x.p.modelo ? x.p.nombre : '', marca: x.p.marca, categoria_principal: rutaCruda(x.p)[0], subcategorias: rutaCruda(x.p).slice(1),
+    descripcion: x.p.descripcion, precio: x.p.precio, disponible: x.p.disponible !== false, imagenes: (x.p.imagenes && x.p.imagenes.length ? x.p.imagenes : [x.p.imagen]).filter(Boolean).map(imgSrc), activo: true }) : { disponible: true, activo: true, imagenes: [], subcategorias: [] };
+  if (copiar){ base.modelo = ''; base.nombre = ''; base.imagenes = []; base.precio = null; base.notas = ''; }
+  const nuevo = !x || copiar;
+  const esCorreccion = !nuevo && x.origen === 'manual';
+  let fotos = (base.imagenes || []).slice();
+  const rutas = new Map();
+  todos.forEach(y => { const r = rutaCruda(y.p).join(' › '); rutas.set(r, (rutas.get(r) || 0) + 1); });
+  const marcasL = [...new Set(todos.map(y => (y.p.marca || '').toUpperCase()).filter(Boolean))].sort();
+  const rutaIni = [base.categoria_principal].concat(base.subcategorias || []).filter(Boolean).join(' › ');
+  const primeros = new Set([...rutas.keys()].map(r => r.split(' › ')[0].toLowerCase()));
+
+  abrirPanel('<form id="pf" style="display:contents" novalidate>' +
+    '<div class="panel-cab"><div class="avatar">' + ICO.caja + '</div><div><h2>' + (nuevo ? (copiar ? 'Nuevo producto (copiado de ' + esc(modelo) + ')' : 'Agregar producto a la web') : 'Editar ' + esc(base.modelo)) + '</h2>' +
+      '<div class="muted">' + (nuevo ? 'Los campos con * son obligatorios. Sale en la tienda apenas guardas.' : esCorreccion ? 'Viene de productos_manuales.json: tu versión del panel queda por encima.' : 'Agregado desde el panel') + '</div></div>' +
+      '<button type="button" class="btn chico fantasma cerrar" id="pf-cerrar" aria-label="Cerrar">' + ICO.cerrar + '</button></div>' +
+    '<div class="panel-cuerpo pf-cuerpo"><div class="pf-form">' +
+      '<div class="seccion"><h3>1 · Identificación</h3><div class="campos">' +
+        '<label class="campo">Modelo o código *<input name="modelo" required maxlength="80" value="' + esc(base.modelo || '') + '"' + (nuevo ? '' : ' readonly') + ' placeholder="Ej. GD20-2R2G-S2" autocomplete="off"></label>' +
+        '<label class="campo">Marca *<input name="marca" required list="pf-marcas" maxlength="80" value="' + esc(base.marca || '') + '" placeholder="Ej. INVT"></label>' +
+        '<label class="campo ancho">Nombre corto <small class="muted" style="font-weight:400">(opcional; si lo dejas vacío se usa el modelo)</small><input name="nombre" maxlength="200" value="' + esc(base.nombre || '') + '" placeholder="Ej. Variador de frecuencia 3 HP 220 V"></label>' +
+      '</div><datalist id="pf-marcas">' + marcasL.map(m => '<option value="' + esc(m) + '">').join('') + '</datalist></div>' +
+      '<div class="seccion"><h3>2 · Dónde aparece en la tienda</h3>' +
+        '<label class="campo">Categoría *<input name="ruta" required list="pf-rutas" value="' + esc(rutaIni) + '" placeholder="Escribe para buscar, ej. Variadores" autocomplete="off"></label>' +
+        '<datalist id="pf-rutas">' + [...rutas.entries()].sort((a, b) => a[0].localeCompare(b[0])).map(([r, c]) => '<option value="' + esc(r) + '">' + c + ' producto' + (c === 1 ? '' : 's') + '</option>').join('') + '</datalist>' +
+        '<p class="muted" style="margin:6px 0 10px;font-size:12.5px">Elige una categoría que ya exista para que aparezca junto a productos parecidos. Separa los niveles con <b>›</b> si necesitas uno nuevo.</p>' +
+        '<label class="campo">Copiar marca y categoría de un producto parecido <small class="muted" style="font-weight:400">(opcional)</small><input id="pf-parecido" list="pf-modelos" placeholder="Escribe un modelo" autocomplete="off"></label>' +
+        '<datalist id="pf-modelos">' + todos.slice(0, 6000).map(y => '<option value="' + esc(y.p.modelo) + '">').join('') + '</datalist></div>' +
+      '<div class="seccion"><h3>3 · Descripción *</h3><textarea name="descripcion" rows="6" maxlength="4000" required placeholder="Qué es, para qué sirve y sus datos técnicos: potencia, voltaje, corriente, medidas, norma…">' + esc(base.descripcion || '') + '</textarea>' +
+        '<div class="muted" style="font-size:12px;text-align:right;margin-top:4px" id="pf-cuenta"></div></div>' +
+      '<div class="seccion"><h3>4 · Precio y disponibilidad</h3><div class="campos">' +
+        '<label class="campo">Precio en USD *<input name="precio" type="number" min="0" step="0.01" required value="' + (base.precio != null ? esc(base.precio) : '') + '" placeholder="0.00"></label>' +
+        '<label class="campo">Cantidad disponible <small class="muted" style="font-weight:400">(opcional)</small><input name="existencias" type="number" min="0" step="1" value="' + (base.existencias != null ? esc(base.existencias) : '') + '" placeholder="La web solo muestra +10 o Últimas"></label>' +
+        '<div class="ancho">' + interruptor('disponible', 'Disponible para la venta', 'Si lo apagas, la tienda lo muestra como agotado.', base.disponible !== false) + '</div>' +
+      '</div><p class="muted" style="margin:8px 0 0;font-size:12.5px">Como los demás productos manuales, se muestra con este precio tal cual; solo le aplican los descuentos de su marca o modelo (Descuentos).</p></div>' +
+      '<div class="seccion"><h3>5 · Fotos</h3><div class="pf-fotos" id="pf-fotos"></div>' +
+        '<div class="fila" style="margin-top:10px"><label class="btn chico" style="cursor:pointer">' + ICO.mas + 'Subir fotos<input type="file" id="pf-archivo" accept="image/*" multiple hidden></label>' +
+        '<input id="pf-url" placeholder="…o pega el enlace de una foto (https://…)" style="flex:1 1 220px;height:32px;font-size:13px"><button type="button" class="btn chico" id="pf-url-ok">Agregar</button></div>' +
+        '<p class="muted" style="margin:6px 0 0;font-size:12.5px">La primera es la principal (arrástralas para cambiar el orden). Se reducen solas a 1200 px. Hasta 8.</p></div>' +
+      '<div class="seccion"><h3>6 · Publicación</h3><div class="interruptores">' +
+        interruptor('activo', 'Publicado en la web', 'Apágalo para guardarlo como borrador sin que salga en la tienda.', base.activo !== false) +
+      '</div><label class="campo" style="margin-top:12px">Notas internas <small class="muted" style="font-weight:400">(solo las ves tú)</small><textarea name="notas" rows="2" maxlength="1000" placeholder="Ej. costo, proveedor, fecha de llegada">' + esc(base.notas || '') + '</textarea></label></div>' +
+      '<p class="error" id="pf-err"></p>' +
+    '</div><aside class="pf-previa"><h3>Así se verá</h3><div id="pf-previa"></div></aside></div>' +
+    '<div class="panel-pie"><button class="btn prim" id="pf-guardar">' + ICO.ok + (nuevo ? 'Publicar producto' : 'Guardar cambios') + '</button><button type="button" class="btn" id="pf-cancelar">Cancelar</button>' +
+      (!nuevo && x.origen === 'panel' ? '<button type="button" class="btn peligro" id="pf-borrar" style="margin-left:auto">' + ICO.borrar + (x.enCatalogo && productos.some(p => p.modelo === base.modelo && p._manual) ? 'Quitar mi versión' : 'Eliminar') + '</button>' : '') +
+    '</div></form>', true);
+
+  const f = $('pf');
+  const leer = () => {
+    const partes = f.elements.ruta.value.split(/\s*[›>]\s*/).map(s => s.trim()).filter(Boolean);
+    const pr = f.elements.precio.value, ex = f.elements.existencias.value;
+    return { modelo: f.elements.modelo.value.trim(), nombre: f.elements.nombre.value.trim() || null, marca: f.elements.marca.value.trim().toUpperCase(),
+      categoria_principal: partes[0] || '', subcategorias: partes.slice(1), descripcion: f.elements.descripcion.value.trim(),
+      precio: pr === '' ? null : Number(pr), existencias: ex === '' ? null : Math.round(Number(ex)), disponible: f.elements.disponible.checked,
+      imagenes: fotos.slice(0, 8), activo: f.elements.activo.checked, notas: f.elements.notas.value.trim() || null };
+  };
+  const pintarFotos = () => {
+    $('pf-fotos').innerHTML = !fotos.length ? '<div class="pf-sinfoto">' + ICO.caja + '<span>Sin fotos todavía</span></div>' : fotos.map((u, i) =>
+      '<div class="pf-foto' + (i === 0 ? ' principal' : '') + '" draggable="true" data-i="' + i + '"><img src="' + esc(u) + '" alt="">' + (i === 0 ? '<b>Principal</b>' : '') +
+      '<button type="button" data-quitar-foto="' + i + '" aria-label="Quitar foto">' + ICO.cerrar + '</button></div>').join('');
+    $('pf-fotos').querySelectorAll('[data-quitar-foto]').forEach(b => b.onclick = () => { fotos.splice(Number(b.dataset.quitarFoto), 1); pintarFotos(); previa(); });
+    let arr = null;
+    $('pf-fotos').querySelectorAll('.pf-foto').forEach(el => {
+      el.ondragstart = () => { arr = Number(el.dataset.i); };
+      el.ondragover = (e) => e.preventDefault();
+      el.ondrop = (e) => { e.preventDefault(); const a = Number(el.dataset.i); if (arr == null || arr === a) return; const [m] = fotos.splice(arr, 1); fotos.splice(a, 0, m); pintarFotos(); previa(); };
+    });
+  };
+  const previa = () => {
+    const d = leer(); const ruta = [d.categoria_principal].concat(d.subcategorias).filter(Boolean);
+    $('pf-cuenta').textContent = d.descripcion.length + ' / 4000';
+    $('pf-previa').innerHTML = '<div class="pf-tarjeta"><div class="pf-t-img">' + (fotos[0] ? '<img src="' + esc(fotos[0]) + '" alt="">' : ICO.caja) + '</div>' +
+      '<div class="pf-t-cuerpo"><div class="pf-t-marca">' + esc(d.marca || 'MARCA') + '</div><div class="pf-t-mod">' + esc(d.modelo || 'MODELO') + '</div>' +
+      (d.nombre ? '<div class="pf-t-nom">' + esc(d.nombre) + '</div>' : '') + '<div class="pf-t-desc">' + esc(d.descripcion || 'La descripción aparece aquí.') + '</div>' +
+      '<div class="pf-t-precio">' + (d.precio != null && !isNaN(d.precio) ? money(d.precio) : 'Sin precio') + '</div>' +
+      '<div class="pf-t-stock ' + (d.disponible && d.existencias !== 0 ? 'ok' : 'off') + '">' + (!d.disponible || d.existencias === 0 ? 'Agotado' : d.existencias > 10 ? '+10 disponibles' : d.existencias > 0 ? 'Últimas unidades' : 'Disponible') + '</div></div></div>' +
+      '<p class="muted" style="font-size:12.5px;margin:10px 0 0">' + (ruta.length ? 'Categoría: <strong>' + esc(ruta.join(' › ')) + '</strong>' : 'Elige la categoría') + '</p>' +
+      (ruta.length && !primeros.has(ruta[0].toLowerCase()) ? '<div class="aviso" style="margin:8px 0 0;font-size:12.5px">' + ICO.alerta + '<div>“' + esc(ruta[0]) + '” no existe todavía en la tienda: el producto saldrá en <b>Otros Productos</b>. Mejor elige una categoría de la lista.</div></div>' : '') +
+      (!d.activo ? '<p class="pill" style="margin-top:8px">Borrador: no sale en la web</p>' : '');
+  };
+  const subir = async (files) => {
+    const d = leer(); if (!d.modelo){ toast('Escribe primero el modelo'); f.elements.modelo.focus(); return; }
+    for (const file of [...files].slice(0, 8 - fotos.length)){
+      try {
+        toast('Subiendo ' + file.name + '…');
+        const blob = await prepararFoto(file);
+        const ruta = slugDe(d.modelo) + '/' + Date.now() + '-' + Math.random().toString(36).slice(2, 6) + '.jpg';
+        const { error } = await sb.storage.from('productos').upload(ruta, blob, { contentType: 'image/jpeg', upsert: false, cacheControl: '31536000' });
+        if (error) throw error;
+        fotos.push(sb.storage.from('productos').getPublicUrl(ruta).data.publicUrl); pintarFotos(); previa();
+      } catch (e){ toast('No se pudo subir ' + file.name + ': ' + mensajeError(e)); }
+    }
+    toast('Fotos listas');
+  };
+  $('pf-archivo').onchange = (e) => { subir(e.target.files); e.target.value = ''; };
+  $('pf-url-ok').onclick = () => { const u = $('pf-url').value.trim(); if (!/^https?:\/\/\S+$/i.test(u)) return toast('Pega un enlace que empiece con https://'); if (fotos.length >= 8) return toast('Máximo 8 fotos'); fotos.push(u); $('pf-url').value = ''; pintarFotos(); previa(); };
+  $('pf-parecido').onchange = () => { const y = todos.find(z => z.p.modelo === $('pf-parecido').value.trim()); if (!y) return; f.elements.marca.value = (y.p.marca || '').toUpperCase(); f.elements.ruta.value = rutaCruda(y.p).join(' › '); previa(); toast('Copiadas la marca y la categoría de ' + y.p.modelo); };
+  f.addEventListener('input', previa); f.addEventListener('change', previa);
+  $('pf-cerrar').onclick = $('pf-cancelar').onclick = cerrarPanel;
+  pintarFotos(); previa();
+  setTimeout(() => (nuevo ? f.elements.modelo : f.elements.descripcion).focus(), 80);
+
+  if ($('pf-borrar')) $('pf-borrar').onclick = async () => {
+    const vuelve = productos.some(p => p.modelo === base.modelo && p._manual);
+    if (!await confirmar({ titulo: (vuelve ? '¿Quitar tu versión de ' : '¿Eliminar ') + base.modelo + '?', peligro: true, boton: vuelve ? 'Quitar mi versión' : 'Eliminar',
+      texto: vuelve ? 'La tienda vuelve a mostrar la versión de productos_manuales.json.' : 'Deja de verse en la tienda al instante. Las fotos subidas quedan guardadas por si lo vuelves a crear.' })) return;
+    const { error } = await sb.from('productos_web').delete().eq('modelo', base.modelo);
+    if (error) return toast('Error: ' + mensajeError(error));
+    await cargarPanelProductos(); cerrarPanel(); toast(base.modelo + (vuelve ? ': se usa otra vez la versión del archivo' : ' eliminado')); if (tab === 'productos') vistaProductos();
+  };
+  f.onsubmit = async (e) => {
+    e.preventDefault();
+    const d = leer(), err = $('pf-err'); err.textContent = '';
+    const falta = [!d.modelo && 'modelo', !d.marca && 'marca', !d.categoria_principal && 'categoría', !d.descripcion && 'descripción', (d.precio == null || isNaN(d.precio)) && 'precio'].filter(Boolean);
+    if (falta.length){ err.textContent = 'Falta: ' + falta.join(', ') + '.'; return; }
+    if (nuevo && todos.some(y => y.p.modelo.toUpperCase() === d.modelo.toUpperCase())){ err.textContent = 'Ya existe un producto con el modelo ' + d.modelo + ' en la web. Búscalo en el directorio y usa Editar, o cambia el código.'; return; }
+    if (!fotos.length && !await confirmar({ titulo: '¿Publicar sin foto?', boton: 'Publicar igual', texto: 'Los productos con foto se ven mejor y venden más. Puedes agregarla después con Editar.' })) return;
+    $('pf-guardar').disabled = true;
+    const { error } = await sb.from('productos_web').upsert(d, { onConflict: 'modelo' });
+    $('pf-guardar').disabled = false;
+    if (error){ err.textContent = mensajeError(error); return; }
+    await cargarPanelProductos(); cerrarPanel();
+    toast(d.activo ? (nuevo ? d.modelo + ' ya está en la tienda' : 'Cambios publicados') : 'Guardado como borrador');
+    if (tab === 'productos') vistaProductos();
+  };
 }
 
 /* ---------- Existencias ---------- */

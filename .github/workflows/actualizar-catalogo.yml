@@ -43,6 +43,10 @@ jobs:
         run: node registrar-scraping.js
 
       - name: Guardar productos.json y categorias.json (con reintentos)
+        env:
+          # Para sumar los productos del panel (14_productos_web.sql) y quitar los ocultos.
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
         run: |
           git config user.name "github-actions[bot]"
           git config user.email "github-actions[bot]@users.noreply.github.com"
