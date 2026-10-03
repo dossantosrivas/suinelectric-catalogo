@@ -1290,7 +1290,9 @@ function registroDesdePrecio(ev){
    Las cantidades reales llegan de Supabase solo para administradores y
    clientes con permiso (existenciasReales = { MODELO: cantidad }). */
 let existenciasReales = null;
+let cantidadesInventario = null;   // Map(clave de modelo -> cantidad) de tu inventario (mismo permiso)
 function cantidadReal(p){
+  if (p && p._inv && cantidadesInventario && cantidadesInventario.has(p._invClave)) return cantidadesInventario.get(p._invClave);
   if (!existenciasReales || !p || !p.modelo) return null;
   const n = existenciasReales[p.modelo];
   return typeof n === 'number' ? n : null;
@@ -2229,6 +2231,11 @@ function ordenarPorJerarquia(lista){
 /** Aplica el criterio de orden elegido en el selector "Ordenar por". */
 function ordenarGrupo(lista){
   const criterio = document.getElementById('filtro-orden').value;
+  // Con el orden por defecto, lo que tienes en inventario va primero.
+  if (criterio !== 'precio-asc' && criterio !== 'precio-desc' && criterio !== 'az' && criterio !== 'za'){
+    const mios = lista.filter(esDeInventario);
+    if (mios.length && mios.length < lista.length) return ordenarPorJerarquia(mios).concat(ordenarPorJerarquia(lista.filter(p => !p._inv)));
+  }
   const conPrecio = (p) => { const m = precioMostrado(p); return m == null ? Infinity : m; }; // sin precio, al final
 
   if (criterio === 'precio-asc'){
@@ -2295,6 +2302,11 @@ function render(lista){
     grupos[clave].push(p);
   }
   const claves = Object.keys(grupos).sort((a,b)=>compararRutas(a.split('|||'), b.split('|||')));
+  // Al buscar, las categorías donde tienes inventario salen primero.
+  if (textoBusqueda){
+    const conInv = (c) => grupos[c].some(esDeInventario) ? 0 : 1;
+    claves.sort((a, b) => conInv(a) - conInv(b));
+  }
 
   // Se pintan por tandas: primero lo que se ve y el resto a medida que se
   // baja. Así la búsqueda y "Ver todo" responden al instante aunque haya
@@ -2476,15 +2488,16 @@ function renderSugerencias(){
   // Se detiene apenas tiene suficientes (no recorre todo el catálogo).
   const palabras = palabrasDe(texto);
   const textoModelo = normalizarBusqueda(texto).replace(/\s+/g, '');
-  const enModelo = [], resto = [];
+  const enModelo = [], resto = [], mios = [];
   for (const p of productos){
     if (!coincideBusqueda(p, palabras)) continue;
+    if (p._inv){ if (mios.length < 8) mios.push(p); continue; }   // tu inventario primero
     if (normalizarBusqueda(p.modelo).replace(/\s+/g, '').includes(textoModelo)){
       enModelo.push(p);
-      if (enModelo.length >= 8) break;
+      if (enModelo.length >= 8 && mios.length >= 8) break;
     } else if (resto.length < 8) resto.push(p);
   }
-  const lista = enModelo.concat(resto).slice(0, 8);
+  const lista = mios.concat(enModelo, resto).slice(0, 8);
 
   if (lista.length === 0){ cont.style.display = 'none'; cont.innerHTML = ''; return; }
 
@@ -2889,9 +2902,55 @@ async function traerDelPanel(){
   const h = { apikey: 'sb_publishable_LOYjM5sqvQbBLIkH4KJTKQ_UfxrpTeC' };
   const pedir = (q) => fetch(base + q, { headers: h, cache: 'no-store' }).then(r => r.ok ? r.json() : []).catch(() => []);
   const limite = new Promise(res => setTimeout(() => res(null), 4000));
-  const r = await Promise.race([Promise.all([pedir('productos_web?select=*&activo=eq.true'), pedir('productos_ocultos?select=modelo')]), limite]);
-  if (!r) return { web: [], ocultos: [] };
-  return { web: Array.isArray(r[0]) ? r[0] : [], ocultos: Array.isArray(r[1]) ? r[1].map(x => x.modelo) : [] };
+  const r = await Promise.race([Promise.all([pedir('productos_web?select=*&activo=eq.true'), pedir('productos_ocultos?select=modelo'), pedir('inventario_web?select=*')]), limite]);
+  if (!r) return { web: [], ocultos: [], inventario: [] };
+  return { web: Array.isArray(r[0]) ? r[0] : [], ocultos: Array.isArray(r[1]) ? r[1].map(x => x.modelo) : [], inventario: Array.isArray(r[2]) ? r[2] : [] };
+}
+
+/* ---------- Tu inventario (15_inventario_web.sql) ----------
+   La app de ventas publica lo que tienes en existencia (tuyo + de tu papá).
+   Si el modelo también viene del distribuidor o del panel, queda UNA sola
+   tarjeta con tu marca, tu nombre, tu precio (tal cual, sin el descuento
+   general) y tu existencia; fotos, descripción y categoría del distribuidor
+   cuando tu producto no las tiene. Lo que solo tienes tú se agrega.
+   El modelo se compara sin guiones, espacios ni mayúsculas. */
+function claveModelo(m){ return normalizarBusqueda(m).replace(/[^a-z0-9]/g, ''); }
+function esDeInventario(p){ return !!(p && p._inv); }
+function unirInventario(lista, inventario, ocultos){
+  if (!inventario.length) return lista;
+  const inv = new Map();
+  for (const r of inventario){ const k = claveModelo(r.modelo); if (k && !ocultos.has(r.modelo)) inv.set(k, r); }
+  if (!inv.size) return lista;
+  const elegido = new Map();   // clave -> índice del producto de la tienda que se queda
+  const puntos = (p) => (p._manual ? 2 : 0) + (p.imagen ? 1 : 0);
+  lista.forEach((p, i) => {
+    const k = claveModelo(p.modelo); if (!inv.has(k)) return;
+    const j = elegido.get(k);
+    if (j === undefined || puntos(p) > puntos(lista[j])) elegido.set(k, i);
+  });
+  const salida = [];
+  lista.forEach((p, i) => {
+    const k = claveModelo(p.modelo), r = inv.get(k);
+    if (!r){ salida.push(p); return; }
+    if (elegido.get(k) !== i) return;   // repetido (otra marca u otra fuente): fuera
+    const q = Object.assign({}, p, { _inv: true, _invClave: k, disponible: true, stock: r.stock });
+    if (r.marca) q.marca = String(r.marca).toUpperCase();
+    if (r.nombre) q.nombre = r.nombre;
+    if (r.descripcion && !p.descripcion) q.descripcion = r.descripcion;
+    if (r.precio != null && Number(r.precio) > 0){ q.precio = Number(r.precio); q._manual = true; }
+    salida.push(q);
+  });
+  const usadas = new Set(elegido.keys());
+  for (const [k, r] of inv){
+    if (usadas.has(k)) continue;
+    const cat = r.categoria || r.marca || 'Inventario';
+    const p = { modelo: r.modelo, sku: r.modelo, nombre: r.nombre || r.modelo, marca: String(r.marca || '').toUpperCase(), descripcion: r.descripcion || '',
+      categoria_principal: cat, subcategorias: [], subcategoria: '', categoria: [cat, r.modelo].join(' > '), categorias: [cat, r.modelo],
+      disponible: true, stock: r.stock, _inv: true, _invClave: k, _manual: true };
+    if (r.precio != null && Number(r.precio) > 0) p.precio = Number(r.precio);
+    salida.push(p);
+  }
+  return salida;
 }
 
 let catalogoEnProgreso = false;   // true mientras el scraper está trabajando
@@ -2912,7 +2971,8 @@ async function cargar(silencioso){
 
     // ¿Cambió algo desde la última vez? (para no re-renderizar de gratis)
     const firma = (data.generado || '') + '|' + (data.total_productos || 0) + '|' + manuales.length + '|' + ocultos.size + '|' +
-      panel.web.reduce((m, r) => r.actualizado > m ? r.actualizado : m, '');
+      panel.web.reduce((m, r) => r.actualizado > m ? r.actualizado : m, '') + '|' + panel.inventario.length + '|' +
+      panel.inventario.reduce((m, r) => r.actualizado > m ? r.actualizado : m, '');
     if (silencioso && firma === ultimoEstado) return;
     ultimoEstado = firma;
 
@@ -2924,7 +2984,7 @@ async function cargar(silencioso){
     const modelosManuales = new Set(manuales.map(p => p.modelo));
     const delScraper = (data.productos || []).filter(p => !modelosManuales.has(p.modelo));
     delScraper.forEach(p => { p._manual = false; });
-    productos = manuales.concat(delScraper);
+    productos = unirInventario(manuales.concat(delScraper), panel.inventario, ocultos);
 
     let estado = productos.length + " productos";
     if (data.en_progreso) {
@@ -3097,12 +3157,16 @@ async function cargarSesionYReglas(){
       sesion.bloqueado = !!(ficha && ficha.activo === false);
     }
     // Cantidades reales: Supabase solo las entrega si esta cuenta tiene permiso.
-    existenciasReales = null;
+    existenciasReales = null; cantidadesInventario = null;
     if (sesion.email && !sesion.bloqueado){
       try {
         const { data: ex, error: errEx } = await sb.rpc('existencias_reales');
         if (!errEx && ex && typeof ex === 'object') existenciasReales = ex;
       } catch (e) { /* sin permiso o función no instalada: se muestran los rangos */ }
+      try {
+        const { data: ci, error: errCi } = await sb.rpc('inventario_cantidades');
+        if (!errCi && ci && typeof ci === 'object') cantidadesInventario = new Map(Object.keys(ci).map(m => [claveModelo(m), Number(ci[m])]));
+      } catch (e) { /* sin permiso o 15_inventario_web.sql sin correr */ }
     }
     const [{ data: reglas, error: errR }, { data: tipos }] = await Promise.all([
       sb.from('reglas_descuento').select('*').eq('activo', true),

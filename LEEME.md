@@ -149,3 +149,14 @@ Notas:
 - Se compara el precio público del proveedor (antes de tu descuento); diferencias menores a un centavo no cuentan.
 - Si ya habías corrido `11_historial_scraping.sql` antes, vuelve a correrlo para activar los precios (no se pierde nada).
 - Se guarda un año de historial. Usa los mismos secrets `SUPABASE_URL` y `SUPABASE_SECRET_KEY`.
+
+## 15. Tu inventario primero en la tienda
+Supabase → **SQL Editor** → pega todo `15_inventario_web.sql` → **Run** (se puede volver a correr).
+
+Desde ahí, la app de ventas (`/ventas`) sube sola a la tienda lo que tienes en existencia (tu inventario + el de tu papá) cada vez que la abres o guardas una compra, venta o ajuste:
+- Si el modelo también viene del distribuidor (o del panel), sale **una sola tarjeta** con tu marca, tu nombre, tu precio de venta (tal cual, sin el descuento general; las reglas por cliente sí aplican) y tu existencia. Fotos, descripción y categoría salen del distribuidor si tu producto no las tiene. Los repetidos con otra marca desaparecen.
+- Si tu producto no tiene precio de venta, se muestra el del distribuidor con el descuento de la tienda.
+- Lo que solo tienes tú se agrega a la tienda, en la categoría que tenga en tu inventario.
+- Con el orden por defecto, en cada categoría tus productos salen primero; al buscar, también las categorías y sugerencias donde tienes inventario. Si el cliente elige ordenar por precio o A-Z, se respeta.
+- El modelo se compara sin guiones, espacios ni mayúsculas. Si dos marcas usan el mismo código para cosas distintas, oculta el que sobra desde el panel → Productos.
+- La tienda pública solo ve el rango (+10 / Últimas unidades). Las cantidades exactas solo las ven los administradores y los clientes con "Ver existencias reales". No se publican costos.

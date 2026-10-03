@@ -4022,6 +4022,39 @@ function aplicarFixCostos() {
 }
 
 /* ---------------- arranque ---------------- */
+/* ---------------- tu inventario en la tienda (15_inventario_web.sql) ----------------
+   Cada vez que cambian productos, compras, ventas o ajustes, sube a la tienda lo
+   público de cada producto con existencia (tuya + de tu papá): modelo, marca, nombre,
+   descripción, categoría y precio de venta. Las cantidades van a una tabla privada.
+   Solo sube si algo cambió desde la última vez. */
+const InvWeb = {
+  ultimo: lsGet('suinadm_invweb', ''), corriendo: false, falta: false,
+  datos() {
+    return Store.all('productos').filter(p => p.activo !== false && String(p.codigo || '').trim()).map(p => {
+      const s = Calc.st(p.id);
+      const cant = Math.max(0, num(s.manuel.cant)) + Math.max(0, num(s.papa.cant));
+      return { modelo: String(p.codigo).trim(), marca: p.marca || '', nombre: p.nombre && p.nombre !== p.codigo ? p.nombre : '', descripcion: p.descripcion || '', categoria: p.categoria || '', precio: num(p.precio) > 0 ? num(p.precio) : null, cantidad: Math.floor(cant) };
+    }).filter(x => x.cantidad >= 1).sort((a, b) => a.modelo.localeCompare(b.modelo));
+  },
+  async publicar() {
+    if (this.corriendo || this.falta || !Sync.online() || !Store.ready || Pend.size) return;
+    const datos = this.datos(), txt = JSON.stringify(datos);
+    let h = 2166136261; for (let i = 0; i < txt.length; i++) { h ^= txt.charCodeAt(i); h = Math.imul(h, 16777619); }
+    const firma = (h >>> 0).toString(36) + ':' + txt.length;
+    if (firma === this.ultimo) return;
+    this.corriendo = true;
+    try {
+      const { error } = await Sync.sb.rpc('publicar_inventario_web', { datos });
+      if (error) { if (/publicar_inventario_web|schema cache|does not exist/i.test(error.message || '')) this.falta = true; console.warn('Inventario en la tienda:', error.message); return; }
+      this.ultimo = firma; lsSet('suinadm_invweb', firma);
+    } catch (e) { console.warn('Inventario en la tienda:', e); }
+    finally { this.corriendo = false; }
+  },
+  programar: debounce(() => InvWeb.publicar(), 5000)
+};
+Bus.on('data', (c) => { if (c === 'docs' || c === 'productos') InvWeb.programar(); });
+Bus.on('sync', () => { if (Sync.state === 'ok') InvWeb.programar(); });
+
 (async function boot() {
   await Store.load();
   App.shell();
