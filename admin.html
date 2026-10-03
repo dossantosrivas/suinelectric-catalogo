@@ -2257,14 +2257,16 @@ function pintarEnlaces(){
    Directorio de todo lo publicado + agregar / editar productos propios + ocultar.
    Lo que se guarda aquí sale en la tienda al instante; cada noche pasa al
    catálogo fijo (página /p/ para Google y WhatsApp, fotos en tu dominio). */
-let prodWeb = [], prodOcultos = new Map(), prodErr = null;
+let prodWeb = [], prodOcultos = new Map(), prodErr = null, prodInv = [];
 let fPro = { origen: '', marca: '', familia: '', q: '', orden: 'modelo' }, cuantosPro = 50;
 async function cargarPanelProductos(){
-  const [w, o] = await Promise.all([
+  const [w, o, inv] = await Promise.all([
     sb.from('productos_web').select('*').order('actualizado', { ascending: false }),
     sb.from('productos_ocultos').select('*'),
+    sb.from('inventario_web').select('*'),   // 15_inventario_web.sql (si no está, se ignora)
   ]);
   prodErr = w.error || o.error || null;
+  prodInv = inv.error ? [] : (inv.data || []);
   prodWeb = w.data || [];
   prodOcultos = new Map((o.data || []).map(x => [x.modelo, x]));
 }
@@ -2279,21 +2281,43 @@ function directorio(){
   const web = new Map(prodWeb.map(r => [r.modelo, r]));
   const lista = productos.filter(p => !web.has(p.modelo)).map(p => ({ p, origen: p._manual ? 'manual' : 'proveedor' }));
   prodWeb.forEach(r => lista.unshift({ p: formaDePanel(r), origen: 'panel', row: r, enCatalogo: productos.some(x => x.modelo === r.modelo) }));
-  lista.forEach(x => { x.oculto = prodOcultos.has(x.p.modelo); x.borrador = x.row ? !x.row.activo : false; });
+  // Tu inventario (lo publica la app de ventas): se marca lo que coincide (mismo modelo sin
+  // guiones/espacios/mayúsculas) y se agrega lo que solo tienes tú. Muestra lo que ve la tienda.
+  if (prodInv.length){
+    const inv = new Map(prodInv.map(r => [claveMod(r.modelo), r]));
+    const usadas = new Set();
+    lista.forEach(x => {
+      const k = claveMod(x.p.modelo), r = inv.get(k); if (!r) return;
+      usadas.add(k); x.inv = r;
+      x.p = Object.assign({}, x.p, { disponible: true });
+      if (r.marca) x.p.marca = r.marca;
+      if (r.nombre) x.p.nombre = r.nombre;
+      if (r.precio != null && Number(r.precio) > 0) x.p.precio = Number(r.precio);
+    });
+    inv.forEach((r, k) => {
+      if (usadas.has(k)) return;
+      const cat = r.categoria || r.marca || 'Inventario';
+      lista.unshift({ origen: 'inventario', inv: r, p: { modelo: r.modelo, nombre: r.nombre || r.modelo, marca: r.marca || '', descripcion: r.descripcion || '',
+        precio: r.precio != null && Number(r.precio) > 0 ? Number(r.precio) : null, disponible: true, imagen: null, categoria_principal: cat, subcategorias: [], _manual: true } });
+    });
+  }
+  const ocultosClave = new Set([...prodOcultos.keys()].map(claveMod));
+  lista.forEach(x => { x.oculto = prodOcultos.has(x.p.modelo) || (!!x.inv && ocultosClave.has(claveMod(x.p.modelo))); x.borrador = x.row ? !x.row.activo : false; });
   return lista;
 }
+function claveMod(m){ return String(m || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, ''); }
 const rutaCruda = (p) => [p.categoria_principal || p.marca || 'Otros'].concat(Array.isArray(p.subcategorias) ? p.subcategorias : (p.subcategoria ? String(p.subcategoria).split(' > ') : [])).filter(Boolean);
-const urlEnWeb = (x) => x.origen === 'panel' && !x.enCatalogo ? TIENDA + '#/todo?p=' + encodeURIComponent(x.p.modelo) : '/p/' + slugDe(x.p.modelo);
+const urlEnWeb = (x) => (x.origen === 'panel' && !x.enCatalogo) || x.origen === 'inventario' ? TIENDA + '#/todo?p=' + encodeURIComponent(x.p.modelo) : '/p/' + slugDe(x.p.modelo);
 const imgSrc = (u) => !u ? '' : /^(https?:)?\/\//.test(u) || u.startsWith('/') ? u : '/' + u;
-const PILL_ORIGEN = { panel: '<span class="pill azul">Del panel</span>', manual: '<span class="pill amar">Manual</span>', proveedor: '<span class="pill">Proveedor</span>' };
+const PILL_ORIGEN = { panel: '<span class="pill azul">Del panel</span>', manual: '<span class="pill amar">Manual</span>', proveedor: '<span class="pill">Proveedor</span>', inventario: '<span class="pill verde">Tu inventario</span>' };
 
 function vistaProductos(){
   const todos = directorio();
   const vis = todos.filter(x => !x.oculto && !x.borrador);
   const n = (f) => todos.filter(f).length;
   const kpi = (icono, titulo, num, pie, f) => '<button class="kpi" data-kf="' + f + '"><div class="k-cab">' + titulo + icono + '</div><div class="k-num">' + Number(num).toLocaleString('es-VE') + '</div><div class="k-pie">' + pie + '</div></button>';
-  const ORIG = [['', 'Todos'], ['proveedor', 'Del proveedor'], ['manual', 'Manuales'], ['panel', 'Agregados aquí'], ['ocultos', 'Ocultos'], ['borradores', 'Borradores'], ['sinfoto', 'Sin foto'], ['sinprecio', 'Sin precio']];
-  const cuentaO = { '': todos.length, proveedor: n(x => x.origen === 'proveedor'), manual: n(x => x.origen === 'manual'), panel: n(x => x.origen === 'panel'), ocultos: n(x => x.oculto), borradores: n(x => x.borrador), sinfoto: n(x => !x.p.imagen), sinprecio: n(x => x.p.precio == null) };
+  const ORIG = [['', 'Todos'], ['proveedor', 'Del proveedor'], ['manual', 'Manuales'], ['panel', 'Agregados aquí'], ['inventario', 'Inventario'], ['ocultos', 'Ocultos'], ['borradores', 'Borradores'], ['sinfoto', 'Sin foto'], ['sinprecio', 'Sin precio']];
+  const cuentaO = { '': todos.length, proveedor: n(x => x.origen === 'proveedor'), manual: n(x => x.origen === 'manual'), panel: n(x => x.origen === 'panel'), inventario: n(x => !!x.inv), ocultos: n(x => x.oculto), borradores: n(x => x.borrador), sinfoto: n(x => !x.p.imagen), sinprecio: n(x => x.p.precio == null) };
   const marcasL = [...new Set(todos.map(x => (x.p.marca || '').toUpperCase()).filter(Boolean))].sort();
   const familias = [...new Set(todos.map(x => rutaCruda(x.p)[0]))].sort((a, b) => a.localeCompare(b));
   $('main').innerHTML = cabecera('Productos', 'Todo lo que está en la tienda. Agrega productos propios (salen en la web al instante), corrige los tuyos u oculta los que no quieras mostrar. Los del proveedor los actualiza el scraper cada día.',
@@ -2304,6 +2328,7 @@ function vistaProductos(){
       kpi(ICO.sync, 'Del proveedor', cuentaO.proveedor, 'los trae el scraper cada día', 'proveedor') +
       kpi(ICO.caja, 'Manuales', cuentaO.manual, 'de productos_manuales.json', 'manual') +
       kpi(ICO.mas, 'Agregados aquí', cuentaO.panel, cuentaO.borradores ? cuentaO.borradores + ' en borrador' : 'desde este panel', 'panel') +
+      (prodInv.length ? kpi(ICO.caja, 'Tu inventario', cuentaO.inventario, n(x => x.origen === 'inventario') + ' que solo tienes tú', 'inventario') : '') +
       kpi(ICO.bloquear, 'Ocultos', cuentaO.ocultos, 'no se muestran en la web', 'ocultos') +
       kpi(ICO.alerta, 'Sin foto', cuentaO.sinfoto, cuentaO.sinprecio + ' sin precio', 'sinfoto') +
     '</div>' +
@@ -2326,7 +2351,7 @@ function vistaProductos(){
 function pintarProductos(){
   const el = $('pro-tabla'); if (!el) return;
   const q = fPro.q.trim().toLowerCase();
-  const filtroO = { '': x => true, proveedor: x => x.origen === 'proveedor', manual: x => x.origen === 'manual', panel: x => x.origen === 'panel', ocultos: x => x.oculto, borradores: x => x.borrador, sinfoto: x => !x.p.imagen, sinprecio: x => x.p.precio == null }[fPro.origen] || (() => true);
+  const filtroO = { '': x => true, proveedor: x => x.origen === 'proveedor', manual: x => x.origen === 'manual', panel: x => x.origen === 'panel', inventario: x => !!x.inv, ocultos: x => x.oculto, borradores: x => x.borrador, sinfoto: x => !x.p.imagen, sinprecio: x => x.p.precio == null }[fPro.origen] || (() => true);
   let lista = directorio().filter(x => filtroO(x) && (!fPro.marca || (x.p.marca || '').toUpperCase() === fPro.marca) && (!fPro.familia || rutaCruda(x.p)[0] === fPro.familia) &&
     (!q || [x.p.modelo, x.p.nombre, x.p.marca, x.p.descripcion, rutaCruda(x.p).join(' ')].join(' ').toLowerCase().includes(q)));
   const ord = { modelo: (a, b) => String(a.p.modelo).localeCompare(String(b.p.modelo)), precio_a: (a, b) => (a.p.precio ?? 1e12) - (b.p.precio ?? 1e12), precio_d: (a, b) => (b.p.precio ?? -1) - (a.p.precio ?? -1),
@@ -2338,17 +2363,17 @@ function pintarProductos(){
     lista.slice(0, cuantosPro).map(x => {
       const p = x.p, ruta = rutaCruda(p);
       const estado = x.oculto ? '<span class="pill rojo">Oculto</span>' : x.borrador ? '<span class="pill">Borrador</span>' : p.disponible === false ? '<span class="pill amar">Agotado</span>' : '<span class="pill verde">En la web</span>';
-      const editable = !prodErr && (x.origen !== 'proveedor');
+      const editable = !prodErr && x.origen !== 'proveedor' && x.origen !== 'inventario';
       return '<tr class="' + (x.oculto || x.borrador ? 'inactivo' : '') + '" data-mod="' + esc(p.modelo) + '">' +
         '<td class="pro-foto">' + (p.imagen ? '<img src="' + esc(imgSrc(p.imagen)) + '" alt="" loading="lazy" onerror="this.replaceWith(document.createTextNode(\'—\'))">' : '<span class="muted">sin foto</span>') + '</td>' +
-        '<td><strong class="mono">' + esc(p.modelo) + '</strong> ' + PILL_ORIGEN[x.origen] + (p.nombre && p.nombre !== p.modelo ? '<div class="muted pro-desc">' + esc(p.nombre) + '</div>' : p.descripcion ? '<div class="muted pro-desc">' + esc(p.descripcion) + '</div>' : '') + '</td>' +
+        '<td><strong class="mono">' + esc(p.modelo) + '</strong> ' + PILL_ORIGEN[x.origen] + (x.inv && x.origen !== 'inventario' ? ' <span class="pill verde" title="Sale con tu marca, precio y existencia">+ tu inventario</span>' : '') + (p.nombre && p.nombre !== p.modelo ? '<div class="muted pro-desc">' + esc(p.nombre) + '</div>' : p.descripcion ? '<div class="muted pro-desc">' + esc(p.descripcion) + '</div>' : '') + '</td>' +
         '<td>' + esc(p.marca || '—') + '</td>' +
         '<td class="pro-cat">' + esc(ruta.join(' › ')) + '</td>' +
         '<td style="white-space:nowrap">' + (p.precio != null ? '<strong>' + money(p.precio) + '</strong>' : '<span class="muted">Sin precio</span>') + '</td>' +
         '<td>' + estado + '</td>' +
         '<td class="acciones">' +
           (x.oculto || x.borrador ? '' : '<a class="btn chico icono" href="' + esc(urlEnWeb(x)) + '" target="_blank" rel="noopener" title="Ver en la web">' + ICO.externo + '</a> ') +
-          (editable ? '<button class="btn chico" data-editar="' + esc(p.modelo) + '">Editar</button> ' : '<button class="btn chico fantasma" data-copiar="' + esc(p.modelo) + '" title="Crear un producto nuevo a partir de este">' + ICO.copiar + 'Copiar</button> ') +
+          (x.origen === 'inventario' ? '<a class="btn chico" href="/ventas#/inventario" target="_blank" rel="noopener" title="Se edita en la app de ventas">Editar en ventas</a> ' : editable ? '<button class="btn chico" data-editar="' + esc(p.modelo) + '">Editar</button> ' : '<button class="btn chico fantasma" data-copiar="' + esc(p.modelo) + '" title="Crear un producto nuevo a partir de este">' + ICO.copiar + 'Copiar</button> ') +
           (prodErr ? '' : '<button class="btn chico ' + (x.oculto ? '' : 'fantasma') + '" data-ocultar="' + esc(p.modelo) + '" title="' + (x.oculto ? 'Volver a mostrar en la web' : 'No mostrar en la web') + '">' + (x.oculto ? ICO.ojo + 'Mostrar' : ICO.bloquear + 'Ocultar') + '</button>') +
         '</td></tr>';
     }).join('') + '</tbody></table>' +

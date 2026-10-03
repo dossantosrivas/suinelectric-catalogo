@@ -159,4 +159,5 @@ Desde ahí, la app de ventas (`/ventas`) sube sola a la tienda lo que tienes en 
 - Lo que solo tienes tú se agrega a la tienda, en la categoría que tenga en tu inventario.
 - Con el orden por defecto, en cada categoría tus productos salen primero; al buscar, también las categorías y sugerencias donde tienes inventario. Si el cliente elige ordenar por precio o A-Z, se respeta.
 - El modelo se compara sin guiones, espacios ni mayúsculas. Si dos marcas usan el mismo código para cosas distintas, oculta el que sobra desde el panel → Productos.
+- En el panel → **Productos**, el filtro **Inventario** muestra todo lo que sale de tu inventario: los que solo tienes tú (etiqueta *Tu inventario*, se editan en la app de ventas) y los unidos con uno del proveedor o manual (etiqueta *+ tu inventario*, con el precio y la marca que ve la tienda). **Ocultar** funciona en ambos.
 - La tienda pública solo ve el rango (+10 / Últimas unidades). Las cantidades exactas solo las ven los administradores y los clientes con "Ver existencias reales". No se publican costos.

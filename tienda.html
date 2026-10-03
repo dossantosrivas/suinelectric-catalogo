@@ -2918,8 +2918,8 @@ function claveModelo(m){ return normalizarBusqueda(m).replace(/[^a-z0-9]/g, '');
 function esDeInventario(p){ return !!(p && p._inv); }
 function unirInventario(lista, inventario, ocultos){
   if (!inventario.length) return lista;
-  const inv = new Map();
-  for (const r of inventario){ const k = claveModelo(r.modelo); if (k && !ocultos.has(r.modelo)) inv.set(k, r); }
+  const inv = new Map(), ocultosClave = new Set([...ocultos].map(claveModelo));
+  for (const r of inventario){ const k = claveModelo(r.modelo); if (k && !ocultosClave.has(k)) inv.set(k, r); }
   if (!inv.size) return lista;
   const elegido = new Map();   // clave -> índice del producto de la tienda que se queda
   const puntos = (p) => (p._manual ? 2 : 0) + (p.imagen ? 1 : 0);
