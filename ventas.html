@@ -1049,9 +1049,24 @@ const findCliente = (c) => {
   if (r && /\d{5}/.test(r)) { const m = all.find(x => normRif(x.rif) === r); if (m) return m; }
   const n = normKey(c.nombre); return n ? (all.find(x => normKey(x.nombre) === n) || null) : null;
 };
+/* ¿El cliente escrito en el documento es el de la ficha enlazada? Coincide si el nombre es igual o el RIF válido es igual. */
+const docCoincideCliente = (d, rec) => {
+  const c = d.cliente || {};
+  const n = normKey(c.nombre); if (!n || n === normKey(rec.nombre)) return true;
+  const r = normRif(c.rif), rr = normRif(rec.rif);
+  return !!(r && /\d{5}/.test(r) && r === rr);
+};
+/* Documentos enlazados a una ficha cuyo nombre no corresponde (ej. nota de un cliente que quedó en la ficha de otro) */
+const docsMalEnlazados = () => Store.all('docs').filter(d => {
+  if (!d.clienteId || d.enlaceRevisado || !d.cliente || !d.cliente.nombre) return false;
+  const rec = Store.get('clientes', d.clienteId);
+  return rec && normKey(d.cliente.nombre) !== normKey(rec.nombre);
+});
 const clienteFromDoc = (d) => {
   const c = d.cliente || {}; if (!c.nombre || !c.nombre.trim()) return null;
   let rec = d.clienteId ? Store.get('clientes', d.clienteId) : null;
+  // si el documento ya no se parece a la ficha enlazada (otro nombre y otro RIF), no confiar en el enlace
+  if (rec && !docCoincideCliente(d, rec)) { rec = null; d.clienteId = null; }
   if (!rec) rec = findCliente(c);
   if (!rec) {
     rec = { id: uid('c_'), nombre: c.nombre.trim(), rif: c.rif || '', direccion: c.direccion || '', telefono: '', correo: '', contacto: '', tipo: '', descuento: 0, notas: '', extras: [] };
@@ -1771,7 +1786,7 @@ function docEditor(v, D, isNew) {
     const box = $('#sec-cli', v); if (!box) return;
     const c = D.cliente || (D.cliente = { nombre: '', rif: '', direccion: '', extras: [] });
     const rec = D.clienteId && Store.get('clientes', D.clienteId);
-    box.innerHTML = `<div class="ph"><h2>Cliente</h2><div class="act"><button class="btn sm" data-c="paste">Pegar datos</button><button class="btn sm" data-c="pick">Mis clientes</button>${rec ? `<a class="btn sm" href="#/cliente/${esc(rec.id)}">Ver ficha</a>` : ''}</div></div>
+    box.innerHTML = `<div class="ph"><h2>Cliente</h2><div class="act"><button class="btn sm" data-c="paste">Pegar datos</button><button class="btn sm" data-c="pick">Mis clientes</button>${rec ? `<a class="btn sm" data-c="ficha" href="#/cliente/${esc(rec.id)}">Ver ficha</a>` : ''}</div></div>
       <div class="grid g2">
         <label class="fld"><span>Razón social o nombre</span><input class="inp" data-ck="nombre" value="${esc(c.nombre)}" list="dl-cli" autocomplete="off"></label>
         <label class="fld"><span>RIF o cédula</span><input class="inp" data-ck="rif" value="${esc(c.rif)}"></label>
@@ -1780,10 +1795,26 @@ function docEditor(v, D, isNew) {
       <datalist id="dl-cli">${Store.all('clientes').slice(0, 400).map(x => `<option value="${esc(x.nombre)}">`).join('')}</datalist>
       <div class="extras" style="margin-top:10px">${(c.extras || []).map((x, i) => `<div class="ex"><input class="inp" data-ex="${i}" data-exk="l" value="${esc(x.l)}"><input class="inp" data-ex="${i}" data-exk="v" value="${esc(x.v)}"><button class="btn ghost sm" data-exdel="${i}" title="Quitar">✕</button></div>`).join('')}</div>
       <div class="row small"><span class="muted">Agregar dato:</span>${['Teléfono', 'Correo', 'Atención', 'Contacto', 'Otro'].map(l => `<button class="btn sm ghost" data-exadd="${l}">+ ${l}</button>`).join('')}</div>
-      ${!rec && c.nombre ? '<p class="muted small" style="margin:8px 0 0">Al guardar se crea este cliente en tu lista (o se enlaza si ya existe con el mismo RIF o nombre).</p>' : ''}`;
+      <p class="muted small" data-c="hint" style="margin:8px 0 0${!rec && c.nombre ? '' : ';display:none'}">Al guardar se crea este cliente en tu lista (o se enlaza si ya existe con el mismo RIF o nombre).</p>`;
+    const desenlazar = () => {
+      D.clienteId = null;
+      const f = $('[data-c="ficha"]', box); if (f) f.remove();
+      const h = $('[data-c="hint"]', box); if (h) h.style.display = c.nombre ? '' : 'none';
+    };
     $$('[data-ck]', box).forEach(i => i.addEventListener('input', () => {
       c[i.dataset.ck] = i.value; setDirty();
-      if (i.dataset.ck === 'nombre') { const m = Store.all('clientes').find(x => x.nombre === i.value); if (m) { D.clienteId = m.id; D.cliente = docClienteSnap(m); paintCliente(); } }
+      if (i.dataset.ck === 'nombre') {
+        const m = Store.all('clientes').find(x => x.nombre === i.value);
+        if (m) { D.clienteId = m.id; D.cliente = docClienteSnap(m); paintCliente(); return; }
+        // escribió otro nombre: la nota deja de pertenecer a la ficha que tenía enlazada
+        const cur = D.clienteId && Store.get('clientes', D.clienteId);
+        if (cur && normKey(i.value) !== normKey(cur.nombre)) desenlazar();
+        else { const h = $('[data-c="hint"]', box); if (h && !D.clienteId) h.style.display = c.nombre ? '' : 'none'; }
+      }
+      if (i.dataset.ck === 'rif') {
+        const cur = D.clienteId && Store.get('clientes', D.clienteId); const r = normRif(i.value);
+        if (cur && cur.rif && r && /\d{5}/.test(r) && r !== normRif(cur.rif)) desenlazar();
+      }
     }));
     $$('[data-ex]', box).forEach(i => i.addEventListener('input', () => { c.extras[+i.dataset.ex][i.dataset.exk] = i.value; setDirty(); }));
     $$('[data-exdel]', box).forEach(b => b.onclick = () => { c.extras.splice(+b.dataset.exdel, 1); setDirty(); paintCliente(); });
@@ -2219,6 +2250,33 @@ const statsCliente = (cid) => {
   vs.forEach(d => { const T = Calc.totals(d); total += T.total; saldo += Math.max(0, T.saldo); if ((d.fecha || '') > ultima) ultima = d.fecha; });
   return { docs: ds, ventas: vs, total, saldo, ultima, ofertas: ds.filter(d => d.tipo === 'oferta').length };
 };
+/* Pasa el documento a la ficha que corresponde a su nombre (o crea esa ficha) */
+const corregirEnlace = (d) => {
+  const wrong = Store.get('clientes', d.clienteId);
+  const n = normKey(d.cliente.nombre);
+  let m = Store.all('clientes').find(x => x.id !== d.clienteId && normKey(x.nombre) === n);
+  if (!m) {
+    const tmp = { cliente: clone(d.cliente) };
+    if (wrong && normRif(tmp.cliente.rif) && normRif(tmp.cliente.rif) === normRif(wrong.rif)) tmp.cliente.rif = ''; // el RIF era del otro cliente
+    m = clienteFromDoc(tmp);
+  }
+  d.clienteId = m ? m.id : null; Store.put('docs', d, { quiet: true });
+  return m;
+};
+const revisarEnlaces = (onDone) => {
+  const m = UI.modal({ title: 'Documentos en el cliente equivocado', wide: true, foot: [['Listo', 'pri', c => c()]], onClose: () => { Bus.emit('data', 'docs'); if (onDone) onDone(); }, body: '<div data-l></div>' });
+  const paint = () => {
+    const ds = docsMalEnlazados().sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''));
+    $('[data-l]', m.body).innerHTML = ds.length ? `<p class="muted small" style="margin-top:0"><b>Corregir</b> pasa el documento al cliente que dice el documento (si no existe, se crea su ficha). <b>Está bien</b> lo deja donde está (por ejemplo, si es la misma empresa escrita de otra forma).</p>
+      <div class="stack" style="gap:8px">${ds.map(d => { const rec = Store.get('clientes', d.clienteId); const mismoRif = normRif(d.cliente.rif) && normRif(d.cliente.rif) === normRif(rec.rif);
+        return `<div class="panel" style="padding:10px 12px"><div class="row" style="justify-content:space-between;gap:8px;flex-wrap:wrap"><div style="flex:1 1 260px"><a href="#/doc/${esc(d.id)}">${esc(TIPOS[d.tipo] || d.tipo)} ${esc(d.numero || '')}</a> <span class="muted small">${esc(fmtFecha(d.fecha))}</span><br>Dice: <b>${esc(d.cliente.nombre)}</b><br><span class="muted">Está en la ficha de: ${esc(rec.nombre)}</span>${mismoRif ? `<br><span class="small" style="color:var(--red)">Tiene el mismo RIF que ${esc(rec.nombre)} (${esc(rec.rif)}). Revisa el RIF dentro del documento.</span>` : ''}</div>
+        <div class="row" style="gap:6px"><button class="btn sm" data-ok="${esc(d.id)}">Está bien</button><button class="btn sm pri" data-fix="${esc(d.id)}">Corregir</button></div></div></div>`; }).join('')}</div>` : '<div class="empty">Todo en orden: no quedan documentos en el cliente equivocado.</div>';
+    $$('[data-fix]', m.body).forEach(b => b.onclick = () => { const d = Store.get('docs', b.dataset.fix); const c = corregirEnlace(d); UI.toast(c ? 'Pasado a ' + c.nombre : 'Corregido'); paint(); });
+    $$('[data-ok]', m.body).forEach(b => b.onclick = () => { const d = Store.get('docs', b.dataset.ok); d.enlaceRevisado = true; Store.put('docs', d, { quiet: true }); paint(); });
+    $$('a[href^="#/doc/"]', m.body).forEach(a => a.addEventListener('click', () => m.close()));
+  };
+  paint();
+};
 Views.clientes = (v) => {
   const F = Object.assign({ q: '', orden: 'ultima', web: '' }, lsGet('suinadm_f_cli', {}));
   const nWeb = Store.all('clientes').filter(c => c.tiendaEmail).length;
@@ -2226,8 +2284,15 @@ Views.clientes = (v) => {
     <div class="sub">${Sync.online() ? (Tienda.error ? esc(Tienda.error) : `Los clientes que se registran en suinelectric.com aparecen aquí solos (${nWeb}).`) : 'Inicia sesión para ver los clientes registrados en la tienda.'}</div></div>
     <div class="row" style="margin-bottom:12px"><input class="inp" style="flex:1 1 240px" type="search" placeholder="Buscar por nombre, RIF, teléfono o correo" value="${esc(F.q)}" data-q>
     <div class="seg" data-web-f>${[['', 'Todos'], ['web', 'Tienda web'], ['no', 'Sin cuenta web']].map(([k, l]) => `<button type="button" data-v="${k}" class="${F.web === k ? 'on' : ''}">${l}</button>`).join('')}</div>
-    <select class="inp" style="width:auto" data-o><option value="ultima" ${F.orden === 'ultima' ? 'selected' : ''}>Compra más reciente</option><option value="total" ${F.orden === 'total' ? 'selected' : ''}>Más compras ($)</option><option value="saldo" ${F.orden === 'saldo' ? 'selected' : ''}>Mayor deuda</option><option value="nombre" ${F.orden === 'nombre' ? 'selected' : ''}>Nombre</option><option value="registro" ${F.orden === 'registro' ? 'selected' : ''}>Registro web más reciente</option></select></div><div id="lst"></div>`;
+    <select class="inp" style="width:auto" data-o><option value="ultima" ${F.orden === 'ultima' ? 'selected' : ''}>Compra más reciente</option><option value="total" ${F.orden === 'total' ? 'selected' : ''}>Más compras ($)</option><option value="saldo" ${F.orden === 'saldo' ? 'selected' : ''}>Mayor deuda</option><option value="nombre" ${F.orden === 'nombre' ? 'selected' : ''}>Nombre</option><option value="registro" ${F.orden === 'registro' ? 'selected' : ''}>Registro web más reciente</option></select></div><div data-malenl></div><div id="lst"></div>`;
+  const paintMal = () => {
+    const box = $('[data-malenl]', v); if (!box) return;
+    const n = docsMalEnlazados().length;
+    box.innerHTML = n ? `<div class="panel" style="margin-bottom:12px;border-color:var(--red);display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span style="flex:1 1 260px">⚠ <b>${n} ${n === 1 ? 'documento está enlazado' : 'documentos están enlazados'}</b> a la ficha de un cliente con otro nombre. Pueden estar apareciendo en el cliente equivocado.</span><button class="btn pri" data-malrev>Revisar</button></div>` : '';
+    const b = $('[data-malrev]', box); if (b) b.onclick = () => revisarEnlaces(() => { paintMal(); paint(); });
+  };
   const paint = () => {
+    paintMal();
     lsSet('suinadm_f_cli', F);
     const q = normTxt(F.q);
     let rows = Store.all('clientes').filter(c => !F.web || (F.web === 'web' ? !!c.tiendaEmail : !c.tiendaEmail)).filter(c => !q || normTxt([c.nombre, c.rif, c.telefono, c.correo, c.contacto, c.direccion].join(' ')).includes(q)).map(c => ({ c, s: statsCliente(c.id) }));
@@ -2252,6 +2317,7 @@ Views.cliente = (v, id) => {
   let c = Store.get('clientes', id); let isNew = false;
   if (!c && App.pendingCliente && App.pendingCliente.id === id) { c = App.pendingCliente; isNew = true; }
   if (!c) { v.innerHTML = '<div class="panel empty">Este cliente no existe.<br><br><a class="btn" href="#/clientes">Ver clientes</a></div>'; return; }
+  let nombreOrig = c.nombre;
   c = clone(c);
   const s = statsCliente(c.id);
   const peds = Tienda.pedidosDe(c);
@@ -2309,7 +2375,7 @@ Views.cliente = (v, id) => {
       box.innerHTML = ps.length ? `<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Fecha</th><th>Documento</th><th>Forma</th><th class="r">Monto</th></tr></thead><tbody>${ps.map(({ d, p }) => `<tr class="click" data-doc="${esc(d.id)}"><td class="mono small">${esc(fmtFecha(p.fecha))}</td><td class="mono small">${esc(d.numero)}</td><td>${esc(p.forma || '—')}${p.ref ? ` <span class="muted small">${esc(p.ref)}</span>` : ''}</td><td class="num">${fmtUSD(num(p.monto))}</td></tr>`).join('')}</tbody></table></div>` : '<div class="empty">Sin pagos registrados.</div>';
     } else {
       const list = docs.filter(d => F.tab === 'todos' || (F.tab === 'ventas' ? esVenta(d) : d.tipo === 'oferta'));
-      box.innerHTML = list.length ? `<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Fecha</th><th>Documento</th><th class="hm">Productos</th><th class="r">Total</th><th>Estado</th></tr></thead><tbody>${list.map(d => `<tr class="click ${d.estado === 'anulada' ? 'anul' : ''}" data-doc="${esc(d.id)}"><td class="mono small">${esc(fmtFecha(d.fecha))}</td><td><span class="small">${esc(TIPOS[d.tipo])}</span><div class="mono small muted">${esc(d.numero)}</div></td><td class="hm">${docItemsTxt(d)}</td><td class="num">${fmtUSD(Calc.totals(d).total)}</td><td>${estadoPill(d)}</td></tr>`).join('')}</tbody></table></div>` : `<div class="empty">Nada por aquí todavía.</div>`;
+      box.innerHTML = list.length ? `<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Fecha</th><th>Documento</th><th class="hm">Productos</th><th class="r">Total</th><th>Estado</th></tr></thead><tbody>${list.map(d => `<tr class="click ${d.estado === 'anulada' ? 'anul' : ''}" data-doc="${esc(d.id)}"><td class="mono small">${esc(fmtFecha(d.fecha))}</td><td><span class="small">${esc(TIPOS[d.tipo])}</span><div class="mono small muted">${esc(d.numero)}</div>${!d.enlaceRevisado && d.cliente && d.cliente.nombre && normKey(d.cliente.nombre) !== normKey(c.nombre) ? `<div class="small" style="color:var(--red)">⚠ A nombre de: ${esc(d.cliente.nombre)}</div>` : ''}</td><td class="hm">${docItemsTxt(d)}</td><td class="num">${fmtUSD(Calc.totals(d).total)}</td><td>${estadoPill(d)}</td></tr>`).join('')}</tbody></table></div>` : `<div class="empty">Nada por aquí todavía.</div>`;
     }
     $$('[data-doc]', box).forEach(tr => tr.onclick = () => Route.nav('#/doc/' + tr.dataset.doc));
   };
@@ -2323,7 +2389,9 @@ Views.cliente = (v, id) => {
     if (c.rif) c.rif = normRif(c.rif);
     Store.put('clientes', c); dirty = false; App.pendingCliente = null;
     // actualizar el nombre en sus documentos
-    Store.all('docs').filter(d => d.clienteId === c.id && d.cliente && d.cliente.nombre !== c.nombre).forEach(d => { d.cliente.nombre = c.nombre; Store.put('docs', d, { quiet: true }); });
+    // solo los que llevaban el nombre anterior de esta ficha: uno de otro cliente enlazado por error no se renombra
+    Store.all('docs').filter(d => d.clienteId === c.id && d.cliente && d.cliente.nombre !== c.nombre && normKey(d.cliente.nombre) === normKey(nombreOrig)).forEach(d => { d.cliente.nombre = c.nombre; Store.put('docs', d, { quiet: true }); });
+    nombreOrig = c.nombre;
     App.guard = null;
     if (c.tiendaEmail) {
       UI.toast('Guardando también en la tienda…');
