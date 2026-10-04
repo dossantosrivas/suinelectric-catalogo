@@ -1522,6 +1522,15 @@ function rutaOriginalDe(p){
   return [cat, ...subs.filter(Boolean)];
 }
 // Ruta completa (todas las subcategorías), ya reorganizada y con nombres limpios.
+
+/* Raíces que ya son una familia o categoría de la tienda (o una raíz conocida escrita con
+   otras mayúsculas/acentos): así un producto guardado como "Seccionadores" o "CONTACTORES"
+   no cae en Otros Productos. */
+function claveCat(s){ return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]/g, ''); }
+const _canonCat = new Map();
+FAMILIAS.forEach(f => { _canonCat.set(claveCat(f.nombre), [f.nombre]); f.categorias.forEach(c => _canonCat.set(claveCat(c), [f.nombre, c])); });
+Object.keys(MAPA_CATEGORIAS).forEach(k => { const kk = claveCat(k); if (!_canonCat.has(kk)) _canonCat.set(kk, MAPA_CATEGORIAS[k]); });
+function canonCat(r){ return _canonCat.get(claveCat(r)) || null; }
 function rutaDe(p){
   const hit = _cacheRuta.get(p);
   if (hit) return hit;
@@ -1534,6 +1543,8 @@ function rutaDe(p){
     base = MAPA_MARCAS[raiz][subs[0]]; resto = subs.slice(1);
   } else if (MAPA_CATEGORIAS[raiz]){
     base = MAPA_CATEGORIAS[raiz]; resto = subs;
+  } else if (canonCat(raiz)){
+    base = canonCat(raiz); resto = subs;
   } else {
     base = [FAMILIA_OTROS, raiz]; resto = subs;
   }
@@ -2916,6 +2927,8 @@ async function traerDelPanel(){
    cuando tu producto no las tiene. Lo que solo tienes tú se agrega.
    El modelo se compara sin guiones, espacios ni mayúsculas. */
 function claveModelo(m){ return normalizarBusqueda(m).replace(/[^a-z0-9]/g, ''); }
+// categoría que manda la app de ventas: "Contactores > Accesorios" → ['Contactores', 'Accesorios']
+function rutaInventario(r){ const cs = String(r.categoria || '').split(/\s*>\s*/).map(x => x.trim()).filter(Boolean); return cs.length ? cs : [r.marca || 'Inventario']; }
 function esDeInventario(p){ return !!(p && p._inv); }
 function unirInventario(lista, inventario, ocultos){
   if (!inventario.length) return lista;
@@ -2927,9 +2940,9 @@ function unirInventario(lista, inventario, ocultos){
     const enLista = new Set(lista.map(p => claveModelo(p.modelo)));
     for (const [k, r] of pedido){
       if (enLista.has(k) || inv.has(k)) continue;
-      const cat = r.categoria || r.marca || 'Inventario';
+      const cs = rutaInventario(r), cat = cs[0];
       const p = { modelo: r.modelo, sku: r.modelo, nombre: r.nombre || r.modelo, marca: String(r.marca || '').toUpperCase(), descripcion: r.descripcion || '',
-        categoria_principal: cat, subcategorias: [], subcategoria: '', categoria: [cat, r.modelo].join(' > '), categorias: [cat, r.modelo],
+        categoria_principal: cat, subcategorias: cs.slice(1), subcategoria: cs.slice(1).join(' > '), categoria: cs.concat(r.modelo).join(' > '), categorias: cs.concat(r.modelo),
         disponible: true, stock: 'pedido', _inv: true, _invClave: k, _manual: true };
       if (r.precio != null && Number(r.precio) > 0) p.precio = Number(r.precio);
       lista = lista.concat([p]);
@@ -2958,9 +2971,9 @@ function unirInventario(lista, inventario, ocultos){
   const usadas = new Set(elegido.keys());
   for (const [k, r] of inv){
     if (usadas.has(k)) continue;
-    const cat = r.categoria || r.marca || 'Inventario';
+    const cs = rutaInventario(r), cat = cs[0];
     const p = { modelo: r.modelo, sku: r.modelo, nombre: r.nombre || r.modelo, marca: String(r.marca || '').toUpperCase(), descripcion: r.descripcion || '',
-      categoria_principal: cat, subcategorias: [], subcategoria: '', categoria: [cat, r.modelo].join(' > '), categorias: [cat, r.modelo],
+      categoria_principal: cat, subcategorias: cs.slice(1), subcategoria: cs.slice(1).join(' > '), categoria: cs.concat(r.modelo).join(' > '), categorias: cs.concat(r.modelo),
       disponible: true, stock: r.stock, _inv: true, _invClave: k, _manual: true };
     if (r.precio != null && Number(r.precio) > 0) p.precio = Number(r.precio);
     salida.push(p);
