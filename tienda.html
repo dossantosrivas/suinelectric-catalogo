@@ -303,6 +303,8 @@
   .precio-box{ display:flex; flex-direction:column; }
   .precio-original{ font-size:13px; color:var(--texto-3); text-decoration:line-through; }
   .precio-linea{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .adm-precios{ margin-top:6px; padding:6px 8px; border:1px dashed #b8860b; border-radius:6px; background:#fff8e1; font-size:12.5px; line-height:1.45; color:#4a3b00; text-align:left; }
+  .adm-precios .usa{ font-weight:600; } .adm-precios span{ opacity:.75; } .adm-precios .adm-nota{ font-size:11px; opacity:.7; margin-top:2px; }
   .dto-badge{ display:inline-block; font-size:12.5px; font-weight:700; line-height:1; padding:4px 7px; border-radius:4px;
     background:var(--ok-suave); color:var(--ok); white-space:nowrap; font-variant-numeric:tabular-nums; }
   .dto-badge.dto-propio{ background:var(--amarillo); color:var(--tinta); }
@@ -1269,6 +1271,19 @@ function precioRegistro(p){
   if (actual == null || conCuenta == null || Math.ceil(conCuenta) >= Math.ceil(actual)) return null;
   return conCuenta;
 }
+// Solo administradores: cuando el modelo está en tu inventario y en la tienda (distribuidor o panel),
+// muestra los dos precios y marca con ✓ el que se usa para el cliente.
+function bloqueAdminPrecios(p){
+  if (typeof sesion === 'undefined' || !sesion.admin || !p || !p._adm || !p._adm.otro) return '';
+  const a = p._adm, f = (n) => n != null && Number(n) > 0 ? formatoMoneda(Number(n)) : 'sin precio';
+  const lista = a.otro.precio != null && Number(a.otro.precio) > 0 ? Number(a.otro.precio) : null;
+  const web = lista == null ? null : a.otro._manual ? lista : precioConDescuento(lista);
+  const usaInv = a.stock !== 'pedido' && a.inv != null && Number(a.inv) > 0;
+  return '<div class="adm-precios" title="Esto solo lo ven los administradores">' +
+    '<div class="' + (usaInv ? 'usa' : '') + '">' + (usaInv ? '✓ ' : '') + 'Tu inventario: <b>' + f(a.inv) + '</b>' + (a.stock === 'pedido' ? ' <span>(sin existencia)</span>' : '') + '</div>' +
+    '<div class="' + (!usaInv ? 'usa' : '') + '">' + (!usaInv ? '✓ ' : '') + a.otro.fuente + ': <b>' + f(web) + '</b>' + (lista != null && !a.otro._manual && Math.ceil(web) < Math.ceil(lista) ? ' <span>(lista ' + f(lista) + ')</span>' : '') + '</div>' +
+    '<div class="adm-nota">Solo administradores · ✓ = el que ve el cliente</div></div>';
+}
 function bloquePrecioRegistro(p, grande){
   const pr = precioRegistro(p);
   if (pr == null) return '';
@@ -2161,6 +2176,7 @@ function tarjetaHTML(p){
             <span class="precio-linea"><span class="precio">${formatoMoneda(precioFinal)}</span>${badgeDescuento(p)}</span>
             ${(esManual(p) && precioFinal != null) ? '<span class="precio-nota">precio de catálogo</span>' : ''}
             ${bloquePrecioRegistro(p)}
+            ${bloqueAdminPrecios(p)}
           </div>
         </div>
         <div class="actions">
@@ -2722,6 +2738,7 @@ function abrirDetalle(modelo){
           '</div>' +
           (esManual(p) && precioFinal != null ? '<span class="precio-nota">precio de catálogo</span>' : '') +
           bloquePrecioRegistro(p, true) +
+          bloqueAdminPrecios(p) +
           '<div><span class="estado ' + (p.disponible ? 'ok' : 'off') + '">' + (p.disponible ? estadoTexto : 'Agotado') + '</span></div>' +
         '</div>' +
         '<span class="det-desc-label">Descripción</span>' +
@@ -2932,13 +2949,17 @@ function rutaInventario(r){ const cs = String(r.categoria || '').split(/\s*>\s*/
 function esDeInventario(p){ return !!(p && p._inv); }
 function unirInventario(lista, inventario, ocultos){
   if (!inventario.length) return lista;
-  const inv = new Map(), pedido = new Map(), ocultosClave = new Set([...ocultos].map(claveModelo));
+  const inv = new Map(), pedido = new Map(), ocultosClave = new Set([...ocultos].map(claveModelo)), pedidoEnLista = new Map();
+  const otroDe = (p) => ({ precio: p.precio, _manual: !!p._manual, fuente: p._panel ? 'Panel /admin' : 'Distribuidor' });
+  // tuyo sin existencia y también en la tienda: se deja el de la tienda, pero el admin ve tu precio
+  const marcarPedido = (arr) => !pedidoEnLista.size ? arr : arr.map(p => { const r = pedidoEnLista.get(claveModelo(p.modelo)); return r && !p._adm ? Object.assign({}, p, { _adm: { inv: r.precio, stock: 'pedido', otro: otroDe(p) } }) : p; });
   // "pedido" = tuyo pero sin existencia: si el producto ya está en la tienda (distribuidor o panel) se deja
   // tal cual, con su disponibilidad; si solo lo tienes tú, se agrega como "A pedido".
   for (const r of inventario){ const k = claveModelo(r.modelo); if (!k || ocultosClave.has(k)) continue; (r.stock === 'pedido' ? pedido : inv).set(k, r); }
   if (pedido.size){
     const enLista = new Set(lista.map(p => claveModelo(p.modelo)));
     for (const [k, r] of pedido){
+      if (enLista.has(k) && !inv.has(k)) pedidoEnLista.set(k, r);
       if (enLista.has(k) || inv.has(k)) continue;
       const cs = rutaInventario(r), cat = cs[0];
       const p = { modelo: r.modelo, sku: r.modelo, nombre: r.nombre || r.modelo, marca: String(r.marca || '').toUpperCase(), descripcion: r.descripcion || '',
@@ -2948,7 +2969,7 @@ function unirInventario(lista, inventario, ocultos){
       lista = lista.concat([p]);
     }
   }
-  if (!inv.size) return lista;
+  if (!inv.size) return marcarPedido(lista);
   const elegido = new Map();   // clave -> índice del producto de la tienda que se queda
   const puntos = (p) => (p._manual ? 2 : 0) + (p.imagen ? 1 : 0);
   lista.forEach((p, i) => {
@@ -2961,7 +2982,7 @@ function unirInventario(lista, inventario, ocultos){
     const k = claveModelo(p.modelo), r = inv.get(k);
     if (!r){ salida.push(p); return; }
     if (elegido.get(k) !== i) return;   // repetido (otra marca u otra fuente): fuera
-    const q = Object.assign({}, p, { _inv: true, _invClave: k, disponible: true, stock: r.stock });
+    const q = Object.assign({}, p, { _inv: true, _invClave: k, disponible: true, stock: r.stock, _adm: { inv: r.precio, stock: r.stock, otro: otroDe(p) } });
     if (r.marca) q.marca = String(r.marca).toUpperCase();
     if (r.nombre) q.nombre = r.nombre;
     if (r.descripcion && !p.descripcion) q.descripcion = r.descripcion;
@@ -2978,7 +2999,7 @@ function unirInventario(lista, inventario, ocultos){
     if (r.precio != null && Number(r.precio) > 0) p.precio = Number(r.precio);
     salida.push(p);
   }
-  return salida;
+  return marcarPedido(salida);
 }
 
 let catalogoEnProgreso = false;   // true mientras el scraper está trabajando
