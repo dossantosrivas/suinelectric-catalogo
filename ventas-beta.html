@@ -124,6 +124,19 @@ table.tbl{width:100%;border-collapse:collapse;font-size:16.5px}
 .tbl tbody tr.click:hover td{background:#EAF2F8}
 .tbl .r{text-align:right}
 .tbl tr.anul td{color:#7B8796;text-decoration:line-through}
+/* Ofertas: estado desde la lista y selección múltiple */
+.tbl .sel-c{width:44px;padding-right:0;vertical-align:middle}
+.tbl .sel-c input{width:20px;height:20px;cursor:pointer;accent-color:var(--steel);margin:0}
+.tbl tbody tr.sel td{background:var(--steel-soft)!important}
+.est-sel{font:600 14.5px var(--f-sans);border:1px solid transparent;border-radius:12px;padding:3px 26px 3px 10px;cursor:pointer;appearance:none;-webkit-appearance:none;background-repeat:no-repeat;background-position:right 8px center;background-size:10px;background-image:url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 10 6'%3E%3Cpath d='M1 1l4 4 4-4' fill='none' stroke='%23475866' stroke-width='1.6'/%3E%3C/svg%3E")}
+.est-sel:hover,.est-sel:focus{border-color:var(--line);outline:none}
+.est-sel.info{background-color:var(--steel-soft);color:var(--steel-2)}.est-sel.ok{background-color:var(--ok-soft);color:var(--ok)}.est-sel.bad{background-color:var(--red-soft);color:var(--red)}
+.lote-bar{position:sticky;top:0;z-index:20;display:flex;align-items:center;gap:8px 10px;flex-wrap:wrap;background:var(--plate);color:#fff;border-radius:var(--r);padding:10px 14px;margin-bottom:10px;box-shadow:0 4px 14px rgba(14,42,59,.25)}
+.lote-bar b{font-size:16.5px;margin-right:4px}
+.lote-bar .btn{background:rgba(255,255,255,.1);border-color:rgba(255,255,255,.2);color:#fff}
+.lote-bar .btn:hover{background:rgba(255,255,255,.2)}
+.lote-bar .btn.ok{background:var(--ok);border-color:var(--ok)}.lote-bar .btn.bad{background:var(--red);border-color:var(--red)}
+.lote-bar .x{margin-left:auto;background:none;border:none;color:rgba(255,255,255,.75);font:600 15px var(--f-sans);cursor:pointer;text-decoration:underline}
 th.ord{cursor:pointer;user-select:none;-webkit-user-select:none}th.ord:hover{color:var(--ink)}
 th.ord::after{content:'↕';opacity:.3;margin-left:4px;font-size:13.5px}th.ord-asc::after{content:'▲';opacity:1;color:var(--steel)}th.ord-desc::after{content:'▼';opacity:1;color:var(--steel)}th.ord-asc,th.ord-desc{color:var(--ink)}
 .empty{padding:28px;text-align:center;color:var(--muted)}
@@ -1563,7 +1576,12 @@ function docListView(v, { titulo, tipos, nuevo, sub }) {
   const compra = tipos.includes('compra');
   const party = compra ? 'Distribuidor' : 'Cliente';
   const campo = compra ? 'comprador' : 'vendedor';
-  const sortId = 'docs-' + tipos.join('');
+  // Ofertas: el estado se cambia desde la lista y se pueden marcar varias a la vez
+  const conEstado = tipos.length === 1 && tipos[0] === 'oferta';
+  const sortId = 'docs-' + tipos.join('') + (conEstado ? '-sel' : '');
+  const off = conEstado ? 1 : 0;           // la columna de selección no ordena
+  const sel = new Set();
+  let visibles = [];
   v.innerHTML = `
     <div class="vh"><h1>${titulo}</h1><div class="act">${nuevo.map(([t, l]) => `<a class="btn ${t === nuevo[0][0] ? 'pri' : ''}" href="#/nuevo/${t}">${ico('plus')} ${l}</a>`).join('')}</div>${sub ? `<div class="sub">${sub}</div>` : ''}</div>
     <div class="row" style="margin-bottom:12px">
@@ -1599,26 +1617,58 @@ function docListView(v, { titulo, tipos, nuevo, sub }) {
     if (q) rows = rows.filter(d => normTxt([d.numero, docParty(d), d.notas, d.vendedor, d.comprador].concat((d.items || []).map(i => i.codigo + ' ' + i.desc)).join(' ')).includes(q));
     rows.sort((a, b) => (b.fecha || '').localeCompare(a.fecha || '') || (b.numero || '').localeCompare(a.numero || ''));
     const so = TablaOrden.get(sortId);
-    if (so && COLS[so.c]) { const g = COLS[so.c].get; rows = rows.map((d, i) => ({ d, i, v: g(d) })).sort((a, b) => TablaOrden.cmp(a.v, b.v, so.d) || a.i - b.i).map(x => x.d); }
+    if (so && COLS[so.c - off]) { const g = COLS[so.c - off].get; rows = rows.map((d, i) => ({ d, i, v: g(d) })).sort((a, b) => TablaOrden.cmp(a.v, b.v, so.d) || a.i - b.i).map(x => x.d); }
     const act = rows.filter(d => d.estado !== 'anulada');
     const tot = act.reduce((a, d) => a + Calc.totals(d).total, 0);
     const shown = rows.slice(0, F.lim || 150);
+    visibles = shown.map(d => d.id);
+    const ids = new Set(rows.map(d => d.id)); Array.from(sel).forEach(id => { if (!ids.has(id)) sel.delete(id); });
+    const estSel = (d) => { const e = d.estado || 'abierta'; const c = (ESTADOS_OFERTA[e] || ESTADOS_OFERTA.abierta)[1];
+      return `<select class="est-sel ${c}" data-est="${esc(d.id)}" title="Cambiar estado" aria-label="Estado de ${esc(d.numero || 'la oferta')}">${Object.entries(ESTADOS_OFERTA).map(([k, [l]]) => `<option value="${k}" ${e === k ? 'selected' : ''}>${l}</option>`).join('')}</select>`; };
     $('#lst', v).innerHTML = rows.length ? `
+      ${conEstado ? '<div class="lote-bar hide" data-lote></div>' : ''}
       <div class="muted small" style="margin-bottom:6px">${rows.length} documento${rows.length === 1 ? '' : 's'} · total ${fmtUSD(tot)}</div>
-      <div class="tbl-wrap"><table class="tbl" data-sort="${sortId}"><thead><tr>${COLS.map(c => `<th${c.cls ? ` class="${c.cls}"` : ''}>${esc(c.h)}</th>`).join('')}</tr></thead><tbody>
-      ${shown.map(d => { const T = Calc.totals(d); return `<tr class="click ${d.estado === 'anulada' ? 'anul' : ''}" data-id="${esc(d.id)}">
+      <div class="tbl-wrap"><table class="tbl" data-sort="${sortId}"><thead><tr>${conEstado ? '<th class="sel-c"><input type="checkbox" data-todas title="Seleccionar todas las que se ven" aria-label="Seleccionar todas"></th>' : ''}${COLS.map(c => `<th${c.cls ? ` class="${c.cls}"` : ''}>${esc(c.h)}</th>`).join('')}</tr></thead><tbody>
+      ${shown.map(d => { const T = Calc.totals(d); return `<tr class="click ${d.estado === 'anulada' ? 'anul' : ''}${sel.has(d.id) ? ' sel' : ''}" data-id="${esc(d.id)}">
+        ${conEstado ? `<td class="sel-c"><input type="checkbox" data-sel="${esc(d.id)}" ${sel.has(d.id) ? 'checked' : ''} aria-label="Seleccionar ${esc(d.numero || '')}"></td>` : ''}
         <td class="mono small" style="white-space:nowrap">${esc(fmtFecha(d.fecha))}</td>
         <td class="mono small" style="white-space:nowrap">${esc(d.numero || '')}</td>
         <td>${esc(docParty(d))}${d.tipo === 'venta' && tipos.includes('nota') ? ' <span class="pill" title="Venta sin nota de entrega">sin nota</span>' : ''}</td>
         <td class="hm">${docItemsTxt(d)}</td>
         <td class="hm">${docOrigins(d).map(ownTag).join(' ')}</td><td class="hm small">${esc(d[campo] || '—')}</td>
         <td class="num">${fmtUSD(T.total)}</td>
-        <td>${estadoPill(d)}</td></tr>`; }).join('')}
+        <td>${conEstado ? estSel(d) : estadoPill(d)}</td></tr>`; }).join('')}
       </tbody></table></div>
       ${rows.length > shown.length ? `<div style="text-align:center;margin-top:10px"><button class="btn" data-more>Ver ${Math.min(150, rows.length - shown.length)} más</button></div>` : ''}`
       : `<div class="panel empty">No hay documentos con estos filtros.<br><br><a class="btn pri" href="#/nuevo/${nuevo[0][0]}">${ico('plus')} ${nuevo[0][1]}</a></div>`;
-    $$('tr[data-id]', v).forEach(tr => tr.onclick = () => { Route.nav('#/doc/' + tr.dataset.id); });
+    $$('tr[data-id]', v).forEach(tr => tr.onclick = (e) => { if (e.target.closest('input,select,label,.sel-c')) return; Route.nav('#/doc/' + tr.dataset.id); });
     const more = $('[data-more]', v); if (more) more.onclick = () => { F.lim = (F.lim || 150) + 150; paint(); };
+    if (!conEstado) return;
+    // estado de una oferta, sin entrar
+    $$('[data-est]', v).forEach(s => s.onchange = () => { cambiarEstados([s.dataset.est], s.value); });
+    // selección
+    $$('[data-sel]', v).forEach(c => c.onchange = () => { if (c.checked) sel.add(c.dataset.sel); else sel.delete(c.dataset.sel); c.closest('tr').classList.toggle('sel', c.checked); pintarLote(); });
+    const todas = $('[data-todas]', v);
+    if (todas) todas.onchange = () => { visibles.forEach(id => todas.checked ? sel.add(id) : sel.delete(id)); $$('[data-sel]', v).forEach(c => { c.checked = todas.checked; c.closest('tr').classList.toggle('sel', c.checked); }); pintarLote(); };
+    pintarLote();
+  };
+  const cambiarEstados = (lista, estado) => {
+    let n = 0;
+    lista.forEach(id => { const d = Store.get('docs', id); if (!d || d.tipo !== 'oferta' || (d.estado || 'abierta') === estado) return; d.estado = estado; Store.put('docs', d, { quiet: true }); n++; });
+    if (n) Bus.emit('data', 'docs');
+    const l = (ESTADOS_OFERTA[estado] || [estado])[0].toLowerCase();
+    UI.toast(n ? (n === 1 ? 'Oferta marcada como ' + l : n + ' ofertas marcadas como ' + l) : 'Ya estaban como ' + l);
+    sel.clear(); paint();
+  };
+  const pintarLote = () => {
+    const bar = $('[data-lote]', v); if (!bar) return;
+    const todas = $('[data-todas]', v);
+    if (todas) { const k = visibles.filter(id => sel.has(id)).length; todas.checked = !!k && k === visibles.length; todas.indeterminate = !!k && k < visibles.length; }
+    bar.classList.toggle('hide', !sel.size);
+    if (!sel.size) { bar.innerHTML = ''; return; }
+    bar.innerHTML = `<b>${sel.size} seleccionada${sel.size === 1 ? '' : 's'}</b><span>Marcar como:</span>${Object.entries(ESTADOS_OFERTA).map(([k, [l, c]]) => `<button type="button" class="btn sm ${c === 'info' ? '' : c}" data-lote-est="${k}">${l}</button>`).join('')}<button type="button" class="x" data-lote-x>Quitar selección</button>`;
+    $$('[data-lote-est]', bar).forEach(b => b.onclick = () => cambiarEstados(Array.from(sel), b.dataset.loteEst));
+    $('[data-lote-x]', bar).onclick = () => { sel.clear(); paint(); };
   };
   TablaOrden.ext(sortId, () => paint());
   $$('[data-f]', v).forEach(el => el.addEventListener(el.tagName === 'INPUT' ? 'input' : 'change', debounce(() => { F[el.dataset.f] = el.value; F.lim = 150; paint(); }, 150)));
