@@ -424,6 +424,30 @@
   .cat-card-flecha{ color:var(--azul); font-family:var(--sans); transition:transform .15s; }
   .cat-card:hover .cat-card-flecha{ transform:translateX(3px); }
 
+  /* Filtros técnicos de variadores */
+  .vfd-panel{ background:var(--superficie); border:1px solid var(--linea); border-radius:var(--radio); margin:0 0 20px; }
+  .vfd-panel > summary{ list-style:none; cursor:pointer; display:flex; align-items:center; gap:10px; padding:12px 14px; font-weight:600; color:var(--tinta); font-size:15px; }
+  .vfd-panel > summary::-webkit-details-marker{ display:none; }
+  .vfd-panel > summary::after{ content:'▾'; margin-left:auto; color:var(--texto-3); transition:transform .15s; }
+  .vfd-panel[open] > summary::after{ transform:rotate(180deg); }
+  .vfd-act{ font-size:12px; font-weight:600; background:var(--amarillo); color:var(--tinta); padding:2px 8px; border-radius:20px; }
+  .vfd-cuerpo{ display:grid; grid-template-columns:repeat(auto-fit, minmax(210px, 1fr)); gap:14px 20px; padding:4px 14px 14px; border-top:1px solid var(--linea-suave); padding-top:12px; }
+  .vfd-ancho{ grid-column:1 / -1; }
+  .vfd-tit{ font-size:13px; font-weight:600; color:var(--texto-2); margin-bottom:7px; display:flex; align-items:center; gap:8px; }
+  .vfd-chips{ display:flex; flex-wrap:wrap; gap:6px; }
+  .vfd-chip{ font:inherit; font-size:13.5px; padding:6px 11px; border:1px solid var(--linea); background:#fff; color:var(--texto); border-radius:20px; cursor:pointer; }
+  .vfd-chip:hover{ border-color:var(--azul); }
+  .vfd-chip.on{ background:var(--azul-suave); border-color:var(--azul); color:var(--azul-texto); font-weight:600; }
+  .vfd-n{ font-size:12px; color:var(--texto-3); margin-left:2px; }
+  .vfd-chip.on .vfd-n{ color:var(--azul-texto); }
+  .vfd-unidad{ display:inline-flex; border:1px solid var(--linea); border-radius:var(--radio); overflow:hidden; }
+  .vfd-unidad button{ font:inherit; font-size:12px; font-weight:600; padding:2px 9px; border:none; background:#fff; color:var(--texto-2); cursor:pointer; }
+  .vfd-unidad button.on{ background:var(--tinta); color:#fff; }
+  .vfd-panel select, .vfd-panel input{ width:100%; height:40px; padding:0 10px; font:inherit; font-size:14.5px; color:var(--texto); background:#fff; border:1px solid var(--linea); border-radius:var(--radio); }
+  .vfd-ayuda{ font-size:12px; color:var(--texto-3); margin-top:5px; }
+  .vfd-limpiar{ grid-column:1 / -1; justify-self:start; font:inherit; font-size:14px; font-weight:600; color:var(--off); background:none; border:none; padding:0; cursor:pointer; }
+  .vfd-limpiar:hover{ text-decoration:underline; }
+
   .filtro-chip{
     display:inline-flex; align-items:center; gap:12px; background:#fff; border:1px solid var(--linea);
     border-radius:24px; padding:6px 8px 6px 16px; margin-bottom:18px;
@@ -2319,6 +2343,13 @@ function render(lista){
     if (btnEnlace) btnEnlace.addEventListener('click', copiarEnlaceActual);
   }
 
+  if (panelVfdBase){
+    const pv = document.createElement('div');
+    pv.innerHTML = panelVfdHTML(panelVfdBase);
+    cont.appendChild(pv.firstChild);
+    conectarPanelVfd();
+  }
+
   if (lista.length === 0){ empty.style.display = "block"; return; }
   empty.style.display = "none";
 
@@ -2479,6 +2510,207 @@ function coincideBusqueda(p, palabras){
   return true;
 }
 
+/* ---------- Filtros técnicos de variadores ---------- */
+// Lee de la descripción de cada variador su potencia, tensión, fases,
+// corriente de salida y tipo de uso, para poder filtrarlos.
+const VFD_USOS = ['Uso general', 'Bombas y ventiladores', 'Industria pesada', 'Elevación', 'Bombeo solar'];
+const VFD_TENSIONES = [120, 220, 440, 575];
+const VFD_RANGOS = {
+  hp: [[0, 1], [1, 3], [3, 7.5], [7.5, 15], [15, 30], [30, 75], [75, Infinity]],
+  kw: [[0, 0.75], [0.75, 2.2], [2.2, 5.5], [5.5, 11], [11, 22], [22, 55], [55, Infinity]]
+};
+let filtrosVfd = { tension: null, fase: null, potencia: '', unidad: 'hp', amperios: '', uso: null };
+let panelVfdAbierto = null; // null = según el ancho de pantalla
+
+function numVfd(s){ const v = parseFloat(String(s).replace(',', '.').replace(/\.$/, '')); return isNaN(v) ? null : v; }
+
+function esRutaVariadores(ruta){ return ruta[0] === 'Variadores y Arrancadores' && ruta[1] === 'Variadores de Frecuencia'; }
+
+function extraerSpecsVfd(p){
+  const ruta = rutaDe(p);
+  if (!esRutaVariadores(ruta)) return null;
+  const modelo = String(p.modelo || '');
+  const t = String(p.descripcion || '') + ' ' + String(p.nombre || '');
+  const esKit = /^\s*1\s*X\s/i.test(p.descripcion || ''); // kits Siemens: panel + unidad de control + módulo de potencia
+  const cabeza = ruta.join(' ') + ' ' + (esKit ? '' : t.slice(0, 70));
+  // Accesorios, paneles, módulos, resistencias: no son variadores.
+  if (/accesorio|resistencia|panel|m[oó]dulo|tarjeta|\bLCP\b|\bBOP\b|\bAOP\b|control unit|unidad de control|filtro de|reactancia|cable/i.test(cabeza)) return null;
+
+  // Potencia
+  let kw = null, hp = null, m;
+  if ((m = t.match(/Potencia \(kW\):\s*([\d.,]+)/i))) kw = numVfd(m[1]);
+  if ((m = t.match(/Potencia \(HP\):\s*([\d.,]+)/i))) hp = numVfd(m[1]);
+  if (kw == null && /G110/i.test(t) && (m = t.match(/VT:\s*([\d.,]+)\s*kW/i))) kw = numVfd(m[1]);
+  if (kw == null && (m = t.match(/(\d+(?:[.,]\d+)?)\s*kW/i))) kw = numVfd(m[1]);
+  if (hp == null && (m = t.match(/(\d+(?:[.,]\d+)?)\s*HP\b/i))) hp = numVfd(m[1]);
+  if (/danfoss/i.test(p.marca || '') && hp != null && (kw == null || kw > hp)) kw = null; // "(500 KW)" mal escrito en la lista
+  if (kw != null && kw <= 0) kw = null;
+  if (hp != null && hp <= 0) hp = null;
+  if (kw != null && hp == null) hp = Math.round(kw * 1.341 * 10) / 10;
+  if (hp != null && kw == null) kw = Math.round(hp * 0.746 * 100) / 100;
+
+  // Tensión y fases de entrada
+  let v = null, fase = null;
+  if ((m = t.match(/entrada (monof|trif)\w*\s*(\d{3})\s*V/i))){
+    fase = /monof/i.test(m[1]) ? 1 : 3; v = +m[2];
+  } else if ((m = t.match(/Alimentaci[oó]n (monof|trif)\w*\s*(\d{3})(?:\s*-\s*(\d{3}))?\s*V/i))){
+    fase = /monof/i.test(m[1]) ? 1 : 3; v = +(m[3] || m[2]);
+  } else {
+    if (/\bINVT\b/i.test(p.marca || '') || /^GD\d/i.test(modelo)){
+      // En INVT el final del modelo dice la tensión: -S12 120 V, -S2/-SS2 220 V 1F, -2 220 V, -4 440 V.
+      if (/-S12\b/i.test(modelo)){ v = 120; fase = 1; }
+      else if (/-S{1,2}2\b/i.test(modelo)){ v = 220; fase = 1; }
+      else if (/-4(\b|-|\()/.test(modelo)){ v = 440; fase = 3; }
+      else if (/-2(\b|-|\()/.test(modelo)){ v = 220; fase = 3; }
+    }
+    if (v == null){
+      m = t.match(/(\d{3})\s*-\s*(\d{3})\s*V/i) || t.match(/(\d{3})\s*V(?:AC)?\b/i);
+      if (m) v = +(m[2] || m[1]);
+    }
+    if (fase == null){
+      if (/1\s*\/\s*3\s*AC/i.test(t)) fase = 13;
+      else if (/trif|3\s*AC|3\s*x\s*\d{3}/i.test(t)) fase = 3;
+      else if (/monof|1\s*AC/i.test(t)) fase = 1;
+    }
+  }
+  if (v != null) v = v <= 130 ? 120 : v <= 260 ? 220 : v <= 500 ? 440 : 575;
+
+  // Corriente de salida (A)
+  let a = null;
+  if ((m = t.match(/corriente (?:de )?salida\s*([\d.,]+)\s*A/i))) a = numVfd(m[1]);
+  else if ((m = t.match(/Corriente permanente m[aá]x\.?\s*\(A\):\s*([\d.,]+)/i))) a = numVfd(m[1]);
+  else if ((m = t.match(/corriente (?:nominal )?de salida[^.]*?([\d.,]+)\s*A\b/i))) a = numVfd(m[1]);
+
+  // Tipo de uso, según la serie
+  const tl = (t + ' ' + ruta.join(' ') + ' ' + modelo).toLowerCase();
+  let uso = 0;
+  if (/solar|-pv\b/.test(tl)) uso = 4;
+  else if (/ascensor|gr[uú]a|elevador|gd300l/.test(tl)) uso = 3;
+  else if (/gd350|gd200|fc-?302|altivar 9|atv9|sobrecarga alta|power module|pm240/.test(tl)) uso = 2;
+  else if (/bomba|g120x|altivar 212|atv212|hvac|ventilad|aqf|aquaflow|gd270/.test(tl)) uso = 1;
+
+  if (kw == null && v == null && a == null) return null;
+  return { kw: kw, hp: hp, v: v, fase: fase, a: a, uso: uso };
+}
+
+const _cacheVfd = new WeakMap();
+function specsVfd(p){
+  if (!_cacheVfd.has(p)) _cacheVfd.set(p, extraerSpecsVfd(p));
+  return _cacheVfd.get(p);
+}
+
+function pasaFiltroVfd(p, omitir){
+  const f = filtrosVfd;
+  const activos = f.tension || f.fase || f.potencia !== '' || f.amperios !== '' || f.uso !== null;
+  if (!activos) return true;
+  const s = specsVfd(p);
+  if (!s) return false; // con filtros técnicos activos, los que no son variadores salen
+  if (omitir !== 'tension' && f.tension && s.v !== f.tension) return false;
+  if (omitir !== 'fase' && f.fase && !(s.fase === f.fase || s.fase === 13)) return false;
+  if (omitir !== 'uso' && f.uso !== null && s.uso !== f.uso) return false;
+  if (f.potencia !== ''){
+    const r = VFD_RANGOS[f.unidad][+f.potencia];
+    const val = f.unidad === 'hp' ? s.hp : s.kw;
+    if (!r || val == null || !(val > r[0] && val <= r[1])) return false;
+  }
+  if (f.amperios !== ''){
+    const minA = parseFloat(String(f.amperios).replace(',', '.'));
+    if (!isNaN(minA) && !(s.a != null && s.a >= minA)) return false;
+  }
+  return true;
+}
+
+function filtrosVfdActivos(){
+  const f = filtrosVfd;
+  return [f.tension, f.fase, f.uso].filter(x => x !== null).length + (f.potencia !== '' ? 1 : 0) + (f.amperios !== '' ? 1 : 0);
+}
+
+function fmtNumVfd(n){ return (Math.round(n * 100) / 100).toLocaleString('es-VE'); }
+
+// Panel de filtros técnicos. `base` = productos de la categoría antes de estos filtros.
+function panelVfdHTML(base){
+  const f = filtrosVfd;
+  const cuenta = (campo, val) => base.filter(p => {
+    if (!pasaFiltroVfd(p, campo)) return false;
+    const s = specsVfd(p);
+    if (!s) return false;
+    if (campo === 'tension') return s.v === val;
+    if (campo === 'fase') return s.fase === val || s.fase === 13;
+    return s.uso === val;
+  }).length;
+  const chip = (campo, val, etiqueta) => {
+    const n = cuenta(campo, val);
+    const on = f[campo] === val;
+    if (!n && !on) return '';
+    return '<button type="button" class="vfd-chip' + (on ? ' on' : '') + '" data-campo="' + campo + '" data-val="' + val + '">' +
+      etiqueta + ' <span class="vfd-n">' + n + '</span></button>';
+  };
+  const R = VFD_RANGOS[f.unidad], u = f.unidad === 'hp' ? 'HP' : 'kW';
+  const opciones = R.map((r, i) => {
+    const txt = r[1] === Infinity ? 'Más de ' + fmtNumVfd(r[0]) : (r[0] === 0 ? 'Hasta ' + fmtNumVfd(r[1]) : fmtNumVfd(r[0]) + ' a ' + fmtNumVfd(r[1]));
+    return '<option value="' + i + '"' + (String(f.potencia) === String(i) ? ' selected' : '') + '>' + txt + ' ' + u + '</option>';
+  }).join('');
+  const nAct = filtrosVfdActivos();
+  const abierto = panelVfdAbierto === null ? window.innerWidth > 760 || nAct > 0 : panelVfdAbierto;
+  return '<details class="vfd-panel" id="vfd-panel"' + (abierto ? ' open' : '') + '>' +
+    '<summary><span>Filtros técnicos de variadores</span>' + (nAct ? '<span class="vfd-act">' + nAct + ' activo' + (nAct > 1 ? 's' : '') + '</span>' : '') + '</summary>' +
+    '<div class="vfd-cuerpo">' +
+      '<div class="vfd-grupo"><div class="vfd-tit">Tensión de alimentación</div><div class="vfd-chips">' +
+        VFD_TENSIONES.map(v => chip('tension', v, v === 575 ? '575-690 V' : v + ' V')).join('') + '</div></div>' +
+      '<div class="vfd-grupo"><div class="vfd-tit">Fases de entrada</div><div class="vfd-chips">' +
+        chip('fase', 1, 'Monofásica') + chip('fase', 3, 'Trifásica') + '</div></div>' +
+      '<div class="vfd-grupo"><div class="vfd-tit">Potencia del motor ' +
+        '<span class="vfd-unidad"><button type="button" data-unidad="hp" class="' + (f.unidad === 'hp' ? 'on' : '') + '">HP</button>' +
+        '<button type="button" data-unidad="kw" class="' + (f.unidad === 'kw' ? 'on' : '') + '">kW</button></span></div>' +
+        '<select id="vfd-potencia" aria-label="Potencia del motor"><option value="">Cualquier potencia</option>' + opciones + '</select></div>' +
+      '<div class="vfd-grupo"><div class="vfd-tit">Corriente del motor (A)</div>' +
+        '<input id="vfd-amperios" type="number" min="0" step="0.1" inputmode="decimal" placeholder="Ej. 15" value="' + (f.amperios || '') + '">' +
+        '<div class="vfd-ayuda">Muestra equipos con corriente de salida igual o mayor</div></div>' +
+      '<div class="vfd-grupo vfd-ancho"><div class="vfd-tit">Tipo de uso</div><div class="vfd-chips">' +
+        VFD_USOS.map((n, i) => chip('uso', i, n)).join('') + '</div></div>' +
+      (nAct ? '<button type="button" class="vfd-limpiar" id="vfd-limpiar">Limpiar filtros técnicos</button>' : '') +
+    '</div></details>';
+}
+
+function conectarPanelVfd(){
+  const panel = document.getElementById('vfd-panel');
+  if (!panel) return;
+  panel.addEventListener('toggle', () => { panelVfdAbierto = panel.open; });
+  panel.querySelectorAll('.vfd-chip').forEach(b => b.addEventListener('click', () => {
+    const campo = b.dataset.campo, val = +b.dataset.val;
+    filtrosVfd[campo] = filtrosVfd[campo] === val ? null : val;
+    aplicarFiltros();
+  }));
+  panel.querySelectorAll('.vfd-unidad button').forEach(b => b.addEventListener('click', (e) => {
+    e.preventDefault();
+    if (filtrosVfd.unidad === b.dataset.unidad) return;
+    filtrosVfd.unidad = b.dataset.unidad; filtrosVfd.potencia = '';
+    aplicarFiltros();
+  }));
+  const sel = document.getElementById('vfd-potencia');
+  if (sel) sel.addEventListener('change', () => { filtrosVfd.potencia = sel.value; aplicarFiltros(); });
+  const amp = document.getElementById('vfd-amperios');
+  if (amp){
+    let t = null;
+    amp.addEventListener('input', () => {
+      clearTimeout(t);
+      t = setTimeout(() => {
+        filtrosVfd.amperios = amp.value.trim();
+        aplicarFiltros();
+        const nuevo = document.getElementById('vfd-amperios');
+        if (nuevo){ nuevo.focus(); const l = nuevo.value.length; try { nuevo.setSelectionRange(l, l); } catch(e){} }
+      }, 450);
+    });
+  }
+  const limpiar = document.getElementById('vfd-limpiar');
+  if (limpiar) limpiar.addEventListener('click', () => {
+    filtrosVfd = { tension: null, fase: null, potencia: '', unidad: filtrosVfd.unidad, amperios: '', uso: null };
+    aplicarFiltros();
+  });
+}
+
+let panelVfdBase = null; // productos de la categoría Variadores antes de los filtros técnicos
+
 /* ---------- Filtros ---------- */
 function aplicarFiltros(){
   const texto = document.getElementById('buscador').value.trim().toLowerCase();
@@ -2503,7 +2735,9 @@ function aplicarFiltros(){
     return coincideCategoria && coincideMarca && coincideTexto && coincideDisp;
   });
 
-  render(filtrados);
+  // En la categoría Variadores de Frecuencia se muestran los filtros técnicos.
+  panelVfdBase = (!hayBusqueda && esRutaVariadores(seleccion)) ? filtrados : null;
+  render(panelVfdBase ? filtrados.filter(p => pasaFiltroVfd(p)) : filtrados);
 }
 
 /* ---------- Sugerencias del buscador (autocompletar) ---------- */
