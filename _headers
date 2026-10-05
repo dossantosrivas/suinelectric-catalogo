@@ -16,3 +16,17 @@
   X-Robots-Tag: noindex
 /ventas/*
   X-Robots-Tag: noindex
+/tienda-beta
+  X-Robots-Tag: noindex
+/tienda-beta.html
+  X-Robots-Tag: noindex
+/admin-beta
+  X-Robots-Tag: noindex
+/admin-beta.html
+  X-Robots-Tag: noindex
+/ventas-beta
+  X-Robots-Tag: noindex
+/ventas-beta.html
+  X-Robots-Tag: noindex
+/ventas-beta/*
+  X-Robots-Tag: noindex

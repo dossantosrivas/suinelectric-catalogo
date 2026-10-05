@@ -4,3 +4,6 @@
 
 # Panel de ventas: cada sección tiene su propio link (suinelectric.com/ventas/clientes, /ventas/ofertas…)
 /ventas/*    /ventas    200
+
+# Versiones beta (pruebas): misma base de datos, links propios
+/ventas-beta/*    /ventas-beta    200
