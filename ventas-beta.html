@@ -1263,7 +1263,7 @@ const App = {
     if (this.guard && h !== this.lastRoute && !(await this.guard())) { Route.nav(this.lastRoute || 'resumen', { replace: true, silent: true }); return; }
     this.guard = null; this.lastRoute = h;
     this.route = { name: parts[0], args: parts.slice(1) };
-    const navId = { nuevo: parts[1] === 'oferta' ? 'ofertas' : parts[1] === 'compra' ? 'compras' : 'ventas', doc: null, cliente: 'clientes', producto: 'inventario', proveedor: 'distribuidores', proveedores: 'distribuidores', distribuidor: 'pedidos', empleado: 'empleados', rapida: 'ofertas' }[parts[0]];
+    const navId = { nuevo: parts[1] === 'oferta' ? 'ofertas' : parts[1] === 'compra' ? 'compras' : 'ventas', doc: null, cliente: 'clientes', 'cliente-web': 'clientes', producto: 'inventario', proveedor: 'distribuidores', proveedores: 'distribuidores', distribuidor: 'pedidos', empleado: 'empleados', rapida: 'ofertas' }[parts[0]];
     let active = navId !== undefined ? navId : parts[0];
     if (parts[0] === 'doc') { const d = Store.get('docs', parts[1]); active = d ? (d.tipo === 'oferta' ? 'ofertas' : d.tipo === 'compra' ? 'compras' : 'ventas') : ''; }
     $$('[data-nav]').forEach(a => a.classList.toggle('on', a.dataset.nav === active));
@@ -2299,6 +2299,15 @@ const revisarEnlaces = (onDone) => {
   };
   paint();
 };
+/* Llega desde el Panel web: /ventas/cliente-web/correo → abre la ficha de ese cliente */
+Views['cliente-web'] = async (v, email) => {
+  email = String(email || '').trim().toLowerCase();
+  const buscar = () => Store.all('clientes').find(x => (x.tiendaEmail || '').toLowerCase() === email) || Store.all('clientes').find(x => (x.correo || '').toLowerCase() === email);
+  let c = buscar();
+  if (!c) { v.innerHTML = '<div class="panel empty">Buscando la ficha de ' + esc(email) + '…</div>'; await Tienda.cargar({ force: true }).catch(() => {}); c = buscar(); }
+  if (c) { Route.nav('cliente/' + c.id, { replace: true }); return; }
+  v.innerHTML = '<div class="panel empty">No encontré una ficha para <b>' + esc(email) + '</b>.<br>' + (Sync.online() ? 'Puede que todavía no haya entrado a la tienda.' : 'Inicia sesión en Ajustes → Conexión para ver los clientes de la tienda.') + '<br><br><a class="btn" href="#/clientes">Ver clientes</a></div>';
+};
 Views.clientes = (v) => {
   const F = Object.assign({ q: '', orden: 'ultima', web: '' }, lsGet('suinadm_f_cli', {}));
   const nWeb = Store.all('clientes').filter(c => c.tiendaEmail).length;
@@ -2352,7 +2361,7 @@ Views.cliente = (v, id) => {
     <div class="kpi"><div class="l">Debe</div><div class="v" style="${s.saldo > 0.005 ? 'color:var(--red)' : ''}">${fmtUSD(s.saldo)}</div></div>
     <div class="kpi"><div class="l">Ofertas</div><div class="v">${s.ofertas}</div></div>
     <div class="kpi"><div class="l">Última compra</div><div class="v" style="font-size:22px">${esc(fmtFecha(s.ultima) || '—')}</div></div></div>` : ''}
-  ${web ? `<div class="banner" style="background:var(--steel-soft);border-color:#B9D4E4;color:var(--steel-2)">Tiene cuenta en la tienda web: <b>${esc(c.tiendaEmail)}</b>${c.tiendaCreado ? ` · registrado el ${esc(fmtFecha(c.tiendaCreado))}` : ''}${c.tiendaActivo === false ? ' · <b>cuenta desactivada</b>' : ''}. Lo que cambies aquí también se cambia en su cuenta.</div>` : ''}
+  ${web ? `<div class="banner" style="background:var(--steel-soft);border-color:#B9D4E4;color:var(--steel-2)">Tiene cuenta en la tienda web: <b>${esc(c.tiendaEmail)}</b>${c.tiendaCreado ? ` · registrado el ${esc(fmtFecha(c.tiendaCreado))}` : ''}${c.tiendaActivo === false ? ' · <b>cuenta desactivada</b>' : ''}. Lo que cambies aquí también se cambia en su cuenta. <a href="/admin-beta#cliente=${encodeURIComponent(c.tiendaEmail)}" style="font-weight:600;white-space:nowrap">Permisos y actividad en el Panel web →</a></div>` : ''}
   <div class="cols2" style="grid-template-columns:minmax(0,1fr) minmax(0,1.3fr)">
     <section class="panel"><div class="ph"><h2>Datos</h2></div>
       <div class="grid g2">
