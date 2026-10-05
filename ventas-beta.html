@@ -4,7 +4,7 @@
 <meta name="robots" content="noindex, nofollow">
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1, viewport-fit=cover">
-<title>[BETA] Suinelectric Administración</title>
+<title>[BETA] Gestión | Suinelectric</title>
 <meta name="theme-color" content="#0E2233">
 <meta name="color-scheme" content="light">
 <meta name="mobile-web-app-capable" content="yes">
@@ -17,15 +17,16 @@
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <style>
 :root{
-  --plate:#0E2233; --plate-2:#17334A; --plate-ink:#E6EEF5; --plate-mute:#B4C4D3;
-  --paper:#EEF1F5; --panel:#FFFFFF; --panel-2:#F7F9FB; --line:#D6DDE5; --line-2:#E7ECF1;
-  --ink:#111827; --ink-2:#1F2937; --muted:#475467;
-  --steel:#1F6E94; --steel-2:#18597A; --steel-soft:#E3EFF6;
-  --amber:#D99A0E; --amber-soft:#FBF1D9; --red:#B91C1C; --red-soft:#FBE7E7; --ok:#15803D; --ok-soft:#E3F3E8;
+  /* Paleta común del ecosistema Suinelectric (tienda · panel web · gestión) */
+  --plate:#0e2a3b; --plate-2:#1c4760; --plate-ink:#ffffff; --plate-mute:rgba(255,255,255,.62);
+  --paper:#f2f4f6; --panel:#FFFFFF; --panel-2:#f8fafb; --line:#dde3e8; --line-2:#edf0f3;
+  --ink:#14222c; --ink-2:#1d2f3b; --muted:#475866;
+  --steel:#006d8c; --steel-2:#0e2a3b; --steel-soft:#e6f4f8;
+  --amber:#ffc20e; --amber-soft:#fff4d6; --red:#B91C1C; --red-soft:#FBE7E7; --ok:#15803D; --ok-soft:#E3F3E8;
   --man:#15803D; --pap:#C2410C; --dis:#1D4ED8; --lib:#64748B;
   --f-sans:'IBM Plex Sans',system-ui,-apple-system,'Segoe UI',sans-serif;
   --f-mono:'IBM Plex Mono',ui-monospace,Menlo,Consolas,monospace;
-  --r:8px; --nav-w:256px;
+  --r:12px; --nav-w:256px;
 }
 *{box-sizing:border-box}
 html{-webkit-text-size-adjust:100%}
@@ -42,20 +43,26 @@ a{color:var(--steel)}
 @media (prefers-reduced-motion:reduce){*{transition:none!important;animation:none!important}}
 
 /* ---------- Placa lateral ---------- */
+/* ---------- Selector de apps del ecosistema (igual en /admin y /ventas) ---------- */
+.apps{display:grid;grid-template-columns:repeat(3,1fr);gap:4px;margin:10px 10px 4px;padding:4px;background:rgba(255,255,255,.06);border-radius:10px}
+.apps a{display:flex;flex-direction:column;align-items:center;gap:3px;padding:7px 2px;border-radius:7px;color:rgba(255,255,255,.7);text-decoration:none;font:600 12.5px/1.15 var(--f-sans);text-align:center}
+.apps a svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.apps a:hover{background:rgba(255,255,255,.08);color:#fff}
+.apps a.on{background:var(--amber);color:#0e2a3b}
+
 .shell{display:grid;grid-template-columns:var(--nav-w) minmax(0,1fr);min-height:100vh}
 .plate{background:var(--plate);color:var(--plate-ink);position:sticky;top:0;height:100vh;display:flex;flex-direction:column;border-right:1px solid #07131D}
-.plate::before{content:"";display:block;height:5px;background:repeating-linear-gradient(135deg,var(--amber) 0 10px,var(--plate) 10px 20px)}
 .brand{display:flex;gap:10px;align-items:center;padding:16px 16px 14px;border-bottom:1px solid rgba(255,255,255,.08)}
 .brand img{width:46px;height:46px;border-radius:50%}
 .brand b{display:block;font-size:17.5px;letter-spacing:.02em}
 .brand span{font-size:14.5px;color:var(--plate-mute)}
 .nav{display:flex;flex-direction:column;padding:10px 8px;gap:2px;overflow:auto;flex:1}
-.nav a{display:flex;align-items:center;gap:12px;padding:12px 12px;min-height:48px;border-radius:5px;color:var(--plate-ink);text-decoration:none;font-size:17px}
+.nav a{display:flex;align-items:center;gap:12px;padding:10px 12px;min-height:44px;border-radius:8px;color:rgba(255,255,255,.78);text-decoration:none;font-size:17px}
 .nav a svg{width:22px;height:22px;flex:none;stroke:currentColor;fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round;opacity:.8}
 .nav a:hover{background:rgba(255,255,255,.06)}
-.nav a.on{background:var(--plate-2);box-shadow:inset 4px 0 0 var(--amber);font-weight:600}
+.nav a.on{background:var(--plate-2);color:#fff;box-shadow:inset 3px 0 0 var(--amber);font-weight:600}.nav a.on svg{color:var(--amber);opacity:1}
 .nav .sep{height:1px;background:rgba(255,255,255,.08);margin:8px 6px}
-.nav .cnt{margin-left:auto;font:500 14px var(--f-mono);background:var(--amber);color:#2A1B00;border-radius:4px;padding:0 5px}
+.nav .cnt{margin-left:auto;font:700 13px var(--f-sans);background:var(--amber);color:#0e2a3b;border-radius:10px;padding:1px 8px}
 .sync{padding:10px 14px;border-top:1px solid rgba(255,255,255,.08);font-size:15px;color:var(--plate-mute);display:flex;gap:8px;align-items:center}
 .sync i{width:8px;height:8px;border-radius:50%;background:var(--plate-mute);flex:none}
 .sync.ok i{background:#4ADE80}.sync.busy i{background:var(--amber)}.sync.err i{background:#F87171}.sync.local i{background:var(--plate-mute)}
@@ -208,7 +215,7 @@ select.orig{font-size:15.5px;padding:6px 6px}
 .tabs button{border:none;background:none;padding:11px 15px;font-size:16.5px;color:var(--muted);border-bottom:2px solid transparent;margin-bottom:-1px;white-space:nowrap}
 .tabs button.on{color:var(--ink);border-bottom-color:var(--steel);font-weight:600}
 .login{min-height:100vh;display:grid;place-items:center;background:var(--plate);padding:20px}
-.login .box{background:#fff;border-radius:8px;width:min(380px,100%);padding:26px}
+.login .box{background:#fff;border-radius:12px;width:min(380px,100%);padding:26px}
 .login img{width:72px;display:block;margin:0 auto 10px}
 .login h1{text-align:center;font-size:22px;margin:0 0 18px}
 
@@ -216,7 +223,7 @@ select.orig{font-size:15.5px;padding:6px 6px}
 @media (min-width:861px){
   body.gen .shell{grid-template-columns:64px minmax(0,1fr)}
   body.gen .brand{padding:14px 12px;justify-content:center}
-  body.gen .brand div, body.gen .nav a span, body.gen .nav .cnt, body.gen .sync span{display:none}
+  body.gen .apps, body.gen .brand div, body.gen .nav a span, body.gen .nav .cnt, body.gen .sync span{display:none}
   body.gen .nav a{justify-content:center;padding:10px 0}
   body.gen .nav a svg{width:20px;height:20px}
   body.gen .sync{justify-content:center;padding:10px 0}
@@ -1211,8 +1218,9 @@ const App = {
     $('#root').innerHTML = `
       <div class="shell">
         <aside class="plate">
-          <div class="brand"><img src="${DEFAULT_LOGO}" alt=""><div><b>SUINELECTRIC</b><span>Administración</span></div></div>
-          <nav class="nav">${navHtml}<div class="sep"></div><a href="/admin-beta" target="_blank" rel="noopener" title="Panel de la tienda">${ico('gear')}<span>Panel de la tienda ↗</span></a></nav>
+          <div class="brand"><img src="${DEFAULT_LOGO}" alt=""><div><b>SUINELECTRIC</b><span>Gestión</span></div></div>
+          <div class="apps" aria-label="Apps de Suinelectric"><a href="/tienda-beta" target="_blank" rel="noopener" title="Abrir la tienda"><svg viewBox="0 0 24 24"><path d="M4 9h16l-1.5 11h-13z"/><path d="M8 9V7a4 4 0 0 1 8 0v2"/></svg>Tienda</a><a href="/admin-beta" title="Panel web: pedidos, clientes y estadísticas de la tienda"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>Panel web</a><a class="on" aria-current="page" title="Gestión: ofertas, ventas, compras e inventario"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Gestión</a></div>
+          <nav class="nav">${navHtml}</nav>
           <div class="sync" id="sync-d"><i></i><span></span><button type="button" data-sync title="Sincronizar ahora">${'↻'}</button></div>
         </aside>
         <div style="min-width:0">
@@ -1230,7 +1238,7 @@ const App = {
     $$('[data-sync]').forEach(b => b.onclick = () => { if (!Sync.online()) { Route.nav('#/ajustes/conexion'); return; } Sync.run(); });
     $('[data-new]').onclick = () => App.newMenu();
     $('[data-more]').onclick = () => {
-      const m = UI.modal({ title: 'Ir a', foot: false, body: `<div class="stack">${NAV.map(([id, label, ic]) => `<a class="btn" style="justify-content:flex-start" href="#/${id}">${ico(ic)} ${label}</a>`).join('')}<a class="btn" style="justify-content:flex-start" href="/admin-beta" target="_blank" rel="noopener">${ico('gear')} Panel de la tienda ↗</a></div>` });
+      const m = UI.modal({ title: 'Ir a', foot: false, body: `<div class="stack">${NAV.map(([id, label, ic]) => `<a class="btn" style="justify-content:flex-start" href="#/${id}">${ico(ic)} ${label}</a>`).join('')}<div class="muted small" style="margin-top:6px">Otras apps</div><a class="btn" style="justify-content:flex-start" href="/admin-beta">${ico('gear')} Panel web</a><a class="btn" style="justify-content:flex-start" href="/tienda-beta" target="_blank" rel="noopener">${ico('box')} Tienda ↗</a></div>` });
       $$('a', m.body).forEach(a => a.addEventListener('click', () => m.close()));
     };
     this.paintSync(); Bus.on('sync', () => this.paintSync());
@@ -4462,7 +4470,7 @@ function showLogin() {
           <div class="small" style="color:var(--red);min-height:1em" data-err></div><button class="btn pri" type="submit">Entrar</button>
           <p class="small muted" style="margin:4px 0 0;line-height:1.5">Es el mismo acceso del panel de la tienda. ¿No tienes clave o la olvidaste? <button class="btn sm" type="button" data-modo="codigo">Entrar con un código</button></p></form>`;
       wrap.innerHTML = `<div class="md" style="width:min(380px,100%);min-height:0;border-radius:8px"><div class="md-b" style="padding:26px">
-        <img src="${DEFAULT_LOGO}" alt="" style="width:72px;display:block;margin:0 auto 10px"><h1 style="text-align:center;font-size:22px;margin:0 0 18px">Administración Suinelectric</h1>
+        <img src="${DEFAULT_LOGO}" alt="" style="width:72px;display:block;margin:0 auto 10px"><h1 style="text-align:center;font-size:22px;margin:0 0 18px">Gestión Suinelectric</h1>
         ${cuerpo}<button class="btn ghost small" type="button" data-skip style="width:100%;margin-top:6px">Seguir sin conexión en este equipo</button></div></div>`;
       const f = $('form', wrap), ins = $$('input', f), err = $('[data-err]', wrap);
       setTimeout(() => ins[0].focus(), 30);
@@ -4572,6 +4580,6 @@ Bus.on('sync', () => { if (Sync.state === 'ok') InvWeb.programar(); });
 })();
 
 </script>
-<div id="beta-aviso" style="position:fixed;left:8px;bottom:8px;z-index:2147483647;background:#d97706;color:#fff;font:700 11px/1 system-ui,sans-serif;letter-spacing:.08em;padding:6px 9px;border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,.25);pointer-events:none;opacity:.9">BETA</div>
+<div id="beta-aviso" style="position:fixed;right:8px;bottom:8px;z-index:2147483647;background:#d97706;color:#fff;font:700 11px/1 system-ui,sans-serif;letter-spacing:.08em;padding:6px 9px;border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,.25);pointer-events:none;opacity:.9">BETA</div>
 </body>
 </html>

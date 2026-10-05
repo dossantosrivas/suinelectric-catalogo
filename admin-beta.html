@@ -14,7 +14,7 @@
 </script>
 <meta name="viewport" content="width=device-width, initial-scale=1">
 <meta name="robots" content="noindex">
-<title>[BETA] Panel de administrador | Suinelectric</title>
+<title>[BETA] Panel web | Suinelectric</title>
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
 <link href="https://fonts.googleapis.com/css2?family=IBM+Plex+Sans:wght@400;500;600;700&family=IBM+Plex+Mono:wght@500&display=swap" rel="stylesheet">
@@ -85,6 +85,12 @@
   .side{ background:var(--side); color:#fff; position:sticky; top:0; height:100vh; display:flex; flex-direction:column; padding:18px 12px 14px; overflow-y:auto; scrollbar-width:thin; scrollbar-color:rgba(255,255,255,.15) transparent; }
   .marca{ display:flex; align-items:center; gap:11px; padding:4px 10px 20px; }
   .marca-logo{ width:36px; height:36px; border-radius:9px; background:var(--amarillo); color:#0e2a3b; display:grid; place-items:center; font-weight:700; font-size:18px; flex:none; box-shadow:inset 0 -3px 0 rgba(0,0,0,.12); }
+  .marca-img{ width:40px; height:40px; border-radius:50%; flex:none; }
+  .apps{ display:grid; grid-template-columns:repeat(3,1fr); gap:4px; margin:0 2px 14px; padding:4px; background:rgba(255,255,255,.06); border-radius:10px; }
+  .apps a{ display:flex; flex-direction:column; align-items:center; gap:3px; padding:7px 2px; border-radius:7px; color:rgba(255,255,255,.7); text-decoration:none; font-weight:600; font-size:12px; line-height:1.15; text-align:center; }
+  .apps a svg{ width:18px; height:18px; stroke:currentColor; fill:none; stroke-width:1.9; stroke-linecap:round; stroke-linejoin:round; }
+  .apps a:hover{ background:rgba(255,255,255,.08); color:#fff; }
+  .apps a.on{ background:var(--amarillo); color:#0e2a3b; }
   .marca-txt strong{ display:block; font-size:15px; letter-spacing:1.4px; }
   .marca-txt span{ font-size:11.5px; opacity:.6; letter-spacing:.2px; }
   .nav{ display:flex; flex-direction:column; gap:1px; }
@@ -716,11 +722,11 @@ function confirmar(o){
 const ESTADOS = [['enviado','Nuevo'],['cotizado','Cotizado'],['aprobado','Aprobado'],['pagado','Pagado'],['entregado','Entregado'],['cancelado','Cancelado']];
 const nombreEstado = (e) => (ESTADOS.find(x => x[0] === e) || [e, e])[1];
 const VISTAS = [
-  ['resumen', 'Resumen', ICO.resumen, 'Ventas'],
-  ['pedidos', 'Pedidos', ICO.pedidos, 'Ventas'],
-  ['clientes', 'Clientes', ICO.clientes, 'Ventas'],
-  ['descuentos', 'Descuentos', ICO.descuentos, 'Ventas'],
-  ['productos', 'Productos', ICO.caja, 'Ventas'],
+  ['resumen', 'Resumen', ICO.resumen, 'Tienda'],
+  ['pedidos', 'Pedidos web', ICO.pedidos, 'Tienda'],
+  ['clientes', 'Clientes', ICO.clientes, 'Tienda'],
+  ['descuentos', 'Descuentos', ICO.descuentos, 'Tienda'],
+  ['productos', 'Productos', ICO.caja, 'Tienda'],
   ['envivo', 'En vivo', ICO.vivo, 'Análisis'],
   ['estadisticas', 'Estadísticas', ICO.grafica, 'Análisis'],
   ['visitantes', 'Visitantes', ICO.globo, 'Análisis'],
@@ -779,7 +785,12 @@ async function iniciar(){
   mostrar();
   iniciarVivo().catch(e => { vivoEstado = 'error'; vivoError = e; refrescarVivo(); });
 }
-const marcaHTML = () => '<div class="marca"><div class="marca-logo">S</div><div class="marca-txt"><strong>SUINELECTRIC</strong><span>Panel de administrador</span></div></div>';
+const marcaHTML = () => '<div class="marca"><img class="marca-img" src="/imagenes/logo-suinelectric.png" alt=""><div class="marca-txt"><strong>SUINELECTRIC</strong><span>Panel web</span></div></div>';
+// Selector de apps del ecosistema (igual en /admin y /ventas)
+const appsHTML = () => '<div class="apps" aria-label="Apps de Suinelectric">' +
+  '<a href="/tienda-beta" target="_blank" rel="noopener" title="Abrir la tienda"><svg viewBox="0 0 24 24"><path d="M4 9h16l-1.5 11h-13z"/><path d="M8 9V7a4 4 0 0 1 8 0v2"/></svg>Tienda</a>' +
+  '<a class="on" aria-current="page" title="Panel web: pedidos, clientes y estadísticas de la tienda"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>Panel web</a>' +
+  '<a href="/ventas-beta" title="Gestión: ofertas, ventas, compras e inventario"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Gestión</a></div>';
 
 let adminModo = 'clave';
 function pantallaLogin(){
@@ -848,11 +859,11 @@ function armarApp(){
   const temaTxt = (TEMAS.find(x => x[0] === temaActual()) || TEMAS[0])[1];
   $('raiz').innerHTML = '<div class="app" id="app">' +
     '<header class="topbar"><button class="menu-btn" id="menu-btn" aria-label="Abrir menú">' + ICO.menu + '<span class="punto-aviso" id="menu-aviso" hidden></span></button>' +
-      '<div class="marca-logo">S</div><strong id="top-titulo">Panel</strong><a href="/tienda-beta" target="_blank" rel="noopener" aria-label="Ver tienda">' + ICO.tienda + '</a></header>' +
-    '<aside class="side" id="side">' + marcaHTML() +
+      '<img class="marca-img" style="width:30px;height:30px" src="/imagenes/logo-suinelectric.png" alt=""><strong id="top-titulo">Panel web</strong><a href="/tienda-beta" target="_blank" rel="noopener" aria-label="Ver tienda">' + ICO.tienda + '</a></header>' +
+    '<aside class="side" id="side">' + marcaHTML() + appsHTML() +
     '<nav class="nav" id="nav">' + nav + '</nav>' +
     '<div class="side-pie"><div class="yo"><div class="avatar">' + esc(iniciales(yo)) + '</div><div><strong>' + esc(yo.nombre || 'Administrador') + '</strong><span>' + esc(yo.email) + '</span></div></div>' +
-      '<div class="acciones"><a href="/ventas-beta" target="_blank" rel="noopener" style="grid-column:1/-1">' + ICO.externo + 'Ventas y administración</a><a href="/tienda-beta" target="_blank" rel="noopener">' + ICO.externo + 'Tienda</a><button id="salir">' + ICO.salir + 'Salir</button>' +
+      '<div class="acciones"><button id="salir" style="grid-column:1/3">' + ICO.salir + 'Salir</button>' +
       '<button id="tema" title="Tema: ' + temaTxt + '" aria-label="Cambiar tema">' + botonTema() + '</button></div></div>' +
     '</aside><div class="velo-menu" id="velo-menu"></div><main class="contenido" id="main"></main></div>';
   document.querySelectorAll('#nav button').forEach(b => b.onclick = () => irA(b.dataset.tab));
@@ -865,7 +876,7 @@ const cerrarMenu = () => { const a = $('app'); if (a) a.classList.remove('menu-a
 function irA(t){ tab = t; cerrarMenu(); mostrar(); window.scrollTo(0, 0); }
 function mostrar(){
   document.querySelectorAll('#nav button').forEach(x => x.classList.toggle('activa', x.dataset.tab === tab));
-  const v = VISTAS.find(x => x[0] === tab); if ($('top-titulo')) $('top-titulo').textContent = v ? v[1] : 'Panel';
+  const v = VISTAS.find(x => x[0] === tab); if ($('top-titulo')) $('top-titulo').textContent = v ? v[1] : 'Panel web';
   cerrarPanel();
   ({ resumen: vistaResumen, pedidos: vistaPedidos, estadisticas: vistaEstadisticas, envivo: vistaEnVivo, visitantes: vistaVisitantes, enlaces: vistaEnlaces, clientes: vistaClientes, descuentos: vistaDescuentos, productos: vistaProductos, existencias: vistaExistencias, scraping: vistaScraping, tipos: vistaTipos }[tab] || vistaResumen)();
 }
@@ -919,7 +930,7 @@ function vistaResumen(){
   const stockPie = estadoStock && !estadoStock.error && estadoStock.actualizado ? 'Existencias al ' + fecha(estadoStock.actualizado) : 'Existencias sin sincronizar';
 
   $('main').innerHTML = cabecera('Hola' + (yo.nombre ? ', ' + esc(yo.nombre.split(' ')[0]) : ''), 'Así va la tienda hoy, ' + new Date().toLocaleDateString('es-VE', { weekday: 'long', day: 'numeric', month: 'long' }) + '.',
-      '<a class="btn" href="/ventas-beta" target="_blank" rel="noopener">' + ICO.externo + 'Ventas</a><a class="btn" href="/tienda-beta" target="_blank" rel="noopener">' + ICO.tienda + 'Ver tienda</a>') +
+      '<a class="btn" href="/ventas-beta">' + ICO.externo + 'Gestión</a><a class="btn" href="/tienda-beta" target="_blank" rel="noopener">' + ICO.tienda + 'Ver tienda</a>') +
     '<div class="kpis">' +
       kpi('pedidos', ICO.pedidos, 'Por atender', nuevos.length, nuevos.length ? 'Toca para revisarlos' : 'Todo al día', nuevos.length ? ' destacado' : '') +
       kpi('pedidos', ICO.caja, 'Pedidos del mes', delMes.length, money(totalMes) + ' en total (sin cancelados)') +
@@ -2983,6 +2994,6 @@ const TablaOrden = (() => {
 
 })();
 </script>
-<div id="beta-aviso" style="position:fixed;left:8px;bottom:8px;z-index:2147483647;background:#d97706;color:#fff;font:700 11px/1 system-ui,sans-serif;letter-spacing:.08em;padding:6px 9px;border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,.25);pointer-events:none;opacity:.9">BETA</div>
+<div id="beta-aviso" style="position:fixed;right:8px;bottom:8px;z-index:2147483647;background:#d97706;color:#fff;font:700 11px/1 system-ui,sans-serif;letter-spacing:.08em;padding:6px 9px;border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,.25);pointer-events:none;opacity:.9">BETA</div>
 </body>
 </html>
