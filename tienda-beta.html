@@ -509,6 +509,18 @@
   .pdf-titulo{ font-weight:700; font-size:16px; color:var(--tinta); }
   .pdf-desc{ font-size:14px; color:var(--texto-2); margin-top:3px; }
   .pdf-accion{ font-size:14px; font-weight:600; color:var(--azul-texto); white-space:nowrap; }
+  .pdf-logos{
+    position:relative; width:132px; height:72px; flex-shrink:0; border:1px solid var(--linea-suave); border-radius:6px;
+    background:#fff; display:flex; flex-wrap:wrap; align-items:center; justify-content:center; gap:6px 8px; padding:8px 10px;
+  }
+  .pdf-logos img{ max-width:100%; max-height:44px; object-fit:contain; }
+  .pdf-logos.dos img{ max-width:46%; max-height:30px; }
+  .pdf-logos.muchas img{ max-width:29%; max-height:18px; }
+  .pdf-tag{
+    position:absolute; right:-6px; bottom:-6px; background:var(--off); color:#fff; font-size:10px; font-weight:700;
+    padding:1px 6px; border-radius:3px; letter-spacing:.03em;
+  }
+  @media (max-width:520px){ .pdf-logos{ width:96px; height:60px; } .pdf-card{ padding:14px; gap:12px; } }
   .pdf-nota{ font-size:13px; color:var(--texto-3); margin-top:20px; }
   .pdf-nota code{ background:var(--linea-suave); padding:1px 5px; border-radius:3px; }
 
@@ -1219,13 +1231,13 @@ let vista = 'inicio';       // 'inicio' | 'catalogos' | 'catalogo'
 
 // Catálogos PDF: agrega aquí tus archivos (ponlos en una carpeta "catalogos/"
 // junto a este HTML, o usa una URL, como los enlaces de Google Drive de abajo).
-// titulo/descripcion/archivo.
+// titulo/descripcion/archivo y marcas (claves de LOGOS_MARCAS) para mostrar sus logos.
 const CATALOGOS_PDF = [
-  { titulo: "Menú de Catálogos (todos)", descripcion: "Carpeta con todos los catálogos disponibles de Suinelectric.", archivo: "https://drive.google.com/drive/folders/1T9uQlM2VNBBXFodn_OKMwZu0EO9fAqcN?usp=drive_link" },
-  { titulo: "Catálogo INVT y Arrancadores Nordic", descripcion: "Variadores de frecuencia INVT y arrancadores suaves Nordic.", archivo: "https://drive.google.com/drive/folders/1G-ZZCIDW_1WMzaW_38Ug8Lj9x-FrSKRx?usp=drive_link" },
-  { titulo: "Catálogo Hyundai", descripcion: "Guía de productos Hyundai — contactores, guardamotores, breakers y más.", archivo: "https://drive.google.com/file/d/1TRcl-QbktOVgMIHxrJ8LlBUDI-Mbl2iq/view?usp=drive_link" },
-  { titulo: "Catálogo Schneider Electric", descripcion: "Contactores, guardamotores, breakers, variadores Altivar, arrancadores suaves y mando y señalización.", archivo: "https://drive.google.com/file/d/1whduAtpMdn58-1n49LzigJjBmTgEiybt/view?usp=sharing" },
-  { titulo: "Catálogos Siemens", descripcion: "Arrancadores suaves, LOGO!, contactores, variadores y más.", archivo: "https://drive.google.com/drive/folders/1wHBj_GbJbomSb0kYJ-T6lWSrobdXV3FY?usp=drive_link" },
+  { titulo: "Menú de Catálogos (todos)", marcas: ["INVT","NORDIC","HYUNDAI","SCHNEIDER","SIEMENS"], descripcion: "Carpeta con todos los catálogos disponibles de Suinelectric.", archivo: "https://drive.google.com/drive/folders/1T9uQlM2VNBBXFodn_OKMwZu0EO9fAqcN?usp=drive_link" },
+  { titulo: "Catálogo INVT y Arrancadores Nordic", marcas: ["INVT","NORDIC"], descripcion: "Variadores de frecuencia INVT y arrancadores suaves Nordic.", archivo: "https://drive.google.com/drive/folders/1G-ZZCIDW_1WMzaW_38Ug8Lj9x-FrSKRx?usp=drive_link" },
+  { titulo: "Catálogo Hyundai", marcas: ["HYUNDAI"], descripcion: "Guía de productos Hyundai — contactores, guardamotores, breakers y más.", archivo: "https://drive.google.com/file/d/1TRcl-QbktOVgMIHxrJ8LlBUDI-Mbl2iq/view?usp=drive_link" },
+  { titulo: "Catálogo Schneider Electric", marcas: ["SCHNEIDER"], descripcion: "Contactores, guardamotores, breakers, variadores Altivar, arrancadores suaves y mando y señalización.", archivo: "https://drive.google.com/file/d/1whduAtpMdn58-1n49LzigJjBmTgEiybt/view?usp=sharing" },
+  { titulo: "Catálogos Siemens", marcas: ["SIEMENS"], descripcion: "Arrancadores suaves, LOGO!, contactores, variadores y más.", archivo: "https://drive.google.com/drive/folders/1wHBj_GbJbomSb0kYJ-T6lWSrobdXV3FY?usp=drive_link" },
 ];
 
 function precioConDescuento(p){ if (p === null || p === undefined) return null; const n = Number(p); if (isNaN(n)) return null; return n * (1 - descuentoPct / 100); }
@@ -2118,6 +2130,14 @@ function renderInicio(){
 }
 
 /* ---------- Sección de Catálogos PDF ---------- */
+// Logo(s) de la marca del catálogo; si no hay logo, queda el ícono "PDF".
+function logosPdf(c){
+  const logos = (c.marcas || []).map(m => [m, LOGOS_MARCAS[m]]).filter(x => x[1]);
+  if (!logos.length) return '<div class="pdf-icon">PDF</div>';
+  return '<div class="pdf-logos' + (logos.length > 2 ? ' muchas' : logos.length === 2 ? ' dos' : '') + '">' +
+    logos.map(x => '<img src="' + x[1] + '" alt="' + x[0] + '" loading="lazy">').join('') +
+    '<span class="pdf-tag">PDF</span></div>';
+}
 function renderCatalogos(){
   actualizarControles();
   ponerTitulo('Catálogos en PDF');
@@ -2130,7 +2150,7 @@ function renderCatalogos(){
   html += '<div class="pdf-cards">';
   for (const c of CATALOGOS_PDF){
     html += '<a class="pdf-card" href="' + c.archivo + '" target="_blank" rel="noopener">' +
-              '<div class="pdf-icon">PDF</div>' +
+              logosPdf(c) +
               '<div class="pdf-info"><div class="pdf-titulo">' + c.titulo + '</div>' +
               '<div class="pdf-desc">' + (c.descripcion || '') + '</div></div>' +
               '<div class="pdf-accion">Abrir</div>' +
