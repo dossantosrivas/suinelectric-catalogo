@@ -626,6 +626,51 @@
     .cab .acc{ max-width:100%; }
     .chip{ flex:none; }
   }
+
+  /* ===== Aprovechar el espacio y no cortar textos (oct. 2026) ===== */
+  .contenido{ max-width:1720px; }
+  .cab p{ max-width:92ch; }
+  .buscar input{ min-width:280px; }
+  .panel{ width:min(640px,100%); }
+  .panel.ancho{ width:min(980px,100%); }
+  .dialogo-caja{ width:min(540px,100%); }
+  .kpis{ grid-template-columns:repeat(auto-fit,minmax(185px,1fr)); }
+  .kpi .k-cab{ letter-spacing:.35px; }
+  .kpi .k-cab > span, .kpi .k-cab > div{ min-width:0; overflow-wrap:anywhere; }
+  .pro-desc{ max-width:560px; white-space:normal; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
+  .pro-cat{ min-width:190px; max-width:320px; }
+  .ranking .nom small{ white-space:normal; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
+  .pleg-res{ white-space:normal; }
+  .items .mono{ white-space:normal; overflow-wrap:anywhere; }
+  .contacto-l{ display:block; white-space:nowrap; }
+  td{ overflow-wrap:break-word; }
+  .aviso span{ white-space:normal; }
+  @media (min-width:1600px){
+    .contenido{ padding-left:44px; padding-right:44px; }
+  }
+  /* Teléfono: las tablas se vuelven fichas (sin desplazamiento lateral) */
+  @media (max-width:640px){
+    .tabla-wrap{ overflow-x:visible; margin:0; padding:0; }
+    .tabla-wrap table.apilable thead{ display:none; }
+    .tabla-wrap table.apilable, .tabla-wrap table.apilable tbody{ display:block; }
+    .tabla-wrap table.apilable tr{ display:flex; flex-wrap:wrap; align-items:center; gap:6px 12px; padding:12px 2px; border-bottom:1px solid var(--linea-suave); }
+    .tabla-wrap table.apilable tr:last-child{ border-bottom:none; }
+    .tabla-wrap table.apilable td{ display:block; border:none; padding:0; min-width:0; max-width:100%; }
+    .tabla-wrap table.apilable td:first-child{ flex-basis:100%; }
+    .tabla-wrap table.apilable td[data-label]:not(:first-child):not(.acciones):not(:empty)::before{ content:attr(data-label); display:block; font-size:10.5px; letter-spacing:.5px; text-transform:uppercase; color:var(--texto-3); font-weight:600; margin-bottom:1px; }
+    .tabla-wrap table.apilable td.acciones{ flex-basis:100%; text-align:left; white-space:normal; display:flex; flex-wrap:wrap; gap:6px; }
+    .tabla-wrap table.apilable tbody tr:hover td{ background:none; }
+    .persona{ min-width:0; }
+    .pro-cat{ min-width:0; }
+    .pro-desc{ max-width:none; }
+    input, select, textarea{ max-width:100%; }
+    label.campo, .fila > *{ min-width:0; }
+    label.campo select{ width:100%; }
+    .lista-simple li{ flex-wrap:wrap; }
+    .lista-simple li > div:not(.avatar):not(.der){ flex:1 1 0; min-width:0; overflow-wrap:anywhere; }
+    .lista-simple .der{ white-space:normal; }
+    .tabla-wrap table.apilable td:first-child:has(> img:only-child), .tabla-wrap table.apilable td:first-child:has(> .mini:only-child){ flex-basis:auto; }
+  }
 </style>
 </head>
 <body>
@@ -989,7 +1034,7 @@ function vistaResumen(){
       '<a class="btn" href="/ventas-beta">' + ICO.externo + 'Gestión</a><a class="btn" href="/tienda-beta" target="_blank" rel="noopener">' + ICO.tienda + 'Ver tienda</a>') +
     (ofertasAbiertas && ofertasAbiertas.length ? '<a class="aviso hoy" href="/ventas-beta/ofertas/lista" title="Abrir en Gestión">' + ICO.info +
       '<strong>' + ofertasAbiertas.length + ' oferta' + (ofertasAbiertas.length === 1 ? '' : 's') + ' pendiente' + (ofertasAbiertas.length === 1 ? '' : 's') + ' de respuesta</strong>' +
-      '<span>' + esc(ofertasAbiertas.slice(0, 3).map(o => (o.numero ? o.numero + ' ' : '') + (o.cliente || '')).join(' · ')) + (ofertasAbiertas.length > 3 ? ' …' : '') + '</span><span class="ir">Gestión →</span></a>' : '') +
+      '<span>' + esc(ofertasAbiertas.slice(0, 6).map(o => (o.numero ? o.numero + ' ' : '') + (o.cliente || '')).join(' · ')) + (ofertasAbiertas.length > 6 ? ' · y ' + (ofertasAbiertas.length - 6) + ' más' : '') + '</span><span class="ir">Gestión →</span></a>' : '') +
     '<div class="kpis">' +
       kpi('pedidos', ICO.pedidos, 'Por atender', nuevos.length, nuevos.length ? 'Toca para revisarlos' : 'Todo al día', nuevos.length ? ' destacado' : '') +
       kpi('pedidos', ICO.caja, 'Pedidos del mes', delMes.length, money(totalMes) + ' en total (sin cancelados)') +
@@ -1279,7 +1324,7 @@ function pintarClientes(){
       return '<tr class="' + (c.activo === false ? 'inactivo' : '') + '"><td><div class="persona"><div class="avatar' + (c.es_admin ? ' admin' : '') + '">' + esc(iniciales(c)) + '</div><div><strong>' + esc(c.nombre || '—') + '</strong>' +
           (c.empresa ? '<span>' + esc(c.empresa) + '</span><br>' : '') + '<span>' + esc(c.email) + '</span></div></div></td>' +
         '<td>' + (c.tipo_id ? '<span class="pill azul">' + esc(nombreTipo(c.tipo_id)) + '</span>' : '<span class="muted">—</span>') + '</td>' +
-        '<td class="muted">' + esc([c.rif, c.telefono].filter(Boolean).join(' · ') || '—') + '</td>' +
+        '<td class="muted">' + ([c.rif, c.telefono].filter(Boolean).map(x => '<span class="contacto-l">' + esc(x) + '</span>').join('') || '—') + '</td>' +
         '<td>' + (c.es_admin ? '<span class="pill tinta">Admin</span> ' : '') + (ms && !c.es_admin ? '<span class="pill verde" title="' + esc(ms) + '">' + ICO.ojo.replace('<svg', '<svg width="13" height="13"') + 'Existencias</span>' : '') + (!ms && !c.es_admin ? '<span class="muted">Estándar</span>' : '') + '</td>' +
         '<td>' + (n ? '<span class="pill amar">' + n + ' regla' + (n > 1 ? 's' : '') + '</span>' : '<span class="muted">—</span>') + '</td>' +
         '<td>' + (c.activo === false ? '<span class="pill rojo"><span class="punto"></span>Bloqueado</span>' : c.user_id ? '<span class="pill verde"><span class="punto"></span>Ya entró</span>' : '<span class="pill"><span class="punto"></span>Sin entrar</span>') + '</td>' +
@@ -3070,3 +3115,20 @@ const TablaOrden = (() => {
 <div id="beta-aviso" style="position:fixed;right:8px;bottom:8px;z-index:2147483647;background:#d97706;color:#fff;font:700 11px/1 system-ui,sans-serif;letter-spacing:.08em;padding:6px 9px;border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,.25);pointer-events:none;opacity:.9">BETA</div>
 </body>
 </html>
+/* Teléfono: cada celda recibe el nombre de su columna para mostrar las tablas como fichas */
+(function(){
+  const etiquetar = (tabla) => {
+    const ths = [...tabla.querySelectorAll('thead th')].map(th => th.textContent.replace(/[↕▲▼]/g, '').trim());
+    if (!ths.length) return;
+    tabla.classList.add('apilable');
+    tabla.querySelectorAll('tbody tr').forEach(tr => {
+      let i = 0;
+      [...tr.children].forEach(td => { const span = Number(td.getAttribute('colspan') || 1); if (!td.hasAttribute('data-label') && ths[i]) td.setAttribute('data-label', ths[i]); i += span; });
+    });
+  };
+  const todo = () => document.querySelectorAll('.tabla-wrap table').forEach(etiquetar);
+  let pend = false;
+  new MutationObserver(() => { if (pend) return; pend = true; requestAnimationFrame(() => { pend = false; todo(); }); })
+    .observe(document.documentElement, { childList: true, subtree: true });
+})();
+

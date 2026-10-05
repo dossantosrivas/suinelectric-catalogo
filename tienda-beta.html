@@ -82,7 +82,7 @@
   /* ---------- Barra superior de contacto ---------- */
   .topbar{ background:var(--tinta); color:#c9d6de; font-size:13px; }
   .topbar-in{
-    max-width:1480px; margin:0 auto; padding:7px 24px;
+    max-width:1640px; margin:0 auto; padding:7px 24px;
     display:flex; align-items:center; gap:24px; flex-wrap:wrap;
   }
   .topbar a{ color:#fff; text-decoration:none; font-weight:600; }
@@ -98,7 +98,7 @@
     box-shadow:0 1px 0 rgba(14,42,59,0.04);
   }
   .header-in{
-    max-width:1480px; margin:0 auto; padding:0 24px; min-height:var(--header-h);
+    max-width:1640px; margin:0 auto; padding:0 24px; min-height:var(--header-h);
     display:grid; grid-template-columns:auto minmax(260px, 1fr) auto; align-items:center; gap:28px;
   }
   .brand{ display:flex; align-items:center; gap:12px; cursor:pointer; text-decoration:none; }
@@ -951,6 +951,12 @@
   #chat-burbuja[hidden], #chat-datos[hidden]{ display:none; }
   body.chat-abierto{ overflow:hidden; }
   @media (min-width: 641px){ body.chat-abierto{ overflow:auto; } }
+  /* ===== Aprovechar el espacio y no cortar textos (oct. 2026) ===== */
+  .layout, .footer-in{ max-width:1640px; }
+  .carrusel-modelo{ white-space:normal; overflow-wrap:anywhere; text-overflow:clip; }
+  .marca-logo-card{ min-width:0; overflow:hidden; }
+  .marca-logo-card img{ width:auto; height:auto; max-width:100%; min-width:0; }
+  @media (max-width:520px){ .marca-logo-card{ padding-left:10px; padding-right:10px; } .marca-logo-card img{ max-height:32px; } }
 </style>
 
 </head>
@@ -1014,7 +1020,7 @@
         <option value="no">Solo agotados</option>
       </select>
       <select id="filtro-orden" aria-label="Ordenar">
-        <option value="jerarquia">Orden técnico (mayor capacidad)</option>
+        <option value="jerarquia">Mayor capacidad</option>
         <option value="precio-asc">Precio: menor a mayor</option>
         <option value="precio-desc">Precio: mayor a menor</option>
         <option value="az">Modelo: A-Z</option>

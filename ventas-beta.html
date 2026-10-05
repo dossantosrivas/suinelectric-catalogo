@@ -290,6 +290,30 @@ body.solo .cot-frame{height:100vh;height:100dvh;border:0;border-radius:0}
   .extras .ex{grid-template-columns:100px minmax(0,1fr) 30px}
 }
 @media (max-width:520px){.g2,.g3,.g4{grid-template-columns:minmax(0,1fr)}.kpi .v{font-size:24px}}
+/* ===== Aprovechar el espacio y no cortar textos (oct. 2026) ===== */
+main.view{max-width:1760px}
+@media (min-width:1600px){main.view{padding-left:40px;padding-right:40px}}
+.ph{flex-wrap:wrap}
+.ph .act{flex-wrap:wrap}
+.tbl td{overflow-wrap:break-word}
+.clip{-webkit-line-clamp:3}
+.md{width:min(820px,100%)}
+.md.wide{width:min(1180px,100%)}
+@media (max-width:520px){.grid > [style*="span"]{grid-column:1/-1!important}}
+/* Teléfono: las tablas se vuelven fichas (sin desplazamiento lateral) */
+@media (max-width:640px){
+  .tbl-wrap:has(table.tbl.apilable){overflow:visible;border:none;background:none}
+  table.tbl.apilable thead{display:none}
+  table.tbl.apilable, table.tbl.apilable tbody{display:block}
+  table.tbl.apilable tr{display:flex;flex-wrap:wrap;align-items:flex-start;gap:6px 14px;padding:12px 14px;margin-bottom:8px;background:#fff;border:1px solid var(--line);border-radius:var(--r)}
+  table.tbl.apilable td{display:block;border:none;padding:0;background:none!important;min-width:0;max-width:100%}
+  table.tbl.apilable td.hm{display:none}
+  table.tbl.apilable td:first-child:not(.sel-c), table.tbl.apilable td.sel-c + td{flex-basis:100%}
+  table.tbl.apilable td.sel-c{order:9;flex-basis:auto;width:auto}
+  table.tbl.apilable td.r{text-align:left}
+  table.tbl.apilable td[data-label]:not(:first-child):not(.sel-c + td):not(:empty)::before{content:attr(data-label);display:block;font-size:12.5px;color:var(--muted);font-weight:600;margin-bottom:1px}
+  table.tbl.apilable tbody tr.sel{outline:2px solid var(--steel)}
+}
 </style>
 </head>
 <body>
@@ -4679,5 +4703,22 @@ Bus.on('sync', () => { if (Sync.state === 'ok') InvWeb.programar(); });
 
 </script>
 <div id="beta-aviso" style="position:fixed;right:8px;bottom:8px;z-index:2147483647;background:#d97706;color:#fff;font:700 11px/1 system-ui,sans-serif;letter-spacing:.08em;padding:6px 9px;border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,.25);pointer-events:none;opacity:.9">BETA</div>
+<script>
+/* Teléfono: cada celda recibe el nombre de su columna para mostrar las tablas como fichas */
+(function(){
+  const etiquetar = (tabla) => {
+    const ths = [...tabla.querySelectorAll('thead th')].map(th => th.textContent.replace(/[↕▲▼⇅]/g, '').trim());
+    if (!ths.length) return;
+    tabla.classList.add('apilable');
+    tabla.querySelectorAll('tbody tr').forEach(tr => {
+      let i = 0;
+      [...tr.children].forEach(td => { const span = Number(td.getAttribute('colspan') || 1); if (!td.hasAttribute('data-label') && ths[i]) td.setAttribute('data-label', ths[i]); i += span; });
+    });
+  };
+  let pend = false;
+  new MutationObserver(() => { if (pend) return; pend = true; requestAnimationFrame(() => { pend = false; document.querySelectorAll('table.tbl').forEach(etiquetar); }); })
+    .observe(document.documentElement, { childList: true, subtree: true });
+})();
+</script>
 </body>
 </html>
