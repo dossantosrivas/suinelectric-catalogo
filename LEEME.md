@@ -6,7 +6,7 @@ Archivos:
 - `admin.html`: panel de administrador (pedidos, clientes, descuentos y tipos de cliente).
 
 ## 1. Crear la base de datos (una sola vez)
-Supabase → **SQL Editor** → **New query** → pega todo `01_esquema.sql` → **Run**.
+Supabase → **SQL Editor** → **New query** → pega todo `supabase/01_esquema.sql` → **Run**.
 Se puede volver a correr sin perder datos.
 
 ## 2. Direcciones permitidas
@@ -55,7 +55,7 @@ El precio fijo (en USD) solo se puede poner a un modelo.
 ## 6. Existencias reales solo para quien tú elijas
 La tienda pública muestra "+10 disponibles", "Últimas unidades" o "Agotado". Las cantidades exactas solo las ven los administradores y los clientes (o tipos de cliente) a quienes les des permiso en el panel → **Existencias**.
 
-1. Supabase → **SQL Editor** → pega todo `03_existencias.sql` → **Run** (se puede volver a correr).
+1. Supabase → **SQL Editor** → pega todo `supabase/03_existencias.sql` → **Run** (se puede volver a correr).
 2. Supabase → **Project Settings → API Keys** → copia una **Secret key** (empieza con `sb_secret_`).
 3. GitHub → el repo → **Settings → Secrets and variables → Actions → New repository secret**:
    - `SUPABASE_URL` = `https://yqnlxhbjassrkudnhvpr.supabase.co`
@@ -68,17 +68,17 @@ La tienda pública muestra "+10 disponibles", "Últimas unidades" o "Agotado". L
 - Alta en Google: search.google.com/search-console → Agregar propiedad → **Dominio** `suinelectric.com` → verificar con Cloudflare → Sitemaps → `https://suinelectric.com/sitemap.xml`.
 
 ## 8. Estadísticas (qué buscan, qué ven y qué cotizan)
-Supabase → **SQL Editor** → pega todo `04_estadisticas.sql` → **Run**. Desde ese momento la tienda anota búsquedas, fichas vistas, productos agregados al carrito y clics en WhatsApp (también desde las páginas `/p/…`). Se ve en el panel → **Estadísticas**. No se anota lo que hacen los administradores y los datos de más de un año se borran solos.
+Supabase → **SQL Editor** → pega todo `supabase/04_estadisticas.sql` → **Run**. Desde ese momento la tienda anota búsquedas, fichas vistas, productos agregados al carrito y clics en WhatsApp (también desde las páginas `/p/…`). Se ve en el panel → **Estadísticas**. No se anota lo que hacen los administradores y los datos de más de un año se borran solos.
 
 ## 9. Archivar, eliminar y ver pedidos en detalle
-Supabase → **SQL Editor** → pega todo `05_pedidos_archivo.sql` → **Run** (se puede volver a correr).
+Supabase → **SQL Editor** → pega todo `supabase/05_pedidos_archivo.sql` → **Run** (se puede volver a correr).
 En el panel → **Pedidos**, cada pedido tiene:
 - **Ver detalle** (o toca el número `#`): cliente con teléfono/WhatsApp y RIF, cada producto con foto, descripción completa, precio de lista, descuento y subtotal, y el botón **Copiar lista**.
 - **Archivar**: lo saca de la lista y de "por atender", sin borrarlo. Se ve en el filtro **Archivados** y se puede desarchivar. El cliente lo sigue viendo en "Mi cuenta".
 - **Eliminar**: lo borra para siempre (también para el cliente). Pide confirmación.
 
 ## 10. Actividad por cliente (qué busca, mira y cotiza cada uno)
-Supabase → **SQL Editor** → pega todo `06_actividad_clientes.sql` → **Run** (requiere haber corrido antes `04_estadisticas.sql`).
+Supabase → **SQL Editor** → pega todo `supabase/06_actividad_clientes.sql` → **Run** (requiere haber corrido antes `supabase/04_estadisticas.sql`).
 - Panel → **Estadísticas** → al final, **Clientes más activos** (toca uno para ver su detalle).
 - Panel → **Clientes** → botón **Actividad** (o dentro de Editar → Ver actividad).
 - El detalle muestra: última visita, días activo, lo que buscó (y qué no encontró), lo que cotizó o puso en el carrito, los productos que miró, sus pedidos y el paso a paso por día.
@@ -87,7 +87,7 @@ Supabase → **SQL Editor** → pega todo `06_actividad_clientes.sql` → **Run*
 ## 11. Chat con un asesor (burbuja en la tienda → tu Telegram)
 El visitante escribe en la burbuja **¿Te ayudamos?** de la tienda (o en **💬 Preguntar a un asesor** dentro de un producto). Cada mensaje te llega a SuinBot como **💬 Chat #12**. Tú **respondes a ese mensaje** en Telegram (celular o PC) y la respuesta le aparece al cliente en la tienda. La conversación queda guardada en su navegador, así que si vuelve después la ve completa.
 
-1. Supabase → **SQL Editor** → pega todo `08_chat.sql` → **Run** (requiere `07_notificaciones.sql`).
+1. Supabase → **SQL Editor** → pega todo `supabase/08_chat.sql` → **Run** (requiere `supabase/07_notificaciones.sql`).
 2. Cloudflare → **Workers & Pages** → proyecto de la tienda → **Settings → Variables and Secrets** → agrega en **Production** (tipo *Secret*):
    - `TELEGRAM_TOKEN` = token de SuinBot
    - `TELEGRAM_CHAT_ID` = tu chat_id (el mismo que guardaste en el Vault de Supabase)
@@ -106,7 +106,7 @@ En Telegram:
 La IA contesta primero: hace 1 o 2 preguntas (potencia, voltaje, tipo de carga), busca en tu catálogo y recomienda hasta 3 productos **con su enlace**. **No da precios** (el precio está en el enlace). Si el cliente pide cotizar, descuentos, hablar con una persona, etc., te pasa el chat.
 
 1. **Clave de Gemini**: aistudio.google.com → **Get API key** → **Create API key**. Guárdala en Cloudflare (Settings → Variables and Secrets, Production, tipo Secret) como `GEMINI_API_KEY`.
-2. Supabase → **SQL Editor** → pega todo `09_asistente.sql` → **Run**.
+2. Supabase → **SQL Editor** → pega todo `supabase/09_asistente.sql` → **Run**.
 3. GitHub → **Actions** → **Subir catálogo del asistente (chat)** → **Run workflow** (sube el catálogo sin precios a Supabase; después se actualiza solo cada día).
 
 En Telegram:
@@ -116,7 +116,7 @@ En Telegram:
 - **Si respondes cualquier chat, la IA se calla en ese chat.** `/ia 12` la vuelve a encender; `/ia 12 off` la apaga.
 
 ## 13. Visitantes sin cuenta (cuántos entran, de dónde, cuándo, qué buscan y qué tarjetas ven)
-1. Supabase → **SQL Editor** → pega todo `10_visitantes.sql` → **Run** (requiere `04_estadisticas.sql`; se puede volver a correr).
+1. Supabase → **SQL Editor** → pega todo `supabase/10_visitantes.sql` → **Run** (requiere `supabase/04_estadisticas.sql`; se puede volver a correr).
 2. Publica (sube los cambios a `main`). Cloudflare publica `rastreo.js` y la función `functions/api/geo.js` (no necesita claves).
 3. Panel → **Visitantes**:
    - Visitas, personas distintas, nuevas y cuántas hay **en la tienda ahora**.
@@ -131,10 +131,10 @@ Notas:
 - Cada navegador recibe un código aleatorio; no se guardan nombres, correos ni la IP. Si la persona borra los datos del navegador o entra desde otro equipo, cuenta como nueva.
 - Una tarjeta cuenta como "vista" si estuvo al menos a la mitad en pantalla casi un segundo (una vez por visita y por sección).
 - No se cuenta a los administradores: al entrar al panel, ese navegador queda marcado para no contarse nunca más (aunque luego entre a la tienda sin sesión). Tampoco a robots como Google.
-- Si todavía no corriste `10_visitantes.sql`, la tienda sigue anotando las estadísticas de antes, sin los datos nuevos.
+- Si todavía no corriste `supabase/10_visitantes.sql`, la tienda sigue anotando las estadísticas de antes, sin los datos nuevos.
 
 ## 14. Historial del scraping (qué se restó de existencias, cambios de precio y cuándo)
-Supabase → **SQL Editor** → pega todo `11_historial_scraping.sql` → **Run** (se puede volver a correr).
+Supabase → **SQL Editor** → pega todo `supabase/11_historial_scraping.sql` → **Run** (se puede volver a correr).
 
 Desde ahí, cada scraping diario (GitHub Actions, paso "Registrar el scraping") manda las existencias de los productos de grupo-electricos.com y Supabase las compara con la corrida anterior. En el panel → **Scraping** ves:
 - Cada corrida: cuántos productos bajaron, unidades restadas, cuáles subieron, nuevos y los que ya no están. Toca una para ver el detalle.
@@ -147,11 +147,11 @@ Notas:
 - Solo cuenta productos del scraper, no los de `productos_manuales.json`.
 - Si un scraping trae menos del 60 % de los productos de la corrida anterior (falló a medias), se marca como "Omitido" y no se registran bajas falsas.
 - Se compara el precio público del proveedor (antes de tu descuento); diferencias menores a un centavo no cuentan.
-- Si ya habías corrido `11_historial_scraping.sql` antes, vuelve a correrlo para activar los precios (no se pierde nada).
+- Si ya habías corrido `supabase/11_historial_scraping.sql` antes, vuelve a correrlo para activar los precios (no se pierde nada).
 - Se guarda un año de historial. Usa los mismos secrets `SUPABASE_URL` y `SUPABASE_SECRET_KEY`.
 
 ## 15. Tu inventario primero en la tienda
-Supabase → **SQL Editor** → pega todo `15_inventario_web.sql` → **Run** (se puede volver a correr).
+Supabase → **SQL Editor** → pega todo `supabase/15_inventario_web.sql` → **Run** (se puede volver a correr).
 
 Desde ahí, la app de ventas (`/ventas`) sube sola a la tienda lo que tienes en existencia (tu inventario + el de tu papá) cada vez que la abres o guardas una compra, venta o ajuste:
 - Si el modelo también viene del distribuidor (o del panel), sale **una sola tarjeta** con tu marca, tu nombre, tu precio de venta (tal cual, sin el descuento general; las reglas por cliente sí aplican) y tu existencia. Fotos, descripción y categoría salen del distribuidor si tu producto no las tiene. Los repetidos con otra marca desaparecen.
