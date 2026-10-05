@@ -19,7 +19,7 @@ const DESTINO = path.join(RAIZ, 'sitio');
 
 // Lo que se publica. Agrega aquí cualquier archivo o carpeta nueva que la web necesite.
 const PUBLICAR = [
-  'index.html', 'tienda.html', 'admin.html', 'links.html', 'ventas.html',
+  'index.html', 'tienda.html', 'admin.html', 'links.html', 'ventas.html', 'cotizador.html',   // el cotizador lo abre Gestión (/ventas/cotizador)
   'tienda-beta.html', 'admin-beta.html', 'ventas-beta.html',   // versiones beta para pruebas
   '_headers', '_redirects', 'robots.txt', 'sitemap.xml', 'publico.css', 'publico.js', 'rastreo.js',
   'catalogo-tienda.json',
