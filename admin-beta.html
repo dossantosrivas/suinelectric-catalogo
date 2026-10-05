@@ -179,6 +179,11 @@
   .ayuda{ font-size:13.5px; color:var(--texto-2); background:var(--superficie-2); border:1px solid var(--linea-suave); border-radius:var(--radio-chico); padding:11px 13px; margin:0 0 14px; line-height:1.55; }
   .aviso{ display:flex; gap:10px; align-items:flex-start; background:var(--amarillo-suave); color:var(--amarillo-texto); border-radius:var(--radio-chico); padding:11px 13px; font-size:13.5px; line-height:1.5; margin-bottom:14px; }
   .aviso.azul{ background:var(--azul-suave); color:var(--azul-texto); }
+  /* Resumen: lo pendiente en Gestión */
+  .aviso.hoy{ align-items:center; flex-wrap:wrap; gap:4px 12px; text-decoration:none; border:1px solid var(--amarillo-borde); font-size:14px; }
+  .aviso.hoy strong{ font-size:15.5px; color:var(--titulo); }
+  .aviso.hoy .ir{ margin-left:auto; font-weight:600; color:var(--azul-texto); }
+  .aviso.hoy:hover{ border-color:var(--amarillo); }
   .aviso svg{ width:18px; height:18px; flex:none; margin-top:1px; }
   .vacio{ text-align:center; padding:36px 10px; color:var(--texto-3); }
   .vacio svg{ width:34px; height:34px; opacity:.4; display:block; margin:0 auto 10px; }
@@ -814,7 +819,7 @@ async function iniciar(){
   armarApp();
   const ruta = leerRuta(); tab = ruta.tab;
   if (location.hash === '#envivo'){ tab = 'envivo'; ponerUrl(urlDe('envivo')); }   // enlace viejo de los avisos de Telegram
-  await Promise.all([cargarProductos(), recargarBase(), cargarPedidos(), cargarEstadoStock(), cargarPanelProductos().catch(e => { prodErr = e; })]);
+  await Promise.all([cargarProductos(), recargarBase(), cargarPedidos(), cargarEstadoStock(), cargarPanelProductos().catch(e => { prodErr = e; }), cargarOfertasGestion().catch(() => {})]);
   pintarBadges();
   const desdeGestion = /^#cliente=/.test(location.hash) ? decodeURIComponent(location.hash.slice(9)).toLowerCase() : '';
   if (desdeGestion){ tab = 'clientes'; ruta.det = desdeGestion; }   // enlace viejo desde Gestión (#cliente=correo)
@@ -939,6 +944,14 @@ async function recargarBase(){
   ]);
   tipos = t.data || []; clientes = c.data || []; reglas = r.data || [];
 }
+/* Ofertas de Gestión que esperan respuesta del cliente (mismo criterio que su Resumen: estado "Abierta") */
+let ofertasAbiertas = null;
+async function cargarOfertasGestion(){
+  const { data, error } = await sb.from('adm_registros')
+    .select('id, estado:data->>estado, conv:data->>convertidoA, fecha:data->>fecha, numero:data->>numero, cliente:data->cliente->>nombre')
+    .eq('coleccion', 'docs').eq('borrado', false).eq('data->>tipo', 'oferta').limit(2000);
+  ofertasAbiertas = error ? null : (data || []).filter(d => (d.estado || 'abierta') === 'abierta' && !d.conv).sort((a, b) => String(b.fecha || '').localeCompare(String(a.fecha || '')));
+}
 async function cargarPedidos(){
   const { data, error } = await sb.from('pedidos').select('*').order('creado', { ascending: false }).limit(500);
   pedidos = error ? [] : (data || []);
@@ -974,6 +987,9 @@ function vistaResumen(){
 
   $('main').innerHTML = cabecera('Hola' + (yo.nombre ? ', ' + esc(yo.nombre.split(' ')[0]) : ''), 'Así va la tienda hoy, ' + new Date().toLocaleDateString('es-VE', { weekday: 'long', day: 'numeric', month: 'long' }) + '.',
       '<a class="btn" href="/ventas-beta">' + ICO.externo + 'Gestión</a><a class="btn" href="/tienda-beta" target="_blank" rel="noopener">' + ICO.tienda + 'Ver tienda</a>') +
+    (ofertasAbiertas && ofertasAbiertas.length ? '<a class="aviso hoy" href="/ventas-beta/ofertas/lista" title="Abrir en Gestión">' + ICO.info +
+      '<strong>' + ofertasAbiertas.length + ' oferta' + (ofertasAbiertas.length === 1 ? '' : 's') + ' pendiente' + (ofertasAbiertas.length === 1 ? '' : 's') + ' de respuesta</strong>' +
+      '<span>' + esc(ofertasAbiertas.slice(0, 3).map(o => (o.numero ? o.numero + ' ' : '') + (o.cliente || '')).join(' · ')) + (ofertasAbiertas.length > 3 ? ' …' : '') + '</span><span class="ir">Gestión →</span></a>' : '') +
     '<div class="kpis">' +
       kpi('pedidos', ICO.pedidos, 'Por atender', nuevos.length, nuevos.length ? 'Toca para revisarlos' : 'Todo al día', nuevos.length ? ' destacado' : '') +
       kpi('pedidos', ICO.caja, 'Pedidos del mes', delMes.length, money(totalMes) + ' en total (sin cancelados)') +
@@ -1229,7 +1245,7 @@ const FILTROS_CLI = [
 ];
 function vistaClientes(){
   $('main').innerHTML = cabecera('Clientes', 'Crea clientes antes de que entren: cuando entren con ese correo verán sus precios automáticamente.',
-      '<button class="btn" id="c-bloquear-correo">' + ICO.bloquear + 'Bloquear un correo</button><button class="btn prim" id="c-nuevo">' + ICO.mas + 'Nuevo cliente</button>') +
+      '<button class="btn" id="c-bloquear-correo">' + ICO.bloquear + 'Bloquear un correo</button><a class="btn prim" id="c-nuevo" href="/ventas-beta/cliente-nuevo" title="Los clientes se crean en Gestión; con correo, también quedan en la tienda">' + ICO.mas + 'Nuevo cliente</a>') +
     '<div class="caja"><form id="c-form-bloq" class="fila" style="margin-bottom:16px" hidden><label class="campo" style="flex:1 1 260px">Correo a bloquear (aunque todavía no se haya registrado)<input name="email" type="email" required placeholder="correo@ejemplo.com"></label>' +
       '<button class="btn peligro">Bloquear</button><button type="button" class="btn" id="c-bloq-cancelar">Cancelar</button></form>' +
     '<div class="caja-cab"><div class="chips" id="c-chips">' + FILTROS_CLI.map(f => '<button class="chip' + (filtroCli === f[0] ? ' activo' : '') + '" data-f="' + f[0] + '">' + f[1] + ' <b>' + clientes.filter(f[2]).length + '</b></button>').join('') + '</div>' +
@@ -1237,7 +1253,6 @@ function vistaClientes(){
     '<div class="tabla-wrap" id="c-tabla"></div></div>';
   $('c-busca').oninput = (e) => { buscaCli = e.target.value; pintarClientes(); };
   document.querySelectorAll('#c-chips .chip').forEach(ch => ch.onclick = () => { filtroCli = ch.dataset.f; vistaClientes(); });
-  $('c-nuevo').onclick = () => abrirCliente({});
   $('c-bloquear-correo').onclick = () => { $('c-form-bloq').hidden = false; $('c-form-bloq').elements.email.focus(); };
   $('c-bloq-cancelar').onclick = () => { $('c-form-bloq').hidden = true; };
   $('c-form-bloq').onsubmit = async (e) => {
@@ -1294,12 +1309,22 @@ function abrirCliente(c){
   if (c.email) ponerUrl(urlDe('clientes', c.email));
   const nuevo = !c.email, soyYo = c.email === yo.email;
   const porTipo = !c.ver_existencias && tipoVeStock(c.tipo_id);
+  // Los clientes (no administradores) tienen su ficha principal en Gestión: datos, compras, ofertas y notas.
+  // Aquí solo se maneja lo de la tienda: tipo de cliente, descuentos, existencias y acceso.
+  const enGestion = !nuevo && !c.es_admin;
+  const fichaUrl = '/ventas-beta/cliente-web/' + encodeURIComponent(c.email || '');
+  const datoLeer = (t, v) => '<div><span>' + t + '</span>' + (v ? esc(v) : '—') + '</div>';
+  const selTipo = '<select name="tipo_id"><option value="">—</option>' + tipos.map(t => '<option value="' + t.id + '"' + (c.tipo_id === t.id || (nuevo && t.id === 'final') ? ' selected' : '') + '>' + esc(t.nombre) + (t.ver_existencias ? ' (ve existencias)' : '') + '</option>').join('') + '</select>';
   abrirPanel('<form id="c-form" style="display:contents">' +
     '<div class="panel-cab">' + (nuevo ? '' : '<div class="avatar' + (c.es_admin ? ' admin' : '') + '">' + esc(iniciales(c)) + '</div>') +
       '<div><h2>' + (nuevo ? 'Nuevo cliente' : esc(c.nombre || c.email)) + '</h2>' + (nuevo ? '' : '<div class="muted">' + esc(c.email) + '</div>') + '</div>' +
       '<button type="button" class="btn chico fantasma cerrar" id="c-cerrar" aria-label="Cerrar">' + ICO.cerrar + '</button></div>' +
     '<div class="panel-cuerpo">' +
-      (nuevo || c.es_admin ? '' : '<a class="enlace-gestion" href="/ventas-beta/cliente-web/' + encodeURIComponent(c.email) + '">' + ICO.externo + '<span><strong>Ficha completa en Gestión</strong><small>Compras, ofertas, notas de entrega y lo que debe</small></span></a>') +
+      (enGestion ? '<a class="enlace-gestion" href="' + fichaUrl + '">' + ICO.externo + '<span><strong>Ver ficha completa en Gestión</strong><small>Datos del cliente, compras, ofertas, notas de entrega y lo que debe</small></span></a>' +
+        '<div class="seccion"><h3>En la tienda</h3><div class="campos"><label class="campo ancho">Tipo de cliente' + selTipo + '</label></div></div>' +
+        '<div class="seccion"><h3>Datos <small class="muted" style="font-weight:500;text-transform:none;letter-spacing:0">· se cambian en Gestión</small></h3><div class="det-datos">' +
+          datoLeer('Correo', c.email) + datoLeer('Nombre', c.nombre) + datoLeer('Empresa', c.empresa) + datoLeer('RIF', c.rif) + datoLeer('Teléfono', c.telefono) + datoLeer('Dirección', c.direccion) +
+        '</div></div>' :
       '<div class="seccion"><h3>Datos</h3><div class="campos">' +
         '<label class="campo ancho">Correo<input name="email" type="email" required value="' + esc(c.email || '') + '"' + (nuevo ? '' : ' readonly') + '></label>' +
         '<label class="campo">Nombre<input name="nombre" value="' + esc(c.nombre || '') + '"></label>' +
@@ -1307,8 +1332,8 @@ function abrirCliente(c){
         '<label class="campo">RIF<input name="rif" value="' + esc(c.rif || '') + '"></label>' +
         '<label class="campo">Teléfono<input name="telefono" value="' + esc(c.telefono || '') + '"></label>' +
         '<label class="campo ancho">Dirección<input name="direccion" value="' + esc(c.direccion || '') + '"></label>' +
-        '<label class="campo ancho">Tipo de cliente<select name="tipo_id"><option value="">—</option>' + tipos.map(t => '<option value="' + t.id + '"' + (c.tipo_id === t.id || (nuevo && t.id === 'final') ? ' selected' : '') + '>' + esc(t.nombre) + (t.ver_existencias ? ' (ve existencias)' : '') + '</option>').join('') + '</select></label>' +
-      '</div></div>' +
+        '<label class="campo ancho">Tipo de cliente' + selTipo + '</label>' +
+      '</div></div>') +
       '<div class="seccion"><h3>Acceso y permisos</h3><div class="interruptores">' +
         interruptor('activo', 'Cuenta activa', 'Si la apagas, verá la tienda como visitante y no podrá registrar pedidos.', c.activo !== false, soyYo) +
         interruptor('es_admin', 'Administrador', 'Puede entrar a este panel y ve todo, incluidas las existencias reales.', !!c.es_admin, soyYo) +
@@ -1323,7 +1348,7 @@ function abrirCliente(c){
   '</form>');
   const f = $('c-form');
   $('c-cerrar').onclick = cerrarPanel; $('c-cancelar').onclick = cerrarPanel;
-  setTimeout(() => (nuevo ? f.elements.email : f.elements.nombre).focus(), 60);
+  if (!enGestion) setTimeout(() => (nuevo ? f.elements.email : f.elements.nombre).focus(), 60);
   if ($('c-actividad')) $('c-actividad').onclick = () => abrirActividad(c.email);
   if ($('c-reglas')) $('c-reglas').onclick = () => { reglaDestinoInicial = 'c:' + c.email; irA('descuentos'); };
   if ($('c-bloq')) $('c-bloq').onclick = async () => {
@@ -1346,8 +1371,8 @@ function abrirCliente(c){
   f.onsubmit = async (e) => {
     e.preventDefault();
     const d = {};
-    ['email', 'nombre', 'empresa', 'rif', 'telefono', 'direccion', 'tipo_id'].forEach(k => d[k] = f.elements[k].value.trim() || null);
-    d.email = (d.email || '').toLowerCase();
+    (enGestion ? ['tipo_id'] : ['email', 'nombre', 'empresa', 'rif', 'telefono', 'direccion', 'tipo_id']).forEach(k => d[k] = f.elements[k].value.trim() || null);
+    if (!enGestion) d.email = (d.email || '').toLowerCase();
     if (!soyYo){ d.activo = f.elements.activo.checked; d.es_admin = f.elements.es_admin.checked; }
     d.ver_existencias = f.elements.ver_existencias.checked;
     let res = nuevo ? await sb.from('clientes').insert(d) : await sb.from('clientes').update(d).eq('email', c.email);
@@ -2378,7 +2403,7 @@ function vistaProductos(){
   const cuentaO = { '': todos.length, proveedor: n(x => x.origen === 'proveedor'), manual: n(x => x.origen === 'manual'), panel: n(x => x.origen === 'panel'), inventario: n(x => !!x.inv), ocultos: n(x => x.oculto), borradores: n(x => x.borrador), sinfoto: n(x => !x.p.imagen), sinprecio: n(x => x.p.precio == null) };
   const marcasL = [...new Set(todos.map(x => (x.p.marca || '').toUpperCase()).filter(Boolean))].sort();
   const familias = [...new Set(todos.map(x => rutaCruda(x.p)[0]))].sort((a, b) => a.localeCompare(b));
-  $('main').innerHTML = cabecera('Productos', 'Todo lo que está en la tienda. Agrega productos propios (salen en la web al instante), corrige los tuyos u oculta los que no quieras mostrar. Los del proveedor los actualiza el scraper cada día.',
+  $('main').innerHTML = cabecera('Productos', 'Aquí decides qué se muestra en la tienda: oculta lo que no quieras mostrar o agrega productos que no tienes en inventario. Lo que está en tu inventario se edita en Gestión; los del proveedor los actualiza el scraper cada día.',
       '<button class="btn prim" id="pro-nuevo">' + ICO.mas + 'Agregar producto</button>') +
     (prodErr ? '<div class="caja"><div class="tarjeta-sync"><div class="icono mal">' + ICO.alerta + '</div><div><strong>Falta instalar "Productos" en Supabase</strong><div class="muted">Corre <span class="mono">14_productos_web.sql</span> en Supabase → SQL Editor. Mientras tanto puedes ver el directorio, pero no agregar, editar ni ocultar.<br><small>' + esc(mensajeError(prodErr)) + '</small></div></div></div></div>' : '') +
     '<div class="kpis">' +
@@ -2421,7 +2446,8 @@ function pintarProductos(){
     lista.slice(0, cuantosPro).map(x => {
       const p = x.p, ruta = rutaCruda(p);
       const estado = x.oculto ? '<span class="pill rojo">Oculto</span>' : x.borrador ? '<span class="pill">Borrador</span>' : p.disponible === false ? '<span class="pill amar">Agotado</span>' : '<span class="pill verde">En la web</span>';
-      const editable = !prodErr && x.origen !== 'proveedor' && x.origen !== 'inventario';
+      // Lo que está en tu inventario se edita en Gestión; aquí solo se decide si se muestra en la tienda.
+      const editable = !prodErr && x.origen !== 'proveedor' && x.origen !== 'inventario' && !x.inv;
       return '<tr class="' + (x.oculto || x.borrador ? 'inactivo' : '') + '" data-mod="' + esc(p.modelo) + '">' +
         '<td class="pro-foto">' + (p.imagen ? '<img src="' + esc(imgSrc(p.imagen)) + '" alt="" loading="lazy" onerror="this.replaceWith(document.createTextNode(\'—\'))">' : '<span class="muted">sin foto</span>') + '</td>' +
         '<td><strong class="mono">' + esc(p.modelo) + '</strong> ' + PILL_ORIGEN[x.origen] + (x.inv && x.origen !== 'inventario' ? ' <span class="pill verde" title="Sale con tu marca, precio y existencia">+ tu inventario</span>' : '') + (p.nombre && p.nombre !== p.modelo ? '<div class="muted pro-desc">' + esc(p.nombre) + '</div>' : p.descripcion ? '<div class="muted pro-desc">' + esc(p.descripcion) + '</div>' : '') + '</td>' +
@@ -2431,7 +2457,7 @@ function pintarProductos(){
         '<td>' + estado + '</td>' +
         '<td class="acciones">' +
           (x.oculto || x.borrador ? '' : '<a class="btn chico icono" href="' + esc(urlEnWeb(x)) + '" target="_blank" rel="noopener" title="Ver en la web">' + ICO.externo + '</a> ') +
-          (x.origen === 'inventario' ? '<a class="btn chico" href="/ventas-beta#/inventario" target="_blank" rel="noopener" title="Se edita en la app de ventas">Editar en ventas</a> ' : editable ? '<button class="btn chico" data-editar="' + esc(p.modelo) + '">Editar</button> ' : '<button class="btn chico fantasma" data-copiar="' + esc(p.modelo) + '" title="Crear un producto nuevo a partir de este">' + ICO.copiar + 'Copiar</button> ') +
+          (x.inv ? '<a class="btn chico" href="/ventas-beta/producto-web/' + encodeURIComponent(p.modelo) + '" title="Está en tu inventario: nombre, precio, fotos y existencias se cambian en Gestión">' + ICO.externo + 'Ver en Gestión</a> ' : editable ? '<button class="btn chico" data-editar="' + esc(p.modelo) + '">Editar</button> ' : '<button class="btn chico fantasma" data-copiar="' + esc(p.modelo) + '" title="Crear un producto nuevo a partir de este">' + ICO.copiar + 'Copiar</button> ') +
           (prodErr ? '' : '<button class="btn chico ' + (x.oculto ? '' : 'fantasma') + '" data-ocultar="' + esc(p.modelo) + '" title="' + (x.oculto ? 'Volver a mostrar en la web' : 'No mostrar en la web') + '">' + (x.oculto ? ICO.ojo + 'Mostrar' : ICO.bloquear + 'Ocultar') + '</button>') +
         '</td></tr>';
     }).join('') + '</tbody></table>' +

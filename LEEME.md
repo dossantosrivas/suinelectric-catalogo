@@ -5,6 +5,9 @@ Archivos:
 - `tienda.html`: tienda con el botón **Ingresar**, precios por cliente y pedidos guardados.
 - `admin.html` (**Panel web**, en `/admin`): todo lo de la tienda en línea — pedidos web, clientes, descuentos, estadísticas y visitantes. Cada sección tiene su link: `/admin/pedidos`, `/admin/clientes`, `/admin/estadisticas`, `/admin/envivo`… y también `/admin/pedidos/<número>` y `/admin/clientes/<correo>` abren ese pedido o esa ficha.
 - `ventas.html` (**Gestión**, en `/ventas`): el negocio — ofertas, ventas, compras, inventario y distribuidores.
+- `cotizador.html` (`/cotizador`): el generador de ofertas y notas. Se usa dentro de Gestión → Ofertas (ahí se marca el vendedor y se sincroniza); si se abre suelto, lleva a Gestión.
+- **Una sola ficha:** los datos de cada cliente (nombre, RIF, teléfono…), sus compras, ofertas y notas viven en Gestión; el Panel web solo cambia su tipo de cliente, descuentos, existencias y acceso, con el botón *Ver ficha completa en Gestión*. Los clientes nuevos se crean en Gestión. Igual con los productos: lo que está en tu inventario se edita en Gestión (`/ventas/producto-web/<modelo>`); el Panel web solo decide qué se muestra en la tienda.
+- **Resumen del día:** el Resumen de Gestión avisa los pedidos web por atender y el del Panel web, las ofertas abiertas de Gestión.
 - Ambas apps tienen arriba del menú el selector **Tienda · Panel web · Gestión** (la actual en amarillo) y usan los mismos colores, esquinas y logo que la tienda.
 
 ## 1. Crear la base de datos (una sola vez)
