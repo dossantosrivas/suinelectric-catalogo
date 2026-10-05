@@ -290,6 +290,119 @@ body.solo .cot-frame{height:100vh;height:100dvh;border:0;border-radius:0}
   .extras .ex{grid-template-columns:100px minmax(0,1fr) 30px}
 }
 @media (max-width:520px){.g2,.g3,.g4{grid-template-columns:minmax(0,1fr)}.kpi .v{font-size:24px}}
+/* ===== Inventario (vista rápida de existencias) ===== */
+.inv-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:14px}
+.inv-kpi{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:14px 18px;text-align:left;display:flex;flex-direction:column;gap:1px;min-width:0;color:inherit;font:inherit}
+button.inv-kpi:hover{border-color:var(--steel)}
+.inv-kpi .l{font-size:15px;color:var(--muted);font-weight:500}
+.inv-kpi .v{font:600 27px var(--f-mono);letter-spacing:-.02em;font-variant-numeric:tabular-nums;color:var(--ink)}
+.inv-kpi .d{font-size:14.5px;color:var(--muted);display:flex;flex-wrap:wrap;gap:2px 10px;align-items:center}
+.inv-kpi .d .own{font-size:14px}
+.inv-filtros{padding:16px 18px;margin-bottom:14px}
+.inv-buscar{display:flex;gap:10px;flex-wrap:wrap;align-items:center}
+.inv-q{position:relative;flex:1 1 380px;min-width:0}
+.inv-q svg{position:absolute;left:14px;top:50%;transform:translateY(-50%);width:22px;height:22px;stroke:var(--muted);fill:none;stroke-width:2;stroke-linecap:round;pointer-events:none}
+.inv-q input{padding-left:46px;height:52px;font-size:18px;width:100%}
+.inv-chips{display:flex;flex-wrap:wrap;gap:8px;margin-top:14px}
+.inv-chip{border:1px solid var(--line);background:#fff;border-radius:999px;padding:6px 14px;font-size:15.5px;color:var(--ink-2);white-space:nowrap}
+.inv-chip b{font-weight:600;color:var(--muted);margin-left:3px;font-family:var(--f-mono);font-size:14.5px}
+.inv-chip:hover{border-color:var(--steel)}
+.inv-chip.on{background:var(--plate);border-color:var(--plate);color:#fff}.inv-chip.on b{color:var(--amber)}
+.inv-chip.alerta:not(.on) b{color:var(--red)}
+.inv-sel{display:flex;flex-wrap:wrap;gap:10px 16px;margin-top:12px;align-items:center}
+.inv-sel label{display:flex;align-items:center;gap:7px;font-size:15px;color:var(--muted);min-width:0}
+.inv-sel select{width:auto;max-width:240px;padding-top:7px;padding-bottom:7px}
+.inv-res{font-size:15.5px;color:var(--muted);margin:2px 0 8px}.inv-res b{color:var(--ink)}
+.inv-grp{font-size:18px;margin:22px 0 8px;display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline}
+/* lista */
+.inv-cab,.inv-item{display:grid;grid-template-columns:84px minmax(0,2.6fr) minmax(150px,.9fr) minmax(160px,1fr) minmax(170px,1.05fr) minmax(130px,.8fr);gap:18px;align-items:center}
+.inv-cab{padding:0 18px 6px 22px;font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:600}
+.inv-list{display:flex;flex-direction:column;gap:8px}
+.inv-item{position:relative;background:var(--panel);border:1px solid var(--line);border-left:5px solid var(--line);border-radius:10px;padding:12px 18px 12px 14px;cursor:pointer;transition:border-color .12s,box-shadow .12s}
+.inv-item:hover{border-color:var(--steel);box-shadow:0 4px 14px rgba(14,42,59,.08)}
+.inv-item.ok{border-left-color:var(--ok)}.inv-item.warn{border-left-color:var(--amber)}.inv-item.bad{border-left-color:var(--red)}
+.inv-item.inactivo{opacity:.62}
+.inv-foto{width:84px;height:84px;border:1px solid var(--line-2);border-radius:8px;background:#fff;display:grid;place-items:center;overflow:hidden}
+.inv-foto img{width:100%;height:100%;object-fit:contain}
+.inv-sinfoto{display:grid;place-items:center;width:100%;height:100%;background:var(--panel-2)}
+.inv-sinfoto svg{width:30px;height:30px;stroke:#b4c0c9;fill:none;stroke-width:1.6;stroke-linecap:round;stroke-linejoin:round}
+.inv-prod{min-width:0}
+.inv-cod{display:flex;align-items:center;gap:6px}
+.inv-cod .code{font:700 18px var(--f-mono);color:var(--ink);overflow-wrap:anywhere}
+.inv-copiar{border:none;background:none;padding:4px;border-radius:6px;color:var(--muted);display:inline-grid;place-items:center;opacity:.55}
+.inv-copiar svg{width:17px;height:17px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.inv-item:hover .inv-copiar{opacity:1}.inv-copiar:hover{background:var(--steel-soft);color:var(--steel)}
+.inv-meta{font-size:14.5px;color:var(--muted);margin-top:1px}.inv-meta b{color:var(--ink-2);font-weight:600}
+.inv-nom{font-size:15.5px;line-height:1.4;margin-top:4px;color:var(--ink-2);display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}
+.inv-desc{color:var(--muted)}
+.inv-ex{display:flex;flex-direction:column;align-items:flex-start;gap:4px;min-width:0}
+.inv-num{font-size:30px;font-weight:700;line-height:1;letter-spacing:-.02em}
+.inv-item.ok .inv-num{color:var(--ok)}.inv-item.warn .inv-num{color:#8A5A00}.inv-item.bad .inv-num{color:var(--red)}
+.inv-ex .pill{font-size:13.5px;padding:2px 9px}
+.inv-owns{display:flex;flex-wrap:wrap;gap:2px 12px;font-size:14px}
+.inv-own{display:inline-flex;align-items:center;gap:6px}.inv-own .own{font-size:14px}.inv-own b{font-size:15px;line-height:1}.inv-own.cero{opacity:.5}
+.inv-sinp{font:600 15.5px var(--f-sans);color:var(--red)}
+.inv-pre,.inv-dist,.inv-ven{display:flex;flex-direction:column;gap:1px;min-width:0;font-size:14.5px}
+.inv-pre .t,.inv-dist .t,.inv-ven .t{display:none}
+.inv-pre b{font-size:19px}
+.inv-dist .t{display:block;font-weight:600;color:var(--ink-2);font-size:14.5px}
+.inv-dist b{font-weight:600;font-size:15px}
+.inv-item .ok,.inv-dist b.ok,.okt{color:var(--ok)}.inv-item .bad:not(.pill),.inv-dist b.bad{color:var(--red)}.warnt{color:#8A5A00;font-weight:600}.okt{font-weight:600}
+.inv-pre .muted,.inv-dist .muted,.inv-ven .muted{font-size:14px}
+.inv-ven b{font-size:19px}
+/* fichas con foto grande */
+.inv-list.fichas{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
+.inv-list.fichas .inv-item{display:flex;flex-direction:column;align-items:stretch;gap:8px;padding:12px 14px 14px;border-left-width:1px;border-top:5px solid var(--line)}
+.inv-list.fichas .inv-item.ok{border-top-color:var(--ok)}.inv-list.fichas .inv-item.warn{border-top-color:var(--amber)}.inv-list.fichas .inv-item.bad{border-top-color:var(--red)}
+.inv-list.fichas .inv-foto{width:100%;height:190px;border:none}
+.inv-list.fichas .inv-ex{flex-direction:row;flex-wrap:wrap;align-items:center;gap:6px 10px}
+.inv-list.fichas .inv-num{font-size:28px}
+.inv-list.fichas .inv-owns{flex-basis:100%}
+.inv-list.fichas .inv-pre{flex-direction:row;flex-wrap:wrap;align-items:baseline;gap:4px 10px}
+.inv-list.fichas .inv-dist{flex-direction:row;flex-wrap:wrap;gap:2px 8px;border-top:1px solid var(--line-2);padding-top:8px;margin-top:auto}
+.inv-list.fichas .inv-ven{flex-direction:row;flex-wrap:wrap;gap:2px 8px}
+.inv-list.fichas .inv-ven .t{display:inline;color:var(--muted)}
+/* pantallas medianas: ocultamos columnas secundarias de la lista */
+@media (max-width:1400px){
+  .inv-cab,.inv-item{grid-template-columns:76px minmax(0,2.4fr) minmax(140px,.9fr) minmax(150px,1fr) minmax(160px,1fr)}
+  .inv-list:not(.fichas) .inv-ven,.inv-cab span:last-child{display:none}
+  .inv-foto{width:76px;height:76px}
+}
+@media (max-width:1100px){
+  .inv-kpis{grid-template-columns:repeat(2,minmax(0,1fr))}
+  .inv-cab,.inv-item{grid-template-columns:70px minmax(0,2fr) minmax(130px,.9fr) minmax(140px,1fr)}
+  .inv-list:not(.fichas) .inv-dist,.inv-cab span:nth-child(5){display:none}
+  .inv-foto{width:70px;height:70px}
+}
+/* teléfono: ficha compacta con foto a la izquierda */
+@media (max-width:640px){
+  main.view:has(> .inv-kpis){display:flex;flex-direction:column}
+  main.view:has(> .inv-kpis) > .vh{order:0}main.view:has(> .inv-kpis) > .inv-filtros{order:1}main.view:has(> .inv-kpis) > #lst{order:2}
+  .inv-kpis{order:3;gap:10px;margin:18px 0 0}.inv-kpi{padding:12px 14px}.inv-kpi .v{font-size:23px}.inv-kpi .d{font-size:13.5px}
+  main.view:has(> .inv-kpis) .vh .act .btn:not(.pri){display:none}
+  .inv-filtros{padding:12px}
+  .inv-buscar .seg{flex:1 1 auto}.inv-buscar .seg button{flex:1;padding:9px 10px}
+  .inv-chips{flex-wrap:nowrap;overflow-x:auto;margin:12px -12px 0;padding:0 12px 2px;scrollbar-width:none}.inv-chips::-webkit-scrollbar{display:none}
+  .inv-sel label{flex:1 1 140px}.inv-sel select{max-width:none;width:100%}
+  .inv-cab{display:none}
+  .inv-list:not(.fichas) .inv-item{grid-template-columns:72px minmax(0,1fr) auto;gap:6px 12px;padding:12px 12px 12px 10px;align-items:start}
+  .inv-list:not(.fichas) .inv-foto{width:72px;height:72px;grid-row:1/3}
+  .inv-list:not(.fichas) .inv-prod{grid-column:2/4}
+  .inv-list:not(.fichas) .inv-ex{grid-column:2/3;flex-direction:row;flex-wrap:wrap;align-items:center;gap:4px 8px}
+  .inv-list:not(.fichas) .inv-num{font-size:26px}
+  .inv-list:not(.fichas) .inv-pre{grid-column:3/4;text-align:right;align-items:flex-end}
+  .inv-list:not(.fichas) .inv-dist{display:flex;grid-column:1/-1;flex-direction:row;flex-wrap:wrap;gap:2px 8px;border-top:1px solid var(--line-2);padding-top:8px}
+  .inv-list:not(.fichas) .inv-ven{display:none}
+  .inv-cod .code{font-size:17px}
+  .inv-nom{font-size:15px}
+  .inv-list.fichas{grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .inv-list.fichas .inv-foto{height:130px}
+  .inv-list.fichas .inv-item{padding:10px}
+  .inv-list.fichas .inv-cod .code{font-size:15px}
+  .inv-list.fichas .inv-nom{font-size:14px}
+  .inv-list.fichas .inv-dist,.inv-list.fichas .inv-ven{display:none}
+  .inv-copiar{opacity:1}
+}
 /* ===== Aprovechar el espacio y no cortar textos (oct. 2026) ===== */
 main.view{max-width:1760px}
 @media (min-width:1600px){main.view{padding-left:40px;padding-right:40px}}
@@ -2558,44 +2671,83 @@ Views.cliente = (v, id) => {
 
 /* ---------------- Inventario ---------------- */
 const ORDENES_INV = [['relevancia', 'Más relevante'], ['codigo', 'Código A-Z'], ['nombre', 'Nombre A-Z'], ['exist_desc', 'Más existencia'], ['exist_asc', 'Menos existencia'], ['precio_desc', 'Precio mayor'], ['precio_asc', 'Precio menor'], ['valor_desc', 'Más valor en inventario'], ['vendidos', 'Más vendidos'], ['ultima', 'Vendidos recientemente'], ['sinmov', 'Sin movimiento hace más tiempo']];
+/* ---------------- Inventario: vista rápida para ver existencias ----------------
+   Cada producto con foto, existencia por inventario, precio, costo, margen, lo que
+   tiene el distribuidor y cuánto se ha vendido. Lista (PC) o fichas (fotos grandes). */
+const InvFotos = (() => {
+  let mapa = null, cargando = null;
+  const abs = (u) => { u = String(u || '').trim(); if (!u) return ''; return /^(https?:|data:|\/)/.test(u) ? u : '/' + u; };
+  /* fotos propias de la tienda (catalogo-tienda.json: copias en suinelectric.com/imagenes) */
+  const cargar = () => cargando || (cargando = fetch('/catalogo-tienda.json', { cache: 'force-cache' }).then(r => r.ok ? r.json() : null).then(j => {
+    mapa = new Map();
+    if (j) [].concat(j.manuales || [], j.productos || []).forEach(p => { const k = normKey(p.modelo); const u = p.imagen || (p.imagenes || [])[0]; if (k && u && !mapa.has(k)) mapa.set(k, abs(u)); });
+  }).catch(() => { mapa = new Map(); }));
+  const de = (p, mc) => {
+    if (p.imagenes && p.imagenes.length) return abs(p.imagenes[0]);
+    const k = normKey(p.codigo);
+    if (mapa && k && mapa.has(k)) return mapa.get(k);
+    if (mc && mc.c && mc.c.m && mapa && mapa.has(normKey(mc.c.m))) return mapa.get(normKey(mc.c.m));
+    if (mc && mc.c && mc.c.img) return abs(mc.c.img);
+    return '';
+  };
+  return { cargar, de, listo: () => !!mapa };
+})();
+const INV_ESTADO = (cant) => cant < 0 ? ['bad', 'Revisar (negativo)'] : cant === 0 ? ['bad', 'Agotado'] : cant <= 2 ? ['warn', 'Pocas unidades'] : ['ok', 'Disponible'];
+
 Views.inventario = (v, invArg) => {
-  const F = Object.assign({ q: '', inv: '', stock: '1', cat: '', marca: '', orden: 'codigo', grupo: '' }, lsGet('suinadm_f_inv', {}));
+  const F = Object.assign({ q: '', inv: '', stock: '1', cat: '', marca: '', orden: 'codigo', grupo: '', vista: 'lista' }, lsGet('suinadm_f_inv', {}));
   if (invArg) { F.inv = invArg; F.stock = '1'; }
   const prods = Store.all('productos');
   const cats = Array.from(new Set(prods.map(p => p.categoria).filter(Boolean))).sort();
   const marcas = Array.from(new Set(prods.map(p => p.marca).filter(Boolean))).sort();
   // ventas por producto (cantidad y última fecha)
   Calc.build(); const vend = new Map();
-  Calc.movs.forEach((ms, pid) => { let q = 0, ult = ''; ms.forEach(x => { if (esVenta(x.doc) && x.doc.estado !== 'anulada') { q += -x.delta; if ((x.doc.fecha || '') > ult) ult = x.doc.fecha; } else if ((x.doc.fecha || '') > ult && x.doc.tipo === 'compra') { /* compras no cuentan como venta */ } }); vend.set(pid, { q, ult, mov: ms.reduce((a, x) => (x.doc.fecha || '') > a ? x.doc.fecha : a, '') }); });
-  v.innerHTML = `<div class="vh"><h1>Inventario</h1><div class="act"><button class="btn" data-cats>Ordenar categorías</button><button class="btn" data-desc>Mejorar descripciones</button><button class="btn" data-csv>Exportar CSV</button><button class="btn pri" data-np>${ico('plus')} Producto</button></div><div class="sub">Las existencias se calculan con las compras, ventas y ajustes. Para corregir una, abre el producto.</div></div>
-    <div class="row" style="margin-bottom:8px">
-      <input class="inp" style="flex:1 1 260px" type="search" placeholder="Buscar: código, nombre, descripción, marca (varias palabras)" value="${esc(F.q)}" data-f="q">
-      <div class="seg" data-seg>${[['', 'Ambos'], ['manuel', origenNombre('manuel')], ['papa', origenNombre('papa')]].map(([k, l]) => `<button type="button" data-v="${k}" class="${F.inv === k ? 'on' : ''}">${esc(l)}</button>`).join('')}</div>
+  Calc.movs.forEach((ms, pid) => { let q = 0, ult = ''; ms.forEach(x => { if (esVenta(x.doc) && x.doc.estado !== 'anulada') { q += -x.delta; if ((x.doc.fecha || '') > ult) ult = x.doc.fecha; } }); vend.set(pid, { q, ult, mov: ms.reduce((a, x) => (x.doc.fecha || '') > a ? x.doc.fecha : a, '') }); });
+  const FILTROS = [['1', 'Con existencia'], ['0', 'Todos'], ['pocas', 'Pocas unidades'], ['sin', 'Agotados'], ['neg', 'Negativos'], ['sinprecio', 'Sin precio'], ['sincosto', 'Sin costo']];
+  v.innerHTML = `<div class="vh"><h1>Inventario</h1><div class="act"><button class="btn" data-cats>Ordenar categorías</button><button class="btn" data-desc>Mejorar descripciones</button><button class="btn" data-csv>Exportar CSV</button><button class="btn pri" data-np>${ico('plus')} Producto</button></div><div class="sub">Las existencias se calculan con las compras, ventas y ajustes. Toca un producto para ver su ficha o corregirlo.</div></div>
+    <div class="inv-kpis" id="inv-kpis"></div>
+    <div class="panel inv-filtros">
+      <div class="inv-buscar">
+        <div class="inv-q"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input class="inp" type="search" placeholder="Buscar código, nombre o marca" value="${esc(F.q)}" data-f="q" autocomplete="off" spellcheck="false"></div>
+        <div class="seg" data-seg>${[['', 'Ambos'], ['manuel', origenNombre('manuel')], ['papa', origenNombre('papa')]].map(([k, l]) => `<button type="button" data-v="${k}" class="${F.inv === k ? 'on' : ''}">${esc(l)}</button>`).join('')}</div>
+        <div class="seg inv-vista" data-vista>${[['lista', 'Lista'], ['fichas', 'Fotos']].map(([k, l]) => `<button type="button" data-v="${k}" class="${F.vista === k ? 'on' : ''}">${l}</button>`).join('')}</div>
+      </div>
+      <div class="inv-chips" data-chips></div>
+      <div class="inv-sel">
+        <label>Ordenar <select class="inp" data-f="orden">${ORDENES_INV.map(([k, l]) => `<option value="${k}" ${F.orden === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+        <label>Agrupar <select class="inp" data-f="grupo"><option value="">Sin grupos</option><option value="tienda" ${F.grupo === 'tienda' ? 'selected' : ''}>Categoría de la tienda</option><option value="categoria" ${F.grupo === 'categoria' ? 'selected' : ''}>Grupo</option><option value="marca" ${F.grupo === 'marca' ? 'selected' : ''}>Marca</option><option value="origen" ${F.grupo === 'origen' ? 'selected' : ''}>Dónde está</option></select></label>
+        <label>Grupo <select class="inp" data-f="cat"><option value="">Todos</option>${cats.map(c => `<option ${F.cat === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></label>
+        ${marcas.length ? `<label>Marca <select class="inp" data-f="marca"><option value="">Todas</option>${marcas.map(c => `<option ${F.marca === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></label>` : ''}
+      </div>
     </div>
-    <div class="row" style="margin-bottom:12px">
-      <label class="row small muted" style="gap:6px">Mostrar <select class="inp" style="width:auto" data-f="stock"><option value="1" ${F.stock === '1' ? 'selected' : ''}>Con existencia</option><option value="0" ${F.stock === '0' ? 'selected' : ''}>Todos</option><option value="sin" ${F.stock === 'sin' ? 'selected' : ''}>Agotados</option><option value="neg" ${F.stock === 'neg' ? 'selected' : ''}>Existencia negativa</option><option value="sinprecio" ${F.stock === 'sinprecio' ? 'selected' : ''}>Sin precio</option><option value="sincosto" ${F.stock === 'sincosto' ? 'selected' : ''}>Sin costo</option></select></label>
-      <label class="row small muted" style="gap:6px">Ordenar <select class="inp" style="width:auto" data-f="orden">${ORDENES_INV.map(([k, l]) => `<option value="${k}" ${F.orden === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
-      <label class="row small muted" style="gap:6px">Agrupar <select class="inp" style="width:auto" data-f="grupo"><option value="">Sin grupos</option><option value="tienda" ${F.grupo === 'tienda' ? 'selected' : ''}>Por categoría de la tienda</option><option value="categoria" ${F.grupo === 'categoria' ? 'selected' : ''}>Por grupo</option><option value="marca" ${F.grupo === 'marca' ? 'selected' : ''}>Por marca</option><option value="inv" ${F.grupo === 'inv' ? 'selected' : ''}>Por dueño</option></select></label>
-      <select class="inp" style="width:auto;max-width:200px" data-f="cat"><option value="">Todos los grupos</option>${cats.map(c => `<option ${F.cat === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select>
-      ${marcas.length ? `<select class="inp" style="width:auto;max-width:180px" data-f="marca"><option value="">Todas las marcas</option>${marcas.map(c => `<option ${F.marca === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select>` : ''}
-    </div><div id="lst"></div>`;
+    <div id="lst"></div>`;
   let rowsCache = [];
   const paint = () => {
     lsSet('suinadm_f_inv', Object.assign({}, F, { lim: undefined }));
     const words = normTxt(F.q).split(/\s+/).filter(Boolean);
     const invs = F.inv ? [F.inv] : ['manuel', 'papa'];
-    let rows = prods.map(p => { const s = Calc.st(p.id); const cant = invs.reduce((a, i) => a + s[i].cant, 0); const valor = invs.reduce((a, i) => a + Math.max(0, s[i].cant) * s[i].costo, 0); return { p, s, cant, valor, vd: vend.get(p.id) || { q: 0, ult: '', mov: '' }, score: 0 }; });
-    if (F.cat) rows = rows.filter(r => r.p.categoria === F.cat);
-    if (F.marca) rows = rows.filter(r => r.p.marca === F.marca);
+    let base = prods.map(p => {
+      const s = Calc.st(p.id); const cant = invs.reduce((a, i) => a + s[i].cant, 0);
+      const valor = invs.reduce((a, i) => a + Math.max(0, s[i].cant) * s[i].costo, 0);
+      const conC = invs.filter(i => s[i].cant > 0 && s[i].costo), uc = conC.reduce((a, i) => a + s[i].cant, 0);
+      const costo = uc ? conC.reduce((a, i) => a + s[i].cant * s[i].costo, 0) / uc : (invs.map(i => s[i].costo).find(x => x) || 0);
+      return { p, s, cant, valor, costo, vd: vend.get(p.id) || { q: 0, ult: '', mov: '' }, score: 0 };
+    });
+    if (F.cat) base = base.filter(r => r.p.categoria === F.cat);
+    if (F.marca) base = base.filter(r => r.p.marca === F.marca);
     if (words.length) {
-      rows = rows.filter(r => { const k = normTxt([r.p.codigo, r.p.nombre, r.p.descripcion, r.p.marca, r.p.categoria].join(' ')); return words.every(w => k.includes(w)); });
-      const qq = normKey(F.q); rows.forEach(r => { const c = normKey(r.p.codigo), n = normTxt(r.p.nombre); r.score = (c === qq ? 100 : 0) + (c.startsWith(qq) ? 50 : 0) + (c.includes(qq) ? 20 : 0) + words.filter(w => n.includes(w)).length * 5 + (r.cant > 0 ? 3 : 0); });
+      base = base.filter(r => { const k = normTxt([r.p.codigo, r.p.nombre, r.p.descripcion, r.p.marca, r.p.categoria].join(' ')); return words.every(w => k.includes(w)); });
+      const qq = normKey(F.q); base.forEach(r => { const c = normKey(r.p.codigo), n = normTxt(r.p.nombre); r.score = (c === qq ? 100 : 0) + (c.startsWith(qq) ? 50 : 0) + (c.includes(qq) ? 20 : 0) + words.filter(w => n.includes(w)).length * 5 + (r.cant > 0 ? 3 : 0); });
     }
-    if (F.stock === '1') rows = rows.filter(r => invs.some(i => r.s[i].cant > 0));
-    if (F.stock === 'sin') rows = rows.filter(r => invs.every(i => r.s[i].cant <= 0));
-    if (F.stock === 'neg') rows = rows.filter(r => invs.some(i => r.s[i].cant < 0));
-    if (F.stock === 'sinprecio') rows = rows.filter(r => !num(r.p.precio));
-    if (F.stock === 'sincosto') rows = rows.filter(r => r.cant > 0 && invs.some(i => r.s[i].cant > 0 && !r.s[i].costo));
+    const pasa = {
+      '1': r => invs.some(i => r.s[i].cant > 0), '0': () => true, pocas: r => r.cant > 0 && r.cant <= 2,
+      sin: r => invs.every(i => r.s[i].cant <= 0), neg: r => invs.some(i => r.s[i].cant < 0),
+      sinprecio: r => !num(r.p.precio), sincosto: r => r.cant > 0 && invs.some(i => r.s[i].cant > 0 && !r.s[i].costo)
+    };
+    // chips con la cantidad de cada filtro (sobre la búsqueda actual)
+    $('[data-chips]', v).innerHTML = FILTROS.map(([k, l]) => { const n = base.filter(pasa[k]).length; return `<button type="button" class="inv-chip ${F.stock === k ? 'on' : ''} ${(k === 'neg' || k === 'sincosto') && n ? 'alerta' : ''}" data-stock="${k}">${l} <b>${n.toLocaleString('es-VE')}</b></button>`; }).join('');
+    $$('[data-stock]', v).forEach(b => b.onclick = () => { F.stock = b.dataset.stock; F.lim = 0; paint(); });
+    let rows = base.filter(pasa[F.stock] || pasa['0']);
     const cmp = {
       relevancia: (a, b) => b.score - a.score || a.p.codigo.localeCompare(b.p.codigo), codigo: (a, b) => a.p.codigo.localeCompare(b.p.codigo),
       nombre: (a, b) => (a.p.nombre || a.p.descripcion || a.p.codigo).localeCompare(b.p.nombre || b.p.descripcion || b.p.codigo),
@@ -2603,34 +2755,72 @@ Views.inventario = (v, invArg) => {
       valor_desc: (a, b) => b.valor - a.valor, vendidos: (a, b) => b.vd.q - a.vd.q, ultima: (a, b) => (b.vd.ult || '').localeCompare(a.vd.ult || ''), sinmov: (a, b) => (a.vd.mov || '0').localeCompare(b.vd.mov || '0')
     }[F.orden === 'relevancia' && !words.length ? 'codigo' : F.orden] || ((a, b) => 0);
     rows.sort(cmp);
-    const sortId = 'inventario' + invs.length, so = TablaOrden.get(sortId);
-    const G = [r => r.p.codigo, r => [r.p.nombre, r.p.descripcion].filter(Boolean).join(' ') || null, r => num(r.p.precio) || null].concat(invs.map(i => r => r.s[i].cant), [r => invs.map(i => r.s[i].costo).find(x => x) || null, r => r.vd.q || null]);
-    if (so && G[so.c]) rows = rows.map((r, i) => ({ r, i, v: G[so.c](r) })).sort((a, b) => TablaOrden.cmp(a.v, b.v, so.d) || a.i - b.i).map(x => x.r);
     rowsCache = rows;
+    // resumen del inventario elegido (todo lo que tiene existencia, sin filtros de búsqueda)
+    const todos = prods.map(p => Calc.st(p.id));
+    const kU = (i) => todos.reduce((a, s) => a + Math.max(0, s[i].cant), 0), kV = (i) => todos.reduce((a, s) => a + Math.max(0, s[i].cant) * s[i].costo, 0);
+    const conEx = todos.filter(s => invs.some(i => s[i].cant > 0)).length, pocas = todos.filter(s => { const c = invs.reduce((a, i) => a + s[i].cant, 0); return c > 0 && c <= 2; }).length;
+    $('#inv-kpis', v).innerHTML = `
+      <button type="button" class="inv-kpi" data-k="1"><span class="l">Productos con existencia</span><span class="v">${conEx.toLocaleString('es-VE')}</span><span class="d">de ${prods.length.toLocaleString('es-VE')} en el inventario</span></button>
+      <div class="inv-kpi"><span class="l">Unidades</span><span class="v">${fmtQty(invs.reduce((a, i) => a + kU(i), 0))}</span><span class="d">${invs.map(i => `${ownTag(i)} ${fmtQty(kU(i))}`).join(' &nbsp; ')}</span></div>
+      <div class="inv-kpi"><span class="l">Valor al costo</span><span class="v">${fmtUSD0(invs.reduce((a, i) => a + kV(i), 0))}</span><span class="d">${invs.map(i => `${ownTag(i)} ${fmtUSD0(kV(i))}`).join(' &nbsp; ')}</span></div>
+      <button type="button" class="inv-kpi" data-k="pocas"><span class="l">Pocas unidades</span><span class="v" style="color:#8A5A00">${pocas.toLocaleString('es-VE')}</span><span class="d">1 o 2 unidades: revisar si hay que reponer</span></button>`;
+    $$('#inv-kpis [data-k]', v).forEach(b => b.onclick = () => { F.stock = b.dataset.k; F.lim = 0; paint(); });
+
     const val = rows.reduce((a, r) => a + r.valor, 0), und = rows.reduce((a, r) => a + Math.max(0, r.cant), 0);
-    const lim = F.lim || 250;
-    const rowHtml = ({ p, s, vd }) => `<tr class="click" data-id="${esc(p.id)}"><td><span class="code">${esc(p.codigo)}</span>${p.activo === false ? ' <span class="pill">inactivo</span>' : ''}<div class="muted small">${esc([p.marca, (() => { const rr = CatAuto.rutaP(p); return CatAuto.enOtros(rr) ? p.categoria : rr[1] || rr[0]; })()].filter(Boolean).join(' · '))}</div></td><td class="hm"><div class="clip small">${esc([p.nombre, p.descripcion].filter(Boolean).join(' — '))}</div></td><td class="num">${p.precio ? fmtUSD(num(p.precio)) : '<span class="muted">—</span>'}</td>${invs.map(i => `<td class="num"><span class="stk ${s[i].cant === 0 ? 'zero' : ''}" style="${s[i].cant < 0 ? 'color:var(--red)' : ''}">${fmtQty(s[i].cant)}</span></td>`).join('')}<td class="num hm small">${invs.map(i => s[i].costo ? fmtUSD(s[i].costo) : '—').join(' / ')}</td><td class="num hm small">${vd.q ? fmtQty(vd.q) : '—'}${vd.ult ? `<div class="muted">${esc(fmtFechaCorta(vd.ult))}</div>` : ''}</td></tr>`;
+    const lim = F.lim || 200;
+    const fichas = F.vista === 'fichas';
+    const itemHtml = (r) => {
+      const { p, s, vd, cant, costo } = r;
+      const mc = MatchCat.de(p), c = mc && mc.c, ci = c ? costoInfo(c) : null;
+      const foto = InvFotos.de(p, mc);
+      const [est, estL] = INV_ESTADO(cant);
+      const precio = num(p.precio), margen = precio && costo ? Math.round((precio - costo) / precio * 100) : null;
+      const rr = CatAuto.rutaP(p), catTxt = CatAuto.enOtros(rr) ? (p.categoria || '') : (rr[1] || rr[0] || p.categoria || '');
+      const nombre = p.nombre || p.descripcion || '';
+      const desc = p.nombre && p.descripcion && normTxt(p.descripcion) !== normTxt(p.nombre) ? p.descripcion : '';
+      const img = foto ? `<img src="${esc(foto)}" alt="" loading="lazy" decoding="async" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'inv-sinfoto',innerHTML:'${ico('box').replace(/"/g, '&quot;')}'}))">` : `<span class="inv-sinfoto">${ico('box')}</span>`;
+      const porInv = invs.map(i => `<span class="inv-own ${s[i].cant > 0 ? '' : 'cero'}">${ownTag(i)} <b class="mono">${fmtQty(s[i].cant)}</b></span>`).join('');
+      const dist = c ? `<div class="inv-dist"><span class="t">${esc(ci && ci.dist ? ci.dist.nombre : c.src === 's' ? 'Distribuidor' : 'En el catálogo')}</span>${c.exist != null ? `<b class="${Number(c.exist) > 0 ? 'ok' : 'bad'}">${Number(c.exist) > 0 ? fmtQty(Number(c.exist)) + ' disp.' : 'sin existencia'}</b>` : `<b>${c.disp ? 'disponible' : 'no disponible'}</b>`}${ci ? `<span class="muted">reponer ${fmtUSD(ci.costo)}</span>` : c.precio ? `<span class="muted">lista ${fmtUSD(c.precio)}</span>` : ''}</div>` : `<div class="inv-dist"><span class="t">Distribuidor</span><span class="muted">no está en el catálogo</span></div>`;
+      const ventas = vd.q ? `<div class="inv-ven"><span class="t">Vendidos</span><b class="mono">${fmtQty(vd.q)}</b><span class="muted">${vd.ult ? 'última ' + fmtFechaCorta(vd.ult) : ''}</span></div>` : `<div class="inv-ven"><span class="t">Vendidos</span><span class="muted">${vd.mov ? 'sin ventas · últ. mov. ' + fmtFechaCorta(vd.mov) : 'sin ventas'}</span></div>`;
+      return `<article class="inv-item ${est}${p.activo === false ? ' inactivo' : ''}" data-id="${esc(p.id)}" tabindex="0">
+        <div class="inv-foto">${img}</div>
+        <div class="inv-prod">
+          <div class="inv-cod"><span class="code">${esc(p.codigo)}</span><button type="button" class="inv-copiar" data-copiar="${esc(p.codigo)}" title="Copiar código" aria-label="Copiar código">${ico('copy')}</button>${p.activo === false ? '<span class="pill">inactivo</span>' : ''}</div>
+          <div class="inv-meta">${[p.marca ? `<b>${esc(p.marca)}</b>` : '', catTxt ? esc(catTxt) : ''].filter(Boolean).join(' · ')}</div>
+          <div class="inv-nom" title="${esc([nombre, desc].filter(Boolean).join(' — '))}">${esc(nombre) || '<span class="muted">Sin nombre</span>'}${desc && !fichas ? `<span class="inv-desc"> — ${esc(desc)}</span>` : ''}</div>
+        </div>
+        <div class="inv-ex"><div class="inv-num mono">${fmtQty(cant)}</div><span class="pill ${est}">${estL}</span>${invs.length > 1 ? `<div class="inv-owns">${porInv}</div>` : ''}</div>
+        <div class="inv-pre"><span class="t">Precio</span><b class="mono">${precio ? fmtUSD(precio) : '<span class="inv-sinp">Sin precio</span>'}</b><span class="muted">${costo ? 'costo ' + fmtUSD(costo) + (margen != null ? ` · <span class="${margen < 15 ? 'bad' : margen < 25 ? 'warnt' : 'okt'}">${margen}%</span>` : '') : (cant > 0 ? '<span class="bad">sin costo</span>' : '')}</span></div>
+        ${dist}${ventas}
+      </article>`;
+    };
     let body = '';
     if (F.grupo) {
       const key = (r) => F.grupo === 'tienda' ? (() => { const rr = CatAuto.rutaP(r.p); return CatAuto.enOtros(rr) ? 'Sin categoría en la tienda' : rr.slice(0, 2).join(' › '); })() : F.grupo === 'categoria' ? (r.p.categoria || 'Sin grupo') : F.grupo === 'marca' ? (r.p.marca || 'Sin marca') : (r.s.manuel.cant > 0 && r.s.papa.cant > 0 ? 'En ambos' : r.s.manuel.cant > 0 ? origenNombre('manuel') : r.s.papa.cant > 0 ? origenNombre('papa') : 'Sin existencia');
       const groups = new Map(); rows.forEach(r => { const k = key(r); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(r); });
       const gs = Array.from(groups.entries()).sort((a, b) => b[1].reduce((x, r) => x + r.valor, 0) - a[1].reduce((x, r) => x + r.valor, 0));
       let shown = 0;
-      gs.forEach(([k, rs]) => { if (shown >= lim) return; body += `<tr class="grp-h"><td colspan="${5 + invs.length}">${esc(k)} <span class="muted small">· ${rs.length} productos · ${fmtUSD(rs.reduce((x, r) => x + r.valor, 0))}</span></td></tr>` + rs.slice(0, Math.max(0, lim - shown)).map(rowHtml).join(''); shown += rs.length; });
-    } else body = rows.slice(0, lim).map(rowHtml).join('');
-    $('#lst', v).innerHTML = rows.length ? `<div class="muted small" style="margin-bottom:6px">${rows.length} productos · ${fmtQty(und)} unidades · valor al costo ${fmtUSD(val)}</div>
-      <div class="tbl-wrap"><table class="tbl" data-sort="${sortId}"><thead><tr><th>Código</th><th class="hm">Descripción</th><th class="r">Precio</th>${invs.map(i => `<th class="r">${ownTag(i)}</th>`).join('')}<th class="r hm">Costo prom.</th><th class="r hm">Vendidos</th></tr></thead><tbody>${body}</tbody></table></div>
-      ${rows.length > lim ? `<div style="text-align:center;margin-top:10px"><button class="btn" data-more>Ver más (${rows.length - lim})</button></div>` : ''}` : '<div class="panel empty">No hay productos con estos filtros.</div>';
-    $$('tr[data-id]', v).forEach(tr => tr.onclick = () => productoModal(Store.get('productos', tr.dataset.id)));
-    const mo = $('[data-more]', v); if (mo) mo.onclick = () => { F.lim = lim + 400; paint(); };
+      gs.forEach(([k, rs]) => { if (shown >= lim) return; body += `<h3 class="inv-grp">${esc(k)} <span class="muted small">${rs.length} productos · ${fmtQty(rs.reduce((x, r) => x + Math.max(0, r.cant), 0))} und. · ${fmtUSD(rs.reduce((x, r) => x + r.valor, 0))}</span></h3><div class="inv-list ${fichas ? 'fichas' : ''}">` + rs.slice(0, Math.max(0, lim - shown)).map(itemHtml).join('') + '</div>'; shown += rs.length; });
+    } else body = `<div class="inv-list ${fichas ? 'fichas' : ''}">${rows.slice(0, lim).map(itemHtml).join('')}</div>`;
+    $('#lst', v).innerHTML = rows.length ? `<div class="inv-res"><b>${rows.length.toLocaleString('es-VE')}</b> productos · ${fmtQty(und)} unidades · valor al costo ${fmtUSD(val)}</div>
+      ${!fichas ? `<div class="inv-cab"><span></span><span>Producto</span><span>Existencia</span><span>Precio y costo</span><span>Distribuidor</span><span>Ventas</span></div>` : ''}${body}
+      ${rows.length > lim ? `<div style="text-align:center;margin-top:14px"><button class="btn" data-more>Ver más (${rows.length - lim})</button></div>` : ''}`
+      : `<div class="panel empty">No hay productos con estos filtros.${F.stock !== '0' ? ' <button class="btn sm" data-todos>Ver todos</button>' : ''}</div>`;
+    const abrir = (el) => productoModal(Store.get('productos', el.dataset.id));
+    $$('.inv-item', v).forEach(el => { el.onclick = (e) => { if (e.target.closest('[data-copiar]')) return; abrir(el); }; el.onkeydown = (e) => { if (e.key === 'Enter') abrir(el); }; });
+    $$('[data-copiar]', v).forEach(b => b.onclick = async (e) => { e.stopPropagation(); try { await navigator.clipboard.writeText(b.dataset.copiar); UI.toast('Código copiado: ' + b.dataset.copiar); } catch (er) { UI.toast('No se pudo copiar'); } });
+    const mo = $('[data-more]', v); if (mo) mo.onclick = () => { F.lim = lim + 300; paint(); };
+    const vt = $('[data-todos]', v); if (vt) vt.onclick = () => { F.stock = '0'; paint(); };
   };
-  TablaOrden.ext('inventario1', () => paint()); TablaOrden.ext('inventario2', () => paint());
-  $$('[data-f]', v).forEach(el => el.addEventListener(el.tagName === 'INPUT' ? 'input' : 'change', debounce(() => { F[el.dataset.f] = el.value; if (el.dataset.f === 'orden') { TablaOrden.clear('inventario1'); TablaOrden.clear('inventario2'); } if (el.dataset.f === 'q' && el.value && F.orden === 'codigo') { F.orden = 'relevancia'; const o = $('[data-f="orden"]', v); if (o) o.value = 'relevancia'; } F.lim = 0; paint(); }, 150)));
-  $('[data-seg]', v).addEventListener('click', e => { const b = e.target.closest('[data-v]'); if (!b) return; F.inv = b.dataset.v; $$('[data-v]', v).forEach(x => x.classList.toggle('on', x === b)); if (invArg) Route.nav('#/inventario', { replace: true, silent: true }); paint(); });
+  $$('[data-f]', v).forEach(el => el.addEventListener(el.tagName === 'INPUT' ? 'input' : 'change', debounce(() => { F[el.dataset.f] = el.value; if (el.dataset.f === 'q' && el.value && F.orden === 'codigo') { F.orden = 'relevancia'; const o = $('[data-f="orden"]', v); if (o) o.value = 'relevancia'; } F.lim = 0; paint(); }, 150)));
+  $('[data-seg]', v).addEventListener('click', e => { const b = e.target.closest('[data-v]'); if (!b) return; F.inv = b.dataset.v; $$('[data-seg] [data-v]', v).forEach(x => x.classList.toggle('on', x === b)); if (invArg) Route.nav('#/inventario', { replace: true, silent: true }); paint(); });
+  $('[data-vista]', v).addEventListener('click', e => { const b = e.target.closest('[data-v]'); if (!b) return; F.vista = b.dataset.v; $$('[data-vista] [data-v]', v).forEach(x => x.classList.toggle('on', x === b)); paint(); });
   $('[data-np]', v).onclick = () => productoModal(null);
   $('[data-desc]', v).onclick = () => descripcionesModal();
   $('[data-cats]', v).onclick = () => categoriasModal();
   WebProd.cargar();
+  if (!InvFotos.listo()) { const kpisEl = $('#inv-kpis', v); InvFotos.cargar().then(() => { if (kpisEl.isConnected) paint(); }); }
   $('[data-csv]', v).onclick = () => {
     const head = ['codigo', 'nombre', 'descripcion', 'marca', 'categoria', 'precio', 'exist_manuel', 'costo_manuel', 'exist_papa', 'costo_papa', 'vendidos'];
     const lines = [head.join(';')].concat(rowsCache.map(({ p, s, vd }) => [p.codigo, p.nombre, p.descripcion, p.marca, p.categoria, num(p.precio), s.manuel.cant, round2(s.manuel.costo), s.papa.cant, round2(s.papa.costo), vd.q].map(x => `"${String(x == null ? '' : x).replace(/"/g, '""').replace(/\n/g, ' ')}"`).join(';')));
