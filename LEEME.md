@@ -3,7 +3,9 @@
 Archivos:
 - `supabase/01_esquema.sql`: crea las tablas, la seguridad y te deja como administrador (manolo1496@gmail.com).
 - `tienda.html`: tienda con el botón **Ingresar**, precios por cliente y pedidos guardados.
-- `admin.html`: panel de administrador (pedidos, clientes, descuentos y tipos de cliente).
+- `admin.html` (**Panel web**, en `/admin`): todo lo de la tienda en línea — pedidos web, clientes, descuentos, estadísticas y visitantes. Cada sección tiene su link: `/admin/pedidos`, `/admin/clientes`, `/admin/estadisticas`, `/admin/envivo`… y también `/admin/pedidos/<número>` y `/admin/clientes/<correo>` abren ese pedido o esa ficha.
+- `ventas.html` (**Gestión**, en `/ventas`): el negocio — ofertas, ventas, compras, inventario y distribuidores.
+- Ambas apps tienen arriba del menú el selector **Tienda · Panel web · Gestión** (la actual en amarillo) y usan los mismos colores, esquinas y logo que la tienda.
 
 ## 1. Crear la base de datos (una sola vez)
 Supabase → **SQL Editor** → **New query** → pega todo `supabase/01_esquema.sql` → **Run**.

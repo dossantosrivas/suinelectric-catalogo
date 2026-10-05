@@ -101,11 +101,12 @@
   .nav{ display:flex; flex-direction:column; gap:1px; }
   .nav-grupo{ font-size:10.5px; font-weight:700; letter-spacing:1.1px; text-transform:uppercase; color:rgba(255,255,255,.38); padding:16px 12px 6px; }
   .nav-grupo:first-child{ padding-top:2px; }
-  .nav button{ display:flex; align-items:center; gap:11px; width:100%; text-align:left; background:none; border:none; color:rgba(255,255,255,.7); padding:9px 12px; border-radius:8px; cursor:pointer; font-weight:500; font-size:14.5px; transition:background .12s, color .12s; }
-  .nav button svg{ width:18px; height:18px; flex:none; opacity:.8; }
-  .nav button:hover{ background:rgba(255,255,255,.06); color:#fff; }
-  .nav button.activa{ background:var(--side-activo); color:#fff; box-shadow:inset 3px 0 0 var(--amarillo); }
-  .nav button.activa svg{ opacity:1; color:var(--amarillo); }
+  .nav button, .nav a{ display:flex; align-items:center; gap:11px; width:100%; text-align:left; background:none; border:none; color:rgba(255,255,255,.7); padding:9px 12px; border-radius:8px; cursor:pointer; font-weight:500; font-size:14.5px; transition:background .12s, color .12s; }
+  .nav a{ text-decoration:none; }
+  .nav button svg, .nav a svg{ width:18px; height:18px; flex:none; opacity:.8; }
+  .nav button:hover, .nav a:hover{ background:rgba(255,255,255,.06); color:#fff; }
+  .nav button.activa, .nav a.activa{ background:var(--side-activo); color:#fff; box-shadow:inset 3px 0 0 var(--amarillo); }
+  .nav button.activa svg, .nav a.activa svg{ opacity:1; color:var(--amarillo); }
   .nav .badge{ margin-left:auto; background:var(--amarillo); color:#0e2a3b; font-size:11.5px; font-weight:700; border-radius:10px; padding:1px 8px; min-width:22px; text-align:center; }
   .side-pie{ margin-top:auto; padding:14px 4px 0; font-size:12.5px; }
   .yo{ display:flex; align-items:center; gap:10px; padding:10px; border-radius:10px; background:rgba(255,255,255,.05); margin-bottom:8px; }
@@ -742,6 +743,33 @@ const VISTAS = [
 ];
 
 let yo = null, tab = 'resumen';
+
+/* ---------- Links propios por sección ----------
+   /admin                     → Resumen
+   /admin/<sección>           → pedidos, clientes, descuentos, productos, envivo, estadisticas…
+   /admin/pedidos/<número>    → abre ese pedido
+   /admin/clientes/<correo>   → abre la ficha de ese cliente                                  */
+const BASE = '/admin-beta';
+const urlDe = (t, det) => BASE + (t && t !== 'resumen' ? '/' + t : '') + (det != null && det !== '' ? '/' + encodeURIComponent(det) : '');
+function leerRuta(){
+  const partes = location.pathname.replace(/\.html$/, '').slice(BASE.length).split('/').filter(Boolean).map(x => { try { return decodeURIComponent(x); } catch (e) { return x; } });
+  const t = VISTAS.some(v => v[0] === partes[0]) ? partes[0] : 'resumen';
+  return { tab: t, det: partes[1] || '' };
+}
+// Cambia la dirección sin recargar (push = nueva entrada para el botón Atrás)
+function ponerUrl(url, push){
+  if (location.pathname + location.search === url) return;
+  try { history[push ? 'pushState' : 'replaceState'](null, '', url); } catch (e) {}
+}
+function abrirDetalle(t, det){
+  if (!det) return;
+  if (t === 'pedidos'){ if (pedidoPorId(det)) abrirPedido(det); else toast('No encontré el pedido #' + det); }
+  else if (t === 'clientes'){ const c = clientes.find(x => x.email === det.toLowerCase()); if (c) abrirCliente(c); else toast('No encontré a ' + det + ' entre los clientes de la tienda'); }
+}
+window.addEventListener('popstate', () => {
+  if (!yo || !$('main')) return;
+  const r = leerRuta(); tab = r.tab; cerrarMenu(); mostrar(); abrirDetalle(r.tab, r.det);
+});
 let tipos = [], clientes = [], reglas = [], productos = [], pedidos = [];
 let infoCatalogo = null, estadoStock = null;
 let emailPendiente = '';
@@ -751,12 +779,12 @@ async function cargarProductos(){
   try {
     // Normalmente un solo archivo liviano (catalogo-tienda.json); si no existe, los originales.
     let a, b;
-    const cat = await fetch('catalogo-tienda.json', { cache: 'no-cache' }).then(r => r.ok ? r.json() : null).catch(() => null);
+    const cat = await fetch('/catalogo-tienda.json', { cache: 'no-cache' }).then(r => r.ok ? r.json() : null).catch(() => null);
     if (cat){ a = { productos: cat.productos || [] }; b = { productos: cat.manuales || [] }; infoCatalogo = { generado: cat.generado }; }
     else {
       [a, b] = await Promise.all([
-        fetch('productos.json', { cache: 'no-cache' }).then(r => r.json()).catch(() => ({ productos: [] })),
-        fetch('productos_manuales.json', { cache: 'no-cache' }).then(r => r.json()).catch(() => ({ productos: [] })),
+        fetch('/productos.json', { cache: 'no-cache' }).then(r => r.json()).catch(() => ({ productos: [] })),
+        fetch('/productos_manuales.json', { cache: 'no-cache' }).then(r => r.json()).catch(() => ({ productos: [] })),
       ]);
       infoCatalogo = { generado: a.generado };
     }
@@ -784,17 +812,15 @@ async function iniciar(){
   // Este navegador es de un administrador: la tienda no lo cuenta como visitante.
   try { localStorage.setItem('suin_no_contar', '1'); } catch (e) {}
   armarApp();
-  if (location.hash === '#envivo') tab = 'envivo';        // enlace de los avisos de Telegram
+  const ruta = leerRuta(); tab = ruta.tab;
+  if (location.hash === '#envivo'){ tab = 'envivo'; ponerUrl(urlDe('envivo')); }   // enlace viejo de los avisos de Telegram
   await Promise.all([cargarProductos(), recargarBase(), cargarPedidos(), cargarEstadoStock(), cargarPanelProductos().catch(e => { prodErr = e; })]);
   pintarBadges();
   const desdeGestion = /^#cliente=/.test(location.hash) ? decodeURIComponent(location.hash.slice(9)).toLowerCase() : '';
-  if (desdeGestion) tab = 'clientes';
+  if (desdeGestion){ tab = 'clientes'; ruta.det = desdeGestion; }   // enlace viejo desde Gestión (#cliente=correo)
+  else if (location.hash === '#envivo') ruta.det = '';
   mostrar();
-  if (desdeGestion){
-    history.replaceState(null, '', location.pathname + location.search);
-    const c = clientes.find(x => x.email === desdeGestion);
-    if (c) abrirCliente(c); else toast('No encontré a ' + desdeGestion + ' entre los clientes de la tienda');
-  }
+  abrirDetalle(tab, ruta.det);
   iniciarVivo().catch(e => { vivoEstado = 'error'; vivoError = e; refrescarVivo(); });
 }
 const marcaHTML = () => '<div class="marca"><img class="marca-img" src="/imagenes/logo-suinelectric.png" alt=""><div class="marca-txt"><strong>SUINELECTRIC</strong><span>Panel web</span></div></div>';
@@ -867,7 +893,7 @@ function cambiarTema(){
 function armarApp(){
   let grupo = '';
   const nav = VISTAS.map(v => (v[3] !== grupo ? '<div class="nav-grupo">' + (grupo = v[3]) + '</div>' : '') +
-    '<button data-tab="' + v[0] + '">' + v[2] + '<span>' + v[1] + '</span><span class="badge" data-badge="' + v[0] + '" hidden></span></button>').join('');
+    '<a data-tab="' + v[0] + '" href="' + urlDe(v[0]) + '">' + v[2] + '<span>' + v[1] + '</span><span class="badge" data-badge="' + v[0] + '" hidden></span></a>').join('');
   const temaTxt = (TEMAS.find(x => x[0] === temaActual()) || TEMAS[0])[1];
   $('raiz').innerHTML = '<div class="app" id="app">' +
     '<header class="topbar"><button class="menu-btn" id="menu-btn" aria-label="Abrir menú">' + ICO.menu + '<span class="punto-aviso" id="menu-aviso" hidden></span></button>' +
@@ -878,16 +904,21 @@ function armarApp(){
       '<div class="acciones"><button id="salir" style="grid-column:1/3">' + ICO.salir + 'Salir</button>' +
       '<button id="tema" title="Tema: ' + temaTxt + '" aria-label="Cambiar tema">' + botonTema() + '</button></div></div>' +
     '</aside><div class="velo-menu" id="velo-menu"></div><main class="contenido" id="main"></main></div>';
-  document.querySelectorAll('#nav button').forEach(b => b.onclick = () => irA(b.dataset.tab));
+  document.querySelectorAll('#nav a').forEach(b => b.onclick = (e) => {
+    if (e.ctrlKey || e.metaKey || e.shiftKey || e.button === 1) return;   // abrir en otra pestaña
+    e.preventDefault(); irA(b.dataset.tab);
+  });
   $('salir').onclick = async () => { await sb.auth.signOut({ scope: 'local' }); location.reload(); };
   $('tema').onclick = cambiarTema;
   $('menu-btn').onclick = () => $('app').classList.add('menu-abierto');
   $('velo-menu').onclick = cerrarMenu;
 }
 const cerrarMenu = () => { const a = $('app'); if (a) a.classList.remove('menu-abierto'); };
-function irA(t){ tab = t; cerrarMenu(); mostrar(); window.scrollTo(0, 0); }
+function irA(t){ tab = t; ponerUrl(urlDe(t), true); cerrarMenu(); mostrar(); window.scrollTo(0, 0); }
 function mostrar(){
-  document.querySelectorAll('#nav button').forEach(x => x.classList.toggle('activa', x.dataset.tab === tab));
+  document.querySelectorAll('#nav a').forEach(x => { const on = x.dataset.tab === tab; x.classList.toggle('activa', on); if (on) x.setAttribute('aria-current', 'page'); else x.removeAttribute('aria-current'); });
+  ponerUrl(urlDe(tab));
+  document.title = (VISTAS.find(x => x[0] === tab) || [, 'Panel web'])[1] + ' · Panel web | Suinelectric' + (BASE.includes('beta') ? ' [BETA]' : '');
   const v = VISTAS.find(x => x[0] === tab); if ($('top-titulo')) $('top-titulo').textContent = v ? v[1] : 'Panel web';
   cerrarPanel();
   ({ resumen: vistaResumen, pedidos: vistaPedidos, estadisticas: vistaEstadisticas, envivo: vistaEnVivo, visitantes: vistaVisitantes, enlaces: vistaEnlaces, clientes: vistaClientes, descuentos: vistaDescuentos, productos: vistaProductos, existencias: vistaExistencias, scraping: vistaScraping, tipos: vistaTipos }[tab] || vistaResumen)();
@@ -1113,6 +1144,7 @@ async function eliminarPedido(id){
 /* Detalle de un pedido (panel lateral) */
 function abrirPedido(id){
   const pd = pedidoPorId(id); if (!pd) return;
+  ponerUrl(urlDe('pedidos', pd.id));
   const c = clienteDe(pd);
   const items = itemsDe(pd);
   const unidades = items.reduce((s, it) => s + Number(it.cantidad || 0), 0);
@@ -1248,6 +1280,7 @@ function abrirPanel(html, ancho){
   $('panel').innerHTML = html; $('panel').scrollTop = 0; $('panel').classList.add('ver'); $('panel').setAttribute('aria-hidden', 'false'); $('velo').classList.add('ver');
 }
 function cerrarPanel(){
+  if (yo && $('main')) ponerUrl(urlDe(tab));
   delete $('panel').dataset.pedido; delete $('panel').dataset.actividad;
   $('panel').classList.remove('ver'); $('panel').setAttribute('aria-hidden', 'true'); $('velo').classList.remove('ver');
 }
@@ -1258,6 +1291,7 @@ const interruptor = (name, titulo, detalle, marcado, deshabilitado) =>
 
 function abrirCliente(c){
   c = c || {};
+  if (c.email) ponerUrl(urlDe('clientes', c.email));
   const nuevo = !c.email, soyYo = c.email === yo.email;
   const porTipo = !c.ver_existencias && tipoVeStock(c.tipo_id);
   abrirPanel('<form id="c-form" style="display:contents">' +
