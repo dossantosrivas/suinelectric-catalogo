@@ -212,6 +212,12 @@ select.orig{font-size:15.5px;padding:6px 6px}
 .pdfview{width:100%;height:75vh;border:1px solid var(--line);border-radius:5px;background:#525659}
 .view.full{max-width:none;padding:12px 14px 0}
 .cot-bar{display:flex;gap:12px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+/* Pestaña aparte con solo el cotizador (/ventas/cotizador) */
+body.solo .shell{grid-template-columns:minmax(0,1fr)}
+body.solo .plate,body.solo .mbar,body.solo .mnav{display:none!important}
+body.solo .view.full{padding:0}
+body.solo .cot-bar{display:none}
+body.solo .cot-frame{height:100vh;height:100dvh;border:0;border-radius:0}
 .cot-frame{width:100%;height:calc(100vh - 70px);border:1px solid var(--line);border-radius:var(--r);background:#fff;display:block}
 .grp-h td{background:var(--panel-2);font-weight:600;font-size:15.5px;color:var(--ink-2)}
 .rapida-frame{width:100%;height:calc(100vh - 40px);border:1px solid var(--line);border-radius:var(--r);background:#fff;display:block}
@@ -1266,7 +1272,7 @@ const App = {
     if (this.guard && h !== this.lastRoute && !(await this.guard())) { Route.nav(this.lastRoute || 'resumen', { replace: true, silent: true }); return; }
     this.guard = null; this.lastRoute = h;
     this.route = { name: parts[0], args: parts.slice(1) };
-    const navId = { nuevo: parts[1] === 'oferta' ? 'ofertas' : parts[1] === 'compra' ? 'compras' : 'ventas', doc: null, cliente: 'clientes', 'cliente-web': 'clientes', 'cliente-nuevo': 'clientes', producto: 'inventario', 'producto-web': 'inventario', proveedor: 'distribuidores', proveedores: 'distribuidores', distribuidor: 'pedidos', empleado: 'empleados', rapida: 'ofertas' }[parts[0]];
+    const navId = { nuevo: parts[1] === 'oferta' ? 'ofertas' : parts[1] === 'compra' ? 'compras' : 'ventas', doc: null, cliente: 'clientes', 'cliente-web': 'clientes', 'cliente-nuevo': 'clientes', producto: 'inventario', cotizador: 'ofertas', 'producto-web': 'inventario', proveedor: 'distribuidores', proveedores: 'distribuidores', distribuidor: 'pedidos', empleado: 'empleados', rapida: 'ofertas' }[parts[0]];
     let active = navId !== undefined ? navId : parts[0];
     if (parts[0] === 'doc') { const d = Store.get('docs', parts[1]); active = d ? (d.tipo === 'oferta' ? 'ofertas' : d.tipo === 'compra' ? 'compras' : 'ventas') : ''; }
     $$('[data-nav]').forEach(a => a.classList.toggle('on', a.dataset.nav === active));
@@ -1274,6 +1280,7 @@ const App = {
     window.scrollTo(0, 0);
   },
   render() {
+    if (this.route.name !== 'cotizador') document.body.classList.remove('solo');
     document.body.classList.toggle('gen', this.route.name === 'ofertas' && (this.route.args[0] || lsGet('suinadm_ofertas_modo', 'generador')) !== 'lista');
     window.onbeforeunload = null; const old = $('#view'); const v = old.cloneNode(false); old.replaceWith(v); const r = this.route;
     const fn = Views[r.name] || Views.resumen;
@@ -1631,10 +1638,28 @@ Views.ofertas = (v, modo) => {
   }
   v.classList.add('full');
   v.innerHTML = `<div class="cot-bar"><div class="seg"><button type="button" class="on">Generador</button><button type="button" data-m="lista">Lista de ofertas</button></div>
-    <span class="muted small">Tu generador de siempre. Lo que guardes aquí (al descargar el PDF o con 💾 Guardar) aparece en Ofertas, Ventas y en la ficha del cliente.</span></div><div id="cot-host"><div class="empty">Cargando el generador…</div></div>`;
+    <button type="button" class="btn sm" data-tab-cot title="Abrir el cotizador en otra pestaña">↗ Abrir en pestaña</button><span class="muted small">Tu generador de siempre. Lo que guardes aquí (al descargar el PDF o con 💾 Guardar) aparece en Ofertas, Ventas y en la ficha del cliente.</span></div><div id="cot-host"><div class="empty">Cargando el generador…</div></div>`;
   $('[data-m]', v).onclick = () => { Route.nav('#/ofertas/lista'); };
+  $('[data-tab-cot]', v).onclick = () => abrirCotizador('oferta');
   Cot.mount($('#cot-host', v));
 };
+/* Cotizador solo, en su propia pestaña: /ventas/cotizador[/oferta|nota[/clienteId]] */
+Views.cotizador = (v, tipo, clienteId) => {
+  document.body.classList.add('solo');
+  document.title = (tipo === 'nota' ? 'Nota de entrega' : 'Oferta') + ' · Cotizador | Suinelectric';
+  if (tipo === 'oferta' || tipo === 'nota') { const c = clienteId && Store.get('clientes', clienteId); Cot._pending = { tipo, cliente: c ? docClienteSnap(c) : null }; }
+  v.classList.add('full');
+  v.innerHTML = '<div id="cot-host"><div class="empty">Cargando el cotizador…</div></div>';
+  Cot.mount($('#cot-host', v));
+};
+/* "Oferta" / "Nota de entrega" (nuevas) abren el cotizador en otra pestaña */
+const abrirCotizador = (tipo, clienteId) => window.open(Route.url('cotizador/' + (tipo || 'oferta') + (clienteId ? '/' + clienteId : '')), '_blank');
+document.addEventListener('click', (e) => {
+  const a = e.target.closest && e.target.closest('a[href]'); if (!a || e.button) return;
+  const m = (a.getAttribute('href') || '').match(/(?:^#\/|^\/ventas(?:-beta)?\/)nuevo\/(oferta|nota)(?:\/([^/?#]+))?$/);
+  if (!m) return;
+  e.preventDefault(); abrirCotizador(m[1], m[2] ? decodeURIComponent(m[2]) : '');
+}, true);
 Views.rapida = (v) => { Route.nav('#/ofertas/generador', { replace: true }); };
 Views.ventas = (v) => docListView(v, { titulo: 'Ventas y notas de entrega', tipos: ['nota', 'venta'], nuevo: [['nota', 'Nota de entrega'], ['venta', 'Venta sin nota']] });
 Views.compras = (v) => docListView(v, { titulo: 'Compras', tipos: ['compra', 'ajuste'], nuevo: [['compra', 'Nueva compra']], sub: 'Lo que entra a tu inventario o al de tu papá. Los ajustes son correcciones de existencia.' });
