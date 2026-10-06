@@ -350,6 +350,37 @@ button.inv-kpi:hover{border-color:var(--steel)}
 .inv-item .ok,.inv-dist b.ok,.okt{color:var(--ok)}.inv-item .bad:not(.pill),.inv-dist b.bad{color:var(--red)}.warnt{color:#8A5A00;font-weight:600}.okt{font-weight:600}
 .inv-pre .muted,.inv-dist .muted,.inv-ven .muted{font-size:14px}
 .inv-ven b{font-size:19px}
+/* selector de vista con íconos */
+.inv-vista button{display:inline-flex;align-items:center;gap:7px}
+.inv-vista svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;flex:none}
+/* tabla compacta */
+.inv-tblw{max-height:calc(100vh - 150px)}
+.inv-tbl td{padding:8px 12px;vertical-align:middle;font-size:15px}
+.inv-tbl .t-cod{white-space:nowrap}.inv-tbl .t-cod .code{font:700 15.5px var(--f-mono);color:var(--ink)}
+.inv-tbl .t-nom{min-width:260px;max-width:480px;width:40%}.inv-tbl .t-nom > div:first-child{display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden;line-height:1.35}
+.inv-tbl .t-ex{white-space:nowrap}.inv-tbl .t-ex b{font-size:17px}
+.t-dot{display:inline-block;width:9px;height:9px;border-radius:50%;margin-right:7px;vertical-align:1px;background:var(--line)}
+.inv-tr.ok .t-dot{background:var(--ok)}.inv-tr.warn .t-dot{background:var(--amber)}.inv-tr.bad .t-dot{background:var(--red)}
+.inv-tr.bad .t-ex b{color:var(--red)}.inv-tr.warn .t-ex b{color:#8A5A00}
+.inv-tr.inactivo td{opacity:.6}
+.inv-tr:hover .inv-copiar{opacity:1}
+.inv-tbl td .bad{color:var(--red)}
+/* letra grande: pensada para leer sin esfuerzo */
+.inv-list.grande{display:flex;flex-direction:column;gap:12px}
+.inv-g{display:grid;grid-template-columns:120px minmax(0,1fr) minmax(150px,auto) minmax(170px,auto);gap:22px;align-items:center;background:var(--panel);border:1px solid var(--line);border-left:8px solid var(--line);border-radius:12px;padding:16px 22px 16px 16px;cursor:pointer}
+.inv-g:hover,.inv-g:focus-visible{border-color:var(--steel);box-shadow:0 4px 14px rgba(14,42,59,.08)}
+.inv-g.ok{border-left-color:var(--ok)}.inv-g.warn{border-left-color:var(--amber)}.inv-g.bad{border-left-color:var(--red)}.inv-g.inactivo{opacity:.62}
+.inv-g .inv-foto{width:120px;height:120px}
+.g-cod{font-size:26px;font-weight:700;color:var(--ink);overflow-wrap:anywhere;line-height:1.15}
+.g-nom{font-size:20px;line-height:1.4;color:var(--ink-2);margin-top:4px}
+.g-marca{font-size:17px;color:var(--muted);margin-top:2px;font-weight:600}
+.g-ex,.g-pre{display:flex;flex-direction:column;align-items:flex-start;gap:2px;align-self:start}
+.g-l{font-size:16px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.04em}
+.g-num{font-size:46px;font-weight:700;line-height:1}
+.inv-g.ok .g-num,.inv-g.ok .g-est{color:var(--ok)}.inv-g.warn .g-num,.inv-g.warn .g-est{color:#8A5A00}.inv-g.bad .g-num,.inv-g.bad .g-est{color:var(--red)}
+.g-est{font-size:18px;font-weight:700}
+.g-owns{font-size:16px;color:var(--ink-2)}
+.g-pre b{font-size:30px;font-weight:700;color:var(--ink)}.g-pre .g-sinp{font:700 20px var(--f-sans);color:var(--red)}
 /* fichas con foto grande */
 .inv-list.fichas{display:grid;grid-template-columns:repeat(auto-fill,minmax(250px,1fr));gap:14px}
 .inv-list.fichas .inv-item{display:flex;flex-direction:column;align-items:stretch;gap:8px;padding:12px 14px 14px;border-left-width:1px;border-top:5px solid var(--line)}
@@ -402,6 +433,15 @@ button.inv-kpi:hover{border-color:var(--steel)}
   .inv-list.fichas .inv-nom{font-size:14px}
   .inv-list.fichas .inv-dist,.inv-list.fichas .inv-ven{display:none}
   .inv-copiar{opacity:1}
+  .inv-vista button{padding:9px 6px;font-size:14px;flex-direction:column;gap:3px}
+  .inv-tbl .hm{display:none}
+  .inv-tbl .t-nom{min-width:130px;width:auto}.inv-tbl td,.inv-tbl th{padding-left:8px;padding-right:8px}.inv-tbl .t-cod .code{font-size:14px}
+  .inv-g{grid-template-columns:88px minmax(0,1fr) auto;gap:10px 14px;padding:14px 14px 14px 12px;align-items:start}
+  .inv-g .inv-foto{width:88px;height:88px;grid-row:1/3}
+  .inv-g .g-prod{grid-column:2/4}
+  .g-cod{font-size:22px}.g-nom{font-size:18px}
+  .inv-g .g-ex{grid-column:2/3}.inv-g .g-pre{grid-column:3/4;align-items:flex-end;text-align:right}
+  .g-num{font-size:40px}.g-pre b{font-size:24px}.g-l{font-size:14px}
 }
 /* ===== Aprovechar el espacio y no cortar textos (oct. 2026) ===== */
 main.view{max-width:1760px}
@@ -2670,7 +2710,7 @@ Views.cliente = (v, id) => {
 };
 
 /* ---------------- Inventario ---------------- */
-const ORDENES_INV = [['relevancia', 'Más relevante'], ['codigo', 'Código A-Z'], ['nombre', 'Nombre A-Z'], ['exist_desc', 'Más existencia'], ['exist_asc', 'Menos existencia'], ['precio_desc', 'Precio mayor'], ['precio_asc', 'Precio menor'], ['valor_desc', 'Más valor en inventario'], ['vendidos', 'Más vendidos'], ['ultima', 'Vendidos recientemente'], ['sinmov', 'Sin movimiento hace más tiempo']];
+const ORDENES_INV = [['relevancia', 'Más relevante'], ['codigo', 'Código A-Z'], ['nombre', 'Nombre A-Z'], ['exist_desc', 'Más existencia'], ['exist_asc', 'Menos existencia'], ['precio_desc', 'Precio mayor'], ['precio_asc', 'Precio menor'], ['valor_desc', 'Más valor en inventario'], ['margen_desc', 'Mayor margen'], ['margen_asc', 'Menor margen'], ['vendidos', 'Más vendidos'], ['ultima', 'Vendidos recientemente'], ['sinmov', 'Sin movimiento hace más tiempo']];
 /* ---------------- Inventario: vista rápida para ver existencias ----------------
    Cada producto con foto, existencia por inventario, precio, costo, margen, lo que
    tiene el distribuidor y cuánto se ha vendido. Lista (PC) o fichas (fotos grandes). */
@@ -2692,11 +2732,19 @@ const InvFotos = (() => {
   };
   return { cargar, de, listo: () => !!mapa };
 })();
+/* formas de ver el inventario: [clave, nombre, ayuda, ícono] */
+const INV_VISTAS = [
+  ['lista', 'Lista', 'Una fila por producto con foto, existencia, precio, distribuidor y ventas', '<path d="M8 6h13M8 12h13M8 18h13"/><circle cx="3.5" cy="6" r="1"/><circle cx="3.5" cy="12" r="1"/><circle cx="3.5" cy="18" r="1"/>'],
+  ['fichas', 'Cuadros', 'Cuadros con la foto grande', '<rect x="3" y="3" width="7.5" height="7.5" rx="1.5"/><rect x="13.5" y="3" width="7.5" height="7.5" rx="1.5"/><rect x="3" y="13.5" width="7.5" height="7.5" rx="1.5"/><rect x="13.5" y="13.5" width="7.5" height="7.5" rx="1.5"/>'],
+  ['tabla', 'Tabla', 'Tabla compacta tipo Excel: muchos productos a la vez; toca un título para ordenar', '<rect x="3" y="4" width="18" height="16" rx="1.5"/><path d="M3 9h18M3 14.5h18M9 4v16"/>'],
+  ['grande', 'Letra grande', 'Solo lo importante (código, nombre, cuántos hay y precio) en letra grande', '<path d="M4 19 9 5l5 14M5.8 14h6.4"/><path d="M15 19l3-8 3 8M15.9 16.5h4.2"/>']
+];
 const INV_ESTADO = (cant) => cant < 0 ? ['bad', 'Revisar (negativo)'] : cant === 0 ? ['bad', 'Agotado'] : cant <= 2 ? ['warn', 'Pocas unidades'] : ['ok', 'Disponible'];
 
 Views.inventario = (v, invArg) => {
   const F = Object.assign({ q: '', inv: '', stock: '1', cat: '', marca: '', orden: 'codigo', grupo: '', vista: 'lista' }, lsGet('suinadm_f_inv', {}));
   if (invArg) { F.inv = invArg; F.stock = '1'; }
+  if (!INV_VISTAS.some(x => x[0] === F.vista)) F.vista = 'lista';
   const prods = Store.all('productos');
   const cats = Array.from(new Set(prods.map(p => p.categoria).filter(Boolean))).sort();
   const marcas = Array.from(new Set(prods.map(p => p.marca).filter(Boolean))).sort();
@@ -2710,7 +2758,7 @@ Views.inventario = (v, invArg) => {
       <div class="inv-buscar">
         <div class="inv-q"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input class="inp" type="search" placeholder="Buscar código, nombre o marca" value="${esc(F.q)}" data-f="q" autocomplete="off" spellcheck="false"></div>
         <div class="seg" data-seg>${[['', 'Ambos'], ['manuel', origenNombre('manuel')], ['papa', origenNombre('papa')]].map(([k, l]) => `<button type="button" data-v="${k}" class="${F.inv === k ? 'on' : ''}">${esc(l)}</button>`).join('')}</div>
-        <div class="seg inv-vista" data-vista>${[['lista', 'Lista'], ['fichas', 'Fotos']].map(([k, l]) => `<button type="button" data-v="${k}" class="${F.vista === k ? 'on' : ''}">${l}</button>`).join('')}</div>
+        <div class="seg inv-vista" data-vista role="group" aria-label="Forma de ver los productos">${INV_VISTAS.map(([k, l, t, svg]) => `<button type="button" data-v="${k}" class="${F.vista === k ? 'on' : ''}" title="${t}"><svg viewBox="0 0 24 24">${svg}</svg><span>${l}</span></button>`).join('')}</div>
       </div>
       <div class="inv-chips" data-chips></div>
       <div class="inv-sel">
@@ -2731,7 +2779,8 @@ Views.inventario = (v, invArg) => {
       const valor = invs.reduce((a, i) => a + Math.max(0, s[i].cant) * s[i].costo, 0);
       const conC = invs.filter(i => s[i].cant > 0 && s[i].costo), uc = conC.reduce((a, i) => a + s[i].cant, 0);
       const costo = uc ? conC.reduce((a, i) => a + s[i].cant * s[i].costo, 0) / uc : (invs.map(i => s[i].costo).find(x => x) || 0);
-      return { p, s, cant, valor, costo, vd: vend.get(p.id) || { q: 0, ult: '', mov: '' }, score: 0 };
+      const pr = num(p.precio), margen = pr && costo ? (pr - costo) / pr * 100 : null;
+      return { p, s, cant, valor, costo, margen, vd: vend.get(p.id) || { q: 0, ult: '', mov: '' }, score: 0 };
     });
     if (F.cat) base = base.filter(r => r.p.categoria === F.cat);
     if (F.marca) base = base.filter(r => r.p.marca === F.marca);
@@ -2752,7 +2801,7 @@ Views.inventario = (v, invArg) => {
       relevancia: (a, b) => b.score - a.score || a.p.codigo.localeCompare(b.p.codigo), codigo: (a, b) => a.p.codigo.localeCompare(b.p.codigo),
       nombre: (a, b) => (a.p.nombre || a.p.descripcion || a.p.codigo).localeCompare(b.p.nombre || b.p.descripcion || b.p.codigo),
       exist_desc: (a, b) => b.cant - a.cant, exist_asc: (a, b) => a.cant - b.cant, precio_desc: (a, b) => num(b.p.precio) - num(a.p.precio), precio_asc: (a, b) => (num(a.p.precio) || 1e12) - (num(b.p.precio) || 1e12),
-      valor_desc: (a, b) => b.valor - a.valor, vendidos: (a, b) => b.vd.q - a.vd.q, ultima: (a, b) => (b.vd.ult || '').localeCompare(a.vd.ult || ''), sinmov: (a, b) => (a.vd.mov || '0').localeCompare(b.vd.mov || '0')
+      valor_desc: (a, b) => b.valor - a.valor, margen_desc: (a, b) => (b.margen == null ? -1e9 : b.margen) - (a.margen == null ? -1e9 : a.margen), margen_asc: (a, b) => (a.margen == null ? 1e9 : a.margen) - (b.margen == null ? 1e9 : b.margen), vendidos: (a, b) => b.vd.q - a.vd.q, ultima: (a, b) => (b.vd.ult || '').localeCompare(a.vd.ult || ''), sinmov: (a, b) => (a.vd.mov || '0').localeCompare(b.vd.mov || '0')
     }[F.orden === 'relevancia' && !words.length ? 'codigo' : F.orden] || ((a, b) => 0);
     rows.sort(cmp);
     rowsCache = rows;
@@ -2795,21 +2844,54 @@ Views.inventario = (v, invArg) => {
         ${dist}${ventas}
       </article>`;
     };
+    const fotoHtml = (foto) => foto ? `<img src="${esc(foto)}" alt="" loading="lazy" decoding="async" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'inv-sinfoto',innerHTML:'${ico('box').replace(/"/g, '&quot;')}'}))">` : `<span class="inv-sinfoto">${ico('box')}</span>`;
+    /* letra grande: solo código, nombre, cuántos hay y precio */
+    const grandeHtml = (r) => {
+      const { p, s, cant } = r; const mc = MatchCat.de(p);
+      const [est, estL] = INV_ESTADO(cant); const precio = num(p.precio);
+      return `<article class="inv-g ${est}${p.activo === false ? ' inactivo' : ''}" data-id="${esc(p.id)}" tabindex="0">
+        <div class="inv-foto">${fotoHtml(InvFotos.de(p, mc))}</div>
+        <div class="g-prod"><div class="g-cod mono">${esc(p.codigo)}</div><div class="g-nom">${esc(p.nombre || p.descripcion || '') || '<span class="muted">Sin nombre</span>'}</div>${p.marca ? `<div class="g-marca">${esc(p.marca)}</div>` : ''}</div>
+        <div class="g-ex"><span class="g-l">Hay</span><span class="g-num mono">${fmtQty(cant)}</span><span class="g-est">${estL}</span>${invs.length > 1 ? `<span class="g-owns">${invs.map(i => `${esc(origenNombre(i))}: <b class="mono">${fmtQty(s[i].cant)}</b>`).join(' · ')}</span>` : ''}</div>
+        <div class="g-pre"><span class="g-l">Precio</span>${precio ? `<b class="mono">${fmtUSD(precio)}</b>` : '<b class="g-sinp">Sin precio</b>'}</div>
+      </article>`;
+    };
+    /* tabla compacta: muchas filas, títulos que ordenan */
+    const COLS_T = [['codigo', 'Código', 'codigo', 'codigo'], ['nombre', 'Producto', 'nombre', 'nombre'], ['exist', 'Exist.', 'exist_desc', 'exist_asc', 'r'], ['precio', 'Precio', 'precio_desc', 'precio_asc', 'r'], ['costo', 'Costo', '', '', 'r hm'], ['margen', 'Margen', 'margen_desc', 'margen_asc', 'r'], ['valor', 'Valor', 'valor_desc', 'valor_desc', 'r hm'], ['dist', 'Distribuidor', '', '', 'hm'], ['vend', 'Vendidos', 'vendidos', 'vendidos', 'r hm'], ['ult', 'Última venta', 'ultima', 'ultima', 'hm']];
+    const tablaHtml = (rs) => `<div class="tbl-wrap inv-tblw"><table class="tbl inv-tbl no-apilar no-orden"><thead><tr>${COLS_T.map(([k, l, d, a, cl]) => { const on = d && (F.orden === d || F.orden === a); const sube = F.orden === 'codigo' || F.orden === 'nombre' || (F.orden === a && a !== d); const cls = (d ? 'ord' : '') + (on ? (sube ? ' ord-asc' : ' ord-desc') : ''); return k === 'exist' && invs.length > 1 ? invs.map(i => `<th class="r hm">${esc(origenNombre(i))}</th>`).join('') + `<th class="r ${cls}" data-iord="${d}|${a}" title="Ordenar">Total</th>` : `<th class="${cl || ''} ${cls}" ${d ? `data-iord="${d}|${a}" title="Ordenar"` : ''}>${l}</th>`; }).join('')}</tr></thead><tbody>${rs.map(r => {
+        const { p, s, cant, costo, margen, vd } = r; const mc = MatchCat.de(p), c = mc && mc.c, ci = c ? costoInfo(c) : null;
+        const [est] = INV_ESTADO(cant); const precio = num(p.precio);
+        const dist = c ? (c.exist != null ? `<span class="${Number(c.exist) > 0 ? 'okt' : 'bad'}">${Number(c.exist) > 0 ? fmtQty(Number(c.exist)) + ' disp.' : 'sin exist.'}</span>` : (c.disp ? 'disponible' : '<span class="muted">no disp.</span>')) + (ci ? ` <span class="muted">· ${fmtUSD(ci.costo)}</span>` : '') : '<span class="muted">—</span>';
+        return `<tr class="click inv-tr ${est}${p.activo === false ? ' inactivo' : ''}" data-id="${esc(p.id)}" tabindex="0">
+          <td class="t-cod"><span class="code">${esc(p.codigo)}</span><button type="button" class="inv-copiar" data-copiar="${esc(p.codigo)}" title="Copiar código" aria-label="Copiar código">${ico('copy')}</button></td>
+          <td class="t-nom"><div>${esc(p.nombre || p.descripcion || '') || '<span class="muted">Sin nombre</span>'}</div>${p.marca ? `<div class="muted small">${esc(p.marca)}</div>` : ''}</td>
+          ${invs.length > 1 ? invs.map(i => `<td class="num hm ${s[i].cant > 0 ? '' : 'muted'}">${fmtQty(s[i].cant)}</td>`).join('') : ''}
+          <td class="num t-ex"><span class="t-dot"></span><b>${fmtQty(cant)}</b></td>
+          <td class="num">${precio ? fmtUSD(precio) : '<span class="bad">sin precio</span>'}</td>
+          <td class="num hm">${costo ? fmtUSD(costo) : (cant > 0 ? '<span class="bad">sin costo</span>' : '<span class="muted">—</span>')}</td>
+          <td class="num">${margen != null ? `<span class="${margen < 15 ? 'bad' : margen < 25 ? 'warnt' : 'okt'}">${Math.round(margen)}%</span>` : '<span class="muted">—</span>'}</td>
+          <td class="num hm">${r.valor ? fmtUSD(r.valor) : '<span class="muted">—</span>'}</td>
+          <td class="hm small">${dist}</td>
+          <td class="num hm">${vd.q ? fmtQty(vd.q) : '<span class="muted">—</span>'}</td>
+          <td class="hm small mono">${vd.ult ? esc(fmtFechaCorta(vd.ult)) : '<span class="muted">—</span>'}</td></tr>`;
+      }).join('')}</tbody></table></div>`;
+    const bloque = (rs) => F.vista === 'tabla' ? tablaHtml(rs) : `<div class="inv-list ${fichas ? 'fichas' : F.vista === 'grande' ? 'grande' : ''}">${rs.map(F.vista === 'grande' ? grandeHtml : itemHtml).join('')}</div>`;
     let body = '';
     if (F.grupo) {
       const key = (r) => F.grupo === 'tienda' ? (() => { const rr = CatAuto.rutaP(r.p); return CatAuto.enOtros(rr) ? 'Sin categoría en la tienda' : rr.slice(0, 2).join(' › '); })() : F.grupo === 'categoria' ? (r.p.categoria || 'Sin grupo') : F.grupo === 'marca' ? (r.p.marca || 'Sin marca') : (r.s.manuel.cant > 0 && r.s.papa.cant > 0 ? 'En ambos' : r.s.manuel.cant > 0 ? origenNombre('manuel') : r.s.papa.cant > 0 ? origenNombre('papa') : 'Sin existencia');
       const groups = new Map(); rows.forEach(r => { const k = key(r); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(r); });
       const gs = Array.from(groups.entries()).sort((a, b) => b[1].reduce((x, r) => x + r.valor, 0) - a[1].reduce((x, r) => x + r.valor, 0));
       let shown = 0;
-      gs.forEach(([k, rs]) => { if (shown >= lim) return; body += `<h3 class="inv-grp">${esc(k)} <span class="muted small">${rs.length} productos · ${fmtQty(rs.reduce((x, r) => x + Math.max(0, r.cant), 0))} und. · ${fmtUSD(rs.reduce((x, r) => x + r.valor, 0))}</span></h3><div class="inv-list ${fichas ? 'fichas' : ''}">` + rs.slice(0, Math.max(0, lim - shown)).map(itemHtml).join('') + '</div>'; shown += rs.length; });
-    } else body = `<div class="inv-list ${fichas ? 'fichas' : ''}">${rows.slice(0, lim).map(itemHtml).join('')}</div>`;
+      gs.forEach(([k, rs]) => { if (shown >= lim) return; body += `<h3 class="inv-grp">${esc(k)} <span class="muted small">${rs.length} productos · ${fmtQty(rs.reduce((x, r) => x + Math.max(0, r.cant), 0))} und. · ${fmtUSD(rs.reduce((x, r) => x + r.valor, 0))}</span></h3>` + bloque(rs.slice(0, Math.max(0, lim - shown))); shown += rs.length; });
+    } else body = bloque(rows.slice(0, lim));
     $('#lst', v).innerHTML = rows.length ? `<div class="inv-res"><b>${rows.length.toLocaleString('es-VE')}</b> productos · ${fmtQty(und)} unidades · valor al costo ${fmtUSD(val)}</div>
-      ${!fichas ? `<div class="inv-cab"><span></span><span>Producto</span><span>Existencia</span><span>Precio y costo</span><span>Distribuidor</span><span>Ventas</span></div>` : ''}${body}
+      ${F.vista === 'lista' ? `<div class="inv-cab"><span></span><span>Producto</span><span>Existencia</span><span>Precio y costo</span><span>Distribuidor</span><span>Ventas</span></div>` : ''}${body}
       ${rows.length > lim ? `<div style="text-align:center;margin-top:14px"><button class="btn" data-more>Ver más (${rows.length - lim})</button></div>` : ''}`
       : `<div class="panel empty">No hay productos con estos filtros.${F.stock !== '0' ? ' <button class="btn sm" data-todos>Ver todos</button>' : ''}</div>`;
     const abrir = (el) => productoModal(Store.get('productos', el.dataset.id));
-    $$('.inv-item', v).forEach(el => { el.onclick = (e) => { if (e.target.closest('[data-copiar]')) return; abrir(el); }; el.onkeydown = (e) => { if (e.key === 'Enter') abrir(el); }; });
+    $$('#lst [data-id]', v).forEach(el => { el.onclick = (e) => { if (e.target.closest('[data-copiar]')) return; abrir(el); }; el.onkeydown = (e) => { if (e.key === 'Enter') abrir(el); }; });
     $$('[data-copiar]', v).forEach(b => b.onclick = async (e) => { e.stopPropagation(); try { await navigator.clipboard.writeText(b.dataset.copiar); UI.toast('Código copiado: ' + b.dataset.copiar); } catch (er) { UI.toast('No se pudo copiar'); } });
+    $$('[data-iord]', v).forEach(th => th.onclick = () => { const [d, a] = th.dataset.iord.split('|'); F.orden = F.orden === d && a !== d ? a : d; const o = $('[data-f="orden"]', v); if (o) o.value = F.orden; paint(); });
     const mo = $('[data-more]', v); if (mo) mo.onclick = () => { F.lim = lim + 300; paint(); };
     const vt = $('[data-todos]', v); if (vt) vt.onclick = () => { F.stock = '0'; paint(); };
   };
@@ -4906,7 +4988,7 @@ Bus.on('sync', () => { if (Sync.state === 'ok') InvWeb.programar(); });
     });
   };
   let pend = false;
-  new MutationObserver(() => { if (pend) return; pend = true; requestAnimationFrame(() => { pend = false; document.querySelectorAll('table.tbl').forEach(etiquetar); }); })
+  new MutationObserver(() => { if (pend) return; pend = true; requestAnimationFrame(() => { pend = false; document.querySelectorAll('table.tbl:not(.no-apilar)').forEach(etiquetar); }); })
     .observe(document.documentElement, { childList: true, subtree: true });
 })();
 </script>
