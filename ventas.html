@@ -345,7 +345,7 @@ button.inv-kpi:hover{border-color:var(--steel)}
 .inv-pre .t,.inv-dist .t,.inv-ven .t{display:none}
 .inv-pre b{font-size:19px}
 .inv-dist .t{display:block;font-weight:600;color:var(--ink-2);font-size:14.5px}
-.inv-dist b{font-weight:600;font-size:15px}
+.inv-dist b{font-weight:600;font-size:15px}.inv-dl{display:flex;flex-wrap:wrap;align-items:baseline;gap:0 6px}.inv-dl .n{color:var(--ink-2);font-size:14px}.inv-tbl .t-dl+.t-dl{margin-top:2px}.inv-exp-op{display:flex;flex-direction:column;gap:12px;margin:0 0 18px}.inv-exp{display:grid;grid-template-columns:repeat(auto-fit,minmax(170px,1fr));gap:10px}.inv-exp .btn{flex-direction:column;align-items:flex-start;white-space:normal;text-align:left;padding:14px 16px;gap:3px;min-height:76px}.inv-exp .btn .l{display:flex;align-items:center;gap:8px;font-size:17px}.inv-exp .btn small{font-weight:400;font-size:14px;opacity:.8}.inv-exp .btn[disabled]{opacity:.6;cursor:wait}
 .inv-item .ok,.inv-dist b.ok,.okt{color:var(--ok)}.inv-item .bad:not(.pill),.inv-dist b.bad{color:var(--red)}.warnt{color:#8A5A00;font-weight:600}.okt{font-weight:600}
 .inv-pre .muted,.inv-dist .muted,.inv-ven .muted{font-size:14px}
 .inv-ven b{font-size:19px}
@@ -1707,7 +1707,7 @@ const PDF = (() => {
     let c = String((d.cliente && d.cliente.nombre) || '').toUpperCase().split(',')[0].normalize('NFD').replace(/[̀-ͯ]/g, '').replace(/[^A-Z0-9\s-]/g, '').trim();
     return `${pref} ${c || 'CLIENTE'}`;
   };
-  return { build, defaultFileName };
+  return { build, defaultFileName, safe, logoData };
 })();
 
 /* =====================================================================
@@ -2740,6 +2740,204 @@ const INV_VISTAS = [
 ];
 const INV_ESTADO = (cant) => cant < 0 ? ['bad', 'Revisar (negativo)'] : cant === 0 ? ['bad', 'Agotado'] : cant <= 2 ? ['warn', 'Pocas unidades'] : ['ok', 'Disponible'];
 
+/* ---------------- Inventario: exportar a Excel, PDF o CSV ----------------
+   Exporta lo que se ve en ese momento (búsqueda, filtros y orden). Se puede incluir o no
+   la existencia en los distribuidores, los costos (quítalos si es para un cliente) y las ventas.
+   Las librerías de Excel y de la tabla del PDF se cargan solo al exportar. */
+const cargarJS = (() => {
+  const hechos = new Map();
+  const uno = (u) => new Promise((res, rej) => { const s = document.createElement('script'); s.src = u; s.async = true; s.onload = res; s.onerror = () => { s.remove(); rej(new Error('No se pudo cargar ' + u.split('/').pop())); }; document.head.appendChild(s); });
+  return (urls, listo) => {
+    urls = [].concat(urls); const k = urls[0];
+    if (listo && listo()) return Promise.resolve();
+    if (!hechos.has(k)) hechos.set(k, (async () => { let err; for (const u of urls) { try { await uno(u); return; } catch (e) { err = e; } } throw err; })().catch(e => { hechos.delete(k); throw e; }));
+    return hechos.get(k);
+  };
+})();
+const InvExport = (() => {
+  const LIB_XLSX = ['https://cdn.jsdelivr.net/npm/exceljs@4.4.0/dist/exceljs.min.js', 'https://cdnjs.cloudflare.com/ajax/libs/exceljs/4.4.0/exceljs.min.js'];
+  const LIB_TABLA = ['https://cdn.jsdelivr.net/npm/jspdf-autotable@3.8.4/dist/jspdf.plugin.autotable.min.js', 'https://cdnjs.cloudflare.com/ajax/libs/jspdf-autotable/3.8.2/jspdf.plugin.autotable.min.js'];
+  const PLATE = '0E2A3B', INK = [30, 41, 59];
+  const fecha = (s) => { const m = String(s || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? new Date(Date.UTC(+m[1], +m[2] - 1, +m[3])) : null; };
+  const hoyTxt = () => new Date().toLocaleDateString('es-VE', { day: '2-digit', month: 'long', year: 'numeric' });
+
+  /* columnas y filas. Columna: { t: título, k: 'txt'|'exist'|'num'|'usd'|'pct'|'fecha'|'dist', w: ancho en Excel, pdf, tot } */
+  const armar = (rows, invs, o, filtros) => {
+    const cols = [];
+    const add = (t, k, w, v, x) => cols.push(Object.assign({ t, k, w, v, pdf: true }, x || {}));
+    add('Código', 'txt', 20, r => r.p.codigo || '');
+    add('Producto', 'txt', 44, r => r.p.nombre || r.p.descripcion || '');
+    add('Descripción', 'txt', 50, r => r.p.nombre && r.p.descripcion && normTxt(r.p.descripcion) !== normTxt(r.p.nombre) ? r.p.descripcion : '', { pdf: false });
+    add('Marca', 'txt', 14, r => r.p.marca || '');
+    add('Grupo', 'txt', 18, r => r.p.categoria || '', { pdf: false });
+    if (invs.length > 1) invs.forEach(i => add(origenNombre(i), 'exist', 10, r => r.s[i].cant, { tot: true }));
+    add(invs.length > 1 ? 'Total' : 'Existencia', 'exist', 11, r => r.cant, { tot: true, bold: true });
+    add('Precio', 'usd', 12, r => num(r.p.precio) || null);
+    if (o.costos) {
+      add('Costo', 'usd', 12, r => r.costo || null);
+      add('Margen', 'pct', 9, r => r.margen != null ? r.margen / 100 : null);
+      add('Valor al costo', 'usd', 14, r => r.valor || null, { tot: true });
+    }
+    if (o.dist) {
+      const dl = new Map(rows.map(r => [r, DistCat.de(r.p)]));
+      const ds = new Map(); dl.forEach(xs => xs.forEach(e => { if (!ds.has(e.id)) ds.set(e.id, e.nombre); }));
+      const ord = Dists().map(d => d.id);
+      Array.from(ds.keys()).sort((a, b) => { const ia = ord.indexOf(a), ib = ord.indexOf(b); return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib); }).forEach(id => {
+        const de = (r) => dl.get(r).find(e => e.id === id);
+        add(ds.get(id), 'dist', 14, r => { const e = de(r); return !e ? null : e.exist != null ? e.exist : (e.disp ? 'Disponible' : 'No disponible'); }, { grupo: 'Existencia en distribuidores' });
+        if (o.costos) add(ds.get(id) + ' · reponer', 'usd', 13, r => { const e = de(r); return e && e.costo ? e.costo : null; });
+      });
+    }
+    if (o.ventas) {
+      add('Vendidos', 'num', 10, r => r.vd.q || null, { tot: true });
+      add('Última venta', 'fecha', 13, r => r.vd.ult || '', { pdf: false });
+    }
+    const data = rows.map(r => cols.map(c => c.v(r)));
+    const tots = cols.map((c, i) => c.tot ? data.reduce((a, d) => a + (typeof d[i] === 'number' ? d[i] : 0), 0) : null);
+    const quien = invs.length > 1 ? 'Ambos inventarios' : 'Inventario de ' + origenNombre(invs[0]);
+    return {
+      cols, data, tots, n: rows.length,
+      titulo: 'Inventario · ' + (CFG().empresa.nombre || 'SUINELECTRIC'),
+      sub: [quien, filtros, rows.length.toLocaleString('es-VE') + ' productos', hoyTxt()].filter(Boolean).join('  ·  '),
+      archivo: 'inventario_' + (invs.length > 1 ? '' : normKey(origenNombre(invs[0])) + '_') + ymd()
+    };
+  };
+
+  const descargar = (blob, nombre) => { const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = nombre; document.body.appendChild(a); a.click(); a.remove(); setTimeout(() => URL.revokeObjectURL(a.href), 30000); };
+
+  /* ---- Excel: título, encabezado fijo, filtros, formatos de número y totales ---- */
+  const excel = async (S) => {
+    await cargarJS(LIB_XLSX, () => !!window.ExcelJS);
+    const wb = new window.ExcelJS.Workbook(); wb.creator = CFG().empresa.nombre || 'Suinelectric'; wb.created = new Date();
+    const HR = 4, nc = S.cols.length, ult = HR + S.data.length;
+    const ws = wb.addWorksheet('Inventario', {
+      views: [{ state: 'frozen', xSplit: 1, ySplit: HR }],
+      pageSetup: { paperSize: 1, orientation: 'landscape', fitToPage: true, fitToWidth: 1, fitToHeight: 0, printTitlesRow: HR + ':' + HR, margins: { left: 0.4, right: 0.4, top: 0.5, bottom: 0.5, header: 0.3, footer: 0.3 } },
+      headerFooter: { oddFooter: '&L' + S.titulo + '&RPágina &P de &N' }
+    });
+    ws.columns = S.cols.map(c => ({ width: c.w }));
+    const letra = (i) => { let s = ''; i++; while (i) { const m = (i - 1) % 26; s = String.fromCharCode(65 + m) + s; i = Math.floor((i - 1) / 26); } return s; };
+    ws.mergeCells(1, 1, 1, nc); Object.assign(ws.getCell(1, 1), { value: S.titulo, font: { size: 16, bold: true, color: { argb: 'FF' + PLATE } } }); ws.getRow(1).height = 24;
+    ws.mergeCells(2, 1, 2, nc); Object.assign(ws.getCell(2, 1), { value: S.sub, font: { size: 11, color: { argb: 'FF64748B' } } });
+    const borde = { style: 'thin', color: { argb: 'FFE2E8F0' } }, bordes = { top: borde, left: borde, bottom: borde, right: borde };
+    const fmt = { usd: '"$"#,##0.00', pct: '0%', exist: '#,##0', num: '#,##0', dist: '#,##0', fecha: 'dd/mm/yyyy' };
+    const hr = ws.getRow(HR); hr.height = 32;
+    S.cols.forEach((c, i) => Object.assign(hr.getCell(i + 1), { value: c.t, font: { bold: true, color: { argb: 'FFFFFFFF' } }, fill: { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FF' + (c.k === 'dist' || c.grupo ? '1C4760' : PLATE) } }, alignment: { vertical: 'middle', horizontal: c.k === 'txt' ? 'left' : 'center', wrapText: true }, border: bordes }));
+    S.data.forEach((vals, j) => {
+      const row = ws.getRow(HR + 1 + j);
+      vals.forEach((v, i) => {
+        const c = S.cols[i], cell = row.getCell(i + 1);
+        cell.value = c.k === 'fecha' ? fecha(v) : (v === '' ? null : v);
+        if (fmt[c.k]) cell.numFmt = (c.k === 'exist' || c.k === 'num' || c.k === 'dist') && typeof v === 'number' && !Number.isInteger(v) ? '#,##0.###' : fmt[c.k];
+        cell.border = bordes;
+        cell.alignment = { vertical: 'top', horizontal: c.k === 'txt' ? 'left' : c.k === 'dist' && typeof v !== 'number' ? 'center' : 'right', wrapText: c.k === 'txt' && i > 0 };
+        const rojo = (c.k === 'exist' && typeof v === 'number' && v <= 0) || (c.k === 'dist' && (v === 0 || v === 'No disponible'));
+        const verde = c.k === 'dist' && ((typeof v === 'number' && v > 0) || v === 'Disponible');
+        if (rojo || verde || c.bold || i === 0) cell.font = { bold: !!c.bold || i === 0, color: rojo ? { argb: 'FFB91C1C' } : verde ? { argb: 'FF15803D' } : undefined };
+        if (j % 2) cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFF8FAFC' } };
+      });
+    });
+    const tr = ws.getRow(ult + 1); tr.height = 20;
+    S.cols.forEach((c, i) => {
+      const cell = tr.getCell(i + 1);
+      if (i === 0) cell.value = 'Totales';
+      else if (S.tots[i] != null && S.data.length) { cell.value = { formula: `SUBTOTAL(9,${letra(i)}${HR + 1}:${letra(i)}${ult})`, result: S.tots[i] }; cell.numFmt = fmt[c.k] || '#,##0'; cell.alignment = { horizontal: 'right' }; }
+      cell.font = { bold: true }; cell.fill = { type: 'pattern', pattern: 'solid', fgColor: { argb: 'FFE8EEF3' } }; cell.border = { top: { style: 'medium', color: { argb: 'FF' + PLATE } } };
+    });
+    if (S.data.length) ws.autoFilter = { from: { row: HR, column: 1 }, to: { row: ult, column: nc } };
+    const buf = await wb.xlsx.writeBuffer();
+    descargar(new Blob([buf], { type: 'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet' }), S.archivo + '.xlsx');
+  };
+
+  /* ---- PDF: hoja carta horizontal con logo, tabla y páginas numeradas ---- */
+  const pdf = async (S, ver) => {
+    await cargarJS(LIB_TABLA, () => !!(window.jspdf && window.jspdf.jsPDF && window.jspdf.jsPDF.API.autoTable));
+    const { jsPDF } = window.jspdf; const safe = PDF.safe;
+    const doc = new jsPDF({ orientation: 'landscape', unit: 'pt', format: 'letter', compress: true });
+    const PW = doc.internal.pageSize.getWidth(), PH = doc.internal.pageSize.getHeight(), M = 28, TOP = 74;
+    const emp = CFG().empresa; const logo = await PDF.logoData(emp.logo || DEFAULT_LOGO);
+    const idx = S.cols.map((c, i) => i).filter(i => S.cols[i].pdf), cols = idx.map(i => S.cols[i]);
+    const celda = (c, v) => v == null || v === '' ? '' : c.k === 'usd' ? fmtUSD(v) : c.k === 'pct' ? Math.round(v * 100) + '%' : c.k === 'fecha' ? fmtFechaCorta(v) : typeof v === 'number' ? fmtQty(v) : safe(v);
+    const body = S.data.map(vals => idx.map(i => celda(S.cols[i], vals[i])));
+    const foot = [idx.map((i, j) => j === 0 ? 'Totales' : S.tots[i] != null ? celda(S.cols[i], S.tots[i]) : '')];
+    const encabezado = () => {
+      let x = M;
+      if (logo) { const h = 40, w = logo.w * h / logo.h; try { doc.addImage(logo.data, 'JPEG', M, 18, w, h); x = M + w + 12; } catch (e) { } }
+      doc.setFont('helvetica', 'bold'); doc.setFontSize(16); doc.setTextColor(14, 42, 59); doc.text('INVENTARIO', x, 34);
+      doc.setFont('helvetica', 'normal'); doc.setFontSize(9); doc.setTextColor(100, 116, 139);
+      doc.text(safe(emp.nombre || 'SUINELECTRIC') + (emp.rif ? '  ·  RIF ' + safe(emp.rif) : ''), x, 48);
+      doc.text(safe(S.sub), x, 60, { maxWidth: PW - x - M });
+      doc.setDrawColor(14, 42, 59); doc.setLineWidth(1.2); doc.line(M, TOP - 8, PW - M, TOP - 8);
+    };
+    doc.autoTable({
+      head: [cols.map(c => safe(c.t))], body, foot: S.data.length ? foot : undefined,
+      startY: TOP, margin: { top: TOP, left: M, right: M, bottom: 30 },
+      theme: 'grid', showHead: 'everyPage', showFoot: 'lastPage', rowPageBreak: 'avoid',
+      styles: { font: 'helvetica', fontSize: 7.6, cellPadding: { top: 3, bottom: 3, left: 3.5, right: 3.5 }, textColor: INK, lineColor: [226, 232, 240], lineWidth: 0.5, overflow: 'linebreak', valign: 'middle' },
+      headStyles: { fillColor: [14, 42, 59], textColor: 255, fontStyle: 'bold', halign: 'center', fontSize: 7.6 },
+      footStyles: { fillColor: [232, 238, 243], textColor: INK, fontStyle: 'bold' },
+      alternateRowStyles: { fillColor: [248, 250, 252] },
+      columnStyles: Object.fromEntries(cols.map((c, j) => [j, c.k === 'txt' ? (j === 0 ? { cellWidth: 'wrap', fontStyle: 'bold' } : c.t === 'Producto' ? { cellWidth: 'auto', minCellWidth: 140 } : { cellWidth: 'wrap' }) : { halign: c.k === 'dist' ? 'center' : 'right', cellWidth: 'wrap', fontStyle: c.bold ? 'bold' : 'normal' }])),
+      didParseCell: (h) => {
+        if (h.section === 'head' && cols[h.column.index].k === 'dist') h.cell.styles.fillColor = [28, 71, 96];
+        if (h.section !== 'body') return;
+        const c = cols[h.column.index], v = S.data[h.row.index][idx[h.column.index]];
+        if ((c.k === 'exist' && typeof v === 'number' && v <= 0) || (c.k === 'dist' && (v === 0 || v === 'No disponible'))) h.cell.styles.textColor = [185, 28, 28];
+        else if (c.k === 'dist' && v != null && v !== '') h.cell.styles.textColor = [21, 128, 61];
+      },
+      didDrawPage: encabezado
+    });
+    const np = doc.getNumberOfPages();
+    for (let i = 1; i <= np; i++) { doc.setPage(i); doc.setFont('helvetica', 'normal'); doc.setFontSize(8); doc.setTextColor(148, 163, 184); doc.text(safe(emp.contacto || ''), M, PH - 14); doc.text(`Página ${i} de ${np}`, PW - M, PH - 14, { align: 'right' }); }
+    const nombre = S.archivo + '.pdf';
+    if (!ver) { doc.save(nombre); return; }
+    const url = URL.createObjectURL(doc.output('blob'));
+    if (window.innerWidth < 860) window.open(url, '_blank');
+    else UI.modal({ title: 'Inventario en PDF', wide: true, foot: false, body: `<iframe class="pdfview" src="${url}" title="Vista previa del PDF"></iframe><div style="text-align:right;margin-top:10px"><a class="btn pri" href="${url}" download="${esc(nombre)}">${ico('pdf')} Descargar PDF</a></div>`, onClose: () => setTimeout(() => URL.revokeObjectURL(url), 1000) });
+  };
+
+  /* ---- CSV (datos simples, separado por punto y coma) ---- */
+  const csv = (S) => {
+    const q = (x) => `"${String(x == null ? '' : x).replace(/"/g, '""').replace(/\r?\n/g, ' ')}"`;
+    const lines = [S.cols.map(c => q(c.t)).join(';')].concat(S.data.map(vals => vals.map(q).join(';')));
+    descargar(new Blob(['﻿' + lines.join('\n')], { type: 'text/csv' }), S.archivo + '.csv');
+  };
+
+  const FORMATOS = [
+    ['xlsx', 'Excel', 'Tabla con formato, filtros y totales', '<rect x="3" y="4" width="18" height="16" rx="1.5"/><path d="M3 9h18M3 14.5h18M9 4v16"/>'],
+    ['ver', 'Ver PDF', 'Para revisarlo o imprimirlo', '<path d="M2 12s3.6-7 10-7 10 7 10 7-3.6 7-10 7S2 12 2 12z"/><circle cx="12" cy="12" r="3"/>'],
+    ['pdf', 'Descargar PDF', 'Para enviarlo o guardarlo', '<path d="M12 3v12M7 10l5 5 5-5"/><path d="M5 21h14"/>'],
+    ['csv', 'CSV', 'Datos simples, sin formato', '<path d="M14 3H6a1.5 1.5 0 0 0-1.5 1.5v15A1.5 1.5 0 0 0 6 21h12a1.5 1.5 0 0 0 1.5-1.5V8.5z"/><path d="M14 3v5.5h5.5"/>']
+  ];
+  const abrir = (rows, invs, filtros) => {
+    if (!rows.length) { UI.toast('No hay productos para exportar con estos filtros'); return; }
+    const o = Object.assign({ dist: true, costos: true, ventas: true }, lsGet('suinadm_inv_exp', {}));
+    const m = UI.modal({
+      title: 'Exportar inventario', foot: false, body: `
+      <p style="margin:0 0 14px">Se exporta lo que estás viendo: <b>${rows.length.toLocaleString('es-VE')} productos</b>${filtros ? ` <span class="muted">(${esc(filtros)})</span>` : ''}.</p>
+      <div class="inv-exp-op">
+        <label class="chk"><input type="checkbox" data-o="dist" ${o.dist ? 'checked' : ''}> Existencia en los distribuidores</label>
+        <label class="chk"><input type="checkbox" data-o="costos" ${o.costos ? 'checked' : ''}> Costos, margen y valor <span class="muted">(quítalo si es para un cliente)</span></label>
+        <label class="chk"><input type="checkbox" data-o="ventas" ${o.ventas ? 'checked' : ''}> Cuántos se han vendido</label>
+      </div>
+      <div class="inv-exp">${FORMATOS.map(([k, l, d, svg], i) => `<button type="button" class="btn ${i === 0 ? 'pri' : ''}" data-fmt="${k}"><span class="l"><svg viewBox="0 0 24 24">${svg}</svg>${l}</span><small>${d}</small></button>`).join('')}</div>` });
+    $$('[data-o]', m.body).forEach(ch => ch.onchange = () => { o[ch.dataset.o] = ch.checked; lsSet('suinadm_inv_exp', o); });
+    $$('[data-fmt]', m.body).forEach(b => b.onclick = async () => {
+      const k = b.dataset.fmt, bs = $$('[data-fmt]', m.body), small = $('small', b), antes = small.textContent;
+      bs.forEach(x => x.disabled = true); small.textContent = 'Preparando…';
+      try {
+        const S = armar(rows, invs, o, filtros);
+        if (k === 'xlsx') await excel(S); else if (k === 'csv') csv(S); else { m.close(); await pdf(S, k === 'ver'); return; }
+        m.close(); UI.toast('Inventario exportado');
+      } catch (err) {
+        console.error(err); UI.toast('No se pudo exportar: ' + (err && err.message || err), 4000);
+        if (m.el.isConnected) { bs.forEach(x => x.disabled = false); small.textContent = antes; }
+      }
+    });
+  };
+  return { abrir, armar };
+})();
+
 Views.inventario = (v, invArg) => {
   const F = Object.assign({ q: '', inv: '', stock: '1', cat: '', marca: '', orden: 'codigo', grupo: '', vista: 'lista' }, lsGet('suinadm_f_inv', {}));
   if (invArg) { F.inv = invArg; F.stock = '1'; }
@@ -2751,7 +2949,7 @@ Views.inventario = (v, invArg) => {
   Calc.build(); const vend = new Map();
   Calc.movs.forEach((ms, pid) => { let q = 0, ult = ''; ms.forEach(x => { if (esVenta(x.doc) && x.doc.estado !== 'anulada') { q += -x.delta; if ((x.doc.fecha || '') > ult) ult = x.doc.fecha; } }); vend.set(pid, { q, ult, mov: ms.reduce((a, x) => (x.doc.fecha || '') > a ? x.doc.fecha : a, '') }); });
   const FILTROS = [['1', 'Con existencia'], ['0', 'Todos'], ['pocas', 'Pocas unidades'], ['sin', 'Agotados'], ['neg', 'Negativos'], ['sinprecio', 'Sin precio'], ['sincosto', 'Sin costo']];
-  v.innerHTML = `<div class="vh"><h1>Inventario</h1><div class="act"><button class="btn" data-cats>Ordenar categorías</button><button class="btn" data-desc>Mejorar descripciones</button><button class="btn" data-csv>Exportar CSV</button><button class="btn pri" data-np>${ico('plus')} Producto</button></div><div class="sub">Las existencias se calculan con las compras, ventas y ajustes. Toca un producto para ver su ficha o corregirlo.</div></div>
+  v.innerHTML = `<div class="vh"><h1>Inventario</h1><div class="act"><button class="btn" data-cats>Ordenar categorías</button><button class="btn" data-desc>Mejorar descripciones</button><button class="btn" data-exp>${ico('pdf')} Exportar</button><button class="btn pri" data-np>${ico('plus')} Producto</button></div><div class="sub">Las existencias se calculan con las compras, ventas y ajustes. Toca un producto para ver su ficha o corregirlo.</div></div>
     <div class="inv-kpis" id="inv-kpis"></div>
     <div class="panel inv-filtros">
       <div class="inv-buscar">
@@ -2768,7 +2966,7 @@ Views.inventario = (v, invArg) => {
       </div>
     </div>
     <div id="lst"></div>`;
-  let rowsCache = [];
+  let rowsCache = [], invsCache = ['manuel', 'papa'];
   const paint = () => {
     lsSet('suinadm_f_inv', Object.assign({}, F, { lim: undefined }));
     const words = normTxt(F.q).split(/\s+/).filter(Boolean);
@@ -2803,7 +3001,7 @@ Views.inventario = (v, invArg) => {
       valor_desc: (a, b) => b.valor - a.valor, margen_desc: (a, b) => (b.margen == null ? -1e9 : b.margen) - (a.margen == null ? -1e9 : a.margen), margen_asc: (a, b) => (a.margen == null ? 1e9 : a.margen) - (b.margen == null ? 1e9 : b.margen), vendidos: (a, b) => b.vd.q - a.vd.q, ultima: (a, b) => (b.vd.ult || '').localeCompare(a.vd.ult || ''), sinmov: (a, b) => (a.vd.mov || '0').localeCompare(b.vd.mov || '0')
     }[F.orden === 'relevancia' && !words.length ? 'codigo' : F.orden] || ((a, b) => 0);
     rows.sort(cmp);
-    rowsCache = rows;
+    rowsCache = rows; invsCache = invs;
     // resumen del inventario elegido (todo lo que tiene existencia, sin filtros de búsqueda)
     const todos = prods.map(p => Calc.st(p.id));
     const kU = (i) => todos.reduce((a, s) => a + Math.max(0, s[i].cant), 0), kV = (i) => todos.reduce((a, s) => a + Math.max(0, s[i].cant) * s[i].costo, 0);
@@ -2829,7 +3027,8 @@ Views.inventario = (v, invArg) => {
       const desc = p.nombre && p.descripcion && normTxt(p.descripcion) !== normTxt(p.nombre) ? p.descripcion : '';
       const img = foto ? `<img src="${esc(foto)}" alt="" loading="lazy" decoding="async" onerror="this.replaceWith(Object.assign(document.createElement('span'),{className:'inv-sinfoto',innerHTML:'${ico('box').replace(/"/g, '&quot;')}'}))">` : `<span class="inv-sinfoto">${ico('box')}</span>`;
       const porInv = invs.map(i => `<span class="inv-own ${s[i].cant > 0 ? '' : 'cero'}">${ownTag(i)} <b class="mono">${fmtQty(s[i].cant)}</b></span>`).join('');
-      const dist = c ? `<div class="inv-dist"><span class="t">${esc(ci && ci.dist ? ci.dist.nombre : c.src === 's' ? 'Distribuidor' : 'En el catálogo')}</span>${c.exist != null ? `<b class="${Number(c.exist) > 0 ? 'ok' : 'bad'}">${Number(c.exist) > 0 ? fmtQty(Number(c.exist)) + ' disp.' : 'sin existencia'}</b>` : `<b>${c.disp ? 'disponible' : 'no disponible'}</b>`}${ci ? `<span class="muted">reponer ${fmtUSD(ci.costo)}</span>` : c.precio ? `<span class="muted">lista ${fmtUSD(c.precio)}</span>` : ''}</div>` : `<div class="inv-dist"><span class="t">Distribuidor</span><span class="muted">no está en el catálogo</span></div>`;
+      const dl = DistCat.de(p, mc);
+      const dist = dl.length ? `<div class="inv-dist"><span class="t">${dl.length > 1 ? 'Distribuidores' : 'Distribuidor'}</span>${dl.map(e => `<div class="inv-dl"><span class="n">${esc(e.nombre)}</span><b class="${DistCat.ok(e) ? 'ok' : 'bad'}">${DistCat.txt(e)}</b>${e.costo ? `<span class="muted">reponer ${fmtUSD(e.costo)}</span>` : e.lista ? `<span class="muted">lista ${fmtUSD(e.lista)}</span>` : ''}</div>`).join('')}</div>` : `<div class="inv-dist"><span class="t">Distribuidor</span><span class="muted">no está en el catálogo</span></div>`;
       const ventas = vd.q ? `<div class="inv-ven"><span class="t">Vendidos</span><b class="mono">${fmtQty(vd.q)}</b><span class="muted">${vd.ult ? 'última ' + fmtFechaCorta(vd.ult) : ''}</span></div>` : `<div class="inv-ven"><span class="t">Vendidos</span><span class="muted">${vd.mov ? 'sin ventas · últ. mov. ' + fmtFechaCorta(vd.mov) : 'sin ventas'}</span></div>`;
       return `<article class="inv-item ${est}${p.activo === false ? ' inactivo' : ''}" data-id="${esc(p.id)}" tabindex="0">
         <div class="inv-foto">${img}</div>
@@ -2860,7 +3059,8 @@ Views.inventario = (v, invArg) => {
     const tablaHtml = (rs) => `<div class="tbl-wrap inv-tblw"><table class="tbl inv-tbl no-apilar no-orden"><thead><tr>${COLS_T.map(([k, l, d, a, cl]) => { const on = d && (F.orden === d || F.orden === a); const sube = F.orden === 'codigo' || F.orden === 'nombre' || (F.orden === a && a !== d); const cls = (d ? 'ord' : '') + (on ? (sube ? ' ord-asc' : ' ord-desc') : ''); return k === 'exist' && invs.length > 1 ? invs.map(i => `<th class="r hm">${esc(origenNombre(i))}</th>`).join('') + `<th class="r ${cls}" data-iord="${d}|${a}" title="Ordenar">Total</th>` : `<th class="${cl || ''} ${cls}" ${d ? `data-iord="${d}|${a}" title="Ordenar"` : ''}>${l}</th>`; }).join('')}</tr></thead><tbody>${rs.map(r => {
         const { p, s, cant, costo, margen, vd } = r; const mc = MatchCat.de(p), c = mc && mc.c, ci = c ? costoInfo(c) : null;
         const [est] = INV_ESTADO(cant); const precio = num(p.precio);
-        const dist = c ? (c.exist != null ? `<span class="${Number(c.exist) > 0 ? 'okt' : 'bad'}">${Number(c.exist) > 0 ? fmtQty(Number(c.exist)) + ' disp.' : 'sin exist.'}</span>` : (c.disp ? 'disponible' : '<span class="muted">no disp.</span>')) + (ci ? ` <span class="muted">· ${fmtUSD(ci.costo)}</span>` : '') : '<span class="muted">—</span>';
+        const dl = DistCat.de(p, mc);
+        const dist = dl.length ? dl.map(e => `<div class="t-dl">${dl.length > 1 ? esc(e.nombre) + ': ' : ''}<span class="${DistCat.ok(e) ? 'okt' : 'bad'}">${DistCat.txt(e)}</span>${e.costo ? ` <span class="muted">· ${fmtUSD(e.costo)}</span>` : ''}</div>`).join('') : '<span class="muted">—</span>';
         return `<tr class="click inv-tr ${est}${p.activo === false ? ' inactivo' : ''}" data-id="${esc(p.id)}" tabindex="0">
           <td class="t-cod"><span class="code">${esc(p.codigo)}</span><button type="button" class="inv-copiar" data-copiar="${esc(p.codigo)}" title="Copiar código" aria-label="Copiar código">${ico('copy')}</button></td>
           <td class="t-nom"><div>${esc(p.nombre || p.descripcion || '') || '<span class="muted">Sin nombre</span>'}</div>${p.marca ? `<div class="muted small">${esc(p.marca)}</div>` : ''}</td>
@@ -2902,10 +3102,10 @@ Views.inventario = (v, invArg) => {
   $('[data-cats]', v).onclick = () => categoriasModal();
   WebProd.cargar();
   if (!InvFotos.listo()) { const kpisEl = $('#inv-kpis', v); InvFotos.cargar().then(() => { if (kpisEl.isConnected) paint(); }); }
-  $('[data-csv]', v).onclick = () => {
-    const head = ['codigo', 'nombre', 'descripcion', 'marca', 'categoria', 'precio', 'exist_manuel', 'costo_manuel', 'exist_papa', 'costo_papa', 'vendidos'];
-    const lines = [head.join(';')].concat(rowsCache.map(({ p, s, vd }) => [p.codigo, p.nombre, p.descripcion, p.marca, p.categoria, num(p.precio), s.manuel.cant, round2(s.manuel.costo), s.papa.cant, round2(s.papa.costo), vd.q].map(x => `"${String(x == null ? '' : x).replace(/"/g, '""').replace(/\n/g, ' ')}"`).join(';')));
-    const a = document.createElement('a'); a.href = URL.createObjectURL(new Blob(['﻿' + lines.join('\n')], { type: 'text/csv' })); a.download = `inventario_${ymd()}.csv`; a.click();
+  $('[data-exp]', v).onclick = () => {
+    const st = FILTROS.find(x => x[0] === F.stock);
+    const filtros = [F.q ? `búsqueda “${F.q}”` : '', st && st[0] !== '0' ? st[1].toLowerCase() : '', F.cat ? 'grupo ' + F.cat : '', F.marca ? 'marca ' + F.marca : ''].filter(Boolean).join(', ');
+    InvExport.abrir(rowsCache, invsCache, filtros);
   };
   paint();
 };
@@ -3812,6 +4012,39 @@ const MatchCat = (() => {
     return null;
   };
   return { de };
+})();
+/* ---------------- Existencia del producto en cada distribuidor ----------------
+   Busca el mismo modelo en todo el catálogo (scraping, manuales y panel) y lo agrupa por
+   el distribuidor que lo surte. Solo el scraping trae cantidades; los demás dicen si está
+   disponible o no. Devuelve [{ id, nombre, exist (número o null), disp, costo, lista }]. */
+const DistCat = (() => {
+  let idx = null, n = -1;
+  const build = () => {
+    if (idx && n === Catalog.items.length) return idx;
+    idx = new Map(); n = Catalog.items.length;
+    Catalog.items.forEach(c => { const k = normKey(c.m); if (!k) return; if (!idx.has(k)) idx.set(k, []); idx.get(k).push(c); });
+    return idx;
+  };
+  const de = (p, mc) => {
+    if (mc === undefined) mc = MatchCat.de(p);
+    const ix = build(), cs = [];
+    if (mc && mc.c) cs.push(mc.c);
+    [normKey(p.codigo), mc && mc.c ? normKey(mc.c.m) : ''].filter(Boolean).forEach(k => (ix.get(k) || []).forEach(c => { if (!cs.includes(c)) cs.push(c); }));
+    const por = new Map();
+    cs.forEach(c => {
+      const d = distDeCat(c), id = d ? d.id : (c.src === 's' ? '_s' : '_cat');
+      const ex = c.exist != null && c.exist !== '' && !isNaN(Number(c.exist)) ? Number(c.exist) : null;
+      const prev = por.get(id);
+      if (prev && !(prev.exist == null && ex != null)) return;      // del mismo distribuidor gana el que trae cantidad
+      const ci = d ? costoInfo(c, d) : null;
+      por.set(id, { id, nombre: d ? d.nombre : (c.src === 's' ? 'Distribuidor' : 'En el catálogo'), exist: ex, disp: !!c.disp, costo: ci ? ci.costo : null, lista: c.precio || null });
+    });
+    const ord = Dists().map(d => d.id);
+    return Array.from(por.values()).sort((a, b) => { const ia = ord.indexOf(a.id), ib = ord.indexOf(b.id); return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib); });
+  };
+  const ok = (e) => e.exist != null ? e.exist > 0 : e.disp;
+  const txt = (e) => e.exist != null ? (e.exist > 0 ? fmtQty(e.exist) + ' disp.' : 'sin existencia') : (e.disp ? 'disponible' : 'no disponible');
+  return { de, ok, txt };
 })();
 /* ---------------- Categorías de la tienda para productos del inventario ----------------
    Sugiere la categoría con la que el producto sale en la tienda y en /admin:
