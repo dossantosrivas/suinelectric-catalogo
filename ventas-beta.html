@@ -4587,7 +4587,10 @@ const Cot = (() => {
     body:not(.is-mobile):not(.mode-rapida){display:grid!important;grid-template-columns:minmax(380px,1fr) 8.5in;column-gap:20px;align-items:start;justify-content:center}
     body:not(.is-mobile):not(.mode-rapida) > *{grid-column:1/-1}
     body:not(.is-mobile):not(.mode-rapida) > .catalog-panel{grid-column:1!important;width:auto!important;margin:0!important;position:sticky;top:var(--adm-top,190px);max-height:calc(100vh - var(--adm-top,190px) - 16px);display:flex;flex-direction:column}
-    body:not(.is-mobile):not(.mode-rapida) > .catalog-panel .catalog-results{max-height:none!important;flex:1;min-height:120px}
+    body:not(.is-mobile):not(.mode-rapida) > .catalog-panel .catalog-results{max-height:none!important;flex:1 1 auto;min-height:min(300px,40vh)}
+    body:not(.is-mobile):not(.mode-rapida) > .catalog-panel #adm-margen{max-height:none}
+    body:not(.is-mobile):not(.mode-rapida) > .catalog-panel #adm-margen:not(.cerrado){flex:1 1 0;min-height:170px}
+    body:not(.is-mobile):not(.mode-rapida) > .catalog-panel:has(#adm-margen:not(.cerrado)) .catalog-results{flex:0 1 auto;min-height:72px}
     body:not(.is-mobile):not(.mode-rapida) > .page{grid-column:2!important}
     .catalog-search-row{flex-wrap:wrap}
     #catalog-search{flex:1 1 100%!important}
@@ -4599,14 +4602,22 @@ const Cot = (() => {
   .mg-row .mg-dto{background:#EFF6FF;color:#1D4ED8;border-radius:5px;padding:1px 7px;font-weight:700}
   .mg-row .mg-src{color:#94a3b8;font-size:14px}
   .m-item .mg-row{margin:8px 12px 0;padding:8px 10px;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px}
-  #adm-margen{margin-top:10px;border-top:2px solid #e2e8f0;padding-top:10px;max-height:38vh;overflow:auto;flex:none}
-  #adm-margen h4{margin:0 0 6px;font-size:16px;display:flex;gap:8px;align-items:baseline}
+  #adm-margen{margin-top:10px;border-top:2px solid #e2e8f0;padding-top:8px;flex:0 1 auto;min-height:0;display:flex;flex-direction:column;max-height:46vh}
+  #adm-margen h4{margin:0;font-size:16px;display:flex;gap:6px 8px;align-items:center;flex-wrap:wrap;cursor:pointer;user-select:none;padding:3px 2px}
   #adm-margen h4 small{font-weight:500;color:#64748b}
+  #adm-margen .mg-car{display:inline-block;transition:transform .15s;color:#64748b;font-size:13px}
+  #adm-margen.cerrado .mg-car{transform:rotate(-90deg)}
+  #adm-margen .mg-aj{margin-left:auto;border:1.5px solid #cbd5e1;background:#fff;border-radius:8px;padding:5px 10px;font:inherit;font-size:14px;font-weight:700;color:#0e2a3b;cursor:pointer}
+  #adm-margen .mg-aj:hover{border-color:#0e2a3b;background:#f8fafc}
+  #adm-margen .mg-list{overflow:auto;min-height:0;flex:0 1 auto;margin-top:6px}
+  #adm-margen.cerrado .mg-list{display:none}
+  #adm-margen .mg-hid{display:none;font-size:14px;color:#94a3b8;margin-top:4px}
+  #adm-margen.buscando .mg-hid{display:block}
   #adm-margen .mg-ln{padding:7px 8px;border-radius:7px;border:1px solid transparent;cursor:pointer}
   #adm-margen .mg-ln.on{background:#FFFBEB;border-color:#FCD34D}
   #adm-margen .mg-ln .mg-t{font-size:15.5px;font-weight:700}
   #adm-margen .mg-ln .mg-row{margin-top:2px}
-  #adm-margen .mg-tot{display:flex;gap:6px 14px;flex-wrap:wrap;font-size:15.5px;margin-top:8px;padding:8px;background:#F0FDF4;border-radius:7px}
+  #adm-margen .mg-tot{display:flex;gap:6px 14px;flex-wrap:wrap;font-size:15.5px;margin-top:6px;padding:8px;background:#F0FDF4;border-radius:7px;flex:none}
   #adm-margen .mg-tot b{font-variant-numeric:tabular-nums}
   #items-tbody tr.item-row.adm-sel td{background:#FFFBEB}`;
   const chip = (cls, n, label) => { const v = num(String(n).replace(',', '.')); return `<span class="stk-chip ${cls}${v <= 0 ? ' zero' : ''}"><b>${esc(fmtQty(v))}</b>${esc(label)}</span>`; };
@@ -4679,14 +4690,16 @@ const Cot = (() => {
       // escritorio: panel debajo del buscador
       const cp = dd.querySelector('body > .catalog-panel');
       if (cp) {
-        let box = dd.getElementById('adm-margen'); if (!box) { box = dd.createElement('div'); box.id = 'adm-margen'; cp.appendChild(box); box.addEventListener('click', (e) => { const l = e.target.closest('[data-mi]'); if (!l) return; const tr = dd.querySelectorAll('#items-tbody > tr.item-row')[+l.dataset.mi]; if (tr) { selIdx = +l.dataset.mi; tr.scrollIntoView({ behavior: 'smooth', block: 'center' }); paintMargen(dd); } }); }
+        let box = dd.getElementById('adm-margen'); if (!box) { box = dd.createElement('div'); box.id = 'adm-margen'; cp.appendChild(box); box.addEventListener('click', (e) => { if (e.target.closest('[data-aj]')) return; if (e.target.closest('[data-mg-tg]')) { if (buscandoMg(dd)) mgForce = !mgForce; else { mgOpen = !mgOpen; lsSet('suinadm_mg_open', mgOpen); } estadoMg(dd); return; } const l = e.target.closest('[data-mi]'); if (!l) return; const tr = dd.querySelectorAll('#items-tbody > tr.item-row')[+l.dataset.mi]; if (tr) { selIdx = +l.dataset.mi; tr.scrollIntoView({ behavior: 'smooth', block: 'center' }); paintMargen(dd); } }); }
         let venta = 0, costo = 0, sinC = 0;
         ls.forEach(l => { const vn = l.q * l.pr * (1 - disc); venta += vn; if (l.m && l.m.costo > 0) costo += l.q * l.m.costo; else sinC++; });
         const gan = venta - costo;
-        const html = ls.length ? `<h4>Margen del documento <small>${ls.length} producto${ls.length === 1 ? '' : 's'}${disc ? ` · con ${fmtNum(disc * 100)}% de descuento` : ''}</small></h4>
-          ${ls.map(l => `<div class="mg-ln ${l.i === selIdx ? 'on' : ''}" data-mi="${l.i}"><div class="mg-t">${l.i + 1}. ${esc(l.model || 'Línea sin modelo')} <span class="mg-src">${fmtQty(l.q)} × ${fmtUSD(l.pr)}</span></div><div class="mg-row">${margenHtml(l.m, l.pr * (1 - disc)) || '<span class="mg-src">Sin costo: no se puede calcular la ganancia</span>'}</div></div>`).join('')}
-          <div class="mg-tot"><span>Venta <b>${fmtUSD(venta)}</b></span><span>Costo <b>${fmtUSD(costo)}</b></span><span style="color:#15803D">Ganancia <b>${fmtUSD(gan)}</b>${costo ? ` (${fmtNum(gan / costo * 100, 1)}%)` : ''}</span>${sinC ? `<span class="mg-src">${sinC} sin costo</span>` : ''}</div>` : '';
+        const html = ls.length ? `<h4 data-mg-tg title="Mostrar u ocultar la lista"><span class="mg-car">▾</span>Margen del documento <small>${ls.length} producto${ls.length === 1 ? '' : 's'}${disc ? ` · con ${fmtNum(disc * 100)}% de descuento` : ''}</small><button type="button" class="mg-aj" data-aj title="Subir o bajar precios, o dar descuento a productos específicos">% Ajustar precios</button></h4>
+          <div class="mg-tot"><span>Venta <b>${fmtUSD(venta)}</b></span><span>Costo <b>${fmtUSD(costo)}</b></span><span style="color:#15803D">Ganancia <b>${fmtUSD(gan)}</b>${costo ? ` (${fmtNum(gan / costo * 100, 1)}%)` : ''}</span>${sinC ? `<span class="mg-src">${sinC} sin costo</span>` : ''}</div>
+          <div class="mg-hid">La lista se oculta mientras buscas, para ver mejor los productos. Toca el título para verla.</div>
+          <div class="mg-list">${ls.map(l => `<div class="mg-ln ${l.i === selIdx ? 'on' : ''}" data-mi="${l.i}"><div class="mg-t">${l.i + 1}. ${esc(l.model || 'Línea sin modelo')} <span class="mg-src">${fmtQty(l.q)} × ${fmtUSD(l.pr)}</span></div><div class="mg-row">${margenHtml(l.m, l.pr * (1 - disc)) || '<span class="mg-src">Sin costo: no se puede calcular la ganancia</span>'}</div></div>`).join('')}</div>` : '';
         if (box.dataset.h !== html) { box.dataset.h = html; box.innerHTML = html; const on = box.querySelector('.mg-ln.on'); if (on) on.scrollIntoView({ block: 'nearest' }); }
+        estadoMg(dd);
       }
       dd.querySelectorAll('#items-tbody > tr.item-row').forEach((tr, i) => tr.classList.toggle('adm-sel', i === selIdx));
       // teléfono: debajo de cada producto
@@ -4700,6 +4713,15 @@ const Cot = (() => {
     } catch (e) { console.warn('margen', e); }
   };
   let selIdx = -1;
+  /* la lista del margen se pliega sola mientras buscas, para que los resultados tengan espacio */
+  let mgOpen = lsGet('suinadm_mg_open', true) !== false, mgForce = false;
+  const buscandoMg = (dd) => ((dd.getElementById('catalog-search') || {}).value || '').trim().length >= 2;
+  const estadoMg = (dd) => {
+    const box = dd.getElementById('adm-margen'); if (!box) return;
+    const busca = buscandoMg(dd); if (!busca) mgForce = false;
+    const ver = busca ? mgForce : mgOpen;
+    box.classList.toggle('cerrado', !ver); box.classList.toggle('buscando', busca && !ver);
+  };
   const setupMargen = (w) => {
     const dd = w.document; const run = debounce(() => paintMargen(dd), 200);
     const tb = dd.getElementById('items-tbody');
@@ -4711,10 +4733,65 @@ const Cot = (() => {
     const di = dd.getElementById('discount-input'); if (di) di.addEventListener('input', run);
     const ml = dd.getElementById('m-items-list'); if (ml) new w.MutationObserver(run).observe(ml, { childList: true });
     const span = dd.getElementById('doc-control-span'); if (span) new w.MutationObserver(run).observe(span, { childList: true, characterData: true, subtree: true });
+    const cs = dd.getElementById('catalog-search'); if (cs) cs.addEventListener('input', () => estadoMg(dd));
     mgRun = run; run();
   };
-  let mgRun = null;
-  Bus.on('catalog', () => mgRun && mgRun()); Bus.on('data', (c) => { if (mgRun && (c === 'docs' || c === 'proveedores' || c === 'productos')) mgRun(); });
+  let mgRun = null, rapRun = null;
+  Bus.on('catalog', () => { mgRun && mgRun(); rapRun && rapRun(); }); Bus.on('data', (c) => { if (c === 'docs' || c === 'proveedores' || c === 'productos') { mgRun && mgRun(); rapRun && rapRun(); } });
+
+  /* ---------- margen en la Oferta rápida (WhatsApp / M. Libre) ----------
+     Vive en otro marco dentro del cotizador. Debajo de cada producto y de cada resultado del
+     buscador sale el costo y la ganancia con el precio que se va a ofertar (como en ofertas y notas).
+     Es solo para ti: no sale en el texto que se copia al cliente. */
+  const RAP_CSS = `.mg-row{display:flex;gap:3px 10px;flex-wrap:wrap;align-items:baseline;font-size:14.5px;color:#475569;line-height:1.4}
+  .mg-row b{font-variant-numeric:tabular-nums;color:#0f172a}
+  .mg-row .mg-gan{color:#15803D;font-weight:700}.mg-row .mg-gan b{color:#15803D;font-size:16px}
+  .mg-row .mg-gan.neg,.mg-row .mg-gan.neg b{color:#B91C1C}
+  .mg-row .mg-dto{background:#EFF6FF;color:#1D4ED8;border-radius:5px;padding:0 6px;font-weight:700}
+  .mg-row .mg-src{color:#94a3b8;font-size:13px}
+  .card > .mg-row{margin:0 12px 10px;padding:7px 10px;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px}
+  .res .mg-row{grid-column:1/-1;margin-top:4px}
+  #total .mg-tot{margin-left:8px;color:#15803D;font-weight:700}`;
+  const setupMargenRapida = (rw) => {
+    const rd = rw && rw.document; if (!rd || rd.__admMg || !rd.getElementById('items')) return; rd.__admMg = true;
+    const st = rd.createElement('style'); st.textContent = RAP_CSS; rd.head.appendChild(st);
+    const precioDe = (s) => num(String(s || '').replace(/[^\d.,]/g, '').replace(',', '.'));
+    const paint = () => {
+      try {
+        let venta = 0, costo = 0, con = 0;
+        rd.querySelectorAll('#items > .card').forEach(card => {
+          const hm = card.querySelector('[data-hm]'); const model = hm && !hm.classList.contains('empty') ? hm.textContent.trim() : '';
+          const inp = card.querySelector('[data-f="precio"]'); const pr = precioDe(inp ? inp.value : (card.querySelector('[data-hp]') || {}).textContent);
+          const m = model ? margenDe(model, pr, false) : null;
+          const html = !model ? '' : (margenHtml(m, pr) || '<span class="mg-src">Sin costo: no se puede calcular la ganancia</span>');
+          let el = card.querySelector(':scope > .mg-row');
+          if (!html) { if (el) el.remove(); return; }
+          if (!el) { el = rd.createElement('div'); el.className = 'mg-row'; const h = card.querySelector('.card-h'); if (h) h.insertAdjacentElement('afterend', el); else card.appendChild(el); }
+          if (el.innerHTML !== html) el.innerHTML = html;
+          if (m && m.costo > 0 && pr > 0) { venta += pr; costo += m.costo; con++; }
+        });
+        rd.querySelectorAll('#catResults .res:not([data-adm])').forEach(b => {
+          b.dataset.adm = '1';
+          const me = b.querySelector('.m'); const model = me && me.firstChild ? me.firstChild.textContent.trim() : '';
+          const pr = precioDe((b.querySelector('.p') || {}).textContent);
+          const h = model ? margenHtml(margenDe(model, pr, false), pr) : '';
+          if (h) b.insertAdjacentHTML('beforeend', `<span class="mg-row">${h}</span>`);
+        });
+        const tot = rd.getElementById('total');
+        if (tot) {
+          const h = con ? `Ganancia ${fmtUSD(venta - costo)} (${fmtNum((venta - costo) / costo * 100, 1)}%)` : '';
+          let s = tot.querySelector('.mg-tot');
+          if (!h || !tot.textContent.trim()) { if (s) s.remove(); }
+          else { if (!s) { s = rd.createElement('span'); s.className = 'mg-tot'; tot.appendChild(s); } if (s.textContent !== h) s.textContent = h; }
+        }
+      } catch (e) { console.warn('margen rápida', e); }
+    };
+    const run = debounce(paint, 150);
+    const it = rd.getElementById('items'); new rw.MutationObserver(run).observe(it, { childList: true, subtree: true }); it.addEventListener('input', run);
+    const res = rd.getElementById('catResults'); if (res) new rw.MutationObserver(run).observe(res, { childList: true });
+    const tot = rd.getElementById('total'); if (tot) new rw.MutationObserver(run).observe(tot, { childList: true });
+    rapRun = run; paint();
+  };
   const enhance = (w) => {
     const dd = w.document;
     if (!dd.getElementById('adm-gen-css')) { const st = dd.createElement('style'); st.id = 'adm-gen-css'; st.textContent = GEN_CSS; dd.head.appendChild(st); }
@@ -4793,6 +4870,7 @@ const Cot = (() => {
       try { setupVendedor(w); } catch (e) { console.warn('vendedor', e); }
       try { enhance(w); } catch (e) { console.warn('diseño', e); }
       try { setupMargen(w); } catch (e) { console.warn('margen', e); }
+      try { const rf = w.document.getElementById('rapida-frame'); if (rf) { const go = () => { try { setupMargenRapida(rf.contentWindow); } catch (e) { console.warn('margen rápida', e); } }; rf.addEventListener('load', go); go(); } } catch (e) { console.warn('margen rápida', e); }
       const tryInject = () => injectInventario();
       w.document.addEventListener('suinapp:ready', tryInject);
       setTimeout(tryInject, 600);
