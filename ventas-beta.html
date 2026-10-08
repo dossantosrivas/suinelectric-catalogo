@@ -314,6 +314,11 @@ button.inv-kpi:hover{border-color:var(--steel)}
 .inv-sel select{width:auto;max-width:240px;padding-top:7px;padding-bottom:7px}
 .inv-res{font-size:15.5px;color:var(--muted);margin:2px 0 8px}.inv-res b{color:var(--ink)}
 .inv-grp{font-size:18px;margin:22px 0 8px;display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline}
+.inv-fam{font-size:21px;margin:30px 0 4px;padding:10px 14px;border-radius:10px;background:var(--plate,#0E2A3B);color:#fff;display:flex;flex-wrap:wrap;gap:4px 12px;align-items:baseline}
+.inv-fam .muted{color:rgba(255,255,255,.75)}
+.inv-fam:first-of-type{margin-top:8px}
+.inv-sub{font-size:16px;margin:14px 0 6px 2px;padding-left:10px;border-left:4px solid var(--amber,#F2B705);display:flex;flex-wrap:wrap;gap:2px 10px;align-items:baseline;color:var(--ink,#1E293B)}
+.inv-sub .muted,.inv-grp .muted{font-weight:400}
 /* lista */
 .inv-cab,.inv-item{display:grid;grid-template-columns:84px minmax(0,2.6fr) minmax(150px,.9fr) minmax(160px,1fr) minmax(170px,1.05fr) minmax(130px,.8fr);gap:18px;align-items:center}
 .inv-cab{padding:0 18px 6px 22px;font-size:13px;text-transform:uppercase;letter-spacing:.04em;color:var(--muted);font-weight:600}
@@ -2714,7 +2719,22 @@ Views.cliente = (v, id) => {
 };
 
 /* ---------------- Inventario ---------------- */
-const ORDENES_INV = [['relevancia', 'Más relevante'], ['codigo', 'Código A-Z'], ['nombre', 'Nombre A-Z'], ['exist_desc', 'Más existencia'], ['exist_asc', 'Menos existencia'], ['precio_desc', 'Precio mayor'], ['precio_asc', 'Precio menor'], ['valor_desc', 'Más valor en inventario'], ['margen_desc', 'Mayor margen'], ['margen_asc', 'Menor margen'], ['vendidos', 'Más vendidos'], ['ultima', 'Vendidos recientemente'], ['sinmov', 'Sin movimiento hace más tiempo']];
+/* categorías como en la tienda: familia › categoría › subcategoría, en el mismo orden del menú de la tienda */
+const InvCat = (() => {
+  const SIN = 'Sin categoría en la tienda';
+  const ruta = (p) => { const rr = CatAuto.rutaP(p); return CatAuto.enOtros(rr) ? [] : rr; };
+  const catIdx = (fam, cat) => { const f = CatTienda.FAMILIAS.find(x => x.nombre === fam); const i = f ? f.categorias.indexOf(cat) : -1; return i < 0 ? 99 : i; };
+  const txt = (a, b) => String(a || '').localeCompare(String(b || ''), 'es', { numeric: true, sensitivity: 'base' });
+  /* compara dos rutas: primero la familia y la categoría en el orden de la tienda, luego las subcategorías A-Z; sin categoría al final */
+  const cmp = (a, b) => {
+    if (!a.length || !b.length) return (a.length ? 0 : 1) - (b.length ? 0 : 1);
+    return CatTienda.famIdx(a[0]) - CatTienda.famIdx(b[0]) || txt(a[0], b[0])
+      || catIdx(a[0], a[1]) - catIdx(b[0], b[1]) || txt(a[1], b[1])
+      || txt(a.slice(2).join(' › '), b.slice(2).join(' › '));
+  };
+  return { SIN, ruta, cmp, txt };
+})();
+const ORDENES_INV = [['relevancia', 'Más relevante'], ['tienda', 'Categoría (como la tienda)'], ['codigo', 'Código A-Z'], ['nombre', 'Nombre A-Z'], ['exist_desc', 'Más existencia'], ['exist_asc', 'Menos existencia'], ['precio_desc', 'Precio mayor'], ['precio_asc', 'Precio menor'], ['valor_desc', 'Más valor en inventario'], ['margen_desc', 'Mayor margen'], ['margen_asc', 'Menor margen'], ['vendidos', 'Más vendidos'], ['ultima', 'Vendidos recientemente'], ['sinmov', 'Sin movimiento hace más tiempo']];
 /* ---------------- Inventario: vista rápida para ver existencias ----------------
    Cada producto con foto, existencia por inventario, precio, costo, margen, lo que
    tiene el distribuidor y cuánto se ha vendido. Lista (PC) o fichas (fotos grandes). */
@@ -2947,12 +2967,21 @@ const InvExport = (() => {
 let invRepintar = null;
 Bus.on('catalog', debounce(() => { if (invRepintar) invRepintar(); }, 400));
 Views.inventario = (v, invArg) => {
-  const F = Object.assign({ q: '', inv: '', stock: '1', cat: '', marca: '', orden: 'codigo', grupo: '', vista: 'lista' }, lsGet('suinadm_f_inv', {}));
+  const F = Object.assign({ q: '', inv: '', stock: '1', cat: '', marca: '', orden: 'codigo', grupo: '', vista: 'lista', tcat: '', tsub: '' }, lsGet('suinadm_f_inv', {}));
   if (invArg) { F.inv = invArg; F.stock = '1'; }
   if (!INV_VISTAS.some(x => x[0] === F.vista)) F.vista = 'lista';
   const prods = Store.all('productos');
   const cats = Array.from(new Set(prods.map(p => p.categoria).filter(Boolean))).sort();
   const marcas = Array.from(new Set(prods.map(p => p.marca).filter(Boolean))).sort();
+  // categorías de la tienda presentes en el inventario (familia › categoría), en el orden de la tienda
+  const rutas = new Map(prods.map(p => [p.id, InvCat.ruta(p)]));
+  const arbolCats = (() => {
+    const fams = new Map(); let sin = 0;
+    rutas.forEach(r => { if (!r.length) { sin++; return; } if (!fams.has(r[0])) fams.set(r[0], new Set()); if (r[1]) fams.get(r[0]).add(r[1]); });
+    const fs = Array.from(fams.keys()).sort((a, b) => InvCat.cmp([a], [b]));
+    return { sin, fams: fs.map(f => ({ f, cats: Array.from(fams.get(f)).sort((a, b) => InvCat.cmp([f, a], [f, b])) })) };
+  })();
+  const tcatOpts = () => `<option value="">Todas</option>${arbolCats.fams.map(({ f, cats }) => `<optgroup label="${esc(f)}"><option value="${esc(f)}" ${F.tcat === f ? 'selected' : ''}>${esc(f)} (todas)</option>${cats.map(c => { const k = f + ' › ' + c; return `<option value="${esc(k)}" ${F.tcat === k ? 'selected' : ''}>${esc(c)}</option>`; }).join('')}</optgroup>`).join('')}${arbolCats.sin ? `<option value="__sin" ${F.tcat === '__sin' ? 'selected' : ''}>${InvCat.SIN}</option>` : ''}`;
   // ventas por producto (cantidad y última fecha)
   Calc.build(); const vend = new Map();
   Calc.movs.forEach((ms, pid) => { let q = 0, ult = ''; ms.forEach(x => { if (esVenta(x.doc) && x.doc.estado !== 'anulada') { q += -x.delta; if ((x.doc.fecha || '') > ult) ult = x.doc.fecha; } }); vend.set(pid, { q, ult, mov: ms.reduce((a, x) => (x.doc.fecha || '') > a ? x.doc.fecha : a, '') }); });
@@ -2968,7 +2997,9 @@ Views.inventario = (v, invArg) => {
       <div class="inv-chips" data-chips></div>
       <div class="inv-sel">
         <label>Ordenar <select class="inp" data-f="orden">${ORDENES_INV.map(([k, l]) => `<option value="${k}" ${F.orden === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
-        <label>Agrupar <select class="inp" data-f="grupo"><option value="">Sin grupos</option><option value="tienda" ${F.grupo === 'tienda' ? 'selected' : ''}>Categoría de la tienda</option><option value="categoria" ${F.grupo === 'categoria' ? 'selected' : ''}>Grupo</option><option value="marca" ${F.grupo === 'marca' ? 'selected' : ''}>Marca</option><option value="origen" ${F.grupo === 'origen' ? 'selected' : ''}>Dónde está</option></select></label>
+        <label>Agrupar <select class="inp" data-f="grupo"><option value="">Sin grupos</option><option value="tienda" ${F.grupo === 'tienda' ? 'selected' : ''}>Categorías y subcategorías (como la tienda)</option><option value="categoria" ${F.grupo === 'categoria' ? 'selected' : ''}>Grupo</option><option value="marca" ${F.grupo === 'marca' ? 'selected' : ''}>Marca</option><option value="origen" ${F.grupo === 'origen' ? 'selected' : ''}>Dónde está</option></select></label>
+        <label>Categoría <select class="inp" data-f="tcat">${tcatOpts()}</select></label>
+        <span data-tsubbox style="display:contents"></span>
         <label>Grupo <select class="inp" data-f="cat"><option value="">Todos</option>${cats.map(c => `<option ${F.cat === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></label>
         ${marcas.length ? `<label>Marca <select class="inp" data-f="marca"><option value="">Todas</option>${marcas.map(c => `<option ${F.marca === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></label>` : ''}
       </div>
@@ -2985,8 +3016,21 @@ Views.inventario = (v, invArg) => {
       const conC = invs.filter(i => s[i].cant > 0 && s[i].costo), uc = conC.reduce((a, i) => a + s[i].cant, 0);
       const costo = uc ? conC.reduce((a, i) => a + s[i].cant * s[i].costo, 0) / uc : (invs.map(i => s[i].costo).find(x => x) || 0);
       const pr = num(p.precio), margen = pr && costo ? (pr - costo) / pr * 100 : null;
-      return { p, s, cant, valor, costo, margen, vd: vend.get(p.id) || { q: 0, ult: '', mov: '' }, score: 0 };
+      return { p, s, cant, valor, costo, margen, vd: vend.get(p.id) || { q: 0, ult: '', mov: '' }, score: 0, ruta: rutas.get(p.id) || [] };
     });
+    // categoría y subcategoría de la tienda
+    if (F.tcat && F.tcat !== '__sin' && !arbolCats.fams.some(({ f, cats }) => F.tcat === f || cats.some(c => F.tcat === f + ' › ' + c))) { F.tcat = ''; F.tsub = ''; const s = $('[data-f="tcat"]', v); if (s) s.value = ''; }
+    if (F.tcat === '__sin') base = base.filter(r => !r.ruta.length);
+    else if (F.tcat) { const n = F.tcat.split(' › ').length; base = base.filter(r => r.ruta.slice(0, n).join(' › ') === F.tcat); }
+    {
+      const nivel = F.tcat && F.tcat !== '__sin' ? F.tcat.split(' › ').length : 0;
+      const subs = nivel === 2 ? Array.from(new Set(base.map(r => r.ruta[2]).filter(Boolean))).sort(InvCat.txt) : [];
+      if (!subs.includes(F.tsub)) F.tsub = '';
+      const box = $('[data-tsubbox]', v);
+      box.innerHTML = subs.length ? `<label>Subcategoría <select class="inp" data-tsub><option value="">Todas</option>${subs.map(sc => `<option ${F.tsub === sc ? 'selected' : ''}>${esc(sc)}</option>`).join('')}</select></label>` : '';
+      const sel = $('[data-tsub]', box); if (sel) sel.onchange = () => { F.tsub = sel.value; F.lim = 0; paint(); };
+      if (F.tsub) base = base.filter(r => r.ruta[2] === F.tsub);
+    }
     if (F.cat) base = base.filter(r => r.p.categoria === F.cat);
     if (F.marca) base = base.filter(r => r.p.marca === F.marca);
     if (words.length) {
@@ -3003,13 +3047,15 @@ Views.inventario = (v, invArg) => {
     $$('[data-stock]', v).forEach(b => b.onclick = () => { F.stock = b.dataset.stock; F.lim = 0; paint(); });
     let rows = base.filter(pasa[F.stock] || pasa['0']);
     const cmp = {
-      relevancia: (a, b) => b.score - a.score || a.p.codigo.localeCompare(b.p.codigo), codigo: (a, b) => a.p.codigo.localeCompare(b.p.codigo),
+      relevancia: (a, b) => b.score - a.score || a.p.codigo.localeCompare(b.p.codigo),
+      tienda: (a, b) => InvCat.cmp(a.ruta, b.ruta) || InvCat.txt(a.p.codigo, b.p.codigo), codigo: (a, b) => a.p.codigo.localeCompare(b.p.codigo),
       nombre: (a, b) => (a.p.nombre || a.p.descripcion || a.p.codigo).localeCompare(b.p.nombre || b.p.descripcion || b.p.codigo),
       exist_desc: (a, b) => b.cant - a.cant, exist_asc: (a, b) => a.cant - b.cant, precio_desc: (a, b) => num(b.p.precio) - num(a.p.precio), precio_asc: (a, b) => (num(a.p.precio) || 1e12) - (num(b.p.precio) || 1e12),
       valor_desc: (a, b) => b.valor - a.valor, margen_desc: (a, b) => (b.margen == null ? -1e9 : b.margen) - (a.margen == null ? -1e9 : a.margen), margen_asc: (a, b) => (a.margen == null ? 1e9 : a.margen) - (b.margen == null ? 1e9 : b.margen), vendidos: (a, b) => b.vd.q - a.vd.q, ultima: (a, b) => (b.vd.ult || '').localeCompare(a.vd.ult || ''), sinmov: (a, b) => (a.vd.mov || '0').localeCompare(b.vd.mov || '0')
     }[F.orden === 'relevancia' && !words.length ? 'codigo' : F.orden] || ((a, b) => 0);
     rows.sort(cmp);
-    rowsCache = rows; invsCache = invs;
+    // al agrupar como la tienda, lo exportado sale en el mismo orden que se ve
+    rowsCache = F.grupo === 'tienda' ? rows.slice().sort((a, b) => InvCat.cmp(a.ruta, b.ruta)) : rows; invsCache = invs;
     // resumen del inventario elegido (todo lo que tiene existencia, sin filtros de búsqueda)
     const todos = prods.map(p => Calc.st(p.id));
     const kU = (i) => todos.reduce((a, s) => a + Math.max(0, s[i].cant), 0), kV = (i) => todos.reduce((a, s) => a + Math.max(0, s[i].cant) * s[i].costo, 0);
@@ -3084,8 +3130,39 @@ Views.inventario = (v, invArg) => {
       }).join('')}</tbody></table></div>`;
     const bloque = (rs) => F.vista === 'tabla' ? tablaHtml(rs) : `<div class="inv-list ${fichas ? 'fichas' : F.vista === 'grande' ? 'grande' : ''}">${rs.map(F.vista === 'grande' ? grandeHtml : itemHtml).join('')}</div>`;
     let body = '';
-    if (F.grupo) {
-      const key = (r) => F.grupo === 'tienda' ? (() => { const rr = CatAuto.rutaP(r.p); return CatAuto.enOtros(rr) ? 'Sin categoría en la tienda' : rr.slice(0, 2).join(' › '); })() : F.grupo === 'categoria' ? (r.p.categoria || 'Sin grupo') : F.grupo === 'marca' ? (r.p.marca || 'Sin marca') : (r.s.manuel.cant > 0 && r.s.papa.cant > 0 ? 'En ambos' : r.s.manuel.cant > 0 ? origenNombre('manuel') : r.s.papa.cant > 0 ? origenNombre('papa') : 'Sin existencia');
+    const resumenG = (rs) => `<span class="muted small">${rs.length} producto${rs.length === 1 ? '' : 's'} · ${fmtQty(rs.reduce((x, r) => x + Math.max(0, r.cant), 0))} und. · ${fmtUSD(rs.reduce((x, r) => x + r.valor, 0))}</span>`;
+    if (F.grupo === 'tienda') {
+      /* árbol como la tienda: familia › categoría › subcategoría, en el orden del menú de la tienda;
+         dentro de cada subcategoría se respeta el orden elegido arriba */
+      const fams = new Map();
+      rows.forEach(r => {
+        const [f, c, ...sb] = r.ruta.length ? r.ruta : [InvCat.SIN, ''];
+        const s = sb.join(' › ');
+        if (!fams.has(f)) fams.set(f, new Map()); const cs = fams.get(f);
+        if (!cs.has(c)) cs.set(c, new Map()); const ss = cs.get(c);
+        if (!ss.has(s)) ss.set(s, []); ss.get(s).push(r);
+      });
+      const todas = (m) => Array.from(m.values()).flatMap(x => x instanceof Map ? todas(x) : x);
+      let shown = 0;
+      Array.from(fams.keys()).sort((a, b) => a === InvCat.SIN ? 1 : b === InvCat.SIN ? -1 : InvCat.cmp([a], [b])).forEach(f => {
+        if (shown >= lim) return;
+        const cs = fams.get(f);
+        body += `<h2 class="inv-fam">${esc(f)} ${resumenG(todas(cs))}</h2>`;
+        Array.from(cs.keys()).sort((a, b) => InvCat.cmp([f, a], [f, b])).forEach(c => {
+          if (shown >= lim) return;
+          const ss = cs.get(c);
+          if (c) body += `<h3 class="inv-grp">${esc(c)} ${resumenG(todas(ss))}</h3>`;
+          // primero lo que está directo en la categoría, luego cada subcategoría A-Z
+          Array.from(ss.keys()).sort((a, b) => (a ? 1 : 0) - (b ? 1 : 0) || InvCat.txt(a, b)).forEach(s => {
+            if (shown >= lim) return;
+            const rs = ss.get(s);
+            if (s) body += `<h4 class="inv-sub">${esc(s)} ${resumenG(rs)}</h4>`;
+            body += bloque(rs.slice(0, Math.max(0, lim - shown))); shown += rs.length;
+          });
+        });
+      });
+    } else if (F.grupo) {
+      const key = (r) => F.grupo === 'categoria' ? (r.p.categoria || 'Sin grupo') : F.grupo === 'marca' ? (r.p.marca || 'Sin marca') : (r.s.manuel.cant > 0 && r.s.papa.cant > 0 ? 'En ambos' : r.s.manuel.cant > 0 ? origenNombre('manuel') : r.s.papa.cant > 0 ? origenNombre('papa') : 'Sin existencia');
       const groups = new Map(); rows.forEach(r => { const k = key(r); if (!groups.has(k)) groups.set(k, []); groups.get(k).push(r); });
       const gs = Array.from(groups.entries()).sort((a, b) => b[1].reduce((x, r) => x + r.valor, 0) - a[1].reduce((x, r) => x + r.valor, 0));
       let shown = 0;
@@ -3102,7 +3179,7 @@ Views.inventario = (v, invArg) => {
     const mo = $('[data-more]', v); if (mo) mo.onclick = () => { F.lim = lim + 300; paint(); };
     const vt = $('[data-todos]', v); if (vt) vt.onclick = () => { F.stock = '0'; paint(); };
   };
-  $$('[data-f]', v).forEach(el => el.addEventListener(el.tagName === 'INPUT' ? 'input' : 'change', debounce(() => { F[el.dataset.f] = el.value; if (el.dataset.f === 'q' && el.value && F.orden === 'codigo') { F.orden = 'relevancia'; const o = $('[data-f="orden"]', v); if (o) o.value = 'relevancia'; } F.lim = 0; paint(); }, 150)));
+  $$('[data-f]', v).forEach(el => el.addEventListener(el.tagName === 'INPUT' ? 'input' : 'change', debounce(() => { F[el.dataset.f] = el.value; if (el.dataset.f === 'tcat') F.tsub = ''; if (el.dataset.f === 'q' && el.value && F.orden === 'codigo') { F.orden = 'relevancia'; const o = $('[data-f="orden"]', v); if (o) o.value = 'relevancia'; } F.lim = 0; paint(); }, 150)));
   $('[data-seg]', v).addEventListener('click', e => { const b = e.target.closest('[data-v]'); if (!b) return; F.inv = b.dataset.v; $$('[data-seg] [data-v]', v).forEach(x => x.classList.toggle('on', x === b)); if (invArg) Route.nav('#/inventario', { replace: true, silent: true }); paint(); });
   $('[data-vista]', v).addEventListener('click', e => { const b = e.target.closest('[data-v]'); if (!b) return; F.vista = b.dataset.v; $$('[data-vista] [data-v]', v).forEach(x => x.classList.toggle('on', x === b)); paint(); });
   $('[data-np]', v).onclick = () => productoModal(null);
@@ -3113,7 +3190,7 @@ Views.inventario = (v, invArg) => {
   if (!InvFotos.listo()) { const kpisEl = $('#inv-kpis', v); InvFotos.cargar().then(() => { if (kpisEl.isConnected) paint(); }); }
   $('[data-exp]', v).onclick = () => {
     const st = FILTROS.find(x => x[0] === F.stock);
-    const filtros = [F.q ? `búsqueda “${F.q}”` : '', st && st[0] !== '0' ? st[1].toLowerCase() : '', F.cat ? 'grupo ' + F.cat : '', F.marca ? 'marca ' + F.marca : ''].filter(Boolean).join(', ');
+    const filtros = [F.q ? `búsqueda “${F.q}”` : '', st && st[0] !== '0' ? st[1].toLowerCase() : '', F.tcat ? 'categoría ' + (F.tcat === '__sin' ? InvCat.SIN.toLowerCase() : F.tcat) + (F.tsub ? ' › ' + F.tsub : '') : '', F.cat ? 'grupo ' + F.cat : '', F.marca ? 'marca ' + F.marca : ''].filter(Boolean).join(', ');
     InvExport.abrir(rowsCache, invsCache, filtros);
   };
   paint();
