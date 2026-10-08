@@ -424,7 +424,7 @@
   .cat-card-flecha{ color:var(--azul); font-family:var(--sans); transition:transform .15s; }
   .cat-card:hover .cat-card-flecha{ transform:translateX(3px); }
 
-  /* Filtros técnicos de variadores */
+  /* Filtros técnicos de variadores (y de arrancadores suaves, mismas clases) */
   .vfd-panel{ background:var(--superficie); border:1px solid var(--linea); border-radius:var(--radio); margin:0 0 20px; }
   .vfd-panel > summary{ list-style:none; cursor:pointer; display:flex; align-items:center; gap:10px; padding:12px 14px; font-weight:600; color:var(--tinta); font-size:15px; }
   .vfd-panel > summary::-webkit-details-marker{ display:none; }
@@ -2524,6 +2524,13 @@ function render(lista){
     conectarPanelVfd();
   }
 
+  if (panelArrBase){
+    const pa = document.createElement('div');
+    pa.innerHTML = panelArrHTML(panelArrBase);
+    cont.appendChild(pa.firstChild);
+    conectarPanelArr();
+  }
+
   if (lista.length === 0){ empty.style.display = "block"; return; }
   empty.style.display = "none";
 
@@ -2885,6 +2892,239 @@ function conectarPanelVfd(){
 
 let panelVfdBase = null; // productos de la categoría Variadores antes de los filtros técnicos
 
+/* ---------- Filtros técnicos de arrancadores suaves ---------- */
+// Lee de la descripción de cada arrancador su corriente, rango de tensión de red,
+// potencia a 220 y 440 V, tipo de servicio y tensión de control.
+// Todos son trifásicos y casi todos multitensión: la tensión filtra por "sirve en esta red"
+// y la potencia se toma a la tensión elegida.
+const ARR_TENSIONES = [[220, '220 V'], [440, '440-480 V'], [575, '575-690 V']];
+const ARR_CONTROL = [[24, '24 V'], [115, '110-120 V'], [230, '220-230 V']];
+const ARR_SERVICIOS = [['normal', 'Normal (bombas, ventiladores)'], ['pesado', 'Pesado (molinos, trituradoras, compresores)']];
+const ARR_RANGOS = {
+  hp: [[0, 5], [5, 10], [10, 25], [25, 50], [50, 100], [100, 200], [200, 400], [400, Infinity]],
+  kw: [[0, 4], [4, 7.5], [7.5, 18.5], [18.5, 37], [37, 75], [75, 150], [150, 300], [300, Infinity]]
+};
+let filtrosArr = { tension: null, servicio: null, control: null, potencia: '', unidad: 'hp', amperios: '' };
+let panelArrAbierto = null; // null = según el ancho de pantalla
+
+// ¿El equipo sirve en esta tensión de red? (margen del 5 %: un equipo de 230-600 V sirve en 220 V)
+function cubreTensionArr(s, v){ return s.vmin != null && s.vmin <= v * 1.05 && s.vmax >= v * 0.98; }
+
+function esRutaArrancadores(ruta){ return ruta[0] === 'Variadores y Arrancadores' && ruta[1] === 'Arrancadores Suaves'; }
+
+function extraerSpecsArr(p){
+  const ruta = rutaDe(p);
+  if (!esRutaArrancadores(ruta)) return null;
+  const t = String(p.descripcion || '') + ' ' + String(p.nombre || '');
+  const modelo = String(p.modelo || '');
+  // Accesorios (módulos HMI y de comunicación, cables, kits): no son arrancadores.
+  if (ruta.indexOf('Accesorios') >= 0 || /^\s*(m[oó]dulo|cable|kit\b|accesorio)/i.test(t)) return null;
+  let m;
+
+  // Corriente nominal (A); en el ATS480 también la de servicio severo.
+  let a = null, aSev = null;
+  if ((m = t.match(/Corriente nominal normal\/severo \(A\):\s*([\d.,]+)\s*\/\s*([\d.,]+)/i))){ a = numVfd(m[1]); aSev = numVfd(m[2]); }
+  else if ((m = t.match(/Corriente nominal \(A\):\s*([\d.,]+)/i))) a = numVfd(m[1]);
+  else if ((m = t.match(/(\d+(?:[.,]\d+)?)\s*(?:A|amp)\b/i))) a = numVfd(m[1]);
+  if (a != null && a <= 0) a = null;
+
+  // Potencia (HP) a 220 y 440 V
+  let hp220 = null, hp440 = null, hp220s = null, hp440s = null;
+  const ponerHp = (volt, val, sev) => {
+    if (val == null || val <= 0) return;
+    if (volt <= 260){ if (sev) hp220s = val; else if (hp220 == null) hp220 = val; }
+    else { if (sev) hp440s = val; else if (hp440 == null) hp440 = val; }
+  };
+  const reSch = /Potencia (\d{3}) V[^:(]*\(HP\):\s*([\d.,]+)(?:\s*\/\s*([\d.,]+))?/gi;
+  while ((m = reSch.exec(t))){ ponerHp(+m[1], numVfd(m[2])); if (m[3]) ponerHp(+m[1], numVfd(m[3]), true); }
+  const reHp = /([\d.,]+)\s*Hp\s*(?:\(\s*|@\s*)(\d{3})/gi;           // Siemens: "75 Hp @220", "100 Hp ( 230 VAC )"
+  while ((m = reHp.exec(t))) ponerHp(+m[2], numVfd(m[1]));
+  if ((m = t.match(/valores con (\d{3}) V[\s\S]*?Est[aá]ndar:\s*[\d.,]+\s*A\s*([\d.,]+)\s*hp/i))) ponerHp(+m[1], numVfd(m[2]));
+  let vNom = null;
+  if ((m = t.match(/(\d{3})\s*VAC\s*\(-\s*10/i))) vNom = +m[1];   // Nordic: "D: 220VAC (-10% + 15%)"
+  if (vNom && (m = t.match(/\b([\d.,]+)\s*HP\b/i))) ponerHp(vNom, numVfd(m[1]));
+  if (hp440 == null && (m = t.match(/([\d.,]+)\s*kW\s*\/\s*400\s*V/i))) hp440 = Math.round(numVfd(m[1]) * 1.341 * 10) / 10;
+
+  // Rango de tensión de red
+  let vmin = null, vmax = null;
+  if ((m = t.match(/\((\d{3})\s*VAC\s*-\s*(\d{3})\s*VAC\)/i))){ vmin = +m[1]; vmax = +m[2]; }
+  else {
+    const reR = /(\d{2,3})\s*(?:-|hasta)\s*(\d{3})\b/gi;
+    while ((m = reR.exec(t))){ if (+m[1] >= 190){ vmin = +m[1]; vmax = +m[2]; break; } }
+  }
+  if (vmin == null && (hp220 != null && hp440 != null)){ vmin = 200; vmax = 480; }
+  if (vmin == null && /siemens/i.test(p.marca || '') && /^3RW/i.test(modelo)){ vmin = 200; vmax = 480; }
+  if (vmin == null && vNom){ vmin = vNom; vmax = vNom; }
+
+  // Sin dato, se estima con corrientes típicas de motor (≈2,8 A/HP a 220 V, ≈1,25 A/HP a 460 V).
+  if (hp220 == null && a != null && vmin != null && vmin <= 230) hp220 = Math.round(a / 2.8 * 10) / 10;
+  if (hp440 == null && a != null && vmax != null && vmax >= 440) hp440 = Math.round(a / 1.25 * 10) / 10;
+  if (a == null && hp440 != null) a = Math.round(hp440 * 1.25);
+  if (a == null && hp220 != null) a = Math.round(hp220 * 2.8);
+
+  // Tensión de control
+  const control = new Set();
+  const ponerCtrl = (lo, hi) => {
+    if (hi == null) hi = lo;
+    if (lo <= 24) control.add(24);
+    if (lo <= 125 && hi >= 110) control.add(115);
+    if (lo <= 240 && hi >= 200) control.add(230);
+  };
+  const reC = /(?:control(?:\s+de)?|AC\/DC)\s*:?\s*(\d{2,3})(?:\s*(?:-|hasta)\s*(\d{3}))?\s*V/gi;
+  while ((m = reC.exec(t))) ponerCtrl(+m[1], m[2] ? +m[2] : null);
+  if (!control.size){
+    const reR = /(\d{2,3})\s*(?:-|hasta)\s*(\d{3})\s*V/gi;
+    while ((m = reR.exec(t))) if (+m[1] < 190) ponerCtrl(+m[1], +m[2]);
+  }
+  if (!control.size && (m = t.match(/V\s*AC\s+(\d{2,3})\s*V\s*AC\s*bornes/i))) ponerCtrl(+m[1]);
+
+  // Tipo de servicio
+  const tl = (ruta.join(' ') + ' ' + modelo + ' ' + t).toLowerCase();
+  const servicio = /ats480|normal\/severo/.test(tl) ? ['normal', 'pesado']
+                 : (/arranque pesado|3rw44|3rw55/.test(tl) ? ['pesado'] : ['normal']);
+
+  if (a == null && hp220 == null && hp440 == null && vmin == null) return null;
+  return { a: a, aSev: aSev, hp220: hp220, hp440: hp440, hp220s: hp220s, hp440s: hp440s,
+           vmin: vmin, vmax: vmax, control: control, servicio: servicio };
+}
+
+const _cacheArr = new WeakMap();
+function specsArr(p){
+  if (!_cacheArr.has(p)) _cacheArr.set(p, extraerSpecsArr(p));
+  return _cacheArr.get(p);
+}
+
+// Valores según el servicio elegido (el ATS480 tiene datos propios para servicio severo).
+function valoresArr(s, servicio){
+  const sev = servicio === 'pesado';
+  return {
+    a: sev && s.aSev != null ? s.aSev : s.a,
+    hp220: sev && s.hp220s != null ? s.hp220s : s.hp220,
+    hp440: sev && s.hp440s != null ? s.hp440s : s.hp440
+  };
+}
+
+function pasaFiltroArr(p, omitir){
+  const f = filtrosArr;
+  const activos = f.tension || f.servicio || f.control || f.potencia !== '' || f.amperios !== '';
+  if (!activos) return true;
+  const s = specsArr(p);
+  if (!s) return false; // con filtros técnicos activos, los accesorios salen
+  if (omitir !== 'tension' && f.tension && !cubreTensionArr(s, f.tension)) return false;
+  if (omitir !== 'servicio' && f.servicio && s.servicio.indexOf(f.servicio) < 0) return false;
+  if (omitir !== 'control' && f.control && !s.control.has(f.control)) return false;
+  const v = valoresArr(s, f.servicio);
+  if (f.potencia !== ''){
+    const r = ARR_RANGOS[f.unidad][+f.potencia];
+    const enRango = hp => {
+      if (hp == null) return false;
+      const val = f.unidad === 'hp' ? hp : hp * 0.746;
+      return val > r[0] && val <= r[1];
+    };
+    const ok = !r ? false
+      : f.tension === 220 ? enRango(v.hp220)
+      : f.tension ? enRango(v.hp440)          // 440-480 V y 575-690 V (en 575 V la potencia real es algo mayor)
+      : (enRango(v.hp220) || enRango(v.hp440));
+    if (!ok) return false;
+  }
+  if (f.amperios !== ''){
+    const minA = parseFloat(String(f.amperios).replace(',', '.'));
+    if (!isNaN(minA) && !(v.a != null && v.a >= minA)) return false;
+  }
+  return true;
+}
+
+function filtrosArrActivos(){
+  const f = filtrosArr;
+  return [f.tension, f.servicio, f.control].filter(x => x !== null).length + (f.potencia !== '' ? 1 : 0) + (f.amperios !== '' ? 1 : 0);
+}
+
+// Panel de filtros técnicos. `base` = productos de la categoría antes de estos filtros.
+function panelArrHTML(base){
+  const f = filtrosArr;
+  const cuenta = (campo, val) => base.filter(p => {
+    if (!pasaFiltroArr(p, campo)) return false;
+    const s = specsArr(p);
+    if (!s) return false;
+    if (campo === 'tension') return cubreTensionArr(s, val);
+    if (campo === 'control') return s.control.has(val);
+    return s.servicio.indexOf(val) >= 0;
+  }).length;
+  const chip = (campo, val, etiqueta) => {
+    const n = cuenta(campo, val);
+    const on = f[campo] === val;
+    if (!n && !on) return '';
+    return '<button type="button" class="vfd-chip' + (on ? ' on' : '') + '" data-campo="' + campo + '" data-val="' + val + '">' +
+      etiqueta + ' <span class="vfd-n">' + n + '</span></button>';
+  };
+  const R = ARR_RANGOS[f.unidad], u = f.unidad === 'hp' ? 'HP' : 'kW';
+  const opciones = R.map((r, i) => {
+    const txt = r[1] === Infinity ? 'Más de ' + fmtNumVfd(r[0]) : (r[0] === 0 ? 'Hasta ' + fmtNumVfd(r[1]) : fmtNumVfd(r[0]) + ' a ' + fmtNumVfd(r[1]));
+    return '<option value="' + i + '"' + (String(f.potencia) === String(i) ? ' selected' : '') + '>' + txt + ' ' + u + '</option>';
+  }).join('');
+  const ayudaPot = f.tension === 220 ? 'Potencia a 220 V' : f.tension ? 'Potencia a 440-480 V' : 'Elige la tensión de red para mayor precisión';
+  const nAct = filtrosArrActivos();
+  const abierto = panelArrAbierto === null ? window.innerWidth > 760 || nAct > 0 : panelArrAbierto;
+  return '<details class="vfd-panel" id="arr-panel"' + (abierto ? ' open' : '') + '>' +
+    '<summary><span>Filtros técnicos de arrancadores</span>' + (nAct ? '<span class="vfd-act">' + nAct + ' activo' + (nAct > 1 ? 's' : '') + '</span>' : '') + '</summary>' +
+    '<div class="vfd-cuerpo">' +
+      '<div class="vfd-grupo"><div class="vfd-tit">Corriente del motor (A)</div>' +
+        '<input id="arr-amperios" type="number" min="0" step="0.1" inputmode="decimal" placeholder="Ej. 32" value="' + (f.amperios || '') + '">' +
+        '<div class="vfd-ayuda">Muestra equipos con corriente nominal igual o mayor</div></div>' +
+      '<div class="vfd-grupo"><div class="vfd-tit">Tensión de la red</div><div class="vfd-chips">' +
+        ARR_TENSIONES.map(x => chip('tension', x[0], x[1])).join('') + '</div></div>' +
+      '<div class="vfd-grupo"><div class="vfd-tit">Potencia del motor ' +
+        '<span class="vfd-unidad"><button type="button" data-unidad="hp" class="' + (f.unidad === 'hp' ? 'on' : '') + '">HP</button>' +
+        '<button type="button" data-unidad="kw" class="' + (f.unidad === 'kw' ? 'on' : '') + '">kW</button></span></div>' +
+        '<select id="arr-potencia" aria-label="Potencia del motor"><option value="">Cualquier potencia</option>' + opciones + '</select>' +
+        '<div class="vfd-ayuda">' + ayudaPot + '</div></div>' +
+      '<div class="vfd-grupo"><div class="vfd-tit">Tensión de control</div><div class="vfd-chips">' +
+        ARR_CONTROL.map(x => chip('control', x[0], x[1])).join('') + '</div></div>' +
+      '<div class="vfd-grupo vfd-ancho"><div class="vfd-tit">Tipo de servicio</div><div class="vfd-chips">' +
+        ARR_SERVICIOS.map(x => chip('servicio', x[0], x[1])).join('') + '</div></div>' +
+      (nAct ? '<button type="button" class="vfd-limpiar" id="arr-limpiar">Limpiar filtros técnicos</button>' : '') +
+    '</div></details>';
+}
+
+function conectarPanelArr(){
+  const panel = document.getElementById('arr-panel');
+  if (!panel) return;
+  panel.addEventListener('toggle', () => { panelArrAbierto = panel.open; });
+  panel.querySelectorAll('.vfd-chip').forEach(b => b.addEventListener('click', () => {
+    const campo = b.dataset.campo, val = campo === 'servicio' ? b.dataset.val : +b.dataset.val;
+    filtrosArr[campo] = filtrosArr[campo] === val ? null : val;
+    aplicarFiltros();
+  }));
+  panel.querySelectorAll('.vfd-unidad button').forEach(b => b.addEventListener('click', (e) => {
+    e.preventDefault();
+    if (filtrosArr.unidad === b.dataset.unidad) return;
+    filtrosArr.unidad = b.dataset.unidad; filtrosArr.potencia = '';
+    aplicarFiltros();
+  }));
+  const sel = document.getElementById('arr-potencia');
+  if (sel) sel.addEventListener('change', () => { filtrosArr.potencia = sel.value; aplicarFiltros(); });
+  const amp = document.getElementById('arr-amperios');
+  if (amp){
+    let t = null;
+    amp.addEventListener('input', () => {
+      clearTimeout(t);
+      t = setTimeout(() => {
+        filtrosArr.amperios = amp.value.trim();
+        aplicarFiltros();
+        const nuevo = document.getElementById('arr-amperios');
+        if (nuevo){ nuevo.focus(); const l = nuevo.value.length; try { nuevo.setSelectionRange(l, l); } catch(e){} }
+      }, 450);
+    });
+  }
+  const limpiar = document.getElementById('arr-limpiar');
+  if (limpiar) limpiar.addEventListener('click', () => {
+    filtrosArr = { tension: null, servicio: null, control: null, potencia: '', unidad: filtrosArr.unidad, amperios: '' };
+    aplicarFiltros();
+  });
+}
+
+let panelArrBase = null; // productos de la categoría Arrancadores Suaves antes de los filtros técnicos
+
 /* ---------- Filtros ---------- */
 function aplicarFiltros(){
   const texto = document.getElementById('buscador').value.trim().toLowerCase();
@@ -2911,7 +3151,11 @@ function aplicarFiltros(){
 
   // En la categoría Variadores de Frecuencia se muestran los filtros técnicos.
   panelVfdBase = (!hayBusqueda && esRutaVariadores(seleccion)) ? filtrados : null;
-  render(panelVfdBase ? filtrados.filter(p => pasaFiltroVfd(p)) : filtrados);
+  // En la categoría Arrancadores Suaves se muestran los filtros técnicos de arrancadores.
+  panelArrBase = (!hayBusqueda && esRutaArrancadores(seleccion)) ? filtrados : null;
+  render(panelVfdBase ? filtrados.filter(p => pasaFiltroVfd(p))
+       : panelArrBase ? filtrados.filter(p => pasaFiltroArr(p))
+       : filtrados);
 }
 
 /* ---------- Sugerencias del buscador (autocompletar) ---------- */
