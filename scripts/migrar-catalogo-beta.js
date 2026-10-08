@@ -80,45 +80,9 @@ function serieDe(categoria, resto){
 }
 
 /* ---------- 5. Atributos técnicos ---------- */
-const ATRIBUTOS = {   // clave: [nombre, tipo, unidad]
-  serie:            ['Serie', 'lista', null],
-  potencia_kw:      ['Potencia', 'numero', 'kW'],
-  potencia_hp:      ['Potencia', 'numero', 'HP'],
-  tension_v:        ['Tensión de alimentación', 'numero', 'V'],
-  fases:            ['Fases de entrada', 'numero', null],
-  corriente_a:      ['Corriente nominal', 'numero', 'A'],
-  aplicacion:       ['Tipo de uso', 'lista', null],
-  corriente_ac3_a:  ['Corriente AC3', 'numero', 'A'],
-  bobina:           ['Tensión de bobina', 'lista', null],
-  polos:            ['Polos', 'numero', null],
-  contactos_aux:    ['Contactos auxiliares', 'lista', null],
-  tamano:           ['Tamaño', 'lista', null],
-  ajuste_a:         ['Rango de ajuste', 'rango', 'A'],
-  clase:            ['Clase de disparo', 'lista', null],
-  curva:            ['Curva', 'lista', null],
-  poder_corte_ka:   ['Poder de corte', 'numero', 'kA'],
-  disparador:       ['Disparador', 'lista', null],
-  tipo_sensor:      ['Tipo de sensor', 'lista', null],
-  rosca:            ['Rosca', 'lista', null],
-  salida:           ['Salida', 'lista', null],
-  distancia_mm:     ['Distancia de detección', 'numero', 'mm'],
-  conexion:         ['Conexión', 'lista', null],
-};
-// Filtros por categoría, en orden. [clave, obligatorio, define_variante]
-// Variadores y Arrancadores ya tienen sus propios filtros en la tienda: aquí solo se guardan los datos.
-const FILTROS = {
-  'Variadores de Frecuencia':    [['potencia_kw', true], ['potencia_hp'], ['tension_v', true], ['fases'], ['corriente_a'], ['aplicacion'], ['serie']],
-  'Arrancadores Suaves':         [['corriente_a', true], ['serie']],
-  'Contactores':                 [['corriente_ac3_a', true], ['bobina', true, true], ['polos'], ['contactos_aux'], ['tamano'], ['serie']],
-  'Guardamotores':               [['ajuste_a', true, true], ['tamano'], ['serie']],
-  'Relés de Sobrecarga':         [['ajuste_a', true, true], ['clase'], ['tamano'], ['serie']],
-  'Breakers Automáticos':        [['corriente_a', true], ['polos', true], ['curva'], ['poder_corte_ka'], ['serie']],
-  'Breakers en Caja Moldeada':   [['corriente_a', true], ['polos', true], ['poder_corte_ka'], ['disparador'], ['serie']],
-  'Sensores de Proximidad':      [['tipo_sensor', true], ['rosca'], ['salida'], ['distancia_mm'], ['conexion']],
-  'Relés de Supervisión y Control': [['serie']],
-  'PLC Básicos': [['serie']], 'PLC Avanzados': [['serie']], 'Paneles HMI': [['serie']],
-  'Fuentes de Alimentación': [['serie']], 'Pulsadores y Pilotos': [['serie']],
-};
+// Los atributos y los filtros de cada categoría viven en scripts/atributos-catalogo.js
+// (los usa también scripts/recalcular-atributos-beta.js).
+const { ATRIBUTOS, FILTROS, atributosExtra, unirSpecs } = require('./atributos-catalogo');
 
 function bobinaNorm(v, tipo){
   v = Number(v); tipo = /dc|cc/i.test(tipo || '') ? 'DC' : 'AC';
@@ -246,7 +210,7 @@ for (const p of productos){
   // Se respetan TODAS las subcategorías originales de la tienda (series, tamaños, marcas…)
   const catRuta = addCategoria(ruta.length >= 2 ? ruta : [familia, categoria]);
   const serie = serieDe(categoria, resto);
-  const specs = atributosDe(p, categoria, sub, resto, serie);
+  const specs = unirSpecs(atributosDe(p, categoria, sub, resto, serie), atributosExtra(p, categoria, resto));
   const marca = marcaLimpia(p.marca);
 
   // ¿variante de una serie con bobina?

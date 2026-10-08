@@ -1176,6 +1176,8 @@
     .mega-grid{ grid-template-columns:1fr; }
   }
   .vfd-chip.fac-cero{ opacity:.45; }
+  .vfd-chip.fac-logo{ display:inline-flex; align-items:center; gap:6px; padding:4px 10px; }
+  .vfd-chip.fac-logo img{ height:18px; width:auto; max-width:84px; object-fit:contain; }
   .vfd-chip.fac-extra{ display:none; }
   .fac-mas{ font:inherit; font-size:13px; border:none; background:none; color:var(--azul-texto); font-weight:600; cursor:pointer; padding:6px 4px; }
   .var-badge{ display:inline-block; margin:4px 0 2px; font-size:12px; font-weight:600; color:var(--azul-texto); background:var(--azul-suave); border-radius:12px; padding:3px 9px; }
@@ -3257,7 +3259,8 @@ const FAC_MARCA = { clave: 'marca', nombre: 'Marca', tipo: 'lista' };
 const FAC_VISIBLES = 14;
 
 function defsFacDe(sel){
-  if (!catalogoBeta || sel.length < 2) return null;
+  if (!catalogoBeta) return null;
+  if (sel.length < 2) return [];   // familia o todo el catálogo: solo marca
   for (let n = sel.length; n >= 2; n--){   // la subcategoría más cercana con filtros propios manda
     const k = sel.slice(0, n).map(slugFac).join('/');
     if (FILTROS_BETA[k]) return FILTROS_BETA[k];
@@ -3277,9 +3280,48 @@ function pasaFac(p, omitir){
     }
     if (!v || !v.length) continue;
     const pv = valorFac(p, k);
-    if (pv == null || !v.some(x => String(x) === String(pv))) return false;
+    if (pv == null || !v.some(x => coincideValorFac(x, pv))) return false;
   }
   return true;
+}
+// Una opción es un valor exacto o un tramo "a~b" (más de a, hasta b) de un atributo numérico.
+function coincideValorFac(x, pv){
+  x = String(x);
+  const i = x.indexOf('~');
+  if (i < 0) return x === String(pv);
+  const n = Number(pv), a = x.slice(0, i), b = x.slice(i + 1);
+  if (isNaN(n)) return false;
+  return (a === '' || n > Number(a)) && (b === '' || n <= Number(b));
+}
+// Tramos redondos para atributos numéricos con muchos valores distintos (amperios, HP, distancia…)
+const FAC_MAX_EXACTOS = 16;
+function redondoFac(v){
+  if (v <= 0) return 0;
+  const e = Math.pow(10, Math.floor(Math.log10(v))), m = v / e;
+  const r = [1, 1.5, 2, 2.5, 3, 4, 5, 6, 7.5, 8, 10].find(x => x >= m - 1e-9) || 10;
+  return Math.round(r * e * 1000) / 1000;
+}
+function tramosFac(valores){
+  const ord = valores.map(Number).filter(n => !isNaN(n)).sort((a, b) => a - b);
+  if (!ord.length) return [];
+  const cortes = [];
+  const partes = Math.min(7, Math.max(4, Math.round(ord.length / 15)));
+  for (let i = 1; i < partes; i++){
+    const c = redondoFac(ord[Math.floor(i * ord.length / partes) - 1]);
+    if (c > 0 && c < ord[ord.length - 1] && !cortes.includes(c) && (!cortes.length || c > cortes[cortes.length - 1])) cortes.push(c);
+  }
+  const t = [];
+  let ant = '';
+  for (const c of cortes){ t.push(ant + '~' + c); ant = String(c); }
+  t.push(ant + '~');
+  return t;
+}
+function etiquetaTramoFac(def, x){
+  const i = x.indexOf('~'), a = x.slice(0, i), b = x.slice(i + 1), u = def.unidad ? ' ' + def.unidad : '';
+  const f = n => Number(n).toLocaleString('es-VE');
+  if (a === '') return 'Hasta ' + f(b) + u;
+  if (b === '') return 'Más de ' + f(a) + u;
+  return 'Más de ' + f(a) + ' a ' + f(b) + u;
 }
 function nActFac(){ return Object.keys(filtrosFac).filter(k => k.indexOf('cubre:') === 0 ? filtrosFac[k] != null : (filtrosFac[k] || []).length).length; }
 function etiquetaFac(def, v){
@@ -3312,34 +3354,43 @@ function panelFacHTML(base, defs){
         '<div class="vfd-ayuda">Muestra los que la cubren dentro de su ' + escHtml(def.nombre.toLowerCase()) + '</div></div>');
       continue;
     }
-    const cuenta = new Map();
+    const elegidos = (filtrosFac[def.clave] || []).map(String);
+    // ¿Muchos valores numéricos distintos? Entonces tramos ("Más de 18 a 25 A") en vez de cada valor.
+    const todos = new Set(), conRepetidos = [];
+    for (const p of base){ const v = valorFac(p, def.clave); if (v != null && v !== ''){ todos.add(String(v)); conRepetidos.push(v); } }
+    const usaTramos = def.tipo === 'numero' && (todos.size > FAC_MAX_EXACTOS || elegidos.some(x => x.indexOf('~') >= 0));
+    const opciones = usaTramos ? tramosFac(conRepetidos) : [...todos];
+    elegidos.forEach(x => { if (!opciones.includes(x)) opciones.push(x); });   // lo elegido siempre se ve
+    const cuenta = new Map(opciones.map(o => [o, 0]));
     for (const p of base){
       if (!pasaFac(p, def.clave)) continue;
       const v = valorFac(p, def.clave);
       if (v == null || v === '') continue;
-      cuenta.set(String(v), (cuenta.get(String(v)) || 0) + 1);
+      for (const o of opciones) if (coincideValorFac(o, v)){ cuenta.set(o, cuenta.get(o) + 1); if (!usaTramos) break; }
     }
-    const elegidos = (filtrosFac[def.clave] || []).map(String);
-    // las opciones de toda la categoría, aunque den 0 con los otros filtros (salen en gris)
-    for (const p of base){ const v = valorFac(p, def.clave); if (v != null && v !== '' && !cuenta.has(String(v))) cuenta.set(String(v), 0); }
     if (cuenta.size < 2 && !elegidos.length) continue;
-    const vals = [...cuenta.keys()].sort((a, b) =>
+    const vals = usaTramos ? opciones : [...cuenta.keys()].sort((a, b) =>
       (cuenta.get(b) ? 1 : 0) - (cuenta.get(a) ? 1 : 0) ||
       (def.tipo === 'numero' ? Number(a) - Number(b) : a.localeCompare(b, 'es', { numeric: true })));
+    const esMarca = def.clave === 'marca';
     const chips = vals.map((v, i) => {
       const on = elegidos.includes(v), n = cuenta.get(v);
-      return '<button type="button" class="vfd-chip' + (on ? ' on' : '') + (n || on ? '' : ' fac-cero') + (i >= FAC_VISIBLES && !on ? ' fac-extra' : '') +
-        '" data-clave="' + escHtml(def.clave) + '" data-val="' + escHtml(v) + '">' + escHtml(etiquetaFac(def, v)) + ' <span class="vfd-n">' + n + '</span></button>';
+      const logo = esMarca ? logoDeMarca(v) : null;
+      const txt = logo ? '<img src="' + logo + '" alt="' + escHtml(v) + '" loading="lazy">'
+        : escHtml(esMarca ? (v === 'SIN MARCA' ? 'Otras marcas' : nombreMarca(v)) : usaTramos ? etiquetaTramoFac(def, v) : etiquetaFac(def, v));
+      return '<button type="button" class="vfd-chip' + (logo ? ' fac-logo' : '') + (on ? ' on' : '') + (n || on ? '' : ' fac-cero') + (i >= FAC_VISIBLES && !on ? ' fac-extra' : '') +
+        '" data-clave="' + escHtml(def.clave) + '" data-val="' + escHtml(v) + '" title="' + escHtml(esMarca ? nombreMarca(v) : '') + '">' + txt + ' <span class="vfd-n">' + n + '</span></button>';
     }).join('');
     const mas = vals.length > FAC_VISIBLES ? '<button type="button" class="fac-mas">Ver ' + (vals.length - FAC_VISIBLES) + ' más</button>' : '';
-    grupos.push('<div class="vfd-grupo' + (vals.length > 8 ? ' vfd-ancho' : '') + '"><div class="vfd-tit">' + escHtml(def.nombre) +
-      (def.tipo === 'numero' && def.unidad ? ' (' + escHtml(def.unidad) + ')' : '') + '</div><div class="vfd-chips">' + chips + mas + '</div></div>');
+    grupos.push('<div class="vfd-grupo' + (vals.length > 8 || esMarca ? ' vfd-ancho' : '') + '"><div class="vfd-tit">' + escHtml(def.nombre) +
+      (def.tipo === 'numero' && def.unidad && !usaTramos ? ' (' + escHtml(def.unidad) + ')' : '') + '</div><div class="vfd-chips">' + chips + mas + '</div></div>');
   }
   if (!grupos.length) return '';
+  const soloMarca = grupos.length === 1 && grupos[0].indexOf('data-clave="marca"') >= 0;
   const nAct = nActFac();
   const abierto = panelFacAbierto === null ? window.innerWidth > 760 || nAct > 0 : panelFacAbierto;
   return '<details class="vfd-panel fac-panel" id="fac-panel"' + (abierto ? ' open' : '') + '>' +
-    '<summary><span>Filtrar por especificación</span>' + (nAct ? '<span class="vfd-act">' + nAct + ' activo' + (nAct > 1 ? 's' : '') + '</span>' : '') + '</summary>' +
+    '<summary><span>' + (soloMarca ? 'Filtrar por marca' : 'Filtrar por especificación y marca') + '</span>' + (nAct ? '<span class="vfd-act">' + nAct + ' activo' + (nAct > 1 ? 's' : '') + '</span>' : '') + '</summary>' +
     '<div class="vfd-cuerpo">' + grupos.join('') +
     (nAct ? '<button type="button" class="vfd-limpiar" id="fac-limpiar">Limpiar filtros</button>' : '') + '</div></details>';
 }
@@ -3543,14 +3594,19 @@ function aplicarFiltros(){
   // En la categoría Arrancadores Suaves se muestran los filtros técnicos de arrancadores.
   panelArrBase = (!hayBusqueda && esRutaArrancadores(seleccion)) ? filtrados : null;
   // Filtros por especificación del catálogo único (se reinician al cambiar de categoría)
-  const claveFac = seleccion.slice(0, 2).join('|||');
+  // En variadores, arrancadores y al buscar, el panel solo trae la marca (los técnicos van en su panel).
+  const claveFac = (hayBusqueda ? 'q|' : '') + seleccion.slice(0, 2).join('|||');
   if (claveFac !== facClaveRuta){ filtrosFac = {}; facClaveRuta = claveFac; }
-  panelFacDefs = (!hayBusqueda && !panelVfdBase && !panelArrBase) ? defsFacDe(seleccion) : null;
-  panelFacBase = panelFacDefs ? filtrados : null;
-  let lista = panelVfdBase ? filtrados.filter(p => pasaFiltroVfd(p))
+  panelFacDefs = catalogoBeta ? ((hayBusqueda || panelVfdBase || panelArrBase) ? [] : defsFacDe(seleccion)) : null;
+  const conTecnicos = panelVfdBase ? filtrados.filter(p => pasaFiltroVfd(p))
        : panelArrBase ? filtrados.filter(p => pasaFiltroArr(p))
        : filtrados;
-  if (panelFacBase) lista = lista.filter(p => pasaFac(p));
+  panelFacBase = panelFacDefs ? conTecnicos : null;   // la marca cuenta con los filtros técnicos puestos…
+  if (panelFacDefs){                                 // …y los técnicos cuentan con la marca puesta
+    if (panelVfdBase) panelVfdBase = panelVfdBase.filter(p => pasaFac(p));
+    if (panelArrBase) panelArrBase = panelArrBase.filter(p => pasaFac(p));
+  }
+  const lista = panelFacBase ? conTecnicos.filter(p => pasaFac(p)) : conTecnicos;
   render(agruparVariantes(lista));
 }
 
