@@ -471,6 +471,17 @@ main.view{max-width:1760px}
   table.tbl.apilable td[data-label]:not(:first-child):not(.sel-c + td):not(:empty)::before{content:attr(data-label);display:block;font-size:12.5px;color:var(--muted);font-weight:600;margin-bottom:1px}
   table.tbl.apilable tbody tr.sel{outline:2px solid var(--steel)}
 }
+/* tamaño de letra elegido por cada quien (A− / A+) */
+.view:not(.full),.ov>.md{zoom:var(--letra,1)}
+.letra{display:flex;align-items:center;gap:3px;padding:8px 12px;border-top:1px solid rgba(255,255,255,.08)}
+.letra button{background:transparent;border:1px solid rgba(255,255,255,.2);color:var(--plate-ink);border-radius:7px;padding:3px 0;min-width:36px;font:inherit;font-size:14px;font-weight:700;line-height:1.3;cursor:pointer}
+.letra button:hover{background:rgba(255,255,255,.1)}
+.letra button[data-letra-val]{flex:1;border-color:transparent;font-size:13px;font-weight:600;color:var(--plate-mute)}
+body.gen .letra{flex-direction:column;padding:8px 8px;gap:4px}
+body.gen .letra button{width:100%;min-width:0}
+.mbar .letra{border:0;padding:0;margin-left:4px;gap:4px}
+.mbar .letra button{color:#fff;min-width:34px;padding:4px 0}
+.mbar .letra button[data-letra-val]{display:none}
 </style>
 </head>
 <body>
@@ -515,6 +526,33 @@ const normKey = (s) => normTxt(s).replace(/[^a-z0-9]/g, '');
 const debounce = (fn, ms) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
 const lsGet = (k, d) => { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } };
 const lsSet = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* sin espacio */ } };
+/* Tamaño de letra: cada quien lo ajusta (A− / A+) y queda guardado en su equipo.
+   Se aplica a Gestión y a los controles del generador; la hoja del PDF no cambia. */
+const Letra = (() => {
+  const K = 'suin_letra', MIN = 0.8, MAX = 1.4;
+  const docs = new Set([document]);
+  const clamp = (z) => Math.round(Math.min(MAX, Math.max(MIN, z)) * 20) / 20;
+  const get = () => { const v = Number(lsGet(K, 1)); return isFinite(v) && v > 0 ? clamp(v) : 1; };
+  const pct = () => Math.round(get() * 100) + '%';
+  const paint = () => {
+    const z = get();
+    docs.forEach(d => {
+      try {
+        if (!d.defaultView) { docs.delete(d); return; }
+        d.documentElement.style.setProperty('--letra', z);
+        d.querySelectorAll('[data-letra-val]').forEach(e => { e.textContent = pct(); });
+        d.dispatchEvent(new d.defaultView.CustomEvent('suin:letra'));
+      } catch (e) { docs.delete(d); }
+    });
+  };
+  const set = (z) => { lsSet(K, clamp(z)); paint(); };
+  const html = (cls = '') => `<div class="letra ${cls}" role="group" aria-label="Tamaño de letra"><button type="button" data-letra="-1" title="Letra más pequeña">A−</button><button type="button" data-letra="0" data-letra-val title="Volver al tamaño normal">${pct()}</button><button type="button" data-letra="1" title="Letra más grande">A+</button></div>`;
+  const wire = (root) => root.querySelectorAll('[data-letra]').forEach(b => { b.onclick = (ev) => { ev.preventDefault(); const d = +b.dataset.letra; set(d ? get() + d * 0.05 : 1); }; });
+  const attach = (d) => { docs.add(d); paint(); };
+  window.addEventListener('storage', (e) => { if (e.key === K) paint(); });
+  paint();
+  return { get, set, html, wire, attach, paint };
+})();
 const clone = (o) => JSON.parse(JSON.stringify(o));
 const normRif = (s) => {
   const str = String(s || '').toUpperCase();
@@ -1429,9 +1467,10 @@ const App = {
           <div class="apps" aria-label="Apps de Suinelectric"><a href="/tienda" target="_blank" rel="noopener" title="Abrir la tienda"><svg viewBox="0 0 24 24"><path d="M4 9h16l-1.5 11h-13z"/><path d="M8 9V7a4 4 0 0 1 8 0v2"/></svg>Tienda</a><a href="/admin" title="Panel web: pedidos, clientes y estadísticas de la tienda"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>Panel web</a><a class="on" aria-current="page" title="Gestión: ofertas, ventas, compras e inventario"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Gestión</a></div>
           <nav class="nav">${navHtml}</nav>
           <div class="sync" id="sync-d"><i></i><span></span><button type="button" data-sync title="Sincronizar ahora">${'↻'}</button></div>
+          ${Letra.html()}
         </aside>
         <div style="min-width:0">
-          <div class="mbar"><img src="${DEFAULT_LOGO}" alt=""><b>Suinelectric</b><div class="sync" id="sync-m"><i></i><span></span></div></div>
+          <div class="mbar"><img src="${DEFAULT_LOGO}" alt=""><b>Suinelectric</b><div class="sync" id="sync-m"><i></i><span></span></div>${Letra.html()}</div>
           <main class="view" id="view"></main>
         </div>
       </div>
@@ -1444,6 +1483,7 @@ const App = {
       </nav>`;
     $$('[data-sync]').forEach(b => b.onclick = () => { if (!Sync.online()) { Route.nav('#/ajustes/conexion'); return; } Sync.run(); });
     $('[data-new]').onclick = () => App.newMenu();
+    Letra.wire($('#root'));
     $('[data-more]').onclick = () => {
       const m = UI.modal({ title: 'Ir a', foot: false, body: `<div class="stack">${NAV.map(([id, label, ic]) => `<a class="btn" style="justify-content:flex-start" href="#/${id}">${ico(ic)} ${label}</a>`).join('')}<div class="muted small" style="margin-top:6px">Otras apps</div><a class="btn" style="justify-content:flex-start" href="/admin">${ico('gear')} Panel web</a><a class="btn" style="justify-content:flex-start" href="/tienda" target="_blank" rel="noopener">${ico('box')} Tienda ↗</a></div>` });
       $$('a', m.body).forEach(a => a.addEventListener('click', () => m.close()));
@@ -4640,6 +4680,405 @@ const Cot = (() => {
   .m-total-strip .usd{font-size:22px!important}
   .m-h{font-size:23px!important}
   `;
+  /* Catálogo compacto: más resultados a la vista (va después de LEER_CSS y GEN_CSS y les gana) */
+  const CAT_CSS = `
+  html body:not(.is-mobile) .catalog-panel{padding:10px 12px!important;border-radius:12px}
+  html body:not(.is-mobile) .catalog-panel-header{margin-bottom:6px!important;gap:4px 8px!important}
+  html body:not(.is-mobile) .catalog-panel-title{font-size:13.5px!important}
+  html body:not(.is-mobile) .catalog-meta,html body:not(.is-mobile) .catalog-sync-status,html body:not(.is-mobile) .catalog-hint{font-size:12px!important}
+  html body:not(.is-mobile) .catalog-search-row{gap:5px!important}
+  html body:not(.is-mobile) #catalog-search{box-sizing:border-box!important;font-size:15px!important;min-height:36px!important;padding:6px 10px!important;border-radius:8px!important}
+  html body:not(.is-mobile) #catalog-brand-filter,html body:not(.is-mobile) .catalog-btn,html body:not(.is-mobile) .catalog-desc{box-sizing:border-box!important;font-size:12.5px!important;min-height:30px!important;padding:3px 9px!important;border-width:1.5px!important;border-radius:7px!important}
+  html body:not(.is-mobile) .catalog-desc input{width:38px}
+  html body:not(.is-mobile) .catalog-sync-status{margin-top:4px!important}
+  html body:not(.is-mobile) .catalog-results{margin-top:6px!important}
+  html body:not(.is-mobile) .catalog-hint{padding:10px 4px!important}
+  html body:not(.is-mobile) .catalog-result-row{font-size:12.5px!important;padding:4px 6px!important;gap:8px!important;line-height:1.25}
+  html body:not(.is-mobile) .catalog-result-row.is-inv{box-shadow:inset 3px 0 0 #15803D}
+  html body:not(.is-mobile) .catalog-result-row .cr-main{display:flex;flex-wrap:wrap;align-items:center;column-gap:6px;row-gap:1px}
+  html body:not(.is-mobile) .catalog-result-row .cr-main > .stk-row{order:2;margin:0!important}
+  html body:not(.is-mobile) .catalog-result-row .cr-main > .cr-desc{order:3;flex:1 1 100%;min-width:0}
+  html body:not(.is-mobile) .catalog-result-row .cr-main > .cr-stock{order:4}
+  html body:not(.is-mobile) #catalog-brand-filter{max-width:170px}
+  html body:not(.is-mobile) .cr-model{font-size:14px!important;letter-spacing:0!important}
+  html body:not(.is-mobile) .cr-brand{font-size:10.5px!important;padding:0 5px!important;margin-left:5px!important}
+  html body:not(.is-mobile) .cr-desc{font-size:12px!important;-webkit-line-clamp:1!important;margin-top:0!important;line-height:1.3!important}
+  html body:not(.is-mobile) .cr-stock,html body:not(.is-mobile) .cr-list{font-size:11px!important}
+  html body:not(.is-mobile) .cr-price{font-size:14.5px!important}
+  html body:not(.is-mobile) .cr-price small{font-size:11px!important}
+  html body:not(.is-mobile) .cr-add-btn{font-size:12.5px!important;padding:5px 9px!important;border-radius:6px!important}
+  html body:not(.is-mobile) .catalog-result-row .stk-row{gap:4px!important}
+  html body:not(.is-mobile) .catalog-result-row .stk-chip{font-size:11.5px!important;padding:0 6px 1px!important;border-width:1px!important;border-radius:5px!important;gap:4px!important}
+  html body:not(.is-mobile) .catalog-result-row .stk-chip b{font-size:13px!important}
+  html body:not(.is-mobile) .catalog-result-row .stk-tag{font-size:10px!important;padding:0 5px!important;margin-left:5px!important}
+  html body:not(.is-mobile) #adm-margen{margin-top:6px!important;padding-top:4px!important}
+  html body:not(.is-mobile) #adm-margen h4{font-size:13.5px!important}
+  html body:not(.is-mobile) #adm-margen .mg-aj{font-size:12.5px!important;padding:3px 8px!important}
+  html body:not(.is-mobile) #adm-margen .mg-ln{padding:4px 6px!important}
+  html body:not(.is-mobile) #adm-margen .mg-ln .mg-t{font-size:13px!important}
+  html body:not(.is-mobile) #adm-margen .mg-row{font-size:12.5px!important;margin-top:1px!important}
+  html body:not(.is-mobile) #adm-margen .mg-row .mg-gan b{font-size:13.5px!important}
+  html body:not(.is-mobile) #adm-margen .mg-tot{font-size:13px!important;padding:5px 8px!important}
+  `;
+  /* Tamaño de letra dentro del generador: solo los controles y el catálogo, nunca la hoja del PDF */
+  const LETRA_CSS = `
+  html body:not(.is-mobile) .actions-container,html body:not(.is-mobile) .catalog-panel{zoom:var(--letra,1)}
+  @media (min-width:1180px){
+    html body:not(.is-mobile):not(.mode-rapida) > .catalog-panel{top:calc(var(--adm-top,190px) / var(--letra,1))!important;max-height:calc((100vh - var(--adm-top,190px) - 16px) / var(--letra,1))!important}
+  }
+  html body.is-mobile .m-panel{zoom:var(--letra,1)}
+  .mode-tabs{position:sticky}
+  .letra-cot{position:absolute;right:10px;top:4px;bottom:4px;display:flex;align-items:center;gap:3px}
+  .letra-cot button{background:transparent;border:1px solid rgba(255,255,255,.25);color:#fff;border-radius:7px;padding:2px 0;min-width:36px;font:inherit;font-size:14px!important;font-weight:700;cursor:pointer;min-height:0!important;box-shadow:none!important}
+  .letra-cot button:hover{background:rgba(255,255,255,.12)}
+  .letra-cot button[data-letra-val]{border-color:transparent;font-size:12.5px!important;font-weight:600;color:rgba(255,255,255,.75);min-width:44px}
+  body.is-mobile .letra-cot{top:auto;bottom:6px}
+  body.is-mobile .letra-cot button[data-letra-val]{display:none}
+  @media (max-width:1100px){ body:not(.is-mobile) .letra-cot button[data-letra-val]{display:none} }
+  `;
+  /* "2 · Cliente" con los campos a la vista + Clientes + cuadro para pegar todo */
+  const CLI_CSS = `
+  .hd-group.adm-cli-grp{flex:3 1 560px!important}
+  #adm-cli{display:grid;grid-template-columns:minmax(0,1fr) minmax(190px,.55fr);gap:6px 10px;align-items:stretch}
+  #adm-cli .ac-f{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(130px,.75fr);gap:5px 8px;align-content:start}
+  #adm-cli .ac-d{grid-column:1/-1}
+  #adm-cli label{display:flex;flex-direction:column;gap:2px;font-size:12.5px;font-weight:600;color:#475569}
+  #adm-cli input,#adm-cli textarea{box-sizing:border-box;width:100%;font:inherit;font-size:14.5px;font-weight:500;color:#14222c;border:1.5px solid #dde3e8;border-radius:8px;padding:6px 9px;background:#fff;outline:none}
+  #adm-cli input:hover,#adm-cli textarea:hover{border-color:#b8c4ce}
+  #adm-cli input:focus,#adm-cli textarea:focus{border-color:#006d8c}
+  #adm-cli input::placeholder,#adm-cli textarea::placeholder{color:#a0aab4;font-weight:400}
+  #adm-cli .ac-s{display:flex;flex-direction:column;gap:5px;min-width:0}
+  #adm-cli .ac-s .act-btn{width:100%;min-height:34px!important;padding:5px 10px!important;font-size:14.5px!important}
+  #adm-cli .ac-p{position:relative;flex:1;display:flex;min-height:64px}
+  #adm-cli textarea{resize:none;flex:1;font-size:13px;line-height:1.35;padding:6px 9px 22px}
+  #adm-cli .ac-use{position:absolute;right:5px;bottom:5px;border:0;background:#0e2a3b;color:#fff;border-radius:6px;font:inherit;font-size:12px;font-weight:700;padding:2px 9px;cursor:pointer}
+  #adm-cli .ac-use:hover{background:#006d8c}
+  #adm-cli .ac-msg{font-size:12.5px;font-weight:600;min-height:1.2em;color:#15803d}
+  #adm-cli .ac-msg.err{color:#b91c1c}
+  `;
+  const setupCliente = (w) => {
+    const dd = w.document; const paste = dd.getElementById('act-paste'); const cli = dd.getElementById('act-clients');
+    if (!paste || !cli || dd.getElementById('adm-cli')) return;
+    if (!dd.getElementById('adm-cli-css')) { const st = dd.createElement('style'); st.id = 'adm-cli-css'; st.textContent = CLI_CSS; dd.head.appendChild(st); }
+    const grp = paste.closest('.hd-group'); const fields = grp && grp.querySelector('.hd-fields'); if (!fields) return;
+    grp.classList.add('adm-cli-grp');
+    const PH = { 'client-name': 'NOMBRE DEL CLIENTE', 'client-rif': 'J-00000000-0', 'client-address': 'Ciudad, Estado, Venezuela.' };
+    const box = dd.createElement('div'); box.id = 'adm-cli';
+    box.innerHTML = `<div class="ac-f">
+        <label><span>Nombre / Razón social</span><input data-cb="client-name" autocomplete="off" spellcheck="false" placeholder="NOMBRE DEL CLIENTE"></label>
+        <label><span>RIF / C.I.</span><input data-cb="client-rif" autocomplete="off" spellcheck="false" placeholder="J-00000000-0"></label>
+        <label class="ac-d"><span>Dirección</span><input data-cb="client-address" autocomplete="off" placeholder="Ciudad, Estado, Venezuela."></label>
+      </div>
+      <div class="ac-s">
+        <div class="ac-p"><textarea id="adm-cli-paste" placeholder="Pega aquí todos los datos del cliente (nombre, RIF, dirección…)" spellcheck="false"></textarea><button type="button" class="ac-use" title="Repartir el texto en nombre, RIF y dirección (Ctrl+Enter)">Usar</button></div>
+        <div class="ac-msg" aria-live="polite"></div>
+      </div>`;
+    fields.replaceWith(box);
+    cli.textContent = '👥 Clientes'; cli.title = 'Buscar en tus clientes guardados';
+    $('.ac-s', box).insertBefore(cli, $('.ac-p', box));
+    const span = (id) => dd.getElementById(id);
+    const read = (id) => { const t = ((span(id) || {}).innerText || '').trim(); return t === PH[id] ? '' : t; };
+    const write = (id, val) => { const el = span(id); if (!el) return; el.innerText = String(val || '').trim() || PH[id]; el.dispatchEvent(new w.Event('input', { bubbles: true })); };
+    const inputs = $$('[data-cb]', box);
+    const refresh = () => inputs.forEach(i => { if (dd.activeElement !== i) { const v = read(i.dataset.cb); if (i.value !== v) i.value = v; } });
+    inputs.forEach(i => {
+      i.addEventListener('input', () => write(i.dataset.cb, i.value));
+      i.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); const n = inputs[inputs.indexOf(i) + 1]; if (n) n.focus(); else i.blur(); } });
+      i.addEventListener('blur', refresh);
+    });
+    const obs = new w.MutationObserver(refresh);
+    Object.keys(PH).forEach(id => { const el = span(id); if (el) obs.observe(el, { childList: true, characterData: true, subtree: true }); });
+    refresh();
+    const ta = $('#adm-cli-paste', box); const msg = $('.ac-msg', box); let tmsg = 0;
+    const say = (t, err) => { msg.textContent = t; msg.classList.toggle('err', !!err); clearTimeout(tmsg); tmsg = setTimeout(() => { msg.textContent = ''; }, 4000); };
+    const use = () => {
+      const txt = ta.value.trim(); if (!txt) { ta.focus(); return; }
+      const parse = w.SuinRec && w.SuinRec.parseClient; if (!parse) { say('No se pudo leer el texto.', true); return; }
+      const c = parse(txt);
+      if (!c.nombre && !c.rif && !c.direccion) { say('No encontré nombre, RIF ni dirección.', true); return; }
+      write('client-name', c.nombre); write('client-rif', c.rif); write('client-address', c.direccion);
+      ta.value = ''; refresh();
+      const falta = [!c.nombre && 'nombre', !c.rif && 'RIF', !c.direccion && 'dirección'].filter(Boolean);
+      say(falta.length ? `✓ Cargado. Falta: ${falta.join(', ')}` : '✓ Datos del cliente cargados', false);
+    };
+    ta.addEventListener('paste', () => setTimeout(use, 0));
+    ta.addEventListener('keydown', (e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); use(); } });
+    $('.ac-use', box).onclick = use;
+  };
+  /* ---------- Registro y clientes a pantalla completa (generador de escritorio) ----------
+     Reemplaza las ventanitas "Ver registro" y "Clientes": ocupa todo el generador, muestra
+     los productos de cada documento con su precio, y se ve en lista o tabla con varios órdenes. */
+  const REG_CSS = `
+  .rg{position:fixed;inset:0;z-index:2000;background:rgba(9,20,31,.5);padding:12px;display:none;font-family:inherit;color:#14222c}
+  .rg.on{display:flex}
+  .rg-box{flex:1;min-width:0;display:flex;flex-direction:column;background:#f2f4f6;border-radius:14px;overflow:hidden;box-shadow:0 20px 50px rgba(0,0,0,.3)}
+  .rg-h{display:flex;align-items:center;gap:8px;background:#0e2a3b;padding:8px 10px 0;flex-wrap:wrap}
+  .rg-tabs{display:flex;gap:4px;align-self:flex-end}
+  .rg-tabs button{border:0;background:transparent;color:rgba(255,255,255,.75);font:inherit;font-size:15px;font-weight:700;padding:9px 16px;border-radius:10px 10px 0 0;cursor:pointer}
+  .rg-tabs button.on{background:#f2f4f6;color:#0e2a3b;box-shadow:inset 0 3px 0 #ffc20e}
+  .rg-tabs button small{font-weight:600;opacity:.75;margin-left:4px}
+  .rg-h-act{margin-left:auto;display:flex;gap:6px;padding-bottom:8px;flex-wrap:wrap}
+  .rg-h-act button{border:1px solid rgba(255,255,255,.25);background:transparent;color:#fff;font:inherit;font-size:13.5px;font-weight:600;padding:6px 11px;border-radius:8px;cursor:pointer}
+  .rg-h-act button:hover{background:rgba(255,255,255,.12)}
+  .rg-h-act .rg-x{font-size:16px;padding:6px 12px}
+  .rg-bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:10px 14px;border-bottom:1px solid #dde3e8;background:#fff}
+  .rg-bar input[type=search]{flex:1 1 260px;min-width:180px;box-sizing:border-box;font:inherit;font-size:14.5px;border:1.5px solid #dde3e8;border-radius:8px;padding:7px 10px;outline:none}
+  .rg-bar input[type=search]:focus{border-color:#006d8c}
+  .rg-bar select{font:inherit;font-size:13.5px;border:1.5px solid #dde3e8;border-radius:8px;padding:6px 8px;background:#fff;color:#14222c;cursor:pointer}
+  .rg-seg{display:inline-flex;border:1.5px solid #dde3e8;border-radius:8px;overflow:hidden;background:#fff}
+  .rg-seg button{border:0;background:transparent;font:inherit;font-size:13.5px;font-weight:600;color:#475569;padding:6px 11px;cursor:pointer}
+  .rg-seg button+button{border-left:1.5px solid #dde3e8}
+  .rg-seg button.on{background:#0e2a3b;color:#fff}
+  .rg-pill{display:inline-flex;align-items:center;gap:6px;background:#e6f4f8;color:#00566f;border-radius:999px;padding:4px 6px 4px 11px;font-size:13px;font-weight:700}
+  .rg-pill button{border:0;background:#00566f;color:#fff;border-radius:999px;width:20px;height:20px;line-height:20px;padding:0;cursor:pointer;font-size:11px}
+  .rg-sum{margin-left:auto;font-size:13px;color:#64748b;white-space:nowrap}
+  .rg-sum b{color:#14222c;font-variant-numeric:tabular-nums}
+  .rg-body{flex:1;overflow:auto;padding:12px 14px 20px;zoom:var(--letra,1)}
+  .rg-empty{text-align:center;color:#64748b;padding:50px 10px;font-size:15px}
+  .rg-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(420px,1fr));gap:10px;align-items:start}
+  .rg-card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:10px 12px;min-width:0}
+  .rg-card.cur{border-color:#ffc20e;box-shadow:0 0 0 2px #ffe58a}
+  .rg-ch{display:flex;align-items:baseline;gap:8px;min-width:0}
+  .rg-ch .cl{font-size:15px;font-weight:700;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .rg-ch .tot{font-size:16px;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .rg-meta{font-size:12.5px;color:#64748b;margin:2px 0 6px}
+  .bdg{display:inline-block;font-size:10.5px;font-weight:800;letter-spacing:.05em;border-radius:5px;padding:1px 6px;vertical-align:middle;white-space:nowrap}
+  .bdg.of{background:#e6f4f8;color:#00566f}.bdg.ne{background:#fef3c7;color:#92400e}.bdg.cu{background:#ffc20e;color:#0e2a3b;margin-left:4px}
+  .rg-it{width:100%;border-collapse:collapse;font-size:13px}
+  .rg-it td{padding:3px 4px;border-top:1px solid #f1f5f9;vertical-align:top}
+  .rg-it .q{width:30px;text-align:right;color:#475569;font-variant-numeric:tabular-nums}
+  .rg-it .m{max-width:0}
+  .rg-it .m b{font-weight:700}
+  .rg-it .m span{display:block;color:#64748b;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .rg-it .n{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;width:1%}
+  .rg-it .n.s{color:#64748b}
+  .rg-more{border:0;background:none;color:#006d8c;font:inherit;font-size:12.5px;font-weight:700;cursor:pointer;padding:4px 4px 0}
+  .rg-act{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+  .rg-b{border:1.5px solid #cbd5e1;background:#fff;color:#0e2a3b;font:inherit;font-size:13px;font-weight:700;padding:4px 10px;border-radius:7px;cursor:pointer;white-space:nowrap}
+  .rg-b:hover{border-color:#0e2a3b;background:#f8fafc}
+  .rg-b.pri{background:#0e2a3b;border-color:#0e2a3b;color:#fff}
+  .rg-b.pri:hover{background:#006d8c;border-color:#006d8c}
+  .rg-b.del{color:#b91c1c;border-color:#fecaca}
+  .rg-b.del:hover{background:#fef2f2;border-color:#b91c1c}
+  .rg-t{width:100%;border-collapse:separate;border-spacing:0;background:#fff;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;font-size:13.5px}
+  .rg-t th{position:sticky;top:-12px;background:#f8fafc;z-index:1;text-align:left;font-size:12px;font-weight:800;color:#475569;letter-spacing:.03em;padding:8px;border-bottom:1px solid #e2e8f0;white-space:nowrap;user-select:none}
+  .rg-t th[data-k]{cursor:pointer}
+  .rg-t th[data-k]:hover{color:#0e2a3b}
+  .rg-t th.on{color:#006d8c}
+  .rg-t th .ar{font-size:10px;margin-left:3px}
+  .rg-t td{padding:6px 8px;border-bottom:1px solid #f1f5f9;vertical-align:middle}
+  .rg-t tr.cur td{background:#fffbeb}
+  .rg-t tbody tr.row:hover td{background:#f0f9ff}
+  .rg-t .n{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+  .rg-t .b{font-weight:700}
+  .rg-t .mut{color:#64748b;font-size:12.5px}
+  .rg-t .cut{max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .rg-t .acts{white-space:nowrap;text-align:right}
+  .rg-t .acts .rg-b{padding:3px 8px;font-size:12.5px}
+  .rg-tg{border:0;background:none;cursor:pointer;color:#64748b;font-size:12px;width:22px;padding:0}
+  .rg-t tr.sub td{background:#f8fafc;padding:4px 10px 10px 38px}
+  .rg-t tr.sub .rg-it{background:#fff;border:1px solid #e2e8f0;border-radius:8px}
+  .rg-t tr.click{cursor:pointer}
+  `;
+  const setupRegistro = (w) => {
+    const dd = w.document; const R = w.SuinRec;
+    const btnReg = dd.getElementById('act-registro');
+    if (!btnReg || !R || !R.openRecord || dd.getElementById('rg')) return;
+    if (!dd.getElementById('adm-reg-css')) { const st = dd.createElement('style'); st.id = 'adm-reg-css'; st.textContent = REG_CSS; dd.head.appendChild(st); }
+    const K_SET = 'suin_rg_v1';
+    const st = Object.assign({ tab: 'docs', vista: 'lista', orden: 'guardado:desc', tipo: 'todos', ordenProd: 'veces:desc', vistaCli: 'tabla', ordenCli: 'nombre:asc' }, lsGet(K_SET, {}) || {});
+    const keep = () => lsSet(K_SET, st);
+    let q = '', qc = '', cliFiltro = null; const open1 = new Set(), moreOpen = new Set();
+
+    /* botones: Ver registro y Clientes abren este panel; el original queda para "Nube y respaldo" */
+    const nb = btnReg.cloneNode(true); nb.id = 'rg-open'; btnReg.style.display = 'none'; btnReg.after(nb);
+    nb.addEventListener('click', () => show('docs'));
+    const oc = dd.getElementById('act-clients');
+    if (oc) { const nc = oc.cloneNode(true); oc.replaceWith(nc); nc.addEventListener('click', () => show('cli')); }
+
+    const box = dd.createElement('div'); box.id = 'rg'; box.className = 'rg'; box.setAttribute('role', 'dialog'); box.setAttribute('aria-modal', 'true');
+    box.innerHTML = `<div class="rg-box">
+      <header class="rg-h">
+        <div class="rg-tabs"><button type="button" data-tab="docs">🗂 Ofertas y notas<small data-n="docs"></small></button><button type="button" data-tab="cli">👥 Clientes<small data-n="cli"></small></button></div>
+        <div class="rg-h-act"><button type="button" data-a="save" title="Guardar en el registro el documento que tienes abierto">💾 Guardar actual</button><button type="button" data-a="new">＋ Nuevo documento</button><button type="button" data-a="nube" title="Conectar la nube, exportar o importar respaldo">☁ Nube y respaldo</button><button type="button" class="rg-x" data-a="close" aria-label="Cerrar" title="Cerrar (Esc)">✕</button></div>
+      </header>
+      <div class="rg-bar"></div>
+      <div class="rg-body"></div>
+    </div>`;
+    dd.body.appendChild(box);
+    const bar = $('.rg-bar', box), body = $('.rg-body', box);
+
+    /* ---- datos ---- */
+    const cache = new Map();
+    const dmy = (s) => { const m = String(s || '').match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/); return m ? new Date(+m[3], m[2] - 1, +m[1]).getTime() : 0; };
+    const rifKey = (c) => { const r = String((c && c.rif) || '').toUpperCase().replace(/[^A-Z0-9]/g, ''); return r && r !== 'J000000000' ? 'R:' + r : 'N:' + String((c && c.nombre) || '').trim().toUpperCase(); };
+    const lab = (desc) => {
+      const lines = String(desc || '').split('\n').map(x => x.replace(/\*/g, '').trim()).filter(Boolean);
+      const mod = modeloDe(desc);
+      if (mod) return { modelo: mod, det: lines.filter(x => !/Ref\s*\/\s*Modelo/i.test(x)).join(' · ') };
+      return { modelo: lines[0] || '(sin descripción)', det: lines.slice(1).join(' · ') };
+    };
+    const docs = () => readArr(K_REG).filter(r => r && !r.deleted && r.clase !== 'rapida').map(r => {
+      const ck = r.id + ':' + modOf(r);
+      if (!cache.has(ck)) {
+        let its = []; try { its = parseItems(r.estado || {}).map(x => Object.assign(x, lab(x.desc))); } catch (e) { its = []; }
+        cache.set(ck, its);
+      }
+      const its = cache.get(ck);
+      const c = r.cliente || {};
+      return { r, its, total: num(r.total), fecha: dmy(r.fecha) || r.creado || 0, guardado: r.guardado || r.mod || 0, cliente: c.nombre && c.nombre !== 'NOMBRE DEL CLIENTE' ? c.nombre : '', key: rifKey(c), control: r.control || '', tipo: r.tipo === 'nota' ? 'nota' : 'oferta', n: its.length || r.items || 0 };
+    });
+    const clientes = () => readArr(K_CLI).filter(c => c && !c.deleted && c.nombre);
+    const fecha = (t) => t ? new Date(t).toLocaleDateString('es-VE', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '';
+    const fechaH = (t) => t ? new Date(t).toLocaleString('es-VE', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
+    const cmp = (a, b) => typeof a === 'string' || typeof b === 'string' ? String(a || '').localeCompare(String(b || ''), 'es', { numeric: true, sensitivity: 'base' }) : (a || 0) - (b || 0);
+    const sortBy = (arr, ord, get) => { const [k, d] = ord.split(':'); const s = d === 'desc' ? -1 : 1; return arr.sort((a, b) => s * cmp(get(a, k), get(b, k))); };
+    const th = (ord, k, label, cls = '') => { const [ok, od] = ord.split(':'); return `<th data-k="${k}" class="${cls} ${ok === k ? 'on' : ''}">${label}${ok === k ? `<span class="ar">${od === 'desc' ? '▼' : '▲'}</span>` : ''}</th>`; };
+    const nextOrd = (ord, k, def) => { const [ok, od] = ord.split(':'); return ok === k ? `${k}:${od === 'desc' ? 'asc' : 'desc'}` : `${k}:${def}`; };
+    const seg = (name, cur, opts) => `<div class="rg-seg" data-seg="${name}">${opts.map(([v, l]) => `<button type="button" data-v="${v}" class="${cur === v ? 'on' : ''}">${l}</button>`).join('')}</div>`;
+    const sel = (name, cur, opts) => `<select data-sel="${name}" title="Ordenar">${opts.map(([v, l]) => `<option value="${v}" ${cur === v ? 'selected' : ''}>${l}</option>`).join('')}${opts.some(o => o[0] === cur) ? '' : `<option value="${cur}" selected>Orden de la tabla</option>`}</select>`;
+    const itemsTable = (its, limit, id) => {
+      if (!its.length) return '<div class="rg-meta">Sin productos.</div>';
+      const show = limit && !moreOpen.has(id) && its.length > limit ? its.slice(0, limit - 1) : its;
+      return `<table class="rg-it">${show.map(x => `<tr><td class="q">${esc(fmtQ(x.cant))}</td><td class="m"><b>${esc(x.modelo)}</b>${x.det ? `<span title="${esc(x.det)}">${esc(x.det)}</span>` : ''}</td><td class="n">${fmtUSD(x.precio)}</td><td class="n s">${fmtUSD(x.precio * (x.cant || 0))}</td></tr>`).join('')}</table>${show.length < its.length ? `<button type="button" class="rg-more" data-more="${esc(id)}">+ ${its.length - show.length} producto${its.length - show.length === 1 ? '' : 's'} más</button>` : ''}`;
+    };
+    const fmtQ = (v) => Number.isInteger(v) ? String(v) : String(Math.round(v * 100) / 100);
+    const badge = (d) => `<span class="bdg ${d.tipo === 'nota' ? 'ne' : 'of'}">${d.tipo === 'nota' ? 'NOTA' : 'OFERTA'}</span>${R.isCurrent(d.r.id) ? '<span class="bdg cu">ABIERTO</span>' : ''}`;
+
+    /* ---- pestaña de documentos ---- */
+    const filtDocs = () => {
+      const t = q.trim().toLowerCase();
+      return docs().filter(d => (st.tipo === 'todos' || d.tipo === st.tipo) && (!cliFiltro || d.key === cliFiltro.key) &&
+        (!t || (d.r.buscar || '').includes(t) || d.cliente.toLowerCase().includes(t) || d.control.toLowerCase().includes(t) || d.its.some(x => x.modelo.toLowerCase().includes(t))));
+    };
+    const getDoc = (d, k) => ({ guardado: d.guardado, fecha: d.fecha, cliente: d.cliente, total: d.total, items: d.n, control: d.control, tipo: d.tipo }[k]);
+    const barDocs = () => {
+      bar.innerHTML = `<input type="search" data-q placeholder="Buscar cliente, RIF, N° de control o modelo" value="${esc(q)}" autocomplete="off">
+        ${seg('tipo', st.tipo, [['todos', 'Todos'], ['oferta', 'Ofertas'], ['nota', 'Notas']])}
+        ${cliFiltro ? `<span class="rg-pill">${esc(cliFiltro.nombre)}<button type="button" data-a="nocli" aria-label="Quitar filtro de cliente">✕</button></span>` : ''}
+        ${st.vista === 'prod' ? sel('ordenProd', st.ordenProd, [['veces:desc', 'Más ofertados'], ['ult:desc', 'Ofertado más reciente'], ['modelo:asc', 'Modelo A–Z'], ['precio:desc', 'Precio mayor'], ['precio:asc', 'Precio menor'], ['cant:desc', 'Más unidades']])
+        : sel('orden', st.orden, [['guardado:desc', 'Más recientes'], ['guardado:asc', 'Más antiguos'], ['fecha:desc', 'Fecha del documento'], ['cliente:asc', 'Cliente A–Z'], ['total:desc', 'Total mayor'], ['total:asc', 'Total menor'], ['items:desc', 'Más productos'], ['control:desc', 'N° de control']])}
+        ${seg('vista', st.vista, [['lista', '▦ Lista'], ['tabla', '☰ Tabla'], ['prod', '📦 Por producto']])}
+        <span class="rg-sum" data-sum></span>`;
+    };
+    const renderDocs = () => {
+      const list = filtDocs();
+      const sum = list.reduce((a, d) => a + d.total, 0);
+      const sumEl = $('[data-sum]', bar); if (sumEl) sumEl.innerHTML = `<b>${list.length}</b> documento${list.length === 1 ? '' : 's'} · <b>${fmtUSD(sum)}</b>`;
+      if (!list.length) { body.innerHTML = `<div class="rg-empty">${q || cliFiltro || st.tipo !== 'todos' ? 'Sin coincidencias.' : 'Todavía no hay documentos guardados. Se guardan al descargar el PDF o con 💾 Guardar.'}</div>`; return; }
+      if (st.vista === 'prod') return renderProd(list);
+      sortBy(list, st.orden, getDoc);
+      if (st.vista === 'tabla') {
+        body.innerHTML = `<table class="rg-t"><thead><tr><th></th>${th(st.orden, 'tipo', 'Tipo')}${th(st.orden, 'control', 'N° control')}${th(st.orden, 'fecha', 'Fecha')}${th(st.orden, 'cliente', 'Cliente')}${th(st.orden, 'items', 'Productos')}${th(st.orden, 'total', 'Total', 'n')}${th(st.orden, 'guardado', 'Guardado')}<th></th></tr></thead><tbody>${list.map(d => {
+          const id = d.r.id; const on = open1.has(id);
+          return `<tr class="row click ${R.isCurrent(id) ? 'cur' : ''}" data-tg="${esc(id)}"><td><button type="button" class="rg-tg" data-tg="${esc(id)}" aria-label="Ver productos">${on ? '▼' : '▶'}</button></td><td>${badge(d)}</td><td class="b">${esc(d.control)}</td><td>${esc(d.r.fecha || '')}</td><td class="b cut" title="${esc(d.cliente)}">${esc(d.cliente || 'Sin cliente')}</td><td class="cut"><b>${d.n}</b> <span class="mut">${esc(d.its.slice(0, 3).map(x => x.modelo).join(', '))}${d.its.length > 3 ? '…' : ''}</span></td><td class="n b">${fmtUSD(d.total)}</td><td class="mut">${esc(fechaH(d.guardado))}</td><td class="acts"><button type="button" class="rg-b pri" data-open="${esc(id)}">Abrir</button> <button type="button" class="rg-b" data-dup="${esc(id)}">Duplicar</button> <button type="button" class="rg-b del" data-del="${esc(id)}" aria-label="Eliminar">🗑</button></td></tr>${on ? `<tr class="sub"><td colspan="9">${itemsTable(d.its, 0, id)}</td></tr>` : ''}`;
+        }).join('')}</tbody></table>`;
+      } else {
+        body.innerHTML = `<div class="rg-grid">${list.map(d => { const id = d.r.id; return `<article class="rg-card ${R.isCurrent(id) ? 'cur' : ''}">
+          <div class="rg-ch">${badge(d)}<span class="cl" title="${esc(d.cliente)}">${esc(d.cliente || 'Sin cliente')}</span><span class="tot">${fmtUSD(d.total)}</span></div>
+          <div class="rg-meta">${esc(d.control)} · ${esc(d.r.fecha || '')} · ${d.n} producto${d.n === 1 ? '' : 's'} · guardado ${esc(fechaH(d.guardado))}</div>
+          ${itemsTable(d.its, 6, id)}
+          <div class="rg-act"><button type="button" class="rg-b pri" data-open="${esc(id)}">Abrir</button><button type="button" class="rg-b" data-dup="${esc(id)}">Duplicar</button><button type="button" class="rg-b del" data-del="${esc(id)}">Eliminar</button></div>
+        </article>`; }).join('')}</div>`;
+      }
+    };
+    const renderProd = (list) => {
+      const m = new Map();
+      list.forEach(d => d.its.forEach(x => {
+        const k = x.modelo.toUpperCase(); let p = m.get(k);
+        if (!p) { p = { modelo: x.modelo, det: x.det, docs: new Set(), cant: 0, min: Infinity, max: 0, ult: 0, precio: 0, cliente: '' }; m.set(k, p); }
+        p.docs.add(d.r.id); p.cant += x.cant || 0;
+        if (x.precio > 0) { p.min = Math.min(p.min, x.precio); p.max = Math.max(p.max, x.precio); }
+        if (d.guardado >= p.ult) { p.ult = d.guardado; p.precio = x.precio; p.cliente = d.cliente; if (x.det) p.det = x.det; }
+      }));
+      const rows = sortBy([...m.values()], st.ordenProd, (p, k) => ({ modelo: p.modelo, veces: p.docs.size, cant: p.cant, precio: p.precio, min: p.min === Infinity ? 0 : p.min, max: p.max, ult: p.ult, cliente: p.cliente }[k]));
+      const o = st.ordenProd;
+      body.innerHTML = `<table class="rg-t" data-prod><thead><tr>${th(o, 'modelo', 'Producto')}${th(o, 'veces', 'Veces', 'n')}${th(o, 'cant', 'Unidades', 'n')}${th(o, 'precio', 'Último precio', 'n')}${th(o, 'min', 'Mín.', 'n')}${th(o, 'max', 'Máx.', 'n')}${th(o, 'cliente', 'Último cliente')}${th(o, 'ult', 'Fecha')}</tr></thead><tbody>${rows.map(p => `<tr class="row click" data-prodq="${esc(p.modelo)}" title="Ver los documentos con este producto"><td class="cut" style="max-width:420px"><b>${esc(p.modelo)}</b>${p.det ? `<div class="mut cut" style="max-width:420px">${esc(p.det)}</div>` : ''}</td><td class="n b">${p.docs.size}</td><td class="n">${esc(fmtQ(p.cant))}</td><td class="n b">${fmtUSD(p.precio)}</td><td class="n mut">${p.min === Infinity ? '—' : fmtUSD(p.min)}</td><td class="n mut">${p.max ? fmtUSD(p.max) : '—'}</td><td class="cut" title="${esc(p.cliente)}">${esc(p.cliente || '—')}</td><td class="mut">${esc(fecha(p.ult))}</td></tr>`).join('')}</tbody></table>`;
+      const sumEl = $('[data-sum]', bar); if (sumEl) sumEl.innerHTML += ` · <b>${rows.length}</b> producto${rows.length === 1 ? '' : 's'}`;
+    };
+
+    /* ---- pestaña de clientes ---- */
+    const getCli = (c, k) => ({ nombre: c.nombre, rif: c.rif, docs: c.st.n, total: c.st.total, ultimo: c.st.ult, of: c.st.of, ne: c.st.ne }[k]);
+    const barCli = () => {
+      bar.innerHTML = `<input type="search" data-qc placeholder="Buscar por nombre, RIF, dirección o teléfono" value="${esc(qc)}" autocomplete="off">
+        ${sel('ordenCli', st.ordenCli, [['nombre:asc', 'Nombre A–Z'], ['ultimo:desc', 'Último documento'], ['docs:desc', 'Más documentos'], ['total:desc', 'Mayor total ofertado'], ['rif:asc', 'RIF']])}
+        ${seg('vistaCli', st.vistaCli, [['lista', '▦ Lista'], ['tabla', '☰ Tabla']])}
+        <button type="button" class="rg-b" data-a="savecli" title="Guarda en tus clientes el que está en el documento">＋ Guardar cliente del documento</button>
+        <span class="rg-sum" data-sum></span>`;
+    };
+    const renderCli = () => {
+      const ds = docs(); const stats = new Map();
+      ds.forEach(d => { let s = stats.get(d.key); if (!s) { s = { n: 0, of: 0, ne: 0, total: 0, ult: 0, last: null }; stats.set(d.key, s); } s.n++; s[d.tipo === 'nota' ? 'ne' : 'of']++; s.total += d.total; if (d.guardado >= s.ult) { s.ult = d.guardado; s.last = d; } });
+      const t = qc.trim().toLowerCase();
+      const list = clientes().map(c => Object.assign({}, c, { key: rifKey(c), st: stats.get(rifKey(c)) || { n: 0, of: 0, ne: 0, total: 0, ult: 0, last: null } }))
+        .filter(c => !t || `${c.nombre} ${c.rif} ${c.direccion} ${(c.extras || []).map(x => x.v).join(' ')}`.toLowerCase().includes(t));
+      sortBy(list, st.ordenCli, getCli);
+      const sumEl = $('[data-sum]', bar); if (sumEl) sumEl.innerHTML = `<b>${list.length}</b> cliente${list.length === 1 ? '' : 's'}`;
+      if (!list.length) { body.innerHTML = `<div class="rg-empty">${t ? 'Sin coincidencias.' : 'Aún no hay clientes guardados. Se guardan al pegar sus datos o al guardar un documento.'}</div>`; return; }
+      const extras = (c) => (c.extras || []).map(x => `${esc(x.l)}: ${esc(x.v)}`).join(' · ');
+      const acts = (c) => `<button type="button" class="rg-b pri" data-use="${esc(c.id)}">Usar</button> ${c.st.n ? `<button type="button" class="rg-b" data-verdocs="${esc(c.id)}">Ver ${c.st.n} doc.</button> ` : ''}<button type="button" class="rg-b del" data-delcli="${esc(c.id)}" aria-label="Eliminar">🗑</button>`;
+      const o = st.ordenCli;
+      if (st.vistaCli === 'tabla') {
+        body.innerHTML = `<table class="rg-t"><thead><tr>${th(o, 'nombre', 'Nombre / Razón social')}${th(o, 'rif', 'RIF / C.I.')}<th>Dirección</th><th>Contacto</th>${th(o, 'of', 'Ofertas', 'n')}${th(o, 'ne', 'Notas', 'n')}${th(o, 'total', 'Total ofertado', 'n')}${th(o, 'ultimo', 'Último doc.')}<th></th></tr></thead><tbody>${list.map(c => `<tr class="row"><td class="b cut" title="${esc(c.nombre)}">${esc(c.nombre)}</td><td>${esc(c.rif || '')}</td><td class="cut mut" title="${esc(c.direccion || '')}">${esc(c.direccion || '')}</td><td class="cut mut" style="max-width:220px">${extras(c)}</td><td class="n">${c.st.of || ''}</td><td class="n">${c.st.ne || ''}</td><td class="n b">${c.st.total ? fmtUSD(c.st.total) : ''}</td><td class="mut">${esc(fecha(c.st.ult))}</td><td class="acts">${acts(c)}</td></tr>`).join('')}</tbody></table>`;
+      } else {
+        body.innerHTML = `<div class="rg-grid">${list.map(c => `<article class="rg-card">
+          <div class="rg-ch"><span class="cl" title="${esc(c.nombre)}">${esc(c.nombre)}</span>${c.st.total ? `<span class="tot">${fmtUSD(c.st.total)}</span>` : ''}</div>
+          <div class="rg-meta">${esc(c.rif || 'Sin RIF')}${c.direccion ? ' · ' + esc(c.direccion) : ''}${extras(c) ? '<br>' + extras(c) : ''}</div>
+          <div class="rg-meta">${c.st.n ? `${c.st.of} oferta${c.st.of === 1 ? '' : 's'} · ${c.st.ne} nota${c.st.ne === 1 ? '' : 's'} · último ${esc(fecha(c.st.ult))}` : 'Sin documentos guardados'}</div>
+          ${c.st.last && c.st.last.its.length ? `<div class="rg-meta" style="margin-bottom:2px">${c.st.last.tipo === 'nota' ? 'Última nota' : 'Última oferta'} (${esc(c.st.last.control)}):</div>${itemsTable(c.st.last.its, 4, 'c:' + c.id)}` : ''}
+          <div class="rg-act">${acts(c)}</div></article>`).join('')}</div>`;
+      }
+    };
+
+    /* ---- mostrar y eventos ---- */
+    const paintTabs = () => {
+      $$('[data-tab]', box).forEach(b => b.classList.toggle('on', b.dataset.tab === st.tab));
+      const nd = $('[data-n="docs"]', box), nc = $('[data-n="cli"]', box);
+      if (nd) nd.textContent = ' ' + docs().length; if (nc) nc.textContent = ' ' + clientes().length;
+    };
+    const paint = (withBar) => { paintTabs(); if (st.tab === 'cli') { if (withBar) barCli(); renderCli(); } else { if (withBar) barDocs(); renderDocs(); } };
+    const show = (tab) => { if (tab) st.tab = tab; keep(); box.classList.add('on'); paint(true); setTimeout(() => { const s = $('input[type=search]', bar); if (s) s.focus(); }, 30); };
+    const hide = () => box.classList.remove('on');
+    const findDoc = (id) => readArr(K_REG).find(r => r && r.id === id);
+    const findCli = (id) => clientes().find(c => c.id === id);
+
+    box.addEventListener('click', (e) => {
+      const t = e.target.closest('button, [data-tg], [data-prodq], th[data-k]'); if (!t || !box.contains(t)) { if (e.target === box) hide(); return; }
+      const d = t.dataset;
+      if (d.tab) { st.tab = d.tab; keep(); paint(true); return; }
+      if (d.a === 'close') return hide();
+      if (d.a === 'save') { R.saveCurrent(); paint(false); return; }
+      if (d.a === 'new') { if (R.newDocument()) hide(); return; }
+      if (d.a === 'nube') { hide(); btnReg.click(); return; }
+      if (d.a === 'nocli') { cliFiltro = null; paint(true); return; }
+      if (d.a === 'savecli') { const c = R.readClient(); if (R.isPlaceholderClient(c)) { alert('El documento no tiene un cliente cargado.'); return; } R.upsertClient(c); paint(false); return; }
+      if (d.open) { const r = findDoc(d.open); if (r) { R.openRecord(r, false); hide(); } return; }
+      if (d.dup) { const r = findDoc(d.dup); if (r) { R.openRecord(r, true); hide(); } return; }
+      if (d.del) { const r = findDoc(d.del); if (r && confirm(`¿Eliminar ${r.control} (${(r.cliente && r.cliente.nombre) || 'sin cliente'}) del registro?`)) { R.removeRec(K_REG, r.id); paint(false); } return; }
+      if (d.more) { moreOpen.add(d.more); paint(false); return; }
+      if (d.use) { const c = findCli(d.use); if (c) { R.applyClient(c); hide(); } return; }
+      if (d.delcli) { const c = findCli(d.delcli); if (c && confirm(`¿Eliminar a ${c.nombre} de tus clientes?`)) { R.removeRec(K_CLI, c.id); paint(false); } return; }
+      if (d.verdocs) { const c = findCli(d.verdocs); if (c) { cliFiltro = { key: rifKey(c), nombre: c.nombre }; st.tab = 'docs'; q = ''; if (st.vista === 'prod') st.vista = 'lista'; keep(); paint(true); } return; }
+      if (d.k) { const tbl = t.closest('table'); const isProd = tbl && tbl.hasAttribute('data-prod');
+        const numK = ['total', 'items', 'guardado', 'fecha', 'veces', 'cant', 'precio', 'min', 'max', 'ult', 'docs', 'ultimo', 'of', 'ne'].includes(d.k);
+        if (st.tab === 'cli') st.ordenCli = nextOrd(st.ordenCli, d.k, numK ? 'desc' : 'asc');
+        else if (isProd) st.ordenProd = nextOrd(st.ordenProd, d.k, numK ? 'desc' : 'asc');
+        else st.orden = nextOrd(st.orden, d.k, numK ? 'desc' : 'asc');
+        keep(); paint(true); return; }
+      if (d.prodq) { q = d.prodq; st.vista = 'lista'; keep(); paint(true); return; }
+      if (d.tg) { if (e.target.closest('.acts')) return; open1.has(d.tg) ? open1.delete(d.tg) : open1.add(d.tg); paint(false); return; }
+      const sg = t.closest('[data-seg]');
+      if (sg && d.v) { st[sg.dataset.seg] = d.v; keep(); paint(true); return; }
+    });
+    box.addEventListener('change', (e) => { const s = e.target.closest('[data-sel]'); if (s) { st[s.dataset.sel] = s.value; keep(); paint(true); } });
+    let tq = 0;
+    box.addEventListener('input', (e) => {
+      if (e.target.matches('[data-q]')) { q = e.target.value; clearTimeout(tq); tq = setTimeout(() => renderDocs(), 120); }
+      if (e.target.matches('[data-qc]')) { qc = e.target.value; clearTimeout(tq); tq = setTimeout(() => renderCli(), 120); }
+    });
+    dd.addEventListener('keydown', (e) => { if (e.key === 'Escape' && box.classList.contains('on')) { e.stopPropagation(); hide(); } }, true);
+    w.addEventListener('storage', (e) => { if ((e.key === K_REG || e.key === K_CLI) && box.classList.contains('on')) paint(false); });
+  };
   const GEN_CSS = `
   body:not(.is-mobile){padding:14px 18px 40px}
   .actions-container.hd{max-width:none!important;width:100%;box-sizing:border-box}
@@ -4883,8 +5322,13 @@ const Cot = (() => {
     const dd = w.document;
     if (!dd.getElementById('adm-gen-css')) { const st = dd.createElement('style'); st.id = 'adm-gen-css'; st.textContent = GEN_CSS; dd.head.appendChild(st); }
     if (!dd.getElementById('adm-leer-css')) { const st = dd.createElement('style'); st.id = 'adm-leer-css'; st.textContent = LEER_CSS; dd.head.appendChild(st); }
-    const setTop = () => { const hd = dd.querySelector('.actions-container'); if (!hd) return; const top = parseFloat(w.getComputedStyle(hd).top) || 10; dd.documentElement.style.setProperty('--adm-top', Math.round(top + hd.offsetHeight + 14) + 'px'); };
-    setTop(); w.addEventListener('resize', setTop); setTimeout(setTop, 800);
+    if (!dd.getElementById('adm-cat-css')) { const st = dd.createElement('style'); st.id = 'adm-cat-css'; st.textContent = CAT_CSS; dd.head.appendChild(st); }
+    if (!dd.getElementById('adm-letra-css')) { const st = dd.createElement('style'); st.id = 'adm-letra-css'; st.textContent = LETRA_CSS; dd.head.appendChild(st); }
+    const tabs = dd.querySelector('.mode-tabs');
+    if (tabs && !dd.querySelector('.letra-cot')) { tabs.insertAdjacentHTML('beforeend', Letra.html('letra-cot')); Letra.wire(tabs); }
+    Letra.attach(dd);
+    const setTop = () => { const hd = dd.querySelector('.actions-container'); if (!hd) return; const z = dd.body.classList.contains('is-mobile') ? 1 : Letra.get(); const top = (parseFloat(w.getComputedStyle(hd).top) || 10) * z; dd.documentElement.style.setProperty('--adm-top', Math.round(top + hd.getBoundingClientRect().height + 14) + 'px'); };
+    setTop(); w.addEventListener('resize', setTop); setTimeout(setTop, 800); dd.addEventListener('suin:letra', () => setTimeout(setTop, 30));
     const obs = new w.MutationObserver(() => decorate(dd));
     ['catalog-results', 'm-results'].forEach(id => { const el = dd.getElementById(id); if (el) obs.observe(el, { childList: true, subtree: true }); });
     decorate(dd);
@@ -4955,6 +5399,8 @@ const Cot = (() => {
     frame.addEventListener('load', () => {
       const w = frame.contentWindow;
       try { setupVendedor(w); } catch (e) { console.warn('vendedor', e); }
+      try { setupCliente(w); } catch (e) { console.warn('cliente', e); }
+      try { setupRegistro(w); } catch (e) { console.warn('registro', e); }
       try { enhance(w); } catch (e) { console.warn('diseño', e); }
       try { setupMargen(w); } catch (e) { console.warn('margen', e); }
       try { const rf = w.document.getElementById('rapida-frame'); if (rf) { const go = () => { try { setupMargenRapida(rf.contentWindow); } catch (e) { console.warn('margen rápida', e); } }; rf.addEventListener('load', go); go(); } } catch (e) { console.warn('margen rápida', e); }
