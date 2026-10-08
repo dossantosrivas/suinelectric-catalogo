@@ -4737,6 +4737,75 @@ const Cot = (() => {
   body.is-mobile .letra-cot button[data-letra-val]{display:none}
   @media (max-width:1100px){ body:not(.is-mobile) .letra-cot button[data-letra-val]{display:none} }
   `;
+  /* "2 · Cliente" con los campos a la vista + Clientes + cuadro para pegar todo */
+  const CLI_CSS = `
+  .hd-group.adm-cli-grp{flex:3 1 560px!important}
+  #adm-cli{display:grid;grid-template-columns:minmax(0,1fr) minmax(190px,.55fr);gap:6px 10px;align-items:stretch}
+  #adm-cli .ac-f{display:grid;grid-template-columns:minmax(0,1.6fr) minmax(130px,.75fr);gap:5px 8px;align-content:start}
+  #adm-cli .ac-d{grid-column:1/-1}
+  #adm-cli label{display:flex;flex-direction:column;gap:2px;font-size:12.5px;font-weight:600;color:#475569}
+  #adm-cli input,#adm-cli textarea{box-sizing:border-box;width:100%;font:inherit;font-size:14.5px;font-weight:500;color:#14222c;border:1.5px solid #dde3e8;border-radius:8px;padding:6px 9px;background:#fff;outline:none}
+  #adm-cli input:hover,#adm-cli textarea:hover{border-color:#b8c4ce}
+  #adm-cli input:focus,#adm-cli textarea:focus{border-color:#006d8c}
+  #adm-cli input::placeholder,#adm-cli textarea::placeholder{color:#a0aab4;font-weight:400}
+  #adm-cli .ac-s{display:flex;flex-direction:column;gap:5px;min-width:0}
+  #adm-cli .ac-s .act-btn{width:100%;min-height:34px!important;padding:5px 10px!important;font-size:14.5px!important}
+  #adm-cli .ac-p{position:relative;flex:1;display:flex;min-height:64px}
+  #adm-cli textarea{resize:none;flex:1;font-size:13px;line-height:1.35;padding:6px 9px 22px}
+  #adm-cli .ac-use{position:absolute;right:5px;bottom:5px;border:0;background:#0e2a3b;color:#fff;border-radius:6px;font:inherit;font-size:12px;font-weight:700;padding:2px 9px;cursor:pointer}
+  #adm-cli .ac-use:hover{background:#006d8c}
+  #adm-cli .ac-msg{font-size:12.5px;font-weight:600;min-height:1.2em;color:#15803d}
+  #adm-cli .ac-msg.err{color:#b91c1c}
+  `;
+  const setupCliente = (w) => {
+    const dd = w.document; const paste = dd.getElementById('act-paste'); const cli = dd.getElementById('act-clients');
+    if (!paste || !cli || dd.getElementById('adm-cli')) return;
+    if (!dd.getElementById('adm-cli-css')) { const st = dd.createElement('style'); st.id = 'adm-cli-css'; st.textContent = CLI_CSS; dd.head.appendChild(st); }
+    const grp = paste.closest('.hd-group'); const fields = grp && grp.querySelector('.hd-fields'); if (!fields) return;
+    grp.classList.add('adm-cli-grp');
+    const PH = { 'client-name': 'NOMBRE DEL CLIENTE', 'client-rif': 'J-00000000-0', 'client-address': 'Ciudad, Estado, Venezuela.' };
+    const box = dd.createElement('div'); box.id = 'adm-cli';
+    box.innerHTML = `<div class="ac-f">
+        <label><span>Nombre / Razón social</span><input data-cb="client-name" autocomplete="off" spellcheck="false" placeholder="NOMBRE DEL CLIENTE"></label>
+        <label><span>RIF / C.I.</span><input data-cb="client-rif" autocomplete="off" spellcheck="false" placeholder="J-00000000-0"></label>
+        <label class="ac-d"><span>Dirección</span><input data-cb="client-address" autocomplete="off" placeholder="Ciudad, Estado, Venezuela."></label>
+      </div>
+      <div class="ac-s">
+        <div class="ac-p"><textarea id="adm-cli-paste" placeholder="Pega aquí todos los datos del cliente (nombre, RIF, dirección…)" spellcheck="false"></textarea><button type="button" class="ac-use" title="Repartir el texto en nombre, RIF y dirección (Ctrl+Enter)">Usar</button></div>
+        <div class="ac-msg" aria-live="polite"></div>
+      </div>`;
+    fields.replaceWith(box);
+    cli.textContent = '👥 Clientes'; cli.title = 'Buscar en tus clientes guardados';
+    $('.ac-s', box).insertBefore(cli, $('.ac-p', box));
+    const span = (id) => dd.getElementById(id);
+    const read = (id) => { const t = ((span(id) || {}).innerText || '').trim(); return t === PH[id] ? '' : t; };
+    const write = (id, val) => { const el = span(id); if (!el) return; el.innerText = String(val || '').trim() || PH[id]; el.dispatchEvent(new w.Event('input', { bubbles: true })); };
+    const inputs = $$('[data-cb]', box);
+    const refresh = () => inputs.forEach(i => { if (dd.activeElement !== i) { const v = read(i.dataset.cb); if (i.value !== v) i.value = v; } });
+    inputs.forEach(i => {
+      i.addEventListener('input', () => write(i.dataset.cb, i.value));
+      i.addEventListener('keydown', (e) => { if (e.key === 'Enter') { e.preventDefault(); const n = inputs[inputs.indexOf(i) + 1]; if (n) n.focus(); else i.blur(); } });
+      i.addEventListener('blur', refresh);
+    });
+    const obs = new w.MutationObserver(refresh);
+    Object.keys(PH).forEach(id => { const el = span(id); if (el) obs.observe(el, { childList: true, characterData: true, subtree: true }); });
+    refresh();
+    const ta = $('#adm-cli-paste', box); const msg = $('.ac-msg', box); let tmsg = 0;
+    const say = (t, err) => { msg.textContent = t; msg.classList.toggle('err', !!err); clearTimeout(tmsg); tmsg = setTimeout(() => { msg.textContent = ''; }, 4000); };
+    const use = () => {
+      const txt = ta.value.trim(); if (!txt) { ta.focus(); return; }
+      const parse = w.SuinRec && w.SuinRec.parseClient; if (!parse) { say('No se pudo leer el texto.', true); return; }
+      const c = parse(txt);
+      if (!c.nombre && !c.rif && !c.direccion) { say('No encontré nombre, RIF ni dirección.', true); return; }
+      write('client-name', c.nombre); write('client-rif', c.rif); write('client-address', c.direccion);
+      ta.value = ''; refresh();
+      const falta = [!c.nombre && 'nombre', !c.rif && 'RIF', !c.direccion && 'dirección'].filter(Boolean);
+      say(falta.length ? `✓ Cargado. Falta: ${falta.join(', ')}` : '✓ Datos del cliente cargados', false);
+    };
+    ta.addEventListener('paste', () => setTimeout(use, 0));
+    ta.addEventListener('keydown', (e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); use(); } });
+    $('.ac-use', box).onclick = use;
+  };
   const GEN_CSS = `
   body:not(.is-mobile){padding:14px 18px 40px}
   .actions-container.hd{max-width:none!important;width:100%;box-sizing:border-box}
@@ -5057,6 +5126,7 @@ const Cot = (() => {
     frame.addEventListener('load', () => {
       const w = frame.contentWindow;
       try { setupVendedor(w); } catch (e) { console.warn('vendedor', e); }
+      try { setupCliente(w); } catch (e) { console.warn('cliente', e); }
       try { enhance(w); } catch (e) { console.warn('diseño', e); }
       try { setupMargen(w); } catch (e) { console.warn('margen', e); }
       try { const rf = w.document.getElementById('rapida-frame'); if (rf) { const go = () => { try { setupMargenRapida(rf.contentWindow); } catch (e) { console.warn('margen rápida', e); } }; rf.addEventListener('load', go); go(); } } catch (e) { console.warn('margen rápida', e); }
