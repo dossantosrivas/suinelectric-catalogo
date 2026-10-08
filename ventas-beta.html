@@ -4806,6 +4806,280 @@ const Cot = (() => {
     ta.addEventListener('keydown', (e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); use(); } });
     $('.ac-use', box).onclick = use;
   };
+  /* ---------- Registro y clientes a pantalla completa (generador de escritorio) ----------
+     Reemplaza las ventanitas "Ver registro" y "Clientes": ocupa todo el generador, muestra
+     los productos de cada documento con su precio, y se ve en lista o tabla con varios órdenes. */
+  const REG_CSS = `
+  .rg{position:fixed;inset:0;z-index:2000;background:rgba(9,20,31,.5);padding:12px;display:none;font-family:inherit;color:#14222c}
+  .rg.on{display:flex}
+  .rg-box{flex:1;min-width:0;display:flex;flex-direction:column;background:#f2f4f6;border-radius:14px;overflow:hidden;box-shadow:0 20px 50px rgba(0,0,0,.3)}
+  .rg-h{display:flex;align-items:center;gap:8px;background:#0e2a3b;padding:8px 10px 0;flex-wrap:wrap}
+  .rg-tabs{display:flex;gap:4px;align-self:flex-end}
+  .rg-tabs button{border:0;background:transparent;color:rgba(255,255,255,.75);font:inherit;font-size:15px;font-weight:700;padding:9px 16px;border-radius:10px 10px 0 0;cursor:pointer}
+  .rg-tabs button.on{background:#f2f4f6;color:#0e2a3b;box-shadow:inset 0 3px 0 #ffc20e}
+  .rg-tabs button small{font-weight:600;opacity:.75;margin-left:4px}
+  .rg-h-act{margin-left:auto;display:flex;gap:6px;padding-bottom:8px;flex-wrap:wrap}
+  .rg-h-act button{border:1px solid rgba(255,255,255,.25);background:transparent;color:#fff;font:inherit;font-size:13.5px;font-weight:600;padding:6px 11px;border-radius:8px;cursor:pointer}
+  .rg-h-act button:hover{background:rgba(255,255,255,.12)}
+  .rg-h-act .rg-x{font-size:16px;padding:6px 12px}
+  .rg-bar{display:flex;gap:8px;align-items:center;flex-wrap:wrap;padding:10px 14px;border-bottom:1px solid #dde3e8;background:#fff}
+  .rg-bar input[type=search]{flex:1 1 260px;min-width:180px;box-sizing:border-box;font:inherit;font-size:14.5px;border:1.5px solid #dde3e8;border-radius:8px;padding:7px 10px;outline:none}
+  .rg-bar input[type=search]:focus{border-color:#006d8c}
+  .rg-bar select{font:inherit;font-size:13.5px;border:1.5px solid #dde3e8;border-radius:8px;padding:6px 8px;background:#fff;color:#14222c;cursor:pointer}
+  .rg-seg{display:inline-flex;border:1.5px solid #dde3e8;border-radius:8px;overflow:hidden;background:#fff}
+  .rg-seg button{border:0;background:transparent;font:inherit;font-size:13.5px;font-weight:600;color:#475569;padding:6px 11px;cursor:pointer}
+  .rg-seg button+button{border-left:1.5px solid #dde3e8}
+  .rg-seg button.on{background:#0e2a3b;color:#fff}
+  .rg-pill{display:inline-flex;align-items:center;gap:6px;background:#e6f4f8;color:#00566f;border-radius:999px;padding:4px 6px 4px 11px;font-size:13px;font-weight:700}
+  .rg-pill button{border:0;background:#00566f;color:#fff;border-radius:999px;width:20px;height:20px;line-height:20px;padding:0;cursor:pointer;font-size:11px}
+  .rg-sum{margin-left:auto;font-size:13px;color:#64748b;white-space:nowrap}
+  .rg-sum b{color:#14222c;font-variant-numeric:tabular-nums}
+  .rg-body{flex:1;overflow:auto;padding:12px 14px 20px;zoom:var(--letra,1)}
+  .rg-empty{text-align:center;color:#64748b;padding:50px 10px;font-size:15px}
+  .rg-grid{display:grid;grid-template-columns:repeat(auto-fill,minmax(420px,1fr));gap:10px;align-items:start}
+  .rg-card{background:#fff;border:1px solid #e2e8f0;border-radius:12px;padding:10px 12px;min-width:0}
+  .rg-card.cur{border-color:#ffc20e;box-shadow:0 0 0 2px #ffe58a}
+  .rg-ch{display:flex;align-items:baseline;gap:8px;min-width:0}
+  .rg-ch .cl{font-size:15px;font-weight:700;flex:1;min-width:0;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .rg-ch .tot{font-size:16px;font-weight:800;font-variant-numeric:tabular-nums;white-space:nowrap}
+  .rg-meta{font-size:12.5px;color:#64748b;margin:2px 0 6px}
+  .bdg{display:inline-block;font-size:10.5px;font-weight:800;letter-spacing:.05em;border-radius:5px;padding:1px 6px;vertical-align:middle;white-space:nowrap}
+  .bdg.of{background:#e6f4f8;color:#00566f}.bdg.ne{background:#fef3c7;color:#92400e}.bdg.cu{background:#ffc20e;color:#0e2a3b;margin-left:4px}
+  .rg-it{width:100%;border-collapse:collapse;font-size:13px}
+  .rg-it td{padding:3px 4px;border-top:1px solid #f1f5f9;vertical-align:top}
+  .rg-it .q{width:30px;text-align:right;color:#475569;font-variant-numeric:tabular-nums}
+  .rg-it .m{max-width:0}
+  .rg-it .m b{font-weight:700}
+  .rg-it .m span{display:block;color:#64748b;font-size:12px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  .rg-it .n{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;width:1%}
+  .rg-it .n.s{color:#64748b}
+  .rg-more{border:0;background:none;color:#006d8c;font:inherit;font-size:12.5px;font-weight:700;cursor:pointer;padding:4px 4px 0}
+  .rg-act{display:flex;gap:6px;margin-top:8px;flex-wrap:wrap}
+  .rg-b{border:1.5px solid #cbd5e1;background:#fff;color:#0e2a3b;font:inherit;font-size:13px;font-weight:700;padding:4px 10px;border-radius:7px;cursor:pointer;white-space:nowrap}
+  .rg-b:hover{border-color:#0e2a3b;background:#f8fafc}
+  .rg-b.pri{background:#0e2a3b;border-color:#0e2a3b;color:#fff}
+  .rg-b.pri:hover{background:#006d8c;border-color:#006d8c}
+  .rg-b.del{color:#b91c1c;border-color:#fecaca}
+  .rg-b.del:hover{background:#fef2f2;border-color:#b91c1c}
+  .rg-t{width:100%;border-collapse:separate;border-spacing:0;background:#fff;border:1px solid #e2e8f0;border-radius:12px;overflow:hidden;font-size:13.5px}
+  .rg-t th{position:sticky;top:-12px;background:#f8fafc;z-index:1;text-align:left;font-size:12px;font-weight:800;color:#475569;letter-spacing:.03em;padding:8px;border-bottom:1px solid #e2e8f0;white-space:nowrap;user-select:none}
+  .rg-t th[data-k]{cursor:pointer}
+  .rg-t th[data-k]:hover{color:#0e2a3b}
+  .rg-t th.on{color:#006d8c}
+  .rg-t th .ar{font-size:10px;margin-left:3px}
+  .rg-t td{padding:6px 8px;border-bottom:1px solid #f1f5f9;vertical-align:middle}
+  .rg-t tr.cur td{background:#fffbeb}
+  .rg-t tbody tr.row:hover td{background:#f0f9ff}
+  .rg-t .n{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums}
+  .rg-t .b{font-weight:700}
+  .rg-t .mut{color:#64748b;font-size:12.5px}
+  .rg-t .cut{max-width:320px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+  .rg-t .acts{white-space:nowrap;text-align:right}
+  .rg-t .acts .rg-b{padding:3px 8px;font-size:12.5px}
+  .rg-tg{border:0;background:none;cursor:pointer;color:#64748b;font-size:12px;width:22px;padding:0}
+  .rg-t tr.sub td{background:#f8fafc;padding:4px 10px 10px 38px}
+  .rg-t tr.sub .rg-it{background:#fff;border:1px solid #e2e8f0;border-radius:8px}
+  .rg-t tr.click{cursor:pointer}
+  `;
+  const setupRegistro = (w) => {
+    const dd = w.document; const R = w.SuinRec;
+    const btnReg = dd.getElementById('act-registro');
+    if (!btnReg || !R || !R.openRecord || dd.getElementById('rg')) return;
+    if (!dd.getElementById('adm-reg-css')) { const st = dd.createElement('style'); st.id = 'adm-reg-css'; st.textContent = REG_CSS; dd.head.appendChild(st); }
+    const K_SET = 'suin_rg_v1';
+    const st = Object.assign({ tab: 'docs', vista: 'lista', orden: 'guardado:desc', tipo: 'todos', ordenProd: 'veces:desc', vistaCli: 'tabla', ordenCli: 'nombre:asc' }, lsGet(K_SET, {}) || {});
+    const keep = () => lsSet(K_SET, st);
+    let q = '', qc = '', cliFiltro = null; const open1 = new Set(), moreOpen = new Set();
+
+    /* botones: Ver registro y Clientes abren este panel; el original queda para "Nube y respaldo" */
+    const nb = btnReg.cloneNode(true); nb.id = 'rg-open'; btnReg.style.display = 'none'; btnReg.after(nb);
+    nb.addEventListener('click', () => show('docs'));
+    const oc = dd.getElementById('act-clients');
+    if (oc) { const nc = oc.cloneNode(true); oc.replaceWith(nc); nc.addEventListener('click', () => show('cli')); }
+
+    const box = dd.createElement('div'); box.id = 'rg'; box.className = 'rg'; box.setAttribute('role', 'dialog'); box.setAttribute('aria-modal', 'true');
+    box.innerHTML = `<div class="rg-box">
+      <header class="rg-h">
+        <div class="rg-tabs"><button type="button" data-tab="docs">🗂 Ofertas y notas<small data-n="docs"></small></button><button type="button" data-tab="cli">👥 Clientes<small data-n="cli"></small></button></div>
+        <div class="rg-h-act"><button type="button" data-a="save" title="Guardar en el registro el documento que tienes abierto">💾 Guardar actual</button><button type="button" data-a="new">＋ Nuevo documento</button><button type="button" data-a="nube" title="Conectar la nube, exportar o importar respaldo">☁ Nube y respaldo</button><button type="button" class="rg-x" data-a="close" aria-label="Cerrar" title="Cerrar (Esc)">✕</button></div>
+      </header>
+      <div class="rg-bar"></div>
+      <div class="rg-body"></div>
+    </div>`;
+    dd.body.appendChild(box);
+    const bar = $('.rg-bar', box), body = $('.rg-body', box);
+
+    /* ---- datos ---- */
+    const cache = new Map();
+    const dmy = (s) => { const m = String(s || '').match(/(\d{1,2})\/(\d{1,2})\/(\d{4})/); return m ? new Date(+m[3], m[2] - 1, +m[1]).getTime() : 0; };
+    const rifKey = (c) => { const r = String((c && c.rif) || '').toUpperCase().replace(/[^A-Z0-9]/g, ''); return r && r !== 'J000000000' ? 'R:' + r : 'N:' + String((c && c.nombre) || '').trim().toUpperCase(); };
+    const lab = (desc) => {
+      const lines = String(desc || '').split('\n').map(x => x.replace(/\*/g, '').trim()).filter(Boolean);
+      const mod = modeloDe(desc);
+      if (mod) return { modelo: mod, det: lines.filter(x => !/Ref\s*\/\s*Modelo/i.test(x)).join(' · ') };
+      return { modelo: lines[0] || '(sin descripción)', det: lines.slice(1).join(' · ') };
+    };
+    const docs = () => readArr(K_REG).filter(r => r && !r.deleted && r.clase !== 'rapida').map(r => {
+      const ck = r.id + ':' + modOf(r);
+      if (!cache.has(ck)) {
+        let its = []; try { its = parseItems(r.estado || {}).map(x => Object.assign(x, lab(x.desc))); } catch (e) { its = []; }
+        cache.set(ck, its);
+      }
+      const its = cache.get(ck);
+      const c = r.cliente || {};
+      return { r, its, total: num(r.total), fecha: dmy(r.fecha) || r.creado || 0, guardado: r.guardado || r.mod || 0, cliente: c.nombre && c.nombre !== 'NOMBRE DEL CLIENTE' ? c.nombre : '', key: rifKey(c), control: r.control || '', tipo: r.tipo === 'nota' ? 'nota' : 'oferta', n: its.length || r.items || 0 };
+    });
+    const clientes = () => readArr(K_CLI).filter(c => c && !c.deleted && c.nombre);
+    const fecha = (t) => t ? new Date(t).toLocaleDateString('es-VE', { day: '2-digit', month: '2-digit', year: 'numeric' }) : '';
+    const fechaH = (t) => t ? new Date(t).toLocaleString('es-VE', { day: '2-digit', month: '2-digit', year: '2-digit', hour: '2-digit', minute: '2-digit' }) : '';
+    const cmp = (a, b) => typeof a === 'string' || typeof b === 'string' ? String(a || '').localeCompare(String(b || ''), 'es', { numeric: true, sensitivity: 'base' }) : (a || 0) - (b || 0);
+    const sortBy = (arr, ord, get) => { const [k, d] = ord.split(':'); const s = d === 'desc' ? -1 : 1; return arr.sort((a, b) => s * cmp(get(a, k), get(b, k))); };
+    const th = (ord, k, label, cls = '') => { const [ok, od] = ord.split(':'); return `<th data-k="${k}" class="${cls} ${ok === k ? 'on' : ''}">${label}${ok === k ? `<span class="ar">${od === 'desc' ? '▼' : '▲'}</span>` : ''}</th>`; };
+    const nextOrd = (ord, k, def) => { const [ok, od] = ord.split(':'); return ok === k ? `${k}:${od === 'desc' ? 'asc' : 'desc'}` : `${k}:${def}`; };
+    const seg = (name, cur, opts) => `<div class="rg-seg" data-seg="${name}">${opts.map(([v, l]) => `<button type="button" data-v="${v}" class="${cur === v ? 'on' : ''}">${l}</button>`).join('')}</div>`;
+    const sel = (name, cur, opts) => `<select data-sel="${name}" title="Ordenar">${opts.map(([v, l]) => `<option value="${v}" ${cur === v ? 'selected' : ''}>${l}</option>`).join('')}${opts.some(o => o[0] === cur) ? '' : `<option value="${cur}" selected>Orden de la tabla</option>`}</select>`;
+    const itemsTable = (its, limit, id) => {
+      if (!its.length) return '<div class="rg-meta">Sin productos.</div>';
+      const show = limit && !moreOpen.has(id) && its.length > limit ? its.slice(0, limit - 1) : its;
+      return `<table class="rg-it">${show.map(x => `<tr><td class="q">${esc(fmtQ(x.cant))}</td><td class="m"><b>${esc(x.modelo)}</b>${x.det ? `<span title="${esc(x.det)}">${esc(x.det)}</span>` : ''}</td><td class="n">${fmtUSD(x.precio)}</td><td class="n s">${fmtUSD(x.precio * (x.cant || 0))}</td></tr>`).join('')}</table>${show.length < its.length ? `<button type="button" class="rg-more" data-more="${esc(id)}">+ ${its.length - show.length} producto${its.length - show.length === 1 ? '' : 's'} más</button>` : ''}`;
+    };
+    const fmtQ = (v) => Number.isInteger(v) ? String(v) : String(Math.round(v * 100) / 100);
+    const badge = (d) => `<span class="bdg ${d.tipo === 'nota' ? 'ne' : 'of'}">${d.tipo === 'nota' ? 'NOTA' : 'OFERTA'}</span>${R.isCurrent(d.r.id) ? '<span class="bdg cu">ABIERTO</span>' : ''}`;
+
+    /* ---- pestaña de documentos ---- */
+    const filtDocs = () => {
+      const t = q.trim().toLowerCase();
+      return docs().filter(d => (st.tipo === 'todos' || d.tipo === st.tipo) && (!cliFiltro || d.key === cliFiltro.key) &&
+        (!t || (d.r.buscar || '').includes(t) || d.cliente.toLowerCase().includes(t) || d.control.toLowerCase().includes(t) || d.its.some(x => x.modelo.toLowerCase().includes(t))));
+    };
+    const getDoc = (d, k) => ({ guardado: d.guardado, fecha: d.fecha, cliente: d.cliente, total: d.total, items: d.n, control: d.control, tipo: d.tipo }[k]);
+    const barDocs = () => {
+      bar.innerHTML = `<input type="search" data-q placeholder="Buscar cliente, RIF, N° de control o modelo" value="${esc(q)}" autocomplete="off">
+        ${seg('tipo', st.tipo, [['todos', 'Todos'], ['oferta', 'Ofertas'], ['nota', 'Notas']])}
+        ${cliFiltro ? `<span class="rg-pill">${esc(cliFiltro.nombre)}<button type="button" data-a="nocli" aria-label="Quitar filtro de cliente">✕</button></span>` : ''}
+        ${st.vista === 'prod' ? sel('ordenProd', st.ordenProd, [['veces:desc', 'Más ofertados'], ['ult:desc', 'Ofertado más reciente'], ['modelo:asc', 'Modelo A–Z'], ['precio:desc', 'Precio mayor'], ['precio:asc', 'Precio menor'], ['cant:desc', 'Más unidades']])
+        : sel('orden', st.orden, [['guardado:desc', 'Más recientes'], ['guardado:asc', 'Más antiguos'], ['fecha:desc', 'Fecha del documento'], ['cliente:asc', 'Cliente A–Z'], ['total:desc', 'Total mayor'], ['total:asc', 'Total menor'], ['items:desc', 'Más productos'], ['control:desc', 'N° de control']])}
+        ${seg('vista', st.vista, [['lista', '▦ Lista'], ['tabla', '☰ Tabla'], ['prod', '📦 Por producto']])}
+        <span class="rg-sum" data-sum></span>`;
+    };
+    const renderDocs = () => {
+      const list = filtDocs();
+      const sum = list.reduce((a, d) => a + d.total, 0);
+      const sumEl = $('[data-sum]', bar); if (sumEl) sumEl.innerHTML = `<b>${list.length}</b> documento${list.length === 1 ? '' : 's'} · <b>${fmtUSD(sum)}</b>`;
+      if (!list.length) { body.innerHTML = `<div class="rg-empty">${q || cliFiltro || st.tipo !== 'todos' ? 'Sin coincidencias.' : 'Todavía no hay documentos guardados. Se guardan al descargar el PDF o con 💾 Guardar.'}</div>`; return; }
+      if (st.vista === 'prod') return renderProd(list);
+      sortBy(list, st.orden, getDoc);
+      if (st.vista === 'tabla') {
+        body.innerHTML = `<table class="rg-t"><thead><tr><th></th>${th(st.orden, 'tipo', 'Tipo')}${th(st.orden, 'control', 'N° control')}${th(st.orden, 'fecha', 'Fecha')}${th(st.orden, 'cliente', 'Cliente')}${th(st.orden, 'items', 'Productos')}${th(st.orden, 'total', 'Total', 'n')}${th(st.orden, 'guardado', 'Guardado')}<th></th></tr></thead><tbody>${list.map(d => {
+          const id = d.r.id; const on = open1.has(id);
+          return `<tr class="row click ${R.isCurrent(id) ? 'cur' : ''}" data-tg="${esc(id)}"><td><button type="button" class="rg-tg" data-tg="${esc(id)}" aria-label="Ver productos">${on ? '▼' : '▶'}</button></td><td>${badge(d)}</td><td class="b">${esc(d.control)}</td><td>${esc(d.r.fecha || '')}</td><td class="b cut" title="${esc(d.cliente)}">${esc(d.cliente || 'Sin cliente')}</td><td class="cut"><b>${d.n}</b> <span class="mut">${esc(d.its.slice(0, 3).map(x => x.modelo).join(', '))}${d.its.length > 3 ? '…' : ''}</span></td><td class="n b">${fmtUSD(d.total)}</td><td class="mut">${esc(fechaH(d.guardado))}</td><td class="acts"><button type="button" class="rg-b pri" data-open="${esc(id)}">Abrir</button> <button type="button" class="rg-b" data-dup="${esc(id)}">Duplicar</button> <button type="button" class="rg-b del" data-del="${esc(id)}" aria-label="Eliminar">🗑</button></td></tr>${on ? `<tr class="sub"><td colspan="9">${itemsTable(d.its, 0, id)}</td></tr>` : ''}`;
+        }).join('')}</tbody></table>`;
+      } else {
+        body.innerHTML = `<div class="rg-grid">${list.map(d => { const id = d.r.id; return `<article class="rg-card ${R.isCurrent(id) ? 'cur' : ''}">
+          <div class="rg-ch">${badge(d)}<span class="cl" title="${esc(d.cliente)}">${esc(d.cliente || 'Sin cliente')}</span><span class="tot">${fmtUSD(d.total)}</span></div>
+          <div class="rg-meta">${esc(d.control)} · ${esc(d.r.fecha || '')} · ${d.n} producto${d.n === 1 ? '' : 's'} · guardado ${esc(fechaH(d.guardado))}</div>
+          ${itemsTable(d.its, 6, id)}
+          <div class="rg-act"><button type="button" class="rg-b pri" data-open="${esc(id)}">Abrir</button><button type="button" class="rg-b" data-dup="${esc(id)}">Duplicar</button><button type="button" class="rg-b del" data-del="${esc(id)}">Eliminar</button></div>
+        </article>`; }).join('')}</div>`;
+      }
+    };
+    const renderProd = (list) => {
+      const m = new Map();
+      list.forEach(d => d.its.forEach(x => {
+        const k = x.modelo.toUpperCase(); let p = m.get(k);
+        if (!p) { p = { modelo: x.modelo, det: x.det, docs: new Set(), cant: 0, min: Infinity, max: 0, ult: 0, precio: 0, cliente: '' }; m.set(k, p); }
+        p.docs.add(d.r.id); p.cant += x.cant || 0;
+        if (x.precio > 0) { p.min = Math.min(p.min, x.precio); p.max = Math.max(p.max, x.precio); }
+        if (d.guardado >= p.ult) { p.ult = d.guardado; p.precio = x.precio; p.cliente = d.cliente; if (x.det) p.det = x.det; }
+      }));
+      const rows = sortBy([...m.values()], st.ordenProd, (p, k) => ({ modelo: p.modelo, veces: p.docs.size, cant: p.cant, precio: p.precio, min: p.min === Infinity ? 0 : p.min, max: p.max, ult: p.ult, cliente: p.cliente }[k]));
+      const o = st.ordenProd;
+      body.innerHTML = `<table class="rg-t" data-prod><thead><tr>${th(o, 'modelo', 'Producto')}${th(o, 'veces', 'Veces', 'n')}${th(o, 'cant', 'Unidades', 'n')}${th(o, 'precio', 'Último precio', 'n')}${th(o, 'min', 'Mín.', 'n')}${th(o, 'max', 'Máx.', 'n')}${th(o, 'cliente', 'Último cliente')}${th(o, 'ult', 'Fecha')}</tr></thead><tbody>${rows.map(p => `<tr class="row click" data-prodq="${esc(p.modelo)}" title="Ver los documentos con este producto"><td class="cut" style="max-width:420px"><b>${esc(p.modelo)}</b>${p.det ? `<div class="mut cut" style="max-width:420px">${esc(p.det)}</div>` : ''}</td><td class="n b">${p.docs.size}</td><td class="n">${esc(fmtQ(p.cant))}</td><td class="n b">${fmtUSD(p.precio)}</td><td class="n mut">${p.min === Infinity ? '—' : fmtUSD(p.min)}</td><td class="n mut">${p.max ? fmtUSD(p.max) : '—'}</td><td class="cut" title="${esc(p.cliente)}">${esc(p.cliente || '—')}</td><td class="mut">${esc(fecha(p.ult))}</td></tr>`).join('')}</tbody></table>`;
+      const sumEl = $('[data-sum]', bar); if (sumEl) sumEl.innerHTML += ` · <b>${rows.length}</b> producto${rows.length === 1 ? '' : 's'}`;
+    };
+
+    /* ---- pestaña de clientes ---- */
+    const getCli = (c, k) => ({ nombre: c.nombre, rif: c.rif, docs: c.st.n, total: c.st.total, ultimo: c.st.ult, of: c.st.of, ne: c.st.ne }[k]);
+    const barCli = () => {
+      bar.innerHTML = `<input type="search" data-qc placeholder="Buscar por nombre, RIF, dirección o teléfono" value="${esc(qc)}" autocomplete="off">
+        ${sel('ordenCli', st.ordenCli, [['nombre:asc', 'Nombre A–Z'], ['ultimo:desc', 'Último documento'], ['docs:desc', 'Más documentos'], ['total:desc', 'Mayor total ofertado'], ['rif:asc', 'RIF']])}
+        ${seg('vistaCli', st.vistaCli, [['lista', '▦ Lista'], ['tabla', '☰ Tabla']])}
+        <button type="button" class="rg-b" data-a="savecli" title="Guarda en tus clientes el que está en el documento">＋ Guardar cliente del documento</button>
+        <span class="rg-sum" data-sum></span>`;
+    };
+    const renderCli = () => {
+      const ds = docs(); const stats = new Map();
+      ds.forEach(d => { let s = stats.get(d.key); if (!s) { s = { n: 0, of: 0, ne: 0, total: 0, ult: 0, last: null }; stats.set(d.key, s); } s.n++; s[d.tipo === 'nota' ? 'ne' : 'of']++; s.total += d.total; if (d.guardado >= s.ult) { s.ult = d.guardado; s.last = d; } });
+      const t = qc.trim().toLowerCase();
+      const list = clientes().map(c => Object.assign({}, c, { key: rifKey(c), st: stats.get(rifKey(c)) || { n: 0, of: 0, ne: 0, total: 0, ult: 0, last: null } }))
+        .filter(c => !t || `${c.nombre} ${c.rif} ${c.direccion} ${(c.extras || []).map(x => x.v).join(' ')}`.toLowerCase().includes(t));
+      sortBy(list, st.ordenCli, getCli);
+      const sumEl = $('[data-sum]', bar); if (sumEl) sumEl.innerHTML = `<b>${list.length}</b> cliente${list.length === 1 ? '' : 's'}`;
+      if (!list.length) { body.innerHTML = `<div class="rg-empty">${t ? 'Sin coincidencias.' : 'Aún no hay clientes guardados. Se guardan al pegar sus datos o al guardar un documento.'}</div>`; return; }
+      const extras = (c) => (c.extras || []).map(x => `${esc(x.l)}: ${esc(x.v)}`).join(' · ');
+      const acts = (c) => `<button type="button" class="rg-b pri" data-use="${esc(c.id)}">Usar</button> ${c.st.n ? `<button type="button" class="rg-b" data-verdocs="${esc(c.id)}">Ver ${c.st.n} doc.</button> ` : ''}<button type="button" class="rg-b del" data-delcli="${esc(c.id)}" aria-label="Eliminar">🗑</button>`;
+      const o = st.ordenCli;
+      if (st.vistaCli === 'tabla') {
+        body.innerHTML = `<table class="rg-t"><thead><tr>${th(o, 'nombre', 'Nombre / Razón social')}${th(o, 'rif', 'RIF / C.I.')}<th>Dirección</th><th>Contacto</th>${th(o, 'of', 'Ofertas', 'n')}${th(o, 'ne', 'Notas', 'n')}${th(o, 'total', 'Total ofertado', 'n')}${th(o, 'ultimo', 'Último doc.')}<th></th></tr></thead><tbody>${list.map(c => `<tr class="row"><td class="b cut" title="${esc(c.nombre)}">${esc(c.nombre)}</td><td>${esc(c.rif || '')}</td><td class="cut mut" title="${esc(c.direccion || '')}">${esc(c.direccion || '')}</td><td class="cut mut" style="max-width:220px">${extras(c)}</td><td class="n">${c.st.of || ''}</td><td class="n">${c.st.ne || ''}</td><td class="n b">${c.st.total ? fmtUSD(c.st.total) : ''}</td><td class="mut">${esc(fecha(c.st.ult))}</td><td class="acts">${acts(c)}</td></tr>`).join('')}</tbody></table>`;
+      } else {
+        body.innerHTML = `<div class="rg-grid">${list.map(c => `<article class="rg-card">
+          <div class="rg-ch"><span class="cl" title="${esc(c.nombre)}">${esc(c.nombre)}</span>${c.st.total ? `<span class="tot">${fmtUSD(c.st.total)}</span>` : ''}</div>
+          <div class="rg-meta">${esc(c.rif || 'Sin RIF')}${c.direccion ? ' · ' + esc(c.direccion) : ''}${extras(c) ? '<br>' + extras(c) : ''}</div>
+          <div class="rg-meta">${c.st.n ? `${c.st.of} oferta${c.st.of === 1 ? '' : 's'} · ${c.st.ne} nota${c.st.ne === 1 ? '' : 's'} · último ${esc(fecha(c.st.ult))}` : 'Sin documentos guardados'}</div>
+          ${c.st.last && c.st.last.its.length ? `<div class="rg-meta" style="margin-bottom:2px">${c.st.last.tipo === 'nota' ? 'Última nota' : 'Última oferta'} (${esc(c.st.last.control)}):</div>${itemsTable(c.st.last.its, 4, 'c:' + c.id)}` : ''}
+          <div class="rg-act">${acts(c)}</div></article>`).join('')}</div>`;
+      }
+    };
+
+    /* ---- mostrar y eventos ---- */
+    const paintTabs = () => {
+      $$('[data-tab]', box).forEach(b => b.classList.toggle('on', b.dataset.tab === st.tab));
+      const nd = $('[data-n="docs"]', box), nc = $('[data-n="cli"]', box);
+      if (nd) nd.textContent = ' ' + docs().length; if (nc) nc.textContent = ' ' + clientes().length;
+    };
+    const paint = (withBar) => { paintTabs(); if (st.tab === 'cli') { if (withBar) barCli(); renderCli(); } else { if (withBar) barDocs(); renderDocs(); } };
+    const show = (tab) => { if (tab) st.tab = tab; keep(); box.classList.add('on'); paint(true); setTimeout(() => { const s = $('input[type=search]', bar); if (s) s.focus(); }, 30); };
+    const hide = () => box.classList.remove('on');
+    const findDoc = (id) => readArr(K_REG).find(r => r && r.id === id);
+    const findCli = (id) => clientes().find(c => c.id === id);
+
+    box.addEventListener('click', (e) => {
+      const t = e.target.closest('button, [data-tg], [data-prodq], th[data-k]'); if (!t || !box.contains(t)) { if (e.target === box) hide(); return; }
+      const d = t.dataset;
+      if (d.tab) { st.tab = d.tab; keep(); paint(true); return; }
+      if (d.a === 'close') return hide();
+      if (d.a === 'save') { R.saveCurrent(); paint(false); return; }
+      if (d.a === 'new') { if (R.newDocument()) hide(); return; }
+      if (d.a === 'nube') { hide(); btnReg.click(); return; }
+      if (d.a === 'nocli') { cliFiltro = null; paint(true); return; }
+      if (d.a === 'savecli') { const c = R.readClient(); if (R.isPlaceholderClient(c)) { alert('El documento no tiene un cliente cargado.'); return; } R.upsertClient(c); paint(false); return; }
+      if (d.open) { const r = findDoc(d.open); if (r) { R.openRecord(r, false); hide(); } return; }
+      if (d.dup) { const r = findDoc(d.dup); if (r) { R.openRecord(r, true); hide(); } return; }
+      if (d.del) { const r = findDoc(d.del); if (r && confirm(`¿Eliminar ${r.control} (${(r.cliente && r.cliente.nombre) || 'sin cliente'}) del registro?`)) { R.removeRec(K_REG, r.id); paint(false); } return; }
+      if (d.more) { moreOpen.add(d.more); paint(false); return; }
+      if (d.use) { const c = findCli(d.use); if (c) { R.applyClient(c); hide(); } return; }
+      if (d.delcli) { const c = findCli(d.delcli); if (c && confirm(`¿Eliminar a ${c.nombre} de tus clientes?`)) { R.removeRec(K_CLI, c.id); paint(false); } return; }
+      if (d.verdocs) { const c = findCli(d.verdocs); if (c) { cliFiltro = { key: rifKey(c), nombre: c.nombre }; st.tab = 'docs'; q = ''; if (st.vista === 'prod') st.vista = 'lista'; keep(); paint(true); } return; }
+      if (d.k) { const tbl = t.closest('table'); const isProd = tbl && tbl.hasAttribute('data-prod');
+        const numK = ['total', 'items', 'guardado', 'fecha', 'veces', 'cant', 'precio', 'min', 'max', 'ult', 'docs', 'ultimo', 'of', 'ne'].includes(d.k);
+        if (st.tab === 'cli') st.ordenCli = nextOrd(st.ordenCli, d.k, numK ? 'desc' : 'asc');
+        else if (isProd) st.ordenProd = nextOrd(st.ordenProd, d.k, numK ? 'desc' : 'asc');
+        else st.orden = nextOrd(st.orden, d.k, numK ? 'desc' : 'asc');
+        keep(); paint(true); return; }
+      if (d.prodq) { q = d.prodq; st.vista = 'lista'; keep(); paint(true); return; }
+      if (d.tg) { if (e.target.closest('.acts')) return; open1.has(d.tg) ? open1.delete(d.tg) : open1.add(d.tg); paint(false); return; }
+      const sg = t.closest('[data-seg]');
+      if (sg && d.v) { st[sg.dataset.seg] = d.v; keep(); paint(true); return; }
+    });
+    box.addEventListener('change', (e) => { const s = e.target.closest('[data-sel]'); if (s) { st[s.dataset.sel] = s.value; keep(); paint(true); } });
+    let tq = 0;
+    box.addEventListener('input', (e) => {
+      if (e.target.matches('[data-q]')) { q = e.target.value; clearTimeout(tq); tq = setTimeout(() => renderDocs(), 120); }
+      if (e.target.matches('[data-qc]')) { qc = e.target.value; clearTimeout(tq); tq = setTimeout(() => renderCli(), 120); }
+    });
+    dd.addEventListener('keydown', (e) => { if (e.key === 'Escape' && box.classList.contains('on')) { e.stopPropagation(); hide(); } }, true);
+    w.addEventListener('storage', (e) => { if ((e.key === K_REG || e.key === K_CLI) && box.classList.contains('on')) paint(false); });
+  };
   const GEN_CSS = `
   body:not(.is-mobile){padding:14px 18px 40px}
   .actions-container.hd{max-width:none!important;width:100%;box-sizing:border-box}
@@ -5127,6 +5401,7 @@ const Cot = (() => {
       const w = frame.contentWindow;
       try { setupVendedor(w); } catch (e) { console.warn('vendedor', e); }
       try { setupCliente(w); } catch (e) { console.warn('cliente', e); }
+      try { setupRegistro(w); } catch (e) { console.warn('registro', e); }
       try { enhance(w); } catch (e) { console.warn('diseño', e); }
       try { setupMargen(w); } catch (e) { console.warn('margen', e); }
       try { const rf = w.document.getElementById('rapida-frame'); if (rf) { const go = () => { try { setupMargenRapida(rf.contentWindow); } catch (e) { console.warn('margen rápida', e); } }; rf.addEventListener('load', go); go(); } } catch (e) { console.warn('margen rápida', e); }

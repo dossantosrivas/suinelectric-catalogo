@@ -3183,7 +3183,8 @@ function doPost(e) {
             });
             setTimeout(() => { hist = [hSnap()]; hpos = 0; paintHist(); }, 900);
 
-            window.SuinRec = { openPaste, openClients, renderRegistro, newDocument, saveCurrent, parseClient, addExtra, cloudSync, undo: () => hGo(-1), redo: () => hGo(1) };
+            window.SuinRec = { openPaste, openClients, renderRegistro, newDocument, saveCurrent, parseClient, addExtra, cloudSync, undo: () => hGo(-1), redo: () => hGo(1),
+                openRecord, applyClient, removeRec, upsertClient, readClient, isPlaceholderClient, isCurrent: (id) => !!id && id === currentId };
         };
         if (window.SuinApp) start();
         else document.addEventListener('suinapp:ready', start, { once: true });
