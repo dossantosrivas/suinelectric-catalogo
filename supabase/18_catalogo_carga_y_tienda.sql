@@ -59,7 +59,8 @@ language sql stable security invoker set search_path = '' as $$
       and not exists (select 1 from jsonb_each(coalesce(p_filtros, '{}')) f(clave, valores)
                       where jsonb_array_length(f.valores) > 0 and not (f.valores @> jsonb_build_array(t.specs -> f.clave)))
       and not exists (select 1 from jsonb_each_text(coalesce(p_cubre, '{}')) r(clave, valor)
-                      where not (r.valor::numeric between (t.specs ->> (r.clave || '_min'))::numeric and (t.specs ->> (r.clave || '_max'))::numeric))
+                      where t.specs ->> (r.clave || '_min') is null
+                         or not (r.valor::numeric between (t.specs ->> (r.clave || '_min'))::numeric and (t.specs ->> (r.clave || '_max'))::numeric))
   )
   select b.sku_id, b.codigo, b.nombre, b.marca, b.specs, b.precio, b.disponibilidad, count(*) over () as total
   from base b
@@ -176,7 +177,9 @@ begin
 
   insert into catalogo.proveedores (nombre, origen)
   select distinct o ->> 'proveedor', case when o ->> 'proveedor' = 'Grupo Eléctricos' then 'scraping' else 'lista' end
-  from jsonb_array_elements(d -> 'series') s, jsonb_array_elements(s -> 'skus') k, jsonb_array_elements(k -> 'ofertas') o
+  from jsonb_array_elements(d -> 'series') s
+  cross join lateral jsonb_array_elements(s -> 'skus') k
+  cross join lateral jsonb_array_elements(k -> 'ofertas') o
   on conflict (nombre) do nothing;
 
   insert into catalogo.series (marca_id, categoria_id, codigo, nombre, descripcion, imagenes, estado)
@@ -186,7 +189,7 @@ begin
   join catalogo.marcas m on m.nombre = s ->> 'marca'
   join catalogo.categorias c on c.ruta = s ->> 'categoria'
   on conflict (marca_id, codigo) do update set categoria_id = excluded.categoria_id, nombre = excluded.nombre,
-     descripcion = excluded.descripcion, imagenes = excluded.imagenes;
+     descripcion = excluded.descripcion, imagenes = excluded.imagenes, estado = 'publicado';
   get diagnostics n_series = row_count;
 
   insert into catalogo.skus (serie_id, codigo, specs, precio_lista)
@@ -194,13 +197,15 @@ begin
   from jsonb_array_elements(d -> 'series') s
   join catalogo.marcas m on m.nombre = s ->> 'marca'
   join catalogo.series se on se.marca_id = m.id and se.codigo = s ->> 'codigo'
-  cross join jsonb_array_elements(s -> 'skus') k
-  on conflict (codigo) do update set serie_id = excluded.serie_id, specs = excluded.specs, precio_lista = excluded.precio_lista;
+  cross join lateral jsonb_array_elements(s -> 'skus') k
+  on conflict (codigo) do update set serie_id = excluded.serie_id, specs = excluded.specs, precio_lista = excluded.precio_lista, activo = true;
   get diagnostics n_skus = row_count;
 
   insert into catalogo.ofertas_proveedor (sku_id, proveedor_id, precio_publico, disponible, visto)
   select distinct on (sk.id, p.id) sk.id, p.id, (o ->> 'precio_publico')::numeric, coalesce((o ->> 'disponible')::boolean, true), now()
-  from jsonb_array_elements(d -> 'series') s, jsonb_array_elements(s -> 'skus') k, jsonb_array_elements(k -> 'ofertas') o
+  from jsonb_array_elements(d -> 'series') s
+  cross join lateral jsonb_array_elements(s -> 'skus') k
+  cross join lateral jsonb_array_elements(k -> 'ofertas') o
   join catalogo.skus sk on sk.codigo = k ->> 'codigo'
   join catalogo.proveedores p on p.nombre = o ->> 'proveedor'
   on conflict (sku_id, proveedor_id) do update set precio_publico = excluded.precio_publico, disponible = excluded.disponible, visto = excluded.visto;

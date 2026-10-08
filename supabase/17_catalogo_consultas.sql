@@ -35,7 +35,8 @@ language sql stable security invoker set search_path = '' as $$
       -- rangos: el valor buscado cae dentro del rango del producto
       and not exists (
         select 1 from jsonb_each_text(coalesce(p_cubre, '{}')) r(clave, valor)
-        where not (r.valor::numeric between (t.specs ->> (r.clave || '_min'))::numeric
+        where t.specs ->> (r.clave || '_min') is null    -- sin rango: no sirve para "mi motor consume X A"
+           or not (r.valor::numeric between (t.specs ->> (r.clave || '_min'))::numeric
                                         and (t.specs ->> (r.clave || '_max'))::numeric))
   )
   select b.sku_id, b.codigo, b.nombre, b.marca, b.specs, b.precio, b.disponibilidad,
