@@ -4641,6 +4641,46 @@ const Cot = (() => {
   .m-total-strip .usd{font-size:22px!important}
   .m-h{font-size:23px!important}
   `;
+  /* Catálogo compacto: más resultados a la vista (va después de LEER_CSS y GEN_CSS y les gana) */
+  const CAT_CSS = `
+  html body:not(.is-mobile) .catalog-panel{padding:10px 12px!important;border-radius:12px}
+  html body:not(.is-mobile) .catalog-panel-header{margin-bottom:6px!important;gap:4px 8px!important}
+  html body:not(.is-mobile) .catalog-panel-title{font-size:13.5px!important}
+  html body:not(.is-mobile) .catalog-meta,html body:not(.is-mobile) .catalog-sync-status,html body:not(.is-mobile) .catalog-hint{font-size:12px!important}
+  html body:not(.is-mobile) .catalog-search-row{gap:5px!important}
+  html body:not(.is-mobile) #catalog-search{box-sizing:border-box!important;font-size:15px!important;min-height:36px!important;padding:6px 10px!important;border-radius:8px!important}
+  html body:not(.is-mobile) #catalog-brand-filter,html body:not(.is-mobile) .catalog-btn,html body:not(.is-mobile) .catalog-desc{box-sizing:border-box!important;font-size:12.5px!important;min-height:30px!important;padding:3px 9px!important;border-width:1.5px!important;border-radius:7px!important}
+  html body:not(.is-mobile) .catalog-desc input{width:38px}
+  html body:not(.is-mobile) .catalog-sync-status{margin-top:4px!important}
+  html body:not(.is-mobile) .catalog-results{margin-top:6px!important}
+  html body:not(.is-mobile) .catalog-hint{padding:10px 4px!important}
+  html body:not(.is-mobile) .catalog-result-row{font-size:12.5px!important;padding:4px 6px!important;gap:8px!important;line-height:1.25}
+  html body:not(.is-mobile) .catalog-result-row.is-inv{box-shadow:inset 3px 0 0 #15803D}
+  html body:not(.is-mobile) .catalog-result-row .cr-main{display:flex;flex-wrap:wrap;align-items:center;column-gap:6px;row-gap:1px}
+  html body:not(.is-mobile) .catalog-result-row .cr-main > .stk-row{order:2;margin:0!important}
+  html body:not(.is-mobile) .catalog-result-row .cr-main > .cr-desc{order:3;flex:1 1 100%;min-width:0}
+  html body:not(.is-mobile) .catalog-result-row .cr-main > .cr-stock{order:4}
+  html body:not(.is-mobile) #catalog-brand-filter{max-width:170px}
+  html body:not(.is-mobile) .cr-model{font-size:14px!important;letter-spacing:0!important}
+  html body:not(.is-mobile) .cr-brand{font-size:10.5px!important;padding:0 5px!important;margin-left:5px!important}
+  html body:not(.is-mobile) .cr-desc{font-size:12px!important;-webkit-line-clamp:1!important;margin-top:0!important;line-height:1.3!important}
+  html body:not(.is-mobile) .cr-stock,html body:not(.is-mobile) .cr-list{font-size:11px!important}
+  html body:not(.is-mobile) .cr-price{font-size:14.5px!important}
+  html body:not(.is-mobile) .cr-price small{font-size:11px!important}
+  html body:not(.is-mobile) .cr-add-btn{font-size:12.5px!important;padding:5px 9px!important;border-radius:6px!important}
+  html body:not(.is-mobile) .catalog-result-row .stk-row{gap:4px!important}
+  html body:not(.is-mobile) .catalog-result-row .stk-chip{font-size:11.5px!important;padding:0 6px 1px!important;border-width:1px!important;border-radius:5px!important;gap:4px!important}
+  html body:not(.is-mobile) .catalog-result-row .stk-chip b{font-size:13px!important}
+  html body:not(.is-mobile) .catalog-result-row .stk-tag{font-size:10px!important;padding:0 5px!important;margin-left:5px!important}
+  html body:not(.is-mobile) #adm-margen{margin-top:6px!important;padding-top:4px!important}
+  html body:not(.is-mobile) #adm-margen h4{font-size:13.5px!important}
+  html body:not(.is-mobile) #adm-margen .mg-aj{font-size:12.5px!important;padding:3px 8px!important}
+  html body:not(.is-mobile) #adm-margen .mg-ln{padding:4px 6px!important}
+  html body:not(.is-mobile) #adm-margen .mg-ln .mg-t{font-size:13px!important}
+  html body:not(.is-mobile) #adm-margen .mg-row{font-size:12.5px!important;margin-top:1px!important}
+  html body:not(.is-mobile) #adm-margen .mg-row .mg-gan b{font-size:13.5px!important}
+  html body:not(.is-mobile) #adm-margen .mg-tot{font-size:13px!important;padding:5px 8px!important}
+  `;
   const GEN_CSS = `
   body:not(.is-mobile){padding:14px 18px 40px}
   .actions-container.hd{max-width:none!important;width:100%;box-sizing:border-box}
@@ -4884,6 +4924,7 @@ const Cot = (() => {
     const dd = w.document;
     if (!dd.getElementById('adm-gen-css')) { const st = dd.createElement('style'); st.id = 'adm-gen-css'; st.textContent = GEN_CSS; dd.head.appendChild(st); }
     if (!dd.getElementById('adm-leer-css')) { const st = dd.createElement('style'); st.id = 'adm-leer-css'; st.textContent = LEER_CSS; dd.head.appendChild(st); }
+    if (!dd.getElementById('adm-cat-css')) { const st = dd.createElement('style'); st.id = 'adm-cat-css'; st.textContent = CAT_CSS; dd.head.appendChild(st); }
     const setTop = () => { const hd = dd.querySelector('.actions-container'); if (!hd) return; const top = parseFloat(w.getComputedStyle(hd).top) || 10; dd.documentElement.style.setProperty('--adm-top', Math.round(top + hd.offsetHeight + 14) + 'px'); };
     setTop(); w.addEventListener('resize', setTop); setTimeout(setTop, 800);
     const obs = new w.MutationObserver(() => decorate(dd));
