@@ -472,6 +472,17 @@ main.view{max-width:1760px}
   table.tbl.apilable td[data-label]:not(:first-child):not(.sel-c + td):not(:empty)::before{content:attr(data-label);display:block;font-size:12.5px;color:var(--muted);font-weight:600;margin-bottom:1px}
   table.tbl.apilable tbody tr.sel{outline:2px solid var(--steel)}
 }
+/* tamaño de letra elegido por cada quien (A− / A+) */
+.view:not(.full),.ov>.md{zoom:var(--letra,1)}
+.letra{display:flex;align-items:center;gap:3px;padding:8px 12px;border-top:1px solid rgba(255,255,255,.08)}
+.letra button{background:transparent;border:1px solid rgba(255,255,255,.2);color:var(--plate-ink);border-radius:7px;padding:3px 0;min-width:36px;font:inherit;font-size:14px;font-weight:700;line-height:1.3;cursor:pointer}
+.letra button:hover{background:rgba(255,255,255,.1)}
+.letra button[data-letra-val]{flex:1;border-color:transparent;font-size:13px;font-weight:600;color:var(--plate-mute)}
+body.gen .letra{flex-direction:column;padding:8px 8px;gap:4px}
+body.gen .letra button{width:100%;min-width:0}
+.mbar .letra{border:0;padding:0;margin-left:4px;gap:4px}
+.mbar .letra button{color:#fff;min-width:34px;padding:4px 0}
+.mbar .letra button[data-letra-val]{display:none}
 </style>
 </head>
 <body>
@@ -516,6 +527,33 @@ const normKey = (s) => normTxt(s).replace(/[^a-z0-9]/g, '');
 const debounce = (fn, ms) => { let t; return (...a) => { clearTimeout(t); t = setTimeout(() => fn(...a), ms); }; };
 const lsGet = (k, d) => { try { const v = localStorage.getItem(k); return v == null ? d : JSON.parse(v); } catch (e) { return d; } };
 const lsSet = (k, v) => { try { localStorage.setItem(k, JSON.stringify(v)); } catch (e) { /* sin espacio */ } };
+/* Tamaño de letra: cada quien lo ajusta (A− / A+) y queda guardado en su equipo.
+   Se aplica a Gestión y a los controles del generador; la hoja del PDF no cambia. */
+const Letra = (() => {
+  const K = 'suin_letra', MIN = 0.8, MAX = 1.4;
+  const docs = new Set([document]);
+  const clamp = (z) => Math.round(Math.min(MAX, Math.max(MIN, z)) * 20) / 20;
+  const get = () => { const v = Number(lsGet(K, 1)); return isFinite(v) && v > 0 ? clamp(v) : 1; };
+  const pct = () => Math.round(get() * 100) + '%';
+  const paint = () => {
+    const z = get();
+    docs.forEach(d => {
+      try {
+        if (!d.defaultView) { docs.delete(d); return; }
+        d.documentElement.style.setProperty('--letra', z);
+        d.querySelectorAll('[data-letra-val]').forEach(e => { e.textContent = pct(); });
+        d.dispatchEvent(new d.defaultView.CustomEvent('suin:letra'));
+      } catch (e) { docs.delete(d); }
+    });
+  };
+  const set = (z) => { lsSet(K, clamp(z)); paint(); };
+  const html = (cls = '') => `<div class="letra ${cls}" role="group" aria-label="Tamaño de letra"><button type="button" data-letra="-1" title="Letra más pequeña">A−</button><button type="button" data-letra="0" data-letra-val title="Volver al tamaño normal">${pct()}</button><button type="button" data-letra="1" title="Letra más grande">A+</button></div>`;
+  const wire = (root) => root.querySelectorAll('[data-letra]').forEach(b => { b.onclick = (ev) => { ev.preventDefault(); const d = +b.dataset.letra; set(d ? get() + d * 0.05 : 1); }; });
+  const attach = (d) => { docs.add(d); paint(); };
+  window.addEventListener('storage', (e) => { if (e.key === K) paint(); });
+  paint();
+  return { get, set, html, wire, attach, paint };
+})();
 const clone = (o) => JSON.parse(JSON.stringify(o));
 const normRif = (s) => {
   const str = String(s || '').toUpperCase();
@@ -1430,9 +1468,10 @@ const App = {
           <div class="apps" aria-label="Apps de Suinelectric"><a href="/tienda-beta" target="_blank" rel="noopener" title="Abrir la tienda"><svg viewBox="0 0 24 24"><path d="M4 9h16l-1.5 11h-13z"/><path d="M8 9V7a4 4 0 0 1 8 0v2"/></svg>Tienda</a><a href="/admin-beta" title="Panel web: pedidos, clientes y estadísticas de la tienda"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>Panel web</a><a class="on" aria-current="page" title="Gestión: ofertas, ventas, compras e inventario"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Gestión</a></div>
           <nav class="nav">${navHtml}</nav>
           <div class="sync" id="sync-d"><i></i><span></span><button type="button" data-sync title="Sincronizar ahora">${'↻'}</button></div>
+          ${Letra.html()}
         </aside>
         <div style="min-width:0">
-          <div class="mbar"><img src="${DEFAULT_LOGO}" alt=""><b>Suinelectric</b><div class="sync" id="sync-m"><i></i><span></span></div></div>
+          <div class="mbar"><img src="${DEFAULT_LOGO}" alt=""><b>Suinelectric</b><div class="sync" id="sync-m"><i></i><span></span></div>${Letra.html()}</div>
           <main class="view" id="view"></main>
         </div>
       </div>
@@ -1445,6 +1484,7 @@ const App = {
       </nav>`;
     $$('[data-sync]').forEach(b => b.onclick = () => { if (!Sync.online()) { Route.nav('#/ajustes/conexion'); return; } Sync.run(); });
     $('[data-new]').onclick = () => App.newMenu();
+    Letra.wire($('#root'));
     $('[data-more]').onclick = () => {
       const m = UI.modal({ title: 'Ir a', foot: false, body: `<div class="stack">${NAV.map(([id, label, ic]) => `<a class="btn" style="justify-content:flex-start" href="#/${id}">${ico(ic)} ${label}</a>`).join('')}<div class="muted small" style="margin-top:6px">Otras apps</div><a class="btn" style="justify-content:flex-start" href="/admin-beta">${ico('gear')} Panel web</a><a class="btn" style="justify-content:flex-start" href="/tienda-beta" target="_blank" rel="noopener">${ico('box')} Tienda ↗</a></div>` });
       $$('a', m.body).forEach(a => a.addEventListener('click', () => m.close()));
@@ -4681,6 +4721,22 @@ const Cot = (() => {
   html body:not(.is-mobile) #adm-margen .mg-row .mg-gan b{font-size:13.5px!important}
   html body:not(.is-mobile) #adm-margen .mg-tot{font-size:13px!important;padding:5px 8px!important}
   `;
+  /* Tamaño de letra dentro del generador: solo los controles y el catálogo, nunca la hoja del PDF */
+  const LETRA_CSS = `
+  html body:not(.is-mobile) .actions-container,html body:not(.is-mobile) .catalog-panel{zoom:var(--letra,1)}
+  @media (min-width:1180px){
+    html body:not(.is-mobile):not(.mode-rapida) > .catalog-panel{top:calc(var(--adm-top,190px) / var(--letra,1))!important;max-height:calc((100vh - var(--adm-top,190px) - 16px) / var(--letra,1))!important}
+  }
+  html body.is-mobile .m-panel{zoom:var(--letra,1)}
+  .mode-tabs{position:sticky}
+  .letra-cot{position:absolute;right:10px;top:4px;bottom:4px;display:flex;align-items:center;gap:3px}
+  .letra-cot button{background:transparent;border:1px solid rgba(255,255,255,.25);color:#fff;border-radius:7px;padding:2px 0;min-width:36px;font:inherit;font-size:14px!important;font-weight:700;cursor:pointer;min-height:0!important;box-shadow:none!important}
+  .letra-cot button:hover{background:rgba(255,255,255,.12)}
+  .letra-cot button[data-letra-val]{border-color:transparent;font-size:12.5px!important;font-weight:600;color:rgba(255,255,255,.75);min-width:44px}
+  body.is-mobile .letra-cot{top:auto;bottom:6px}
+  body.is-mobile .letra-cot button[data-letra-val]{display:none}
+  @media (max-width:1100px){ body:not(.is-mobile) .letra-cot button[data-letra-val]{display:none} }
+  `;
   const GEN_CSS = `
   body:not(.is-mobile){padding:14px 18px 40px}
   .actions-container.hd{max-width:none!important;width:100%;box-sizing:border-box}
@@ -4925,8 +4981,12 @@ const Cot = (() => {
     if (!dd.getElementById('adm-gen-css')) { const st = dd.createElement('style'); st.id = 'adm-gen-css'; st.textContent = GEN_CSS; dd.head.appendChild(st); }
     if (!dd.getElementById('adm-leer-css')) { const st = dd.createElement('style'); st.id = 'adm-leer-css'; st.textContent = LEER_CSS; dd.head.appendChild(st); }
     if (!dd.getElementById('adm-cat-css')) { const st = dd.createElement('style'); st.id = 'adm-cat-css'; st.textContent = CAT_CSS; dd.head.appendChild(st); }
-    const setTop = () => { const hd = dd.querySelector('.actions-container'); if (!hd) return; const top = parseFloat(w.getComputedStyle(hd).top) || 10; dd.documentElement.style.setProperty('--adm-top', Math.round(top + hd.offsetHeight + 14) + 'px'); };
-    setTop(); w.addEventListener('resize', setTop); setTimeout(setTop, 800);
+    if (!dd.getElementById('adm-letra-css')) { const st = dd.createElement('style'); st.id = 'adm-letra-css'; st.textContent = LETRA_CSS; dd.head.appendChild(st); }
+    const tabs = dd.querySelector('.mode-tabs');
+    if (tabs && !dd.querySelector('.letra-cot')) { tabs.insertAdjacentHTML('beforeend', Letra.html('letra-cot')); Letra.wire(tabs); }
+    Letra.attach(dd);
+    const setTop = () => { const hd = dd.querySelector('.actions-container'); if (!hd) return; const z = dd.body.classList.contains('is-mobile') ? 1 : Letra.get(); const top = (parseFloat(w.getComputedStyle(hd).top) || 10) * z; dd.documentElement.style.setProperty('--adm-top', Math.round(top + hd.getBoundingClientRect().height + 14) + 'px'); };
+    setTop(); w.addEventListener('resize', setTop); setTimeout(setTop, 800); dd.addEventListener('suin:letra', () => setTimeout(setTop, 30));
     const obs = new w.MutationObserver(() => decorate(dd));
     ['catalog-results', 'm-results'].forEach(id => { const el = dd.getElementById(id); if (el) obs.observe(el, { childList: true, subtree: true }); });
     decorate(dd);
