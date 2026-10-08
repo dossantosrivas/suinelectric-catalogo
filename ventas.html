@@ -2942,6 +2942,9 @@ const InvExport = (() => {
   return { abrir, armar };
 })();
 
+/* el catálogo de los distribuidores llega después de abrir la vista (o se actualiza): se repinta solo */
+let invRepintar = null;
+Bus.on('catalog', debounce(() => { if (invRepintar) invRepintar(); }, 400));
 Views.inventario = (v, invArg) => {
   const F = Object.assign({ q: '', inv: '', stock: '1', cat: '', marca: '', orden: 'codigo', grupo: '', vista: 'lista' }, lsGet('suinadm_f_inv', {}));
   if (invArg) { F.inv = invArg; F.stock = '1'; }
@@ -3105,6 +3108,7 @@ Views.inventario = (v, invArg) => {
   $('[data-desc]', v).onclick = () => descripcionesModal();
   $('[data-cats]', v).onclick = () => categoriasModal();
   WebProd.cargar();
+  { const kpisEl = $('#inv-kpis', v); invRepintar = () => { if (kpisEl.isConnected) paint(); }; }
   if (!InvFotos.listo()) { const kpisEl = $('#inv-kpis', v); InvFotos.cargar().then(() => { if (kpisEl.isConnected) paint(); }); }
   $('[data-exp]', v).onclick = () => {
     const st = FILTROS.find(x => x[0] === F.stock);
@@ -3999,9 +4003,10 @@ const WebProd = (() => {
 
 /* ---------------- tu producto ↔ catálogo (scraping, manuales o /admin) ---------------- */
 const MatchCat = (() => {
-  let idx = null, n = -1;
+  let idx = null, n = -1, arr = null;
   const build = () => {
-    if (idx && n === Catalog.items.length) return idx;
+    if (idx && n === Catalog.items.length && arr === Catalog.items) return idx;
+    arr = Catalog.items;
     const mod = new Map(), sku = new Map();
     Catalog.items.forEach(c => { const k = normKey(c.m); if (k && !mod.has(k)) mod.set(k, c); const s2 = normKey(c.sku); if (s2 && s2.length >= 8 && !sku.has(s2)) sku.set(s2, c); });
     idx = { mod, sku }; n = Catalog.items.length; return idx;
@@ -4022,11 +4027,11 @@ const MatchCat = (() => {
    el distribuidor que lo surte. Solo el scraping trae cantidades; los demás dicen si está
    disponible o no. Devuelve [{ id, nombre, exist (número o null), disp, costo, lista }]. */
 const DistCat = (() => {
-  let idx = null, n = -1;
+  let idx = null, n = -1, arr = null, arrS = null;
   const build = () => {
     const tot = Catalog.items.length + Catalog.sombra.length;
-    if (idx && n === tot) return idx;
-    idx = new Map(); n = tot;
+    if (idx && n === tot && arr === Catalog.items && arrS === Catalog.sombra) return idx;
+    idx = new Map(); n = tot; arr = Catalog.items; arrS = Catalog.sombra;
     Catalog.items.concat(Catalog.sombra).forEach(c => { const k = normKey(c.m); if (!k) return; if (!idx.has(k)) idx.set(k, []); idx.get(k).push(c); });
     return idx;
   };
