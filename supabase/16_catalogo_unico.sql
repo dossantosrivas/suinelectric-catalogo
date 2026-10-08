@@ -21,11 +21,11 @@ create table catalogo.marcas (
   orden     smallint not null default 0
 );
 
--- ---------- Árbol de categorías: 1 familia · 2 categoría · 3 subcategoría ----------
+-- ---------- Árbol de categorías: 1 familia · 2 categoría · 3+ subcategorías (las de la tienda) ----------
 create table catalogo.categorias (
   id        integer generated always as identity primary key,
   padre_id  integer references catalogo.categorias(id) on delete restrict,
-  nivel     smallint not null default 1 check (nivel between 1 and 3),
+  nivel     smallint not null default 1 check (nivel >= 1),       -- 1 familia · 2 categoría · 3+ subcategorías originales
   nombre    text not null,
   slug      text not null,
   ruta      text not null default '' ,            -- 'control-de-motores/contactores'

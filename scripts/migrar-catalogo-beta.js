@@ -109,8 +109,6 @@ const ATRIBUTOS = {   // clave: [nombre, tipo, unidad]
 const FILTROS = {
   'Variadores de Frecuencia':    [['potencia_kw', true], ['potencia_hp'], ['tension_v', true], ['fases'], ['corriente_a'], ['aplicacion'], ['serie']],
   'Arrancadores Suaves':         [['corriente_a', true], ['serie']],
-  'Contactores/Auxiliares':      [['contactos_aux', true], ['bobina', true], ['tamano'], ['serie']],
-  'Contactores/Estado sólido':   [['bobina'], ['serie']],
   'Contactores':                 [['corriente_ac3_a', true], ['bobina', true, true], ['polos'], ['contactos_aux'], ['tamano'], ['serie']],
   'Guardamotores':               [['ajuste_a', true, true], ['tamano'], ['serie']],
   'Relés de Sobrecarga':         [['ajuste_a', true, true], ['clase'], ['tamano'], ['serie']],
@@ -245,7 +243,8 @@ for (const p of productos){
   const ruta = T.rutaDe(p);
   const familia = ruta[0], categoria = ruta[1] || 'General', resto = ruta.slice(2);
   const sub = subcategoria(categoria, resto);
-  const catRuta = addCategoria([familia, categoria].concat(sub ? [sub] : []));
+  // Se respetan TODAS las subcategorías originales de la tienda (series, tamaños, marcas…)
+  const catRuta = addCategoria(ruta.length >= 2 ? ruta : [familia, categoria]);
   const serie = serieDe(categoria, resto);
   const specs = atributosDe(p, categoria, sub, resto, serie);
   const marca = marcaLimpia(p.marca);
@@ -311,11 +310,16 @@ const salida = {
   categorias: [...categorias.values()],
   atributos: Object.entries(ATRIBUTOS).map(([clave, [nombre, tipo, unidad]]) => ({ clave, nombre, tipo, unidad })),
   filtros: Object.entries(FILTROS).flatMap(([c, lista]) => {
-    const [c2, c3] = c.split('/');
-    const fam = T.FAMILIAS.find(f => f.categorias.includes(c2));
-    const ruta = slug(fam.nombre) + '/' + slug(c2) + (c3 ? '/' + slug(c3) : '');
+    const fam = T.FAMILIAS.find(f => f.categorias.includes(c));
+    const ruta = slug(fam.nombre) + '/' + slug(c);
     return lista.map(([clave, ob, dv], i) => ({ categoria: ruta, clave, orden: i, obligatorio: !!ob, define_variante: !!dv }));
-  }),
+  }).concat(
+    // Dentro de Contactores, los auxiliares y los de estado sólido no tienen corriente AC3:
+    // sus subcategorías originales llevan su propia definición (la más cercana manda).
+    [...categorias.values()].filter(c => c.ruta.startsWith('control-de-motores/contactores/') && !/accesorio/i.test(c.ruta) && /auxiliar|estado s[oó]lido/i.test(c.nombre))
+      .flatMap(c => (/auxiliar/i.test(c.nombre) ? [['contactos_aux', true], ['bobina', true], ['tamano'], ['serie']] : [['bobina'], ['serie']])
+        .map(([clave, ob], i) => ({ categoria: c.ruta, clave, orden: i, obligatorio: !!ob, define_variante: false })))
+  ),
   series: [...series.values()].map(s => ({ codigo: s.codigo, marca: s.marca, categoria: s.categoria, nombre: s.nombre, descripcion: s.descripcion, imagenes: s.imagenes, skus: [...s.skus.values()] })),
 };
 fs.mkdirSync(path.join(REPO, 'datos-beta'), { recursive: true });
@@ -331,9 +335,11 @@ console.log('Existencias propias:', privado.length, 'filas');
 const cobertura = {};
 for (const s of salida.series) for (const k of s.skus){
   const c = s.categoria.split('/').slice(0, 2).join('/');
-  const propias = salida.filtros.filter(f => f.categoria === s.categoria);
-  const defs = (propias.length ? propias : salida.filtros.filter(f => f.categoria === c)).filter(f => f.obligatorio);
-  if (!defs.length || s.categoria.endsWith('/accesorios')) continue;
+  if (/(^|\/)[^/]*accesorio/.test(s.categoria)) continue;
+  let manda = s.categoria;
+  while (manda && !salida.filtros.some(f => f.categoria === manda)) manda = manda.includes('/') ? manda.slice(0, manda.lastIndexOf('/')) : '';
+  const defs = salida.filtros.filter(f => f.categoria === manda && f.obligatorio);
+  if (!defs.length) continue;
   const ok = defs.every(f => (k.specs[f.clave] != null) || (k.specs[f.clave + '_min'] != null));
   cobertura[c] = cobertura[c] || [0, 0]; cobertura[c][0] += ok ? 1 : 0; cobertura[c][1]++;
 }

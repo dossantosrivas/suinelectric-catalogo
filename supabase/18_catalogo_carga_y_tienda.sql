@@ -11,7 +11,11 @@
 --    (Contactores › Auxiliares no exige corriente AC3).
 --  · cargar_catalogo(json): carga lo que arma scripts/migrar-catalogo-beta.js.
 --  · exportar_tienda(): todo lo que necesita la tienda en un solo JSON.
+-- · el árbol conserva todas las subcategorías originales de la tienda (sin tope de niveles).
 -- =====================================================================
+
+alter table catalogo.categorias drop constraint if exists categorias_nivel_check;
+alter table catalogo.categorias add constraint categorias_nivel_check check (nivel >= 1);
 
 alter table catalogo.ofertas_proveedor add column if not exists disponible boolean not null default true;
 
@@ -111,7 +115,7 @@ language sql stable security invoker set search_path = '' as $$
     from catalogo.categorias c
     join catalogo.categorias d on c.ruta = d.ruta or c.ruta like d.ruta || '/%'
     where exists (select 1 from catalogo.atributos_categoria ac where ac.categoria_id = d.id)
-      and c.ruta not like '%/accesorios'
+      and c.ruta !~ '(^|/)[^/]*accesorio'      -- ningún nivel de accesorios exige atributos técnicos
     order by c.id, d.nivel desc
   )
   select 1, 'stock_bajo', p.codigo, p.nombre, 'Quedan ' || p.cant || ' (mínimo ' || p.stock_minimo || ')', null::timestamptz
@@ -218,12 +222,10 @@ revoke all on function catalogo.cargar_catalogo(jsonb) from public, anon, authen
 -- ---------- Todo lo que necesita la tienda, en un JSON ----------
 create or replace function catalogo.exportar_tienda() returns jsonb
 language sql stable security invoker set search_path = '' as $$
-  with rutas as (
-    select c.id, c.ruta, c.nivel, c.orden,
-           array_remove(array[c3.nombre, c2.nombre, c.nombre], null) as nombres
-    from catalogo.categorias c
-    left join catalogo.categorias c2 on c2.id = c.padre_id
-    left join catalogo.categorias c3 on c3.id = c2.padre_id
+  with recursive rutas as (   -- nombre de cada nivel, desde la familia hasta la subcategoría
+    select c.id, c.ruta, c.nivel, c.orden, array[c.nombre] as nombres from catalogo.categorias c where c.padre_id is null
+    union all
+    select c.id, c.ruta, c.nivel, c.orden, r.nombres || c.nombre from catalogo.categorias c join rutas r on c.padre_id = r.id
   )
   select jsonb_build_object(
     'generado', now(),
