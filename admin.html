@@ -510,6 +510,8 @@
   .pleg-barra{ display:flex; align-items:center; gap:4px; margin:-4px 0 10px; flex-wrap:wrap; }
   .pleg-barra .muted{ margin-right:auto; font-size:12.5px; }
   .plegables{ display:grid; grid-template-columns:repeat(2,minmax(0,1fr)); gap:14px; grid-auto-flow:row dense; align-items:start; margin-bottom:18px; }
+  .plegables-1{ grid-template-columns:1fr; }
+  .pleg-acc{ display:flex; justify-content:flex-end; gap:8px; margin:-4px 0 10px; }
   .plegable{ margin:0; padding:0; overflow:hidden; transition:box-shadow .15s, border-color .15s; }
   .plegable.abierta{ grid-column:1 / -1; }
   .plegable:not(.abierta):hover{ border-color:var(--azul); box-shadow:var(--sombra-media); }
@@ -1029,6 +1031,9 @@ function vistaResumen(){
   const veStock = clientes.filter(motivoStock).length;
   const kpi = (id, icono, titulo, num, pie, extra) => '<' + (id ? 'button data-ir="' + id + '"' : 'div') + ' class="kpi' + (extra || '') + '"><div class="k-cab">' + titulo + icono + '</div><div class="k-num">' + num + '</div><div class="k-pie">' + pie + '</div></' + (id ? 'button' : 'div') + '>';
   const stockPie = estadoStock && !estadoStock.error && estadoStock.actualizado ? 'Existencias al ' + fecha(estadoStock.actualizado) : 'Existencias sin sincronizar';
+  const pedAct = pedidos.filter(p => !p.archivado);
+  const resUlt = pedAct.length ? (nuevos.length ? nuevos.length + ' por atender' : 'Todo al día') + ' · el último ' + haceCuanto(pedAct[0].creado) : 'Todavía no hay pedidos';
+  const resNue = activos.length ? activos.length + ' cliente' + (activos.length === 1 ? '' : 's') + ' · el último ' + haceCuanto(activos[0].creado) : 'Aún no hay clientes';
 
   $('main').innerHTML = cabecera('Hola' + (yo.nombre ? ', ' + esc(yo.nombre.split(' ')[0]) : ''), 'Así va la tienda hoy, ' + new Date().toLocaleDateString('es-VE', { weekday: 'long', day: 'numeric', month: 'long' }) + '.',
       '<a class="btn" href="/ventas">' + ICO.externo + 'Gestión</a><a class="btn" href="/tienda" target="_blank" rel="noopener">' + ICO.tienda + 'Ver tienda</a>') +
@@ -1043,19 +1048,22 @@ function vistaResumen(){
       kpi('descuentos', ICO.descuentos, 'Descuentos', reglas.filter(r => r.activo).length, 'reglas activas de ' + reglas.length) +
       kpi(null, ICO.tienda, 'Productos', productos.length.toLocaleString('es-VE'), infoCatalogo && infoCatalogo.generado ? 'Catálogo al ' + fecha(infoCatalogo.generado) : stockPie) +
     '</div>' +
+    plegBarra() +
+    '<div class="plegables" id="res-plegables">' +
     embudoPedidos() +
-    '<div class="grid-2"><div class="caja"><div class="caja-cab"><h2>Últimos pedidos</h2><button class="btn chico" data-ir="pedidos">Ver todos →</button></div>' +
+    plegable('res', 'ultimos', ICO.pedidos, 'Últimos pedidos', resUlt, '<div class="pleg-acc"><button class="btn chico" data-ir="pedidos">Ver todos →</button></div>' +
       (pedidos.length ? '<ul class="lista-simple">' + pedidos.filter(p => !p.archivado).slice(0, 6).map(pd => {
         const c = clientes.find(x => x.email === pd.cliente_email) || { email: pd.cliente_email };
         const n = (Array.isArray(pd.items) ? pd.items : []).reduce((s, it) => s + Number(it.cantidad || 0), 0);
         return '<li data-ver-pedido="' + pd.id + '" style="cursor:pointer"><div class="avatar">' + esc(iniciales(c)) + '</div><div><strong>#' + pd.id + ' · ' + esc(c.nombre || c.empresa || c.email) + '</strong><div class="muted">' + fecha(pd.creado) + ' · ' + n + ' unid.</div></div>' +
           '<div class="der"><strong>' + money(pd.total) + '</strong><br>' + pillEstado(pd.estado) + '</div></li>';
-      }).join('') + '</ul>' : '<div class="vacio">' + ICO.pedidos + 'Todavía no hay pedidos.</div>') +
-    '</div><div class="caja"><div class="caja-cab"><h2>Clientes nuevos</h2><button class="btn chico" data-ir="clientes">Ver todos →</button></div>' +
+      }).join('') + '</ul>' : '<div class="vacio">' + ICO.pedidos + 'Todavía no hay pedidos.</div>')) +
+    plegable('res', 'nuevos', ICO.clientes, 'Clientes nuevos', resNue, '<div class="pleg-acc"><button class="btn chico" data-ir="clientes">Ver todos →</button></div>' +
       (activos.length ? '<ul class="lista-simple">' + activos.slice(0, 6).map(c =>
         '<li data-ver-cliente="' + esc(c.email) + '" style="cursor:pointer"><div class="avatar">' + esc(iniciales(c)) + '</div><div><strong>' + esc(c.nombre || c.empresa || '—') + '</strong><div class="muted">' + esc(c.email) + ' · ' + haceCuanto(c.creado) + '</div></div>' +
-        '<div class="der"><span class="pill azul">' + esc(nombreTipo(c.tipo_id)) + '</span></div></li>').join('') + '</ul>' : '<div class="vacio">' + ICO.clientes + 'Aún no hay clientes.</div>') +
-    '</div></div>';
+        '<div class="der"><span class="pill azul">' + esc(nombreTipo(c.tipo_id)) + '</span></div></li>').join('') + '</ul>' : '<div class="vacio">' + ICO.clientes + 'Aún no hay clientes.</div>')) +
+    '</div>';
+  activarPlegables('res');
   document.querySelectorAll('[data-ir]').forEach(b => b.onclick = () => { if (b.dataset.ir === 'pedidos' && nuevos.length && b.classList.contains('destacado')) filtroEstado = 'enviado'; irA(b.dataset.ir); });
   document.querySelectorAll('[data-ver-pedido]').forEach(li => li.onclick = () => abrirPedido(li.dataset.verPedido));
   document.querySelectorAll('[data-ver-cliente]').forEach(li => li.onclick = () => abrirCliente(clientes.find(c => c.email === li.dataset.verCliente)));
@@ -1066,9 +1074,11 @@ function embudoPedidos(){
   const act = pedidos.filter(p => !p.archivado);
   if (!act.length) return '';
   const n = (e) => act.filter(p => p.estado === e).length;
-  return '<div class="caja"><div class="caja-cab" style="margin-bottom:12px"><h2>Pedidos por estado <small>' + act.length + '</small></h2><span class="muted">Sin contar los archivados · toca un estado para verlos</span></div>' +
+  const res = ESTADOS.filter(e => n(e[0])).map(e => e[1] + ' ' + n(e[0])).join(' · ');
+  return plegable('res', 'estado', ICO.grafica, 'Pedidos por estado <small>' + act.length + '</small>', res,
+    '<p class="muted" style="margin:0 0 12px">Sin contar los archivados · toca un estado para verlos</p>' +
     '<div class="embudo">' + ESTADOS.filter(e => n(e[0])).map(e => '<i class="c-' + e[0] + '" style="flex:' + n(e[0]) + '" title="' + e[1] + ': ' + n(e[0]) + '"></i>').join('') + '</div>' +
-    '<div class="embudo-ley">' + ESTADOS.map(e => '<button data-embudo="' + e[0] + '"><i class="c-' + e[0] + '"></i>' + e[1] + ' <b>' + n(e[0]) + '</b></button>').join('') + '</div></div>';
+    '<div class="embudo-ley">' + ESTADOS.map(e => '<button data-embudo="' + e[0] + '"><i class="c-' + e[0] + '"></i>' + e[1] + ' <b>' + n(e[0]) + '</b></button>').join('') + '</div>');
 }
 const pillEstado = (e) => {
   const cls = { enviado: 'amar', cotizado: 'azul', aprobado: 'indigo', pagado: 'indigo', entregado: 'verde', cancelado: 'rojo' }[e] || '';
@@ -1095,12 +1105,15 @@ function vistaPedidos(){
   const nArch = pedidos.length - activos.length;
   $('main').innerHTML = cabecera('Pedidos', 'Los pedidos que los clientes con cuenta envían por WhatsApp. Ábrelos para ver el detalle, cambia el estado y deja un comentario: el cliente lo ve en "Mi cuenta".',
       '<button class="btn" id="p-recargar">' + ICO.sync + 'Actualizar</button>') +
-    '<div class="caja"><div class="caja-cab" style="margin-bottom:0"><div class="chips" id="p-chips">' +
-      '<button class="chip' + (!filtroEstado ? ' activo' : '') + '" data-f="">Todos <b>' + cuenta('') + '</b></button>' +
-      ESTADOS.map(e => '<button class="chip' + (filtroEstado === e[0] ? ' activo' : '') + '" data-f="' + e[0] + '">' + e[1] + ' <b>' + cuenta(e[0]) + '</b></button>').join('') +
-      '<button class="chip sep' + (filtroEstado === ARCH ? ' activo' : '') + '" data-f="' + ARCH + '">' + ICO.archivar.replace('<svg', '<svg width="14" height="14"') + 'Archivados <b>' + nArch + '</b></button>' +
-    '</div><div class="buscar">' + ICO.buscar + '<input id="p-busca" placeholder="Buscar cliente, # o modelo" value="' + esc(buscaPed) + '"></div></div></div>' +
-    '<div class="pedidos" id="p-lista"></div>';
+    '<div class="plegables plegables-1">' + plegable('ped', 'lista', ICO.pedidos, 'Lista de pedidos <small>' + cuenta('') + '</small>',
+      (cuenta('enviado') ? cuenta('enviado') + ' por atender · ' : '') + cuenta('') + ' activo' + (cuenta('') === 1 ? '' : 's') + (nArch ? ' · ' + nArch + ' archivado' + (nArch === 1 ? '' : 's') : ''),
+      '<div class="caja-cab" style="margin-bottom:14px"><div class="chips" id="p-chips">' +
+        '<button class="chip' + (!filtroEstado ? ' activo' : '') + '" data-f="">Todos <b>' + cuenta('') + '</b></button>' +
+        ESTADOS.map(e => '<button class="chip' + (filtroEstado === e[0] ? ' activo' : '') + '" data-f="' + e[0] + '">' + e[1] + ' <b>' + cuenta(e[0]) + '</b></button>').join('') +
+        '<button class="chip sep' + (filtroEstado === ARCH ? ' activo' : '') + '" data-f="' + ARCH + '">' + ICO.archivar.replace('<svg', '<svg width="14" height="14"') + 'Archivados <b>' + nArch + '</b></button>' +
+      '</div><div class="buscar">' + ICO.buscar + '<input id="p-busca" placeholder="Buscar cliente, # o modelo" value="' + esc(buscaPed) + '"></div></div>' +
+      '<div class="pedidos" id="p-lista"></div>') + '</div>';
+  activarPlegables('ped');
   document.querySelectorAll('#p-chips .chip').forEach(ch => ch.onclick = () => { filtroEstado = ch.dataset.f; vistaPedidos(); });
   $('p-busca').oninput = (e) => { buscaPed = e.target.value; pintarPedidos(); };
   $('p-recargar').onclick = async () => { const err = await cargarPedidos(); if (err) toast('Error: ' + mensajeError(err)); pintarBadges(); vistaPedidos(); };
@@ -1117,7 +1130,7 @@ function pintarPedidos(){
     return ['#' + pd.id, String(pd.id), pd.cliente_email, c.nombre, c.empresa, c.rif].concat(itemsDe(pd).map(it => it.modelo)).join(' ').toLowerCase().includes(q);
   });
   if (!lista.length){
-    $('p-lista').innerHTML = '<div class="caja vacio">' + (verArch ? ICO.archivar + 'No hay pedidos archivados.' : ICO.pedidos + (pedidos.length ? 'No hay pedidos con este filtro.' : 'Todavía no hay pedidos.')) + '</div>';
+    $('p-lista').innerHTML = '<div class="vacio">' + (verArch ? ICO.archivar + 'No hay pedidos archivados.' : ICO.pedidos + (pedidos.length ? 'No hay pedidos con este filtro.' : 'Todavía no hay pedidos.')) + '</div>';
     return;
   }
   const MAX = 5;
@@ -1291,11 +1304,14 @@ const FILTROS_CLI = [
 function vistaClientes(){
   $('main').innerHTML = cabecera('Clientes', 'Crea clientes antes de que entren: cuando entren con ese correo verán sus precios automáticamente.',
       '<button class="btn" id="c-bloquear-correo">' + ICO.bloquear + 'Bloquear un correo</button><a class="btn prim" id="c-nuevo" href="/ventas/cliente-nuevo" title="Los clientes se crean en Gestión; con correo, también quedan en la tienda">' + ICO.mas + 'Nuevo cliente</a>') +
-    '<div class="caja"><form id="c-form-bloq" class="fila" style="margin-bottom:16px" hidden><label class="campo" style="flex:1 1 260px">Correo a bloquear (aunque todavía no se haya registrado)<input name="email" type="email" required placeholder="correo@ejemplo.com"></label>' +
+    '<div class="plegables plegables-1">' + plegable('cli', 'lista', ICO.clientes, 'Lista de clientes <small>' + clientes.length + '</small>',
+      clientes.length + ' en total · ' + clientes.filter(c => c.user_id && !c.es_admin).length + ' ya entraron' + (clientes.some(c => c.activo === false) ? ' · ' + clientes.filter(c => c.activo === false).length + ' bloqueado' + (clientes.filter(c => c.activo === false).length === 1 ? '' : 's') : ''),
+    '<form id="c-form-bloq" class="fila" style="margin-bottom:16px" hidden><label class="campo" style="flex:1 1 260px">Correo a bloquear (aunque todavía no se haya registrado)<input name="email" type="email" required placeholder="correo@ejemplo.com"></label>' +
       '<button class="btn peligro">Bloquear</button><button type="button" class="btn" id="c-bloq-cancelar">Cancelar</button></form>' +
     '<div class="caja-cab"><div class="chips" id="c-chips">' + FILTROS_CLI.map(f => '<button class="chip' + (filtroCli === f[0] ? ' activo' : '') + '" data-f="' + f[0] + '">' + f[1] + ' <b>' + clientes.filter(f[2]).length + '</b></button>').join('') + '</div>' +
       '<div class="buscar">' + ICO.buscar + '<input id="c-busca" placeholder="Buscar nombre, correo, RIF…" value="' + esc(buscaCli) + '"></div></div>' +
-    '<div class="tabla-wrap" id="c-tabla"></div></div>';
+    '<div class="tabla-wrap" id="c-tabla"></div>') + '</div>';
+  activarPlegables('cli');
   $('c-busca').oninput = (e) => { buscaCli = e.target.value; pintarClientes(); };
   document.querySelectorAll('#c-chips .chip').forEach(ch => ch.onclick = () => { filtroCli = ch.dataset.f; vistaClientes(); });
   $('c-bloquear-correo').onclick = () => { $('c-form-bloq').hidden = false; $('c-form-bloq').elements.email.focus(); };
@@ -1470,8 +1486,9 @@ function vistaDescuentos(){
     '<optgroup label="Cliente">' + clientes.map(c => '<option value="c:' + esc(c.email) + '">' + esc(c.nombre || c.empresa || c.email) + ' · ' + esc(c.email) + '</option>').join('') + '</optgroup>';
   const filtro = reglaDestinoInicial;
   $('main').innerHTML = cabecera('Descuentos', 'Cada regla dice a quién, en qué productos y cuánto. Si hay varias, gana la más específica.') +
-    '<div class="grid-2">' +
-    '<form id="r-form" class="caja"><div class="caja-cab"><h2>Dar un descuento</h2></div>' +
+    plegBarra() +
+    '<div class="plegables" id="desc-plegables">' +
+    plegable('desc', 'dar', ICO.descuentos, 'Dar un descuento', 'Elige a quién, en qué productos y cuánto', '<form id="r-form">' +
     '<p class="ayuda">La de un modelo gana a la de una marca, y la de una marca a la de todos los productos; la de un cliente gana a la de su tipo o la general. ' +
     'Los productos cargados a mano solo cambian con reglas de su marca o modelo.</p>' +
     '<div class="fila">' +
@@ -1489,19 +1506,21 @@ function vistaDescuentos(){
     '</div><div class="fila" style="margin-top:12px"><label class="campo" style="flex:1 1 100%">Nota (opcional)<input name="nota" placeholder="Ej. Acordado en septiembre"></label></div>' +
     '<div class="resumen" id="r-resumen"></div>' +
     '<div class="fila" style="margin-top:14px"><button class="btn prim">Guardar regla</button></div><p class="error" id="r-err"></p>' +
-    '<datalist id="dl-modelos">' + productos.slice(0, 5000).map(p => '<option value="' + esc(p.modelo) + '">').join('') + '</datalist></form>' +
+    '<datalist id="dl-modelos">' + productos.slice(0, 5000).map(p => '<option value="' + esc(p.modelo) + '">').join('') + '</datalist></form>') +
 
-    '<div class="caja"><div class="caja-cab"><h2>Probar un precio</h2></div><p class="sub">Mira qué precio ve un cliente en un modelo.</p>' +
+    plegable('desc', 'probar', ICO.ojo, 'Probar un precio', 'Mira qué precio ve un cliente en un modelo', '<p class="sub" style="margin-top:0">Mira qué precio ve un cliente en un modelo.</p>' +
       '<div class="apilar"><label class="campo">Como<select id="pr-quien"><option value="">Visitante sin cuenta</option>' + clientes.map(c => '<option value="' + esc(c.email) + '">' + esc(c.nombre || c.empresa || c.email) + ' (' + esc(nombreTipo(c.tipo_id)) + ')</option>').join('') + '</select></label>' +
       '<label class="campo">Modelo<input id="pr-modelo" list="dl-modelos" placeholder="Escribe un modelo"></label></div>' +
-    '<div class="prueba-res" id="pr-res"></div></div>' +
-    '</div>' +
+    '<div class="prueba-res" id="pr-res"></div>') +
 
-    '<div class="caja" style="margin-top:18px"><div class="caja-cab"><h2>Reglas <small>' + reglas.length + '</small></h2>' +
-      '<label class="campo" style="flex-direction:row;align-items:center;gap:8px">Mostrar<select id="r-filtro" style="width:auto"><option value="">Todas</option><option value="t:"' + (filtro === 't:' ? ' selected' : '') + '>Para todos</option>' +
+    plegable('desc', 'reglas', ICO.descuentos, 'Reglas <small>' + reglas.length + '</small>',
+      reglas.length ? reglas.filter(r => r.activo).length + ' activa' + (reglas.filter(r => r.activo).length === 1 ? '' : 's') + ' de ' + reglas.length : 'Todavía no hay reglas',
+      '<div class="caja-cab"><label class="campo" style="flex-direction:row;align-items:center;gap:8px">Mostrar<select id="r-filtro" style="width:auto"><option value="">Todas</option><option value="t:"' + (filtro === 't:' ? ' selected' : '') + '>Para todos</option>' +
       tipos.map(t => '<option value="tp:' + t.id + '"' + (filtro === 'tp:' + t.id ? ' selected' : '') + '>' + esc(t.nombre) + '</option>').join('') +
       clientes.filter(c => reglas.some(r => r.cliente_email === c.email)).map(c => '<option value="c:' + esc(c.email) + '"' + (filtro === 'c:' + c.email ? ' selected' : '') + '>' + esc(c.nombre || c.email) + '</option>').join('') +
-      '</select></label></div><div class="tabla-wrap" id="r-lista"></div></div>';
+      '</select></label></div><div class="tabla-wrap" id="r-lista"></div>') +
+    '</div>';
+  activarPlegables('desc');
 
   const f = $('r-form');
   if (filtro) f.elements.destino.value = filtro.startsWith('c:') || filtro.startsWith('tp:') ? filtro : 't:';
@@ -1680,21 +1699,23 @@ async function vistaEstadisticas(){
       kpi(ICO.tienda, 'Agregados al pedido', t.agregar_carrito, 'productos puestos en el carrito') +
       kpi(ICO.pedidos, 'Cotizaciones por WhatsApp', cotiza, (t.pedido_whatsapp || 0) + ' desde el carrito · ' + (t.cotizar_whatsapp || 0) + ' de un producto') +
     '</div>' +
-    '<div class="caja"><div class="caja-cab"><h2>Actividad por día</h2><div class="leyenda"><span><i style="background:var(--azul-suave)"></i>Productos vistos</span><span><i style="background:var(--azul)"></i>Cotizaciones y carrito</span></div></div>' + grafico + '</div>' +
-    '<div class="grid-2" style="grid-template-columns:1fr 1fr;margin-bottom:18px">' +
-      '<div class="caja"><div class="caja-cab"><h2>Lo más buscado</h2></div>' +
-        ranking(data.buscado, (x, i) => '<li><span class="pos">' + (i + 1) + '</span><span class="nom">' + linkBusq(x.texto) + (x.resultados === 0 ? ' <span class="pill rojo">sin resultados</span>' : '') + barra(x.veces, maxB) + '</span><span class="num">' + x.veces + '</span></li>', 'Todavía no hay búsquedas en este período.') + '</div>' +
-      '<div class="caja"><div class="caja-cab"><h2>Buscan y no encuentran</h2></div><p class="sub">Oportunidades: productos que te piden y no están en la tienda (o están escritos distinto).</p>' +
-        ranking(data.sin_resultados, (x, i) => '<li><span class="pos">' + (i + 1) + '</span><span class="nom">' + linkBusq(x.texto) + '<small>Última vez: ' + fecha(x.ultima) + '</small>' + barra(x.veces, maxS) + '</span><span class="num">' + x.veces + '</span></li>', 'Nadie se ha quedado sin resultados. 👍') + '</div>' +
-    '</div>' +
-    '<div class="grid-2" style="grid-template-columns:1fr 1fr">' +
-      '<div class="caja"><div class="caja-cab"><h2>Productos más vistos</h2></div>' +
-        ranking(data.vistos, (x, i) => '<li><span class="pos">' + (i + 1) + '</span><span class="nom">' + nomProd(x.modelo) + barra(x.veces, maxVi) + '</span><span class="num">' + x.veces + '<small>vistas</small></span></li>', 'Todavía no hay visitas en este período.') + '</div>' +
-      '<div class="caja"><div class="caja-cab"><h2>Productos más cotizados</h2></div>' +
+    plegBarra() +
+    '<div class="plegables" id="est-plegables">' +
+      plegable('est', 'dia', ICO.grafica, 'Actividad por día', Number(t.ver_producto || 0).toLocaleString('es-VE') + ' productos vistos · ' + Number(cotiza).toLocaleString('es-VE') + ' cotizaciones',
+        '<div class="leyenda" style="margin-bottom:6px"><span><i style="background:var(--azul-suave)"></i>Productos vistos</span><span><i style="background:var(--azul)"></i>Cotizaciones y carrito</span></div>' + grafico) +
+      plegable('est', 'buscado', ICO.buscar, 'Lo más buscado', (data.buscado || [])[0] ? '“' + esc(data.buscado[0].texto) + '” · ' + data.buscado[0].veces + (data.buscado[0].veces === 1 ? ' vez' : ' veces') : 'Todavía no hay búsquedas',
+        ranking(data.buscado, (x, i) => '<li><span class="pos">' + (i + 1) + '</span><span class="nom">' + linkBusq(x.texto) + (x.resultados === 0 ? ' <span class="pill rojo">sin resultados</span>' : '') + barra(x.veces, maxB) + '</span><span class="num">' + x.veces + '</span></li>', 'Todavía no hay búsquedas en este período.')) +
+      plegable('est', 'sinres', ICO.alerta, 'Buscan y no encuentran', (data.sin_resultados || [])[0] ? '“' + esc(data.sin_resultados[0].texto) + '” · ' + data.sin_resultados[0].veces + (data.sin_resultados[0].veces === 1 ? ' vez' : ' veces') : 'Nadie se ha quedado sin resultados',
+        '<p class="sub" style="margin-top:0">Oportunidades: productos que te piden y no están en la tienda (o están escritos distinto).</p>' +
+        ranking(data.sin_resultados, (x, i) => '<li><span class="pos">' + (i + 1) + '</span><span class="nom">' + linkBusq(x.texto) + '<small>Última vez: ' + fecha(x.ultima) + '</small>' + barra(x.veces, maxS) + '</span><span class="num">' + x.veces + '</span></li>', 'Nadie se ha quedado sin resultados. 👍')) +
+      plegable('est', 'vistos', ICO.ojo, 'Productos más vistos', (data.vistos || [])[0] ? esc(data.vistos[0].modelo) + ' · ' + data.vistos[0].veces + (data.vistos[0].veces === 1 ? ' vista' : ' vistas') : 'Todavía no hay visitas',
+        ranking(data.vistos, (x, i) => '<li><span class="pos">' + (i + 1) + '</span><span class="nom">' + nomProd(x.modelo) + barra(x.veces, maxVi) + '</span><span class="num">' + x.veces + '<small>vistas</small></span></li>', 'Todavía no hay visitas en este período.')) +
+      plegable('est', 'cotizados', ICO.whatsapp, 'Productos más cotizados', (data.cotizados || [])[0] ? esc(data.cotizados[0].modelo) + ' · ' + totalCot(data.cotizados[0]) + (totalCot(data.cotizados[0]) === 1 ? ' vez' : ' veces') : 'Todavía no hay cotizaciones',
         ranking(data.cotizados, (x, i) => '<li><span class="pos">' + (i + 1) + '</span><span class="nom">' + nomProd(x.modelo) + barra(totalCot(x), maxC) + '</span><span class="num">' + totalCot(x) +
-          '<small>' + [x.whatsapp ? x.whatsapp + ' WhatsApp' : '', x.carrito ? x.carrito + ' carrito' : '', x.pedidos ? x.pedidos + ' pedido' + (x.pedidos > 1 ? 's' : '') : ''].filter(Boolean).join(' · ') + (x.clientes ? ' · ' + x.clientes + ' con cuenta' : '') + '</small></span></li>', 'Todavía no hay cotizaciones en este período.') + '</div>' +
-    '</div>' +
-    '<div style="margin-top:18px">' + cajaClientesActivos(resCli) + '</div>';
+          '<small>' + [x.whatsapp ? x.whatsapp + ' WhatsApp' : '', x.carrito ? x.carrito + ' carrito' : '', x.pedidos ? x.pedidos + ' pedido' + (x.pedidos > 1 ? 's' : '') : ''].filter(Boolean).join(' · ') + (x.clientes ? ' · ' + x.clientes + ' con cuenta' : '') + '</small></span></li>', 'Todavía no hay cotizaciones en este período.')) +
+      cajaClientesActivos(resCli) +
+    '</div>';
+  activarPlegables('est');
   document.querySelectorAll('#main [data-actividad]').forEach(li => li.onclick = () => abrirActividad(li.dataset.actividad));
 }
 
@@ -1736,12 +1757,13 @@ const descProd = (m) => { const p = productos.find(x => x.modelo === m); return 
 
 // Caja "Clientes más activos" dentro de Estadísticas
 function cajaClientesActivos(res){
-  if (!res || res.error || !res.data) return '<div class="caja"><div class="caja-cab"><h2>Clientes más activos</h2></div>' + faltaActividad(res && res.error) + '</div>';
+  if (!res || res.error || !res.data) return plegable('est', 'activos', ICO.clientes, 'Clientes más activos', 'Falta instalar la actividad por cliente', faltaActividad(res && res.error));
   const d = res.data, lista = d.clientes || [];
   const totalEv = (d.con_cuenta || 0) + (d.sin_cuenta || 0);
   const pct = totalEv ? Math.round(100 * (d.con_cuenta || 0) / totalEv) : 0;
   const max = Math.max(1, ...lista.map(x => x.total));
-  return '<div class="caja"><div class="caja-cab"><h2>Clientes más activos <small>' + lista.length + '</small></h2><span class="muted">' + pct + '% de la actividad es de clientes con cuenta</span></div>' +
+  return plegable('est', 'activos', ICO.clientes, 'Clientes más activos <small>' + lista.length + '</small>',
+    lista.length ? esc((clientes.find(y => y.email === lista[0].email) || { email: lista[0].email }).nombre || lista[0].email) + ' · ' + pct + '% de la actividad es de clientes con cuenta' : 'Ningún cliente con cuenta ha usado la tienda',
     (!lista.length ? '<div class="vacio">' + ICO.clientes + 'Ningún cliente con cuenta ha usado la tienda en este período.</div>' :
     '<ol class="ranking">' + lista.slice(0, 20).map((x, i) => {
       const c = clientes.find(y => y.email === x.email) || { email: x.email };
@@ -1749,7 +1771,7 @@ function cajaClientesActivos(res){
       return '<li class="clic" data-actividad="' + esc(x.email) + '"><span class="pos">' + (i + 1) + '</span><span class="nom"><strong>' + esc(c.nombre || c.empresa || c.email) + '</strong>' + (c.nombre && c.empresa ? ' <span class="muted">· ' + esc(c.empresa) + '</span>' : '') +
         '<small>' + partes + ' · ' + haceCuanto(x.ultima) + '</small>' + '<div class="barra"><i style="width:' + Math.max(4, Math.round(100 * x.total / max)) + '%"></i></div></span>' +
         '<span class="num">' + x.dias_activos + '<small>día' + (x.dias_activos > 1 ? 's' : '') + ' activo</small></span></li>';
-    }).join('') + '</ol>') + '</div>';
+    }).join('') + '</ol>'));
 }
 
 // Panel con la actividad de un cliente
@@ -1895,7 +1917,9 @@ function barrasSimples(valores, etiquetas, titulo){
 /* ---------- Ventanas plegables (Visitantes) ----------
    Cerradas muestran el título y un resumen; al tocarlas se abren a todo el
    ancho. Este navegador recuerda cuáles dejaste abiertas. */
-const PLEG_DEF = { vis: ['recientes'] };
+const PLEG_DEF = { vis: ['recientes'], res: ['ultimos'], ped: ['lista'], cli: ['lista'], desc: ['dar', 'reglas'], est: ['dia'], viv: ['ahora', 'feed'],
+  lnk: ['botones'], pro: ['dir'], exi: ['permisos'], scr: ['cada'], tip: ['lista'] };
+const plegBarra = () => '<div class="pleg-barra"><span class="muted">Toca una ventana para abrirla completa</span><button class="btn chico fantasma" data-pleg-todo="1">Abrir todas</button><button class="btn chico fantasma" data-pleg-todo="0">Cerrar todas</button></div>';
 function plegAbiertas(grupo){
   try { const v = JSON.parse(localStorage.getItem('suin_pleg_' + grupo) || 'null'); if (Array.isArray(v)) return v; } catch (e) {}
   return (PLEG_DEF[grupo] || []).slice();
@@ -2206,9 +2230,14 @@ function vistaEnVivo(){
   $('main').innerHTML = cabecera('En vivo', 'Quién está en la web ahora mismo, en qué página y qué va haciendo. Se actualiza solo, al instante. Toca a una persona para ver todo su recorrido.', '<span id="vivo-estado">' + estadoVivoHTML() + '</span>') +
     (vivoEstado === 'falta' ? '<div class="caja"><div class="tarjeta-sync"><div class="icono mal">' + ICO.alerta + '</div><div><strong>Falta instalar "En vivo" en Supabase</strong><div class="muted">Corre <span class="mono">13_en_vivo.sql</span> en Supabase → SQL Editor (después de <span class="mono">12_enlaces.sql</span>) y vuelve a abrir el panel.' + (vivoError ? '<br><small>' + esc(mensajeError(vivoError)) + '</small>' : '') + '</div></div></div></div>' : '') +
     '<div class="kpis" id="vivo-kpis"></div>' +
-    '<div class="grid-2 vivo-grid"><div class="caja"><div class="caja-cab"><h2>Ahora en la web <small id="vivo-n">0</small></h2><span class="muted">En gris: dejó la pestaña en segundo plano</span></div><div id="vivo-lista"></div></div>' +
-    '<div class="caja"><div class="caja-cab"><h2>Lo que va pasando</h2><span class="muted">Última hora</span></div><ol class="feed" id="vivo-feed"></ol></div></div>' +
-    '<div class="caja" id="vivo-avisos"><div class="caja-cab"><h2>Avisos a Telegram</h2><span class="muted">Te llegan por SuinBot</span></div><div class="cargando">Cargando…</div></div>';
+    plegBarra() +
+    '<div class="plegables" id="vivo-plegables">' +
+      plegable('viv', 'ahora', ICO.clientes, 'Ahora en la web <small id="vivo-n">0</small>', '<span id="vivo-res-ahora">Nadie en la web en este momento</span>',
+        '<p class="muted" style="margin:0 0 10px">En gris: dejó la pestaña en segundo plano</p><div id="vivo-lista"></div>') +
+      plegable('viv', 'feed', ICO.grafica, 'Lo que va pasando', '<span id="vivo-res-feed">Última hora</span>', '<ol class="feed" id="vivo-feed"></ol>') +
+      plegable('viv', 'avisos', ICO.whatsapp, 'Avisos a Telegram', 'Te llegan por SuinBot', '<div id="vivo-avisos"><div class="cargando">Cargando…</div></div>') +
+    '</div>';
+  activarPlegables('viv');
   pintarVivo();
   cargarAvisos();
 }
@@ -2225,6 +2254,7 @@ function pintarVivo(){
     kpi(ICO.enlace, 'En enlaces', n('links'), 'suinelectric.com/links') +
     kpi(ICO.grafica, 'Acciones', enHora.filter(e => e.tipo !== 'visita').length, enHora.filter(e => e.tipo === 'visita').length + ' visitas en la última hora');
   $('vivo-n').textContent = act.length;
+  if ($('vivo-res-ahora')) $('vivo-res-ahora').textContent = act.length ? act.length + (act.length === 1 ? ' persona en línea' : ' personas en línea') + (l.length > act.length ? ' · ' + (l.length - act.length) + ' en segundo plano' : '') : 'Nadie en la web en este momento';
   $('vivo-lista').innerHTML = !l.length ? '<div class="vacio">' + ICO.globo + (vivoEstado === 'falta' ? 'Esperando la instalación.' : 'Nadie en la web en este momento.<br><small>Aparecerán aquí apenas entren.</small>') + '</div>' :
     l.map(r => {
       const c = r.cliente_email ? clientes.find(x => x.email === r.cliente_email) : null;
@@ -2261,6 +2291,7 @@ function pintarFeed(){
   const ICO_F = { visita: ICO.globo, busqueda: ICO.buscar, ver_producto: ICO.ojo, agregar_carrito: ICO.tienda, cotizar_whatsapp: ICO.whatsapp, pedido_whatsapp: ICO.whatsapp, clic_enlace: ICO.enlace };
   const lugares = {}; feed.forEach(e => { if (e.tipo === 'visita' && e.visita) lugares[e.visita] = e; });
   const lista = feed.filter(e => Date.now() - new Date(e.creado) < 3600000).slice(0, 60);
+  if ($('vivo-res-feed')) $('vivo-res-feed').textContent = lista.length ? lista.length + (lista.length === 1 ? ' movimiento' : ' movimientos') + ' en la última hora' : 'Sin movimiento en la última hora';
   el.innerHTML = !lista.length ? '<li class="vacio">' + ICO.grafica + 'Sin movimiento en la última hora.</li>' : lista.map(e => {
     const r = vivos[e.visitante], v = lugares[e.visita] || r || {};
     const quien = e.cliente_email ? nombreCliente(e.cliente_email) : 'Visitante ' + codigoVis(e.visitante);
@@ -2339,25 +2370,26 @@ async function vistaEnlaces(){
       kpi(ICO.whatsapp, 'Fueron a WhatsApp', n(t.whatsapp), pct(t.whatsapp, t.visitas) + ' de las visitas') +
       kpi(ICO.tienda, 'Siguieron a la tienda', n(t.a_tienda), pct(t.a_tienda, t.visitas) + ' de las visitas') +
     '</div>' +
-    '<div class="grid-2" style="grid-template-columns:minmax(0,1.15fr) minmax(0,1fr);margin-bottom:18px">' +
-      '<div class="caja"><div class="caja-cab"><h2>Botones más tocados</h2><span class="muted">' + n(t.clics) + ' clics</span></div>' +
-        ranking(data.botones, (x, i) => '<li><span class="pos">' + (i + 1) + '</span><span class="nom"><strong>' + esc(x.texto) + '</strong><small>' + x.personas + ' persona' + (x.personas === 1 ? '' : 's') + ' · último ' + haceCuanto(x.ultima) + '</small>' + barra(x.clics, maxBt) + '</span><span class="num">' + x.clics + '<small>' + pct(x.clics, t.clics) + '</small></span></li>', 'Todavía nadie ha tocado un botón en este período.', 20) + '</div>' +
-      '<div class="caja"><div class="caja-cab"><h2>¿De dónde llegan?</h2></div>' +
+    plegBarra() +
+    '<div class="plegables" id="lnk-plegables">' +
+      plegable('lnk', 'botones', ICO.enlace, 'Botones más tocados', (data.botones || [])[0] ? esc(data.botones[0].texto) + ' · ' + data.botones[0].clics + ' clics' : 'Todavía nadie ha tocado un botón',
+        ranking(data.botones, (x, i) => '<li><span class="pos">' + (i + 1) + '</span><span class="nom"><strong>' + esc(x.texto) + '</strong><small>' + x.personas + ' persona' + (x.personas === 1 ? '' : 's') + ' · último ' + haceCuanto(x.ultima) + '</small>' + barra(x.clics, maxBt) + '</span><span class="num">' + x.clics + '<small>' + pct(x.clics, t.clics) + '</small></span></li>', 'Todavía nadie ha tocado un botón en este período.', 20)) +
+      plegable('lnk', 'origen', ICO.globo, '¿De dónde llegan?', (data.origenes || [])[0] ? esc(origenDe(data.origenes[0].referencia)) + ' · ' + pct(data.origenes[0].visitas, t.visitas) + ' de las visitas' : 'Sin datos todavía',
         ranking(data.origenes, (x, i) => '<li><span class="pos">' + (i + 1) + '</span><span class="nom"><strong>' + esc(origenDe(x.referencia)) + '</strong><small>' + (x.referencia ? '' : 'Enlace en la bio, un QR, WhatsApp o escribieron la dirección · ') + pct(x.con_clic, x.visitas) + ' tocó algún botón</small>' + barra(x.visitas, maxO) + '</span><span class="num">' + x.visitas + '<small>' + pct(x.visitas, t.visitas) + '</small></span></li>', 'Sin datos todavía.') +
-        '<p class="muted" style="margin:12px 0 0;font-size:12.5px">Para saber exactamente de dónde viene cada visita, usa enlaces con etiqueta, por ejemplo <span class="mono">suinelectric.com/links?utm_source=instagram</span> en la bio de Instagram o <span class="mono">?utm_source=qr</span> en un QR impreso.</p></div>' +
-    '</div>' +
-    '<div class="caja"><div class="caja-cab"><h2>Visitas y clics por día</h2><div class="leyenda"><span><i style="background:color-mix(in srgb, var(--azul) 28%, var(--superficie))"></i>Visitas</span><span><i style="background:var(--azul)"></i>Clics en botones</span></div></div>' + grafico + '</div>' +
-    '<div class="grid-2" style="grid-template-columns:1fr 1fr;margin-bottom:18px">' +
-      '<div class="caja"><div class="caja-cab"><h2>¿Desde dónde?</h2></div>' +
+        '<p class="muted" style="margin:12px 0 0;font-size:12.5px">Para saber exactamente de dónde viene cada visita, usa enlaces con etiqueta, por ejemplo <span class="mono">suinelectric.com/links?utm_source=instagram</span> en la bio de Instagram o <span class="mono">?utm_source=qr</span> en un QR impreso.</p>') +
+      plegable('lnk', 'dia', ICO.grafica, 'Visitas y clics por día', n(t.visitas) + ' visitas · ' + n(t.clics) + ' clics',
+        '<div class="leyenda" style="margin-bottom:6px"><span><i style="background:color-mix(in srgb, var(--azul) 28%, var(--superficie))"></i>Visitas</span><span><i style="background:var(--azul)"></i>Clics en botones</span></div>' + grafico) +
+      plegable('lnk', 'desde', ICO.globo, '¿Desde dónde?', (data.paises || [])[0] ? bandera(data.paises[0].pais) + esc(nomPais(data.paises[0].pais)) + ' · ' + pct(data.paises[0].visitas, t.visitas) + ' de las visitas' : 'Sin datos todavía',
         ranking(data.paises, (x, i) => '<li><span class="pos">' + (i + 1) + '</span><span class="nom"><strong>' + bandera(x.pais) + esc(nomPais(x.pais)) + '</strong>' + barra(x.visitas, maxP) + '</span><span class="num">' + x.visitas + '<small>' + pct(x.visitas, t.visitas) + '</small></span></li>', 'Sin datos todavía.', 5) +
-        '<div class="seccion" style="margin:16px 0 0"><h3>Ciudades (aproximado)</h3>' + ranking(data.ciudades, (x, i) => '<li><span class="pos">' + (i + 1) + '</span><span class="nom"><strong>' + esc(lugarDe(x)) + '</strong>' + barra(x.visitas, maxCi) + '</span><span class="num">' + x.visitas + '</span></li>', 'Sin ciudades todavía.', 8) + '</div></div>' +
-      '<div class="caja"><div class="caja-cab"><h2>¿Con qué equipo y a qué hora?</h2></div>' +
-        mini('Tipo de equipo', data.dispositivos, 'dispositivo') + mini('Navegador o app', data.navegadores, 'navegador') +
-        '<div class="seccion" style="margin:0"><h3>Hora de entrada (Venezuela)</h3>' + barrasSimples(horas, horas.map((_, h) => h % 3 === 0 ? (h % 12 || 12) + (h < 12 ? 'a' : 'p') : ''), (h, v) => hTxt(h) + ': ' + v + ' visitas') + '</div></div>' +
-    '</div>' +
-    '<div class="caja"><div class="caja-cab"><h2>Visitas recientes <small>' + (data.visitas || []).length + '</small></h2>' +
-      '<div class="buscar">' + ICO.buscar + '<input id="lnk-buscar" type="search" placeholder="Filtrar por ciudad, botón, origen…" value="' + esc(buscaLnk) + '"></div></div>' +
-      '<div class="tabla-wrap" id="lnk-tabla"></div></div>';
+        '<div class="seccion" style="margin:16px 0 0"><h3>Ciudades (aproximado)</h3>' + ranking(data.ciudades, (x, i) => '<li><span class="pos">' + (i + 1) + '</span><span class="nom"><strong>' + esc(lugarDe(x)) + '</strong>' + barra(x.visitas, maxCi) + '</span><span class="num">' + x.visitas + '</span></li>', 'Sin ciudades todavía.', 8) + '</div>') +
+      plegable('lnk', 'equipo', ICO.ojo, '¿Con qué equipo y a qué hora?', (data.dispositivos || [])[0] ? esc(data.dispositivos[0].dispositivo || 'Desconocido') + ' ' + pct(data.dispositivos[0].visitas, t.visitas) + (t.visitas ? ' · más visitas a las ' + hTxt(horas.indexOf(Math.max(...horas))) : '') : 'Sin datos todavía',
+        '<div class="pleg-2">' + mini('Tipo de equipo', data.dispositivos, 'dispositivo') + mini('Navegador o app', data.navegadores, 'navegador') + '</div>' +
+        '<div class="seccion" style="margin:8px 0 0"><h3>Hora de entrada (Venezuela)</h3>' + barrasSimples(horas, horas.map((_, h) => h % 3 === 0 ? (h % 12 || 12) + (h < 12 ? 'a' : 'p') : ''), (h, v) => hTxt(h) + ': ' + v + ' visitas') + '</div>') +
+      plegable('lnk', 'recientes', ICO.clientes, 'Visitas recientes <small>' + (data.visitas || []).length + '</small>', (data.visitas || [])[0] ? (data.visitas || []).length + ((data.visitas || []).length === 1 ? ' visita' : ' visitas') + ' · la última ' + haceCuanto(data.visitas[0].inicio) : 'Sin visitas en este período',
+        '<div class="buscar" style="margin-bottom:12px">' + ICO.buscar + '<input id="lnk-buscar" type="search" placeholder="Filtrar por ciudad, botón, origen…" value="' + esc(buscaLnk) + '"></div>' +
+        '<div class="tabla-wrap" id="lnk-tabla"></div>') +
+    '</div>';
+  activarPlegables('lnk');
   pintarEnlaces();
   $('lnk-buscar').oninput = (e) => { buscaLnk = e.target.value; cuantasLnk = 25; pintarEnlaces(); };
 }
@@ -2460,13 +2492,16 @@ function vistaProductos(){
       kpi(ICO.bloquear, 'Ocultos', cuentaO.ocultos, 'no se muestran en la web', 'ocultos') +
       kpi(ICO.alerta, 'Sin foto', cuentaO.sinfoto, cuentaO.sinprecio + ' sin precio', 'sinfoto') +
     '</div>' +
-    '<div class="caja"><div class="caja-cab"><div class="chips" id="pro-chips">' + ORIG.map(([k, t]) => '<button class="chip' + (fPro.origen === k ? ' activo' : '') + '" data-o="' + k + '">' + t + ' <b>' + Number(cuentaO[k]).toLocaleString('es-VE') + '</b></button>').join('') + '</div></div>' +
+    '<div class="plegables plegables-1">' + plegable('pro', 'dir', ICO.caja, 'Directorio de productos <small>' + Number(todos.length).toLocaleString('es-VE') + '</small>',
+      vis.length.toLocaleString('es-VE') + ' visibles en la tienda' + (cuentaO.ocultos ? ' · ' + cuentaO.ocultos + ' oculto' + (cuentaO.ocultos === 1 ? '' : 's') : '') + (cuentaO.sinfoto ? ' · ' + Number(cuentaO.sinfoto).toLocaleString('es-VE') + ' sin foto' : ''),
+    '<div class="caja-cab"><div class="chips" id="pro-chips">' + ORIG.map(([k, t]) => '<button class="chip' + (fPro.origen === k ? ' activo' : '') + '" data-o="' + k + '">' + t + ' <b>' + Number(cuentaO[k]).toLocaleString('es-VE') + '</b></button>').join('') + '</div></div>' +
       '<div class="fila" style="margin-bottom:14px">' +
         '<div class="buscar" style="flex:2 1 260px">' + ICO.buscar + '<input id="pro-q" type="search" placeholder="Buscar modelo, nombre, descripción…" value="' + esc(fPro.q) + '"></div>' +
         '<label class="campo" style="flex:1 1 150px">Marca<select id="pro-marca"><option value="">Todas</option>' + marcasL.map(m => '<option' + (fPro.marca === m ? ' selected' : '') + '>' + esc(m) + '</option>').join('') + '</select></label>' +
         '<label class="campo" style="flex:1 1 180px">Familia<select id="pro-fam"><option value="">Todas</option>' + familias.map(f => '<option' + (fPro.familia === f ? ' selected' : '') + '>' + esc(f) + '</option>').join('') + '</select></label>' +
         '<label class="campo" style="flex:0 1 170px">Orden<select id="pro-orden">' + [['modelo', 'Modelo A-Z'], ['precio_a', 'Precio menor'], ['precio_d', 'Precio mayor'], ['recientes', 'Agregados recientes']].map(([k, t]) => '<option value="' + k + '"' + (fPro.orden === k ? ' selected' : '') + '>' + t + '</option>').join('') + '</select></label>' +
-      '</div><div class="tabla-wrap" id="pro-tabla"></div></div>';
+      '</div><div class="tabla-wrap" id="pro-tabla"></div>') + '</div>';
+  activarPlegables('pro');
   $('pro-nuevo').onclick = () => abrirProducto(null);
   document.querySelectorAll('#pro-chips .chip').forEach(c => c.onclick = () => { fPro.origen = c.dataset.o; cuantosPro = 50; vistaProductos(); });
   document.querySelectorAll('[data-kf]').forEach(c => c.onclick = () => { fPro.origen = c.dataset.kf; cuantosPro = 50; vistaProductos(); });
@@ -2679,9 +2714,14 @@ function vistaExistencias(){
   else if (!estadoStock || !estadoStock.modelos) sync = '<div class="tarjeta-sync"><div class="icono mal">' + ICO.sync + '</div><div><strong>Todavía no se han subido las cantidades reales</strong><div class="muted">Se suben solas cada día con la actualización del catálogo. Revisa que GitHub tenga los secrets <span class="mono">SUPABASE_URL</span> y <span class="mono">SUPABASE_SECRET_KEY</span>.</div></div></div>';
   else sync = '<div class="tarjeta-sync"><div class="icono">' + ICO.ok + '</div><div><strong>' + Number(estadoStock.modelos).toLocaleString('es-VE') + ' modelos con cantidad real</strong><div class="muted">Última actualización: ' + fecha(estadoStock.actualizado) + ' · se actualiza cada día con el catálogo.</div></div></div>';
 
+  const resSync = faltaSQL ? 'Falta instalar esta función en Supabase' : !estadoStock || !estadoStock.modelos ? 'Todavía no se han subido las cantidades reales' :
+    Number(estadoStock.modelos).toLocaleString('es-VE') + ' modelos con cantidad real · ' + fecha(estadoStock.actualizado);
+  const nTiposStock = tipos.filter(t => t.ver_existencias).length;
   $('main').innerHTML = cabecera('Existencias', 'Elige quién ve las cantidades exactas. Los demás ven un rango, y las cantidades reales nunca se publican en la web.') +
-    '<div class="caja">' + sync + '</div>' +
-    '<div class="caja"><div class="caja-cab"><h2>Qué ve cada quien</h2></div><div class="muestras">' +
+    plegBarra() +
+    '<div class="plegables" id="exi-plegables">' +
+    plegable('exi', 'estado', ICO.sync, 'Estado de las cantidades', resSync, sync) +
+    plegable('exi', 'quien', ICO.candado, 'Qué ve cada quien', 'Visitantes y clientes ven un rango · con permiso, la cantidad real', '<div class="muestras">' +
       '<div class="muestra"><h3>' + ICO.candado + 'Visitantes y clientes</h3><ul>' +
         '<li><span>Más de 10 unidades</span><span class="estado-stock ok">+10 disponibles</span></li>' +
         '<li><span>De 1 a 10 unidades</span><span class="estado-stock ok">Últimas unidades</span></li>' +
@@ -2690,9 +2730,9 @@ function vistaExistencias(){
         '<li><span>Más de 10 unidades</span><span class="estado-stock ok">252 disponibles</span></li>' +
         '<li><span>De 1 a 10 unidades</span><span class="estado-stock ok">3 disponibles</span></li>' +
         '<li><span>Sin unidades</span><span class="estado-stock off">Agotado</span></li></ul></div>' +
-    '</div></div>' +
-    '<div class="grid-2">' +
-      '<div class="caja"><div class="caja-cab"><h2>Clientes con permiso <small>' + total + ' en total</small></h2></div>' +
+    '</div>') +
+      plegable('exi', 'permisos', ICO.ojo, 'Clientes con permiso <small>' + total + ' en total</small>',
+        total === 1 ? '1 persona ve las cantidades reales' : total + ' personas ven las cantidades reales',
         '<form id="e-dar" class="fila" style="margin-bottom:12px"><label class="campo" style="flex:1 1 240px">Dar permiso a un cliente<select name="email"><option value="">Elige un cliente…</option>' +
           clientes.filter(c => !c.es_admin && !c.ver_existencias).map(c => '<option value="' + esc(c.email) + '">' + esc(c.nombre || c.empresa || c.email) + ' · ' + esc(c.email) + '</option>').join('') +
         '</select></label><button class="btn prim">' + ICO.ojo + 'Dar permiso</button></form>' +
@@ -2701,15 +2741,15 @@ function vistaExistencias(){
           conPermiso.map(c => filaPermiso(c, 'Permiso propio' + (c.activo === false ? ' · cuenta bloqueada' : ''), 'cli')).join('') +
           porTipo.map(c => filaPermiso(c, 'Por ser ' + nombreTipo(c.tipo_id), 'tipo')).join('') +
         '</ul>' +
-        (!conPermiso.length && !porTipo.length ? '<p class="muted" style="margin:8px 0 0">Por ahora solo los administradores ven las cantidades reales.</p>' : '') +
-      '</div>' +
-      '<div class="caja"><div class="caja-cab"><h2>Por tipo de cliente</h2></div><p class="sub">Todos los clientes del tipo verán las cantidades reales.</p>' +
+        (!conPermiso.length && !porTipo.length ? '<p class="muted" style="margin:8px 0 0">Por ahora solo los administradores ven las cantidades reales.</p>' : '')) +
+      plegable('exi', 'tipos', ICO.tipos, 'Por tipo de cliente', nTiposStock ? nTiposStock + ' de ' + tipos.length + ' tipo' + (tipos.length === 1 ? '' : 's') + ' ve' + (nTiposStock === 1 ? '' : 'n') + ' las cantidades reales' : 'Ningún tipo ve las cantidades reales',
+        '<p class="sub" style="margin-top:0">Todos los clientes del tipo verán las cantidades reales.</p>' +
         '<div class="interruptores">' + tipos.map(t => {
           const n = clientes.filter(c => c.tipo_id === t.id).length;
           return '<label class="switch"><input type="checkbox" data-tipo-stock="' + t.id + '"' + (t.ver_existencias ? ' checked' : '') + (faltaSQL ? ' disabled' : '') + '><span class="sw"></span><span class="sw-txt"><strong>' + esc(t.nombre) + '</strong><small>' + n + ' cliente' + (n === 1 ? '' : 's') + '</small></span></label>';
-        }).join('') + '</div>' +
-      '</div>' +
+        }).join('') + '</div>') +
     '</div>';
+  activarPlegables('exi');
 
   $('e-dar').onsubmit = async (e) => {
     e.preventDefault();
@@ -2817,19 +2857,27 @@ async function vistaScraping(){
       kpi(ICO.descuentos, 'Cambios de precio', numScr((t.precios_subieron || 0) + (t.precios_bajaron || 0)), '↑ ' + numScr(t.precios_subieron) + ' subieron · ↓ ' + numScr(t.precios_bajaron) + ' bajaron') +
       kpi(ICO.sync, 'Corridas', numScr(t.corridas), ult ? 'Última: ' + fecha(ult.fecha) : 'Ninguna todavía') +
     '</div>' +
-    '<div class="caja"><div class="caja-cab"><h2>Cada scraping</h2><small class="muted">Toca una corrida para ver el detalle</small></div><div class="tabla-wrap">' + tablaEjec + '</div></div>' +
-    '<div class="caja"><div class="caja-cab"><h2>Lo que más se restó</h2><small class="muted">Toca un producto para ver su historial</small></div>' + ranking + '</div>' +
-    '<div class="caja"><div class="caja-cab"><h2>Movimientos del período</h2><div class="fila" style="align-items:center">' +
-      '<div class="chips" id="scr-tipos">' + TIPOS_SCR.map(([k, n]) => '<button class="chip' + (tipoScr === k ? ' activo' : '') + '" data-tipo-scr="' + k + '">' + n + '</button>').join('') + '</div>' +
-      '<div class="buscar">' + ICO.buscar + '<input id="scr-busca" placeholder="Buscar modelo, marca…" value="' + esc(buscaScr) + '"></div>' +
-      '<button class="btn chico" id="scr-csv">Descargar CSV</button></div></div>' +
-      '<div class="tabla-wrap" id="scr-tabla"></div></div>' +
-    '<div class="caja"><div class="caja-cab"><h2>Cambios de precio</h2><div class="fila" style="align-items:center">' +
-      '<div class="chips">' + SENTIDOS_PRECIO.map(([k, n]) => '<button class="chip' + (sentidoPrecio === k ? ' activo' : '') + '" data-sentido-precio="' + k + '">' + n + '</button>').join('') + '</div>' +
-      '<div class="buscar">' + ICO.buscar + '<input id="pre-busca" placeholder="Buscar modelo, marca…" value="' + esc(buscaPrecio) + '"></div>' +
-      '<button class="btn chico" id="pre-csv">Descargar CSV</button></div></div>' +
-      '<p class="muted" style="margin:-4px 0 10px;font-size:12.5px">Precio público del proveedor (antes de tu descuento). Los centavos de diferencia por redondeo no cuentan.</p>' +
-      '<div class="tabla-wrap" id="pre-tabla"></div></div>';
+    plegBarra() +
+    '<div class="plegables" id="scr-plegables">' +
+      plegable('scr', 'cada', ICO.sync, 'Cada scraping <small>' + ejec.length + '</small>', ult ? 'Última: ' + fecha(ult.fecha) + ' · ' + numScr(t.corridas) + ' corrida' + (t.corridas === 1 ? '' : 's') + ' en el período' : 'Sin corridas en este período',
+        '<p class="muted" style="margin:0 0 10px;font-size:12.5px">Toca una corrida para ver el detalle</p><div class="tabla-wrap">' + tablaEjec + '</div>') +
+      plegable('scr', 'restado', ICO.existencias, 'Lo que más se restó', (datosScr.mas_restados || [])[0] ? esc(datosScr.mas_restados[0].modelo) + ' · −' + numScr(datosScr.mas_restados[0].unidades) + ' unidades' : 'Nada se ha restado en este período',
+        '<p class="muted" style="margin:0 0 10px;font-size:12.5px">Toca un producto para ver su historial</p>' + ranking) +
+      plegable('scr', 'movs', ICO.caja, 'Movimientos del período', numScr(movsScr.length) + ' movimiento' + (movsScr.length === 1 ? '' : 's') + ' (' + (TIPOS_SCR.find(x => x[0] === tipoScr) || TIPOS_SCR[0])[1].toLowerCase() + ')',
+        '<div class="fila" style="align-items:center;margin-bottom:12px">' +
+          '<div class="chips" id="scr-tipos">' + TIPOS_SCR.map(([k, n]) => '<button class="chip' + (tipoScr === k ? ' activo' : '') + '" data-tipo-scr="' + k + '">' + n + '</button>').join('') + '</div>' +
+          '<div class="buscar">' + ICO.buscar + '<input id="scr-busca" placeholder="Buscar modelo, marca…" value="' + esc(buscaScr) + '"></div>' +
+          '<button class="btn chico" id="scr-csv">Descargar CSV</button></div>' +
+        '<div class="tabla-wrap" id="scr-tabla"></div>') +
+      plegable('scr', 'precios', ICO.descuentos, 'Cambios de precio', preciosScr === null ? 'Falta actualizar la base de datos' : numScr(preciosScr.length) + ' cambio' + (preciosScr.length === 1 ? '' : 's') + ' · ↑ ' + numScr(preciosScr.filter(p => p.diferencia > 0).length) + ' subieron · ↓ ' + numScr(preciosScr.filter(p => p.diferencia < 0).length) + ' bajaron',
+        '<div class="fila" style="align-items:center;margin-bottom:8px">' +
+          '<div class="chips">' + SENTIDOS_PRECIO.map(([k, n]) => '<button class="chip' + (sentidoPrecio === k ? ' activo' : '') + '" data-sentido-precio="' + k + '">' + n + '</button>').join('') + '</div>' +
+          '<div class="buscar">' + ICO.buscar + '<input id="pre-busca" placeholder="Buscar modelo, marca…" value="' + esc(buscaPrecio) + '"></div>' +
+          '<button class="btn chico" id="pre-csv">Descargar CSV</button></div>' +
+        '<p class="muted" style="margin:0 0 10px;font-size:12.5px">Precio público del proveedor (antes de tu descuento). Los centavos de diferencia por redondeo no cuentan.</p>' +
+        '<div class="tabla-wrap" id="pre-tabla"></div>') +
+    '</div>';
+  activarPlegables('scr');
 
   document.querySelectorAll('[data-ejec-scr]').forEach(tr => tr.onclick = () => abrirEjecucionScr(Number(tr.dataset.ejecScr)));
   document.querySelectorAll('[data-modelo-scr]').forEach(li => li.onclick = (e) => { if (!e.target.closest('a')) abrirModeloScr(li.dataset.modeloScr); });
@@ -2992,12 +3040,15 @@ async function abrirModeloScr(modelo){
 /* ---------- Tipos de cliente ---------- */
 function vistaTipos(){
   $('main').innerHTML = cabecera('Tipos de cliente', 'Agrupa a tus clientes para darles descuentos y permisos en bloque.') +
-    '<div class="caja"><div class="tabla-wrap"><table><thead><tr><th>Nombre</th><th>Clientes</th><th>Reglas</th><th>Ve existencias reales</th><th></th></tr></thead><tbody>' +
+    '<div class="plegables plegables-1">' + plegable('tip', 'lista', ICO.tipos, 'Tipos de cliente <small>' + tipos.length + '</small>',
+      tipos.length + ' tipo' + (tipos.length === 1 ? '' : 's') + ' · ' + clientes.length + ' cliente' + (clientes.length === 1 ? '' : 's'),
+    '<div class="tabla-wrap"><table><thead><tr><th>Nombre</th><th>Clientes</th><th>Reglas</th><th>Ve existencias reales</th><th></th></tr></thead><tbody>' +
     tipos.map(t => '<tr><td style="min-width:200px"><input data-nombre="' + t.id + '" value="' + esc(t.nombre) + '"></td>' +
       '<td>' + clientes.filter(c => c.tipo_id === t.id).length + '</td><td>' + reglas.filter(r => r.tipo_id === t.id).length + '</td>' +
       '<td><label class="switch solo"><input type="checkbox" data-tipo-stock="' + t.id + '"' + (t.ver_existencias ? ' checked' : '') + ' aria-label="Ve existencias reales"><span class="sw"></span></label></td>' +
       '<td class="acciones"><button class="btn chico" data-guardar="' + t.id + '">Guardar</button> <button class="btn chico peligro" data-borrar="' + t.id + '">Eliminar</button></td></tr>').join('') +
-    '</tbody></table></div><form id="t-form" class="fila" style="margin-top:16px"><label class="campo" style="flex:1 1 240px">Nuevo tipo<input name="nombre" required placeholder="Ej. Integrador"></label><button class="btn prim">' + ICO.mas + 'Agregar</button></form><p class="error" id="t-err"></p></div>';
+    '</tbody></table></div><form id="t-form" class="fila" style="margin-top:16px"><label class="campo" style="flex:1 1 240px">Nuevo tipo<input name="nombre" required placeholder="Ej. Integrador"></label><button class="btn prim">' + ICO.mas + 'Agregar</button></form><p class="error" id="t-err"></p>') + '</div>';
+  activarPlegables('tip');
   document.querySelectorAll('[data-guardar]').forEach(b => b.onclick = async () => {
     const nombre = document.querySelector('[data-nombre="' + b.dataset.guardar + '"]').value.trim();
     const { error } = await sb.from('tipos_cliente').update({ nombre }).eq('id', b.dataset.guardar);
