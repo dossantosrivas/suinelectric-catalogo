@@ -3258,7 +3258,7 @@ const FAC_VISIBLES = 14;
 
 function defsFacDe(sel){
   if (!catalogoBeta || sel.length < 2) return null;
-  for (let n = Math.min(sel.length, 3); n >= 2; n--){
+  for (let n = sel.length; n >= 2; n--){   // la subcategoría más cercana con filtros propios manda
     const k = sel.slice(0, n).map(slugFac).join('/');
     if (FILTROS_BETA[k]) return FILTROS_BETA[k];
   }
@@ -3377,7 +3377,7 @@ function conectarPanelFac(){
    Los SKU de una misma serie (ej. el mismo contactor con distintas bobinas)
    salen en una sola tarjeta; en la ficha se elige la versión. */
 function ejeVarianteDe(p){
-  const defs = defsFacDe(rutaDe(p).slice(0, 3)) || [];
+  const defs = defsFacDe(rutaDe(p)) || [];
   const d = defs.find(x => x.variante);
   return d || null;
 }
