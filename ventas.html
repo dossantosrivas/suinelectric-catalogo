@@ -1170,6 +1170,9 @@ const ensureDistribuidores = () => {
 /* ---------------- catálogo del distribuidor ---------------- */
 const Catalog = {
   items: [], meta: null, loading: false, error: '',
+  /* productos del scraping tapados por uno del panel con el mismo modelo: el panel gana en precio
+     y búsqueda, pero estos se guardan aparte para seguir mostrando la existencia del distribuidor */
+  sombra: [],
   trim(p, src) {
     return {
       src, m: String(p.modelo || p.sku || '').trim(), n: String(p.nombre || p.modelo || '').trim(), marca: String(p.marca || '').trim(),
@@ -1187,18 +1190,18 @@ const Catalog = {
       all = all.concat(arr.map(p => this.trim(p, src)).filter(p => p.m));
       if (json.generado) gen = json.generado;
     });
-    const seen = new Set(); this.items = [];
-    all.forEach(p => { const k = p.m.toUpperCase() + '|' + p.marca.toUpperCase(); if (!seen.has(k)) { seen.add(k); p._k = normTxt(p.m + ' ' + p.n + ' ' + p.marca + ' ' + p.desc + ' ' + p.sku + ' ' + p.cat); this.items.push(p); } });
+    const seen = new Set(); this.items = []; this.sombra = [];
+    all.forEach(p => { const k = p.m.toUpperCase() + '|' + p.marca.toUpperCase(); if (!seen.has(k)) { seen.add(k); p._k = normTxt(p.m + ' ' + p.n + ' ' + p.marca + ' ' + p.desc + ' ' + p.sku + ' ' + p.cat); this.items.push(p); } else if (p.src === 's') this.sombra.push(p); });
     this.meta = { generado: gen || nowISO(), leido: nowISO(), total: this.items.length, origen };
-    IDB.set('catalogo', { items: this.items.map(p => { const c = Object.assign({}, p); delete c._k; return c; }), meta: this.meta });
+    IDB.set('catalogo', { items: this.items.map(p => { const c = Object.assign({}, p); delete c._k; return c; }), sombra: this.sombra, meta: this.meta });
     Bus.emit('catalog');
   },
   async load() {
     const c = await IDB.get('catalogo');
-    if (c && c.items) { this.items = c.items.map(p => Object.assign(p, { _k: normTxt(p.m + ' ' + p.n + ' ' + p.marca + ' ' + p.desc + ' ' + p.sku + ' ' + p.cat) })); this.meta = c.meta; Bus.emit('catalog'); }
+    if (c && c.items) { this.items = c.items.map(p => Object.assign(p, { _k: normTxt(p.m + ' ' + p.n + ' ' + p.marca + ' ' + p.desc + ' ' + p.sku + ' ' + p.cat) })); this.sombra = Array.isArray(c.sombra) ? c.sombra : []; this.meta = c.meta; Bus.emit('catalog'); }
     const age = this.meta ? Date.now() - new Date(this.meta.leido).getTime() : Infinity;
     /* la copia guardada sin subcategorías (versión anterior) no sirve para los descuentos por categoría */
-    if (age > 3 * 3600e3 || (this.items.length && !Array.isArray(this.items[0].subs))) this.refresh();
+    if (age > 3 * 3600e3 || (this.items.length && !Array.isArray(this.items[0].subs)) || (c && c.items && !Array.isArray(c.sombra))) this.refresh();      // copia vieja sin la existencia de los tapados por el panel
     else this.mezclarPanel();      // los del panel → Productos se ven al momento, sin esperar 3 horas
   },
   /* Productos agregados o corregidos en el panel de la tienda → Productos (14_productos_web.sql).
@@ -1218,6 +1221,7 @@ const Catalog = {
     const k = (p) => p.m.toUpperCase() + '|' + p.marca.toUpperCase();
     const ks = new Set(panel.map(k));
     panel.forEach(p => { p._k = normTxt(p.m + ' ' + p.n + ' ' + p.marca + ' ' + p.desc + ' ' + p.sku + ' ' + p.cat); });
+    this.items.forEach(p => { if (p.src === 's' && ks.has(k(p))) this.sombra.push(p); });
     this.items = panel.concat(this.items.filter(p => !ks.has(k(p))));
     Bus.emit('catalog');
   },
@@ -4020,9 +4024,10 @@ const MatchCat = (() => {
 const DistCat = (() => {
   let idx = null, n = -1;
   const build = () => {
-    if (idx && n === Catalog.items.length) return idx;
-    idx = new Map(); n = Catalog.items.length;
-    Catalog.items.forEach(c => { const k = normKey(c.m); if (!k) return; if (!idx.has(k)) idx.set(k, []); idx.get(k).push(c); });
+    const tot = Catalog.items.length + Catalog.sombra.length;
+    if (idx && n === tot) return idx;
+    idx = new Map(); n = tot;
+    Catalog.items.concat(Catalog.sombra).forEach(c => { const k = normKey(c.m); if (!k) return; if (!idx.has(k)) idx.set(k, []); idx.get(k).push(c); });
     return idx;
   };
   const de = (p, mc) => {
@@ -4039,6 +4044,7 @@ const DistCat = (() => {
       const ci = d ? costoInfo(c, d) : null;
       por.set(id, { id, nombre: d ? d.nombre : (c.src === 's' ? 'Distribuidor' : 'En el catálogo'), exist: ex, disp: !!c.disp, costo: ci ? ci.costo : null, lista: c.precio || null });
     });
+    if (Array.from(por.keys()).some(id => id[0] !== '_')) por.delete('_cat');      // si un distribuidor lo trae, sobra el "en el catálogo"
     const ord = Dists().map(d => d.id);
     return Array.from(por.values()).sort((a, b) => { const ia = ord.indexOf(a.id), ib = ord.indexOf(b.id); return (ia < 0 ? 99 : ia) - (ib < 0 ? 99 : ib); });
   };
