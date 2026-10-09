@@ -878,6 +878,62 @@
   }
 
 
+
+  /* ================= Íconos en filtros y especificaciones ================= */
+  .fi{ display:inline-flex; align-items:center; justify-content:center; width:18px; height:18px; flex:none; color:var(--azul-texto); }
+  .fi svg{ width:18px; height:18px; }
+  .fi-color{ width:14px; height:14px; border-radius:50%; border:1px solid rgba(0,0,0,.18); box-shadow:inset 0 0 0 1.5px #fff; }
+  .vfd-chip{ display:inline-flex; align-items:center; gap:6px; }
+  .vfd-chip.on .fi{ color:var(--tinta); }
+  .fac-min{ display:flex; gap:6px; align-items:center; }
+  .fac-min input{ width:120px; }
+
+  /* ================= Vista Ficha: más productos y más datos a la vista ================= */
+  #contenido.vista-ficha .grid{ grid-template-columns:repeat(auto-fill, minmax(300px, 1fr)); gap:12px; }
+  #contenido.vista-ficha .card{ display:grid; grid-template-columns:104px minmax(0,1fr); align-items:start; }
+  #contenido.vista-ficha .card-marca-logo{ position:static; grid-column:1; grid-row:2; height:15px; max-width:78px; margin:0 auto 10px; }
+  #contenido.vista-ficha .thumb{ grid-column:1; grid-row:1; width:88px; height:88px; margin:12px 0 8px 12px; padding:6px;
+    border:1px solid var(--linea-suave); border-radius:8px; }
+  #contenido.vista-ficha .thumb.sin-imagen{ font-size:11px; text-align:center; }
+  #contenido.vista-ficha .card:hover .thumb img{ transform:none; }
+  #contenido.vista-ficha .card-body{ grid-column:2; grid-row:1 / span 3; padding:12px 14px 12px 12px;
+    display:grid; grid-template-columns:minmax(0,1fr) auto; column-gap:10px; align-content:start; }
+  #contenido.vista-ficha .card-body > *{ grid-column:1 / -1; }
+  #contenido.vista-ficha .modelo{ font-size:17px; }
+  #contenido.vista-ficha .desc{ font-size:13px; line-height:1.4; -webkit-line-clamp:4; margin:4px 0 6px; }
+  #contenido.vista-ficha .card-body > .estado{ grid-column:1; align-self:center; justify-self:start; font-size:12px; padding:2px 8px 2px 7px; margin:0; }
+  #contenido.vista-ficha .card-body > .price-row{ grid-column:2; margin:0; justify-content:flex-end; text-align:right; }
+  #contenido.vista-ficha .precio-box{ align-items:flex-end; }
+  #contenido.vista-ficha .precio-linea{ justify-content:flex-end; }
+  #contenido.vista-ficha .precio{ font-size:20px; }
+  #contenido.vista-ficha .precio-nota{ display:none; }
+  #contenido.vista-ficha .card-body > .estado{ white-space:normal; line-height:1.25; min-width:0; max-width:100%; }
+  #contenido.vista-ficha .precio-registro{ margin-top:4px; padding:3px 7px; align-items:flex-end; text-align:right; }
+  #contenido.vista-ficha .precio-registro .pr-monto{ font-size:14px; }
+  #contenido.vista-ficha .card-body > .actions{ display:flex; flex-wrap:nowrap; gap:6px; margin-top:8px; }
+  #contenido.vista-ficha .qty-selector{ flex:0 0 auto; height:36px; }
+  #contenido.vista-ficha .qty-btn{ width:28px; }
+  #contenido.vista-ficha .qty-input{ flex:none; width:34px; font-size:14px; }
+  #contenido.vista-ficha .btn-cart-add{ flex:1 1 auto; padding:8px 10px; font-size:14px; }
+  #contenido.vista-ficha .card-body > .wa-doble{ margin-top:6px; }
+  #contenido.vista-ficha .wa-doble .btn{ flex:1 1 50%; padding:5px 8px; font-size:12.5px; border-width:1px; }
+  .especs-mini{ display:flex; flex-wrap:wrap; gap:4px; margin:0 0 8px; }
+  .especs-mini > span{ display:inline-flex; align-items:center; gap:4px; font-size:12px; font-weight:600; color:var(--tinta);
+    background:var(--azul-suave); border-radius:5px; padding:2px 7px; line-height:1.5; }
+  .especs-mini .fi, .especs-mini .fi svg{ width:14px; height:14px; }
+  .especs-mini .fi-color{ width:10px; height:10px; }
+  #contenido.vista-cuadros .especs-mini, #contenido.vista-compacta .especs-mini{ display:none; }
+  @media (max-width: 640px){
+    #contenido.vista-ficha .grid{ grid-template-columns:1fr; gap:10px; }
+    #contenido.vista-ficha .card{ grid-template-columns:86px minmax(0,1fr); }
+    #contenido.vista-ficha .thumb{ width:72px; height:72px; margin:10px 0 6px 10px; padding:4px; }
+    #contenido.vista-ficha .card-marca-logo{ max-width:64px; height:13px; }
+    #contenido.vista-ficha .card-body{ padding:10px 10px 10px 8px; }
+    #contenido.vista-ficha .modelo{ font-size:16px; }
+    #contenido.vista-ficha .desc{ -webkit-line-clamp:3; }
+    #contenido.vista-ficha .card-body > .wa-doble{ flex-wrap:nowrap; gap:6px; }
+  }
+
   /* ---------- Modos de vista del listado (Cuadros / Lista / Compacta) ---------- */
   .vista-ctrl{ display:flex; align-items:center; gap:8px; }
   .vista-toggle{ display:inline-flex; border:1px solid var(--linea); border-radius:var(--radio); overflow:hidden; height:42px; background:#fff; }
@@ -1130,6 +1186,71 @@
   .marca-logo-card{ min-width:0; overflow:hidden; }
   .marca-logo-card img{ width:auto; height:auto; max-width:100%; min-width:0; }
   @media (max-width:520px){ .marca-logo-card{ padding-left:10px; padding-right:10px; } .marca-logo-card img{ max-height:32px; } }
+
+  /* ================= CATÁLOGO ÚNICO (beta): mega menú, filtros, variantes ================= */
+  .btn-mega{ display:inline-flex; align-items:center; gap:8px; height:44px; padding:0 16px; background:var(--tinta); color:#fff; border:none;
+    border-radius:var(--radio); font:inherit; font-size:14.5px; font-weight:600; cursor:pointer; }
+  .btn-mega svg{ width:18px; height:18px; }
+  .btn-mega[aria-expanded="true"]{ background:var(--tinta-2); box-shadow:inset 0 -3px 0 var(--amarillo); }
+  .mega{ display:none; position:fixed; inset:var(--header-h) 0 0 0; z-index:45; background:rgba(14,42,59,.35); }
+  .mega.abierto{ display:block; }
+  .mega-in{ max-width:1180px; margin:0 auto; background:var(--superficie); border:1px solid var(--linea); border-top:none;
+    border-radius:0 0 var(--radio) var(--radio); box-shadow:0 18px 40px rgba(9,24,34,.22); max-height:calc(100vh - var(--header-h) - 24px); overflow:auto; }
+  .mega-cab{ display:none; }
+  .mega-tareas{ display:flex; flex-wrap:wrap; gap:8px; padding:14px 18px; border-bottom:1px solid var(--linea-suave); }
+  .mega-tarea{ font-size:13.5px; font-weight:600; color:var(--azul-texto); background:var(--azul-suave); padding:7px 12px; border-radius:20px; text-decoration:none; }
+  .mega-tarea:hover{ background:var(--azul); color:#fff; }
+  .mega-cols{ display:grid; grid-template-columns:280px 1fr; min-height:360px; }
+  .mega-familias{ border-right:1px solid var(--linea-suave); padding:10px 0; background:var(--fondo); }
+  .mega-fam{ display:flex; width:100%; align-items:center; gap:10px; padding:11px 18px; border:none; background:none; font:inherit;
+    font-size:14.5px; color:var(--texto); text-align:left; cursor:pointer; }
+  .mega-fam:hover, .mega-fam.on{ background:var(--superficie); color:var(--tinta); }
+  .mega-fam.on{ font-weight:600; box-shadow:inset 3px 0 0 var(--amarillo); }
+  .mega-n{ margin-left:auto; font-size:12px; color:var(--texto-3); font-weight:400; }
+  .mega-cats{ padding:16px 22px 18px; }
+  .mega-volver{ display:none; }
+  .mega-grid{ display:grid; grid-template-columns:repeat(auto-fill, minmax(230px, 1fr)); gap:6px 18px; align-content:start; }
+  .mega-cat{ padding:8px 0; border-bottom:1px solid var(--linea-suave); }
+  .mega-cat > a{ display:flex; gap:8px; align-items:baseline; text-decoration:none; }
+  .mega-cat-nom{ font-family:var(--display); font-weight:600; font-size:17px; color:var(--tinta); }
+  .mega-cat > a:hover .mega-cat-nom{ color:var(--azul-texto); text-decoration:underline; }
+  .mega-subs{ font-size:13px; color:var(--texto-3); margin-top:3px; line-height:1.6; }
+  .mega-subs a{ color:var(--texto-2); text-decoration:none; }
+  .mega-subs a:hover{ color:var(--azul-texto); text-decoration:underline; }
+  .mega-todo{ grid-column:1 / -1; font-size:13.5px; font-weight:600; color:var(--azul-texto); text-decoration:none; padding-top:10px; }
+  .mega-marcas{ display:flex; flex-wrap:wrap; gap:10px 22px; align-items:center; padding:12px 18px; border-top:1px solid var(--linea-suave); }
+  .mega-marca img{ height:26px; width:auto; max-width:110px; object-fit:contain; filter:grayscale(1); opacity:.75; }
+  .mega-marca:hover img{ filter:none; opacity:1; }
+  @media (max-width: 760px){
+    .btn-mega{ display:none; }   /* en el celular se abre desde la barra inferior (Categorías) */
+    .mega{ inset:0; z-index:80; background:var(--superficie); }
+    .mega-in{ border:none; border-radius:0; box-shadow:none; max-height:100dvh; height:100dvh; }
+    .mega-cab{ display:flex; align-items:center; justify-content:space-between; padding:calc(14px + env(safe-area-inset-top, 0px)) 16px 12px; border-bottom:1px solid var(--linea); }
+    .mega-cab strong{ font-family:var(--display); font-size:20px; color:var(--tinta); }
+    .mega-cerrar{ border:none; background:none; font-size:20px; padding:6px 10px; cursor:pointer; }
+    .mega-cols{ display:block; min-height:0; }
+    .mega-familias{ border:none; background:none; padding:4px 0; }
+    .mega-fam{ padding:15px 16px; border-bottom:1px solid var(--linea-suave); font-size:16px; }
+    .mega-fam::after{ content:'›'; margin-left:10px; color:var(--texto-3); font-size:20px; }
+    .mega-fam.on{ box-shadow:none; font-weight:400; }
+    .mega-cats{ display:none; padding:0 16px 20px; }
+    .mega.paso-cats .mega-familias, .mega.paso-cats .mega-tareas{ display:none; }
+    .mega.paso-cats .mega-cats{ display:block; }
+    .mega-volver{ display:flex; align-items:center; gap:12px; padding:12px 0; }
+    .mega-volver button{ border:1px solid var(--linea); background:#fff; border-radius:var(--radio); padding:8px 12px; font:inherit; font-size:14px; cursor:pointer; }
+    .mega-grid{ grid-template-columns:1fr; }
+  }
+  .vfd-chip.fac-cero{ opacity:.45; }
+  .vfd-chip.fac-logo{ display:inline-flex; align-items:center; gap:6px; padding:4px 10px; }
+  .vfd-chip.fac-logo img{ height:18px; width:auto; max-width:84px; object-fit:contain; }
+  .vfd-chip.fac-extra{ display:none; }
+  .fac-mas{ font:inherit; font-size:13px; border:none; background:none; color:var(--azul-texto); font-weight:600; cursor:pointer; padding:6px 4px; }
+  .var-badge{ display:inline-block; margin:4px 0 2px; font-size:12px; font-weight:600; color:var(--azul-texto); background:var(--azul-suave); border-radius:12px; padding:3px 9px; }
+  .det-variantes{ margin:12px 0 4px; }
+  .det-variantes .vfd-chips{ margin-top:6px; }
+  .vfd-chip.var-stock::before{ content:'●'; color:var(--ok); margin-right:5px; font-size:10px; vertical-align:2px; }
+  .vfd-chip.var-agotado{ text-decoration:line-through; color:var(--texto-3); }
+  .det-especs{ margin-bottom:14px; }
 </style>
 
 </head>
@@ -1161,6 +1282,7 @@
       <div id="sugerencias"></div>
     </div>
     <div class="header-right">
+      <button id="btn-mega" class="btn-mega" type="button" aria-expanded="false" aria-controls="mega"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg><span>Categorías</span></button>
       <label class="descuento-box" title="Descuento aplicado a los precios del catálogo">Dto. <input type="number" id="descuento" min="0" max="90" value="60" step="0.5"> %</label>
       <button id="btn-cuenta" type="button" aria-label="Mi cuenta" style="display:none">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>
@@ -1173,6 +1295,7 @@
     </div>
   </div>
 </header>
+<div id="mega" class="mega" role="dialog" aria-label="Categorías"></div>
 
 <div class="layout">
   <div id="sidebar-backdrop"></div>
@@ -1201,6 +1324,7 @@
       </select>
       <div class="vista-ctrl" id="vista-ctrl">
         <div class="vista-toggle" role="group" aria-label="Ver productos como">
+          <button type="button" data-vista-modo="ficha" title="Ficha: más productos y datos a la vista"><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M1 1h4v4H1zM6.5 1.5H15V3H6.5zM6.5 3.8H12V5H6.5zM1 9h4v4H1zM6.5 9.5H15V11H6.5zM6.5 11.8H12V13H6.5z"/></svg>Ficha</button>
           <button type="button" data-vista-modo="cuadros" title="Ver en cuadros"><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M1 1h6v6H1zM9 1h6v6H9zM1 9h6v6H1zM9 9h6v6H9z"/></svg>Cuadros</button>
           <button type="button" data-vista-modo="lista" title="Ver en lista"><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M1 1h5v5H1zM8 2h7v1.5H8zM8 4h5v1.2H8zM1 10h5v5H1zM8 11h7v1.5H8zM8 13h5v1.2H8z"/></svg>Lista</button>
           <button type="button" data-vista-modo="compacta" title="Vista compacta: una línea por producto"><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M1 1.5h14V4H1zM1 6.75h14v2.5H1zM1 12h14v2.5H1z"/></svg>Compacta</button>
@@ -1364,6 +1488,7 @@
 </div>
 
 <script>window.SUIN_RASTREO_MANUAL = true; /* rastreo.js arranca cuando se sabe si es administrador */</script>
+<script src="/especificaciones.js?v=1"></script>
 <script src="/rastreo.js?v=3"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
@@ -1747,6 +1872,7 @@ FAMILIAS.forEach(f => { _canonCat.set(claveCat(f.nombre), [f.nombre]); f.categor
 Object.keys(MAPA_CATEGORIAS).forEach(k => { const kk = claveCat(k); if (!_canonCat.has(kk)) _canonCat.set(kk, MAPA_CATEGORIAS[k]); });
 function canonCat(r){ return _canonCat.get(claveCat(r)) || null; }
 function rutaDe(p){
+  if (p._ruta) return p._ruta;   // catálogo único (beta): la ruta ya viene de la base
   const hit = _cacheRuta.get(p);
   if (hit) return hit;
   const orig = rutaOriginalDe(p);
@@ -1860,11 +1986,12 @@ function hashDeNav(n, det){
   else if (n.filtroMarca) base = '#/marca/' + slugDe(n.filtroMarca);
   else base = '#/todo';
   if (n.filtroMarca && n.vista === 'catalogo' && base.indexOf('#/marca/') !== 0) params.push('marca=' + slugDe(n.filtroMarca));
+  if (n.fac && n.vista === 'catalogo' && !q) params.push('f=' + encodeURIComponent(n.fac));
   if (det) params.push('p=' + encodeURIComponent(det));
   return base + (params.length ? '?' + params.join('&') : '');
 }
 function navActualBasica(){
-  return { vista: vista, seleccion: seleccion.slice(), filtroMarca: filtroMarca, q: document.getElementById('buscador').value };
+  return { vista: vista, seleccion: seleccion.slice(), filtroMarca: filtroMarca, q: document.getElementById('buscador').value, fac: facSerial() };
 }
 function marcaDeSlug(sl){
   const marcas = new Set(Object.keys(LOGOS_MARCAS));
@@ -1894,6 +2021,7 @@ function navDeHash(hash){
     }
   }
   if (params.get('marca')) n.filtroMarca = marcaDeSlug(params.get('marca'));
+  n.fac = params.get('f') || '';
   return { nav: n, det: params.get('p') || null };
 }
 // Muestra la pantalla de una dirección (se usa al abrir un link compartido).
@@ -1902,6 +2030,7 @@ function aplicarHash(hash){
   vista = n.vista;
   seleccion = n.seleccion;
   filtroMarca = n.filtroMarca;
+  filtrosFac = facDeSerial(n.fac); facClaveRuta = seleccion.slice(0, 2).join('|||');
   document.getElementById('buscador').value = n.q;
   for (let i = 1; i <= seleccion.length; i++) expandidos.add(seleccion.slice(0, i).join('|||'));
   renderSidebar();
@@ -2375,8 +2504,10 @@ function tarjetaHTML(p){
       </div>
       <div class="card-body">
         <div class="modelo" data-modelo="${p.modelo}">${p.modelo || 'S/N'}</div>
+        ${badgeVariantes(p)}
         ${(p.marca && !logoMarca) ? '<div class="marca">'+p.marca+'</div>' : ''}
         <div class="desc">${p.descripcion || ''}</div>
+        ${especsMiniHTML(p)}
         <div class="estado ${p.disponible ? 'ok' : 'off'}">${estadoTexto}</div>
         <div class="price-row">
           <div class="precio-box">
@@ -2539,6 +2670,12 @@ function render(lista){
     pa.innerHTML = panelArrHTML(panelArrBase);
     cont.appendChild(pa.firstChild);
     conectarPanelArr();
+  }
+
+  if (panelFacBase){
+    const pf = document.createElement('div');
+    pf.innerHTML = panelFacHTML(panelFacBase, panelFacDefs || []);
+    if (pf.firstChild){ cont.appendChild(pf.firstChild); conectarPanelFac(); }
   }
 
   if (lista.length === 0){ empty.style.display = "block"; return; }
@@ -3136,6 +3273,492 @@ function conectarPanelArr(){
 let panelArrBase = null; // productos de la categoría Arrancadores Suaves antes de los filtros técnicos
 
 /* ---------- Filtros ---------- */
+/* =====================================================================
+   CATÁLOGO ÚNICO (beta)
+   ---------------------------------------------------------------------
+   La tienda-beta lee catalogo-beta.json, que sale de la base nueva
+   (catalogo.exportar_tienda(), ver supabase/18_catalogo_carga_y_tienda.sql).
+   Ya viene unido: distribuidor, tus listas, tu inventario y el panel, con su
+   categoría de 3 niveles, sus atributos técnicos y sus variantes.
+   Si el archivo no existe, la tienda sigue funcionando como siempre.
+   ===================================================================== */
+let catalogoBeta = false;
+let FILTROS_BETA = {};        // ruta de categoría (slug) → [{clave, nombre, unidad, tipo, variante}]
+let NOMBRES_ATRIB = {};       // clave → {nombre, unidad, tipo}
+const slugFac = s => String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
+
+function formaTiendaDeBeta(x){
+  const ruta = Array.isArray(x.ruta) && x.ruta.length ? x.ruta : ['Otros Productos'];
+  const imgs = (x.imgs || []).filter(Boolean);
+  const p = { modelo: x.codigo, sku: x.codigo, nombre: x.nombre || x.codigo, marca: x.marca, descripcion: x.desc || '',
+    categoria_principal: ruta[1] || ruta[0], subcategorias: ruta.slice(2), subcategoria: ruta.slice(2).join(' > '),
+    categoria: ruta.concat(x.codigo).join(' > '), categorias: ruta.concat(x.codigo),
+    disponible: x.disp !== 'agotado', _manual: !!x.propio, _ruta: ruta, _specs: x.specs || {}, _serie: x.serie || x.codigo };
+  if (x.precio != null) p.precio = Number(x.precio);
+  if (imgs.length){ p.imagen = imgs[0]; p.imagenes = imgs; }
+  if (x.disp === 'propio'){ p._inv = true; p._invClave = claveModelo(x.codigo); p.stock = x.stock || 'pocas'; }
+  else if (x.disp === 'a_pedido'){ p._inv = true; p._invClave = claveModelo(x.codigo); p.stock = 'pedido'; }
+  return p;
+}
+async function traerCatalogoBeta(silencioso){
+  try {
+    const r = await fetch('catalogo-beta.json', silencioso ? { cache: 'no-cache' } : {});
+    if (r.ok) return await r.json();
+  } catch (e) {}
+  return null;
+}
+/* ---------- Especificaciones leídas aquí mismo (tienda oficial) ----------
+   /especificaciones.js lee de la descripción y de la categoría de cada producto
+   sus datos técnicos. Se calculan al cargar: un producto nuevo o una descripción
+   editada entra solo en los filtros. */
+let conEspecs = false;
+function prepararEspecsLocales(lista){
+  const E = window.Especificaciones;
+  if (!E) return;
+  const aux = { extraerSpecsVfd, extraerSpecsArr, VFD_USOS, NODOS_MARCA };
+  const rutas = new Map();
+  for (const p of lista){
+    const r = rutaDe(p);
+    try { p._specs = E.especificacionesDe(p, r, aux); } catch (e) { p._specs = {}; }
+    const k = r.join('|||');
+    if (!rutas.has(k)) rutas.set(k, r);
+  }
+  FILTROS_BETA = E.filtrosPorRuta([...rutas.values()], slugFac);
+  NOMBRES_ATRIB = {};
+  Object.values(FILTROS_BETA).forEach(l => l.forEach(d => { NOMBRES_ATRIB[d.clave] = d; }));
+  conEspecs = true;
+}
+function prepararBeta(beta){
+  catalogoBeta = true;
+  FILTROS_BETA = beta.filtros || {};
+  NOMBRES_ATRIB = {};
+  Object.values(FILTROS_BETA).forEach(l => l.forEach(d => { NOMBRES_ATRIB[d.clave] = d; }));
+  return beta.productos.map(formaTiendaDeBeta);
+}
+
+
+/* ---------- Íconos de las opciones de filtro ---------- */
+const SVG_FI = {
+  ac:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 12c2.5-6 5.5-6 8 0s5.5 6 8 0 3-4 4-3"/></svg>',
+  dc:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 9h18"/><path d="M3 15h4M10 15h4M17 15h4"/></svg>',
+  acdc: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 8c1.6-4 3.4-4 5 0s3.4 4 5 0"/><path d="M13 15h9"/><path d="M13 19h2M17 19h2M21 19h1"/></svg>',
+  rayo: '<svg viewBox="0 0 24 24" fill="currentColor"><path d="M13 2 4 14h6l-1 8 9-12h-6z"/></svg>',
+  rele: '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><rect x="3" y="6" width="8" height="12" rx="1"/><path d="M3 18 11 6"/><path d="M14 12h3l4-4M21 16"/></svg>',
+  trans:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="13" cy="12" r="9"/><path d="M4 12h6M10 7v10M10 9l6-4M10 15l6 4"/><path d="m14 17.5 2 1.5-.4-2.4"/></svg>',
+  na:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 16h6l8-6M16 16h6"/><circle cx="8" cy="16" r="1.2" fill="currentColor"/><circle cx="16" cy="16" r="1.2" fill="currentColor"/></svg>',
+  nc:   '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M2 14h6l9 4M16 14h6M16 9v5"/><circle cx="8" cy="14" r="1.2" fill="currentColor"/></svg>',
+  dos:  '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><path d="M3 9h18M3 15h18"/></svg>',
+  motor:'<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round"><circle cx="12" cy="12" r="9"/><path d="M8 16V8l4 5 4-5v8"/></svg>',
+};
+const COLORES_FI = { Rojo:'#d7263d', Verde:'#1e9e48', Amarillo:'#f5c400', Azul:'#1f6fd1', Blanco:'#ffffff', Negro:'#1b1b1b',
+  Naranja:'#f28c18', Gris:'#9aa3ab', Transparente:'linear-gradient(135deg,#fff 45%,#cfd8de 55%)' };
+const CLAVES_TENSION = ['bobina', 'tension_control', 'alimentacion', 'tension_entrada', 'tension_salida_v'];
+function iconoFac(clave, v){
+  const t = String(v);
+  const i = (k) => '<span class="fi">' + SVG_FI[k] + '</span>';
+  if (clave === 'color' && COLORES_FI[t]) return '<span class="fi fi-color" style="background:' + COLORES_FI[t] + '"></span>';
+  if (CLAVES_TENSION.includes(clave)){
+    if (/AC\s*\/\s*V?DC|universal/i.test(t)) return i('acdc');
+    if (/DC|VDC/i.test(t)) return i('dc');
+    if (/AC|VAC/i.test(t)) return i('ac');
+    return i('rayo');
+  }
+  if (clave === 'salida'){
+    if (/rel[eé]/i.test(t)) return i('rele');
+    if (/transistor|PNP|NPN/i.test(t)) return i('trans');
+    if (/2 hilos/i.test(t)) return i('dos');
+  }
+  if (clave === 'contactos' || clave === 'contactos_aux'){
+    if (/rel[eé]|conmutad/i.test(t)) return i('rele');
+    if (/NC/.test(t) && !/NA/.test(t)) return i('nc');
+    return i('na');
+  }
+  if (clave === 'hp_220' || clave === 'hp_440' || clave === 'potencia_hp' || clave === 'potencia_kw') return i('motor');
+  return '';
+}
+
+/* ---------- Especificaciones cortas en la tarjeta ---------- */
+const FMT_NUM = (n) => Number(n).toLocaleString('es-VE');
+function textoCortoEspec(d, v){
+  switch (d.clave){
+    case 'hp_220': return FMT_NUM(v) + ' HP a 220 V';
+    case 'hp_440': return FMT_NUM(v) + ' HP a 440 V';
+    case 'polos': return v + (Number(v) === 1 ? ' polo' : ' polos');
+    case 'fases': return Number(v) === 1 ? 'Monofásico' : 'Trifásico';
+    case 'curva': return 'Curva ' + v;
+    case 'tamano': return 'Tamaño ' + v;
+    case 'distancia_mm': return 'Sn ' + FMT_NUM(v) + ' mm';
+    case 'pantalla_pulg': return FMT_NUM(v) + '"';
+    case 'corriente_ac3_a': return FMT_NUM(v) + ' A (AC3)';
+  }
+  if (typeof v === 'number' || d.tipo === 'numero') return FMT_NUM(v) + (d.unidad ? ' ' + d.unidad : '');
+  return String(v);
+}
+function especsMiniHTML(p){
+  if (!(catalogoBeta || conEspecs) || !p._specs) return '';
+  const s = p._specs, defs = defsFacDe(rutaDe(p)) || [], out = [];
+  for (const d of defs){
+    if (out.length >= 5) break;
+    if (d.clave === 'serie' || d.clave === 'marca') continue;
+    if (d.tipo === 'rango'){
+      const a = s[d.clave + '_min'], b = s[d.clave + '_max'];
+      if (a != null && b != null) out.push('<span>' + FMT_NUM(a) + '–' + FMT_NUM(b) + ' ' + escHtml(d.unidad || 'A') + '</span>');
+      continue;
+    }
+    const v = s[d.clave];
+    if (v == null || v === '') continue;
+    out.push('<span>' + iconoFac(d.clave, v) + escHtml(textoCortoEspec(d, v)) + '</span>');
+  }
+  return out.length ? '<div class="especs-mini">' + out.join('') + '</div>' : '';
+}
+// Corrientes en las que conviene "escribe la corriente de tu motor / carga"
+const CLAVES_MIN = { corriente_ac3_a: 'Corriente de tu motor (A)', corriente_a: 'Corriente que necesitas (A)', corriente_salida_a: 'Corriente que necesitas (A)' };
+
+/* ---------- Filtros por especificación ----------
+   Cada categoría trae sus filtros desde la base (atributos_categoria).
+   Dentro de un filtro suma (O); entre filtros restringe (Y). Cada opción
+   muestra cuántos productos quedan; las que darían 0 quedan en gris. */
+let filtrosFac = {};          // clave → [valores]; 'cubre:clave' → número
+let facClaveRuta = '';
+let panelFacBase = null, panelFacDefs = null, panelFacAbierto = null;
+const FAC_MARCA = { clave: 'marca', nombre: 'Marca', tipo: 'lista' };
+const FAC_VISIBLES = window.innerWidth <= 640 ? 8 : 14;
+
+function defsFacDe(sel){
+  if (!catalogoBeta && !conEspecs) return null;
+  if (sel.length < 2) return [];   // familia o todo el catálogo: solo marca
+  for (let n = sel.length; n >= 2; n--){   // la subcategoría más cercana con filtros propios manda
+    const k = sel.slice(0, n).map(slugFac).join('/');
+    if (FILTROS_BETA[k]) return FILTROS_BETA[k];
+  }
+  return [];
+}
+function valorFac(p, clave){ return clave === 'marca' ? (p.marca || null) : (p._specs ? p._specs[clave] : null); }
+function pasaFac(p, omitir){
+  for (const k in filtrosFac){
+    if (k === omitir) continue;
+    const v = filtrosFac[k];
+    if (k.indexOf('cubre:') === 0){
+      if (v == null) continue;
+      const c = k.slice(6), s = p._specs || {}, a = s[c + '_min'], b = s[c + '_max'];
+      if (a == null || b == null || v < a || v > b) return false;
+      continue;
+    }
+    if (k.indexOf('min:') === 0){
+      if (v == null) continue;
+      const pv = p._specs ? p._specs[k.slice(4)] : null;
+      if (pv == null || Number(pv) < v) return false;
+      continue;
+    }
+    if (!v || !v.length) continue;
+    const pv = valorFac(p, k);
+    if (pv == null || !v.some(x => coincideValorFac(x, pv))) return false;
+  }
+  return true;
+}
+// Una opción es un valor exacto o un tramo "a~b" (más de a, hasta b) de un atributo numérico.
+function coincideValorFac(x, pv){
+  x = String(x);
+  const i = x.indexOf('~');
+  if (i < 0) return x === String(pv);
+  const n = Number(pv), a = x.slice(0, i), b = x.slice(i + 1);
+  if (isNaN(n)) return false;
+  return (a === '' || n > Number(a)) && (b === '' || n <= Number(b));
+}
+// Tramos redondos para atributos numéricos con muchos valores distintos (amperios, HP, distancia…)
+const FAC_MAX_EXACTOS = 16;
+function redondoFac(v){
+  if (v <= 0) return 0;
+  const e = Math.pow(10, Math.floor(Math.log10(v))), m = v / e;
+  const r = [1, 1.5, 2, 2.5, 3, 4, 5, 6, 7.5, 8, 10].find(x => x >= m - 1e-9) || 10;
+  return Math.round(r * e * 1000) / 1000;
+}
+function tramosFac(valores){
+  const ord = valores.map(Number).filter(n => !isNaN(n)).sort((a, b) => a - b);
+  if (!ord.length) return [];
+  const cortes = [];
+  const partes = Math.min(7, Math.max(4, Math.round(ord.length / 15)));
+  for (let i = 1; i < partes; i++){
+    const c = redondoFac(ord[Math.floor(i * ord.length / partes) - 1]);
+    if (c > 0 && c < ord[ord.length - 1] && !cortes.includes(c) && (!cortes.length || c > cortes[cortes.length - 1])) cortes.push(c);
+  }
+  const t = [];
+  let ant = '';
+  for (const c of cortes){ t.push(ant + '~' + c); ant = String(c); }
+  t.push(ant + '~');
+  return t;
+}
+function etiquetaTramoFac(def, x){
+  const i = x.indexOf('~'), a = x.slice(0, i), b = x.slice(i + 1), u = def.unidad ? ' ' + def.unidad : '';
+  const f = n => Number(n).toLocaleString('es-VE');
+  if (a === '') return 'Hasta ' + f(b) + u;
+  if (b === '') return 'Más de ' + f(a) + u;
+  return 'Más de ' + f(a) + ' a ' + f(b) + u;
+}
+const esNumFac = (k) => k.indexOf('cubre:') === 0 || k.indexOf('min:') === 0;
+function nActFac(){ return Object.keys(filtrosFac).filter(k => esNumFac(k) ? filtrosFac[k] != null : (filtrosFac[k] || []).length).length; }
+function etiquetaFac(def, v){
+  if (def.tipo === 'numero') return Number(v).toLocaleString('es-VE') + (def.unidad ? ' ' + def.unidad : '');
+  return String(v);
+}
+// Para el enlace: f=bobina:220-240 VAC|24 VAC;cubre:ajuste_a:8.5
+function facSerial(){
+  return Object.keys(filtrosFac).filter(k => esNumFac(k) ? filtrosFac[k] != null : (filtrosFac[k] || []).length)
+    .map(k => k + ':' + (esNumFac(k) ? filtrosFac[k] : filtrosFac[k].join('|'))).join(';');
+}
+function facDeSerial(s){
+  const f = {};
+  String(s || '').split(';').filter(Boolean).forEach(par => {
+    if (par.indexOf('cubre:') === 0 || par.indexOf('min:') === 0){ const [pre, c, v] = par.split(':'); const n = parseFloat(v); if (c && !isNaN(n)) f[pre + ':' + c] = n; return; }
+    const i = par.indexOf(':'); if (i < 1) return;
+    f[par.slice(0, i)] = par.slice(i + 1).split('|').filter(Boolean);
+  });
+  return f;
+}
+
+function panelFacHTML(base, defs){
+  const grupos = [];
+  for (const def of [FAC_MARCA].concat(defs)){
+    if (def.tipo === 'rango'){
+      if (!base.some(p => p._specs && p._specs[def.clave + '_min'] != null)) continue;
+      const val = filtrosFac['cubre:' + def.clave];
+      grupos.push('<div class="vfd-grupo"><div class="vfd-tit">Corriente de tu motor (' + escHtml(def.unidad || 'A') + ')</div>' +
+        '<input type="number" min="0" step="0.01" inputmode="decimal" class="fac-cubre" data-pre="" data-clave="' + def.clave + '" placeholder="Ej. 8,5" value="' + (val != null ? val : '') + '">' +
+        '<div class="vfd-ayuda">Muestra los que la cubren dentro de su ' + escHtml(def.nombre.toLowerCase()) + '</div></div>');
+      continue;
+    }
+    if (CLAVES_MIN[def.clave] && base.some(p => p._specs && p._specs[def.clave] != null)){
+      const val = filtrosFac['min:' + def.clave];
+      grupos.push('<div class="vfd-grupo"><div class="vfd-tit">' + CLAVES_MIN[def.clave] + '</div>' +
+        '<input type="number" min="0" step="0.1" inputmode="decimal" class="fac-cubre" data-pre="min" data-clave="' + def.clave + '" placeholder="Ej. 18" value="' + (val != null ? val : '') + '">' +
+        '<div class="vfd-ayuda">Muestra los que soportan esa corriente o más</div></div>');
+    }
+    const elegidos = (filtrosFac[def.clave] || []).map(String);
+    // ¿Muchos valores numéricos distintos? Entonces tramos ("Más de 18 a 25 A") en vez de cada valor.
+    const todos = new Set(), conRepetidos = [];
+    for (const p of base){ const v = valorFac(p, def.clave); if (v != null && v !== ''){ todos.add(String(v)); conRepetidos.push(v); } }
+    const usaTramos = def.tipo === 'numero' && (todos.size > FAC_MAX_EXACTOS || elegidos.some(x => x.indexOf('~') >= 0));
+    const opciones = usaTramos ? tramosFac(conRepetidos) : [...todos];
+    elegidos.forEach(x => { if (!opciones.includes(x)) opciones.push(x); });   // lo elegido siempre se ve
+    const cuenta = new Map(opciones.map(o => [o, 0]));
+    for (const p of base){
+      if (!pasaFac(p, def.clave)) continue;
+      const v = valorFac(p, def.clave);
+      if (v == null || v === '') continue;
+      for (const o of opciones) if (coincideValorFac(o, v)){ cuenta.set(o, cuenta.get(o) + 1); if (!usaTramos) break; }
+    }
+    if (cuenta.size < 2 && !elegidos.length) continue;
+    const vals = usaTramos ? opciones : [...cuenta.keys()].sort((a, b) =>
+      (cuenta.get(b) ? 1 : 0) - (cuenta.get(a) ? 1 : 0) ||
+      (def.tipo === 'numero' ? Number(a) - Number(b) : a.localeCompare(b, 'es', { numeric: true })));
+    const esMarca = def.clave === 'marca';
+    if (usaTramos){
+      const sel = elegidos[0] || '';
+      grupos.push('<div class="vfd-grupo"><div class="vfd-tit">' + escHtml(def.nombre) + '</div>' +
+        '<select class="fac-sel" data-clave="' + escHtml(def.clave) + '" aria-label="' + escHtml(def.nombre) + '"><option value="">Cualquiera</option>' +
+        vals.map(v => '<option value="' + escHtml(v) + '"' + (v === sel ? ' selected' : '') + (cuenta.get(v) || v === sel ? '' : ' disabled') + '>' +
+          escHtml(etiquetaTramoFac(def, v)) + ' (' + cuenta.get(v) + ')</option>').join('') + '</select></div>');
+      continue;
+    }
+    const chips = vals.map((v, i) => {
+      const on = elegidos.includes(v), n = cuenta.get(v);
+      const logo = esMarca ? logoDeMarca(v) : null;
+      const txt = logo ? '<img src="' + logo + '" alt="' + escHtml(nombreMarca(v)) + '" loading="lazy" onerror="this.replaceWith(document.createTextNode(this.alt))">'
+        : (usaTramos ? '' : iconoFac(def.clave, v)) + escHtml(esMarca ? (v === 'SIN MARCA' ? 'Otras marcas' : nombreMarca(v)) : usaTramos ? etiquetaTramoFac(def, v) : etiquetaFac(def, v));
+      return '<button type="button" class="vfd-chip' + (logo ? ' fac-logo' : '') + (on ? ' on' : '') + (n || on ? '' : ' fac-cero') + (i >= FAC_VISIBLES && !on ? ' fac-extra' : '') +
+        '" data-clave="' + escHtml(def.clave) + '" data-val="' + escHtml(v) + '" title="' + escHtml(esMarca ? nombreMarca(v) : '') + '">' + txt + ' <span class="vfd-n">' + n + '</span></button>';
+    }).join('');
+    const mas = vals.length > FAC_VISIBLES ? '<button type="button" class="fac-mas">Ver ' + (vals.length - FAC_VISIBLES) + ' más</button>' : '';
+    grupos.push('<div class="vfd-grupo' + (vals.length > 8 || esMarca ? ' vfd-ancho' : '') + '"><div class="vfd-tit">' + escHtml(def.nombre) +
+      (def.tipo === 'numero' && def.unidad && !usaTramos ? ' (' + escHtml(def.unidad) + ')' : '') + '</div><div class="vfd-chips">' + chips + mas + '</div></div>');
+  }
+  if (!grupos.length) return '';
+  const soloMarca = grupos.length === 1 && grupos[0].indexOf('data-clave="marca"') >= 0;
+  const nAct = nActFac();
+  const abierto = panelFacAbierto === null ? window.innerWidth > 760 || nAct > 0 : panelFacAbierto;
+  return '<details class="vfd-panel fac-panel" id="fac-panel"' + (abierto ? ' open' : '') + '>' +
+    '<summary><span>' + (soloMarca ? 'Filtrar por marca' : 'Filtrar por especificación y marca') + '</span>' + (nAct ? '<span class="vfd-act">' + nAct + ' activo' + (nAct > 1 ? 's' : '') + '</span>' : '') + '</summary>' +
+    '<div class="vfd-cuerpo">' + grupos.join('') +
+    (nAct ? '<button type="button" class="vfd-limpiar" id="fac-limpiar">Limpiar filtros</button>' : '') + '</div></details>';
+}
+function conectarPanelFac(){
+  const panel = document.getElementById('fac-panel');
+  if (!panel) return;
+  panel.addEventListener('toggle', () => { panelFacAbierto = panel.open; });
+  panel.querySelectorAll('.vfd-chip').forEach(b => b.addEventListener('click', () => {
+    const k = b.dataset.clave, v = b.dataset.val, act = (filtrosFac[k] || []).map(String);
+    filtrosFac[k] = act.includes(v) ? act.filter(x => x !== v) : act.concat([v]);
+    aplicarFiltros();
+  }));
+  panel.querySelectorAll('.fac-sel').forEach(sel => sel.addEventListener('change', () => {
+    filtrosFac[sel.dataset.clave] = sel.value ? [sel.value] : [];
+    aplicarFiltros();
+  }));
+  panel.querySelectorAll('.fac-mas').forEach(b => b.addEventListener('click', () => {
+    b.parentNode.querySelectorAll('.fac-extra').forEach(x => x.classList.remove('fac-extra'));
+    b.remove();
+  }));
+  panel.querySelectorAll('.fac-cubre').forEach(inp => {
+    let t = null;
+    inp.addEventListener('input', () => {
+      clearTimeout(t);
+      t = setTimeout(() => {
+        const n = parseFloat(String(inp.value).replace(',', '.'));
+        const pre = inp.dataset.pre || 'cubre';
+        filtrosFac[pre + ':' + inp.dataset.clave] = isNaN(n) ? null : n;
+        aplicarFiltros();
+        const nuevo = document.querySelector('.fac-cubre[data-clave="' + inp.dataset.clave + '"][data-pre="' + (inp.dataset.pre || '') + '"]') ||
+                      document.querySelector('.fac-cubre[data-clave="' + inp.dataset.clave + '"]:not([data-pre])');
+        if (nuevo){ nuevo.focus(); const l = nuevo.value.length; try { nuevo.setSelectionRange(l, l); } catch (e) {} }
+      }, 450);
+    });
+  });
+  const limpiar = document.getElementById('fac-limpiar');
+  if (limpiar) limpiar.addEventListener('click', () => { filtrosFac = {}; aplicarFiltros(); });
+}
+
+/* ---------- Variantes: una tarjeta por serie ----------
+   Los SKU de una misma serie (ej. el mismo contactor con distintas bobinas)
+   salen en una sola tarjeta; en la ficha se elige la versión. */
+function ejeVarianteDe(p){
+  const defs = defsFacDe(rutaDe(p)) || [];
+  const d = defs.find(x => x.variante);
+  return d || null;
+}
+function hermanosDe(p){ return p && p._serie ? productos.filter(x => x._serie === p._serie && x.marca === p.marca) : [p]; }
+function agruparVariantes(lista){
+  if (!catalogoBeta) return lista;
+  const porSerie = new Map();
+  for (const p of lista){ const k = p.marca + '|' + p._serie; const arr = porSerie.get(k); if (arr) arr.push(p); else porSerie.set(k, [p]); }
+  const puntos = (p) => (p.stock && p.stock !== 'pedido' ? 4 : 0) + (p.disponible ? 2 : 0) + (p._specs && Object.keys(p._specs).length > 1 ? 1 : 0);
+  const salida = [];
+  for (const p of lista){
+    const arr = porSerie.get(p.marca + '|' + p._serie);
+    if (arr.length < 2){ p._nVar = 0; salida.push(p); continue; }
+    if (!arr._rep) arr._rep = arr.slice().sort((a, b) => puntos(b) - puntos(a))[0];
+    if (p !== arr._rep) continue;
+    p._nVar = arr.length; salida.push(p);
+  }
+  return salida;
+}
+function badgeVariantes(p){
+  if (!(p._nVar > 1)) return '';
+  const eje = ejeVarianteDe(p);
+  return '<div class="var-badge">' + p._nVar + ' versiones' + (eje ? ' · elige ' + escHtml(eje.nombre.toLowerCase()) : '') + '</div>';
+}
+function textoEspec(clave, s){
+  const d = NOMBRES_ATRIB[clave] || {};
+  if (d.tipo === 'rango' || clave.endsWith('_min')){
+    const c = clave.replace(/_min$/, ''), a = s[c + '_min'], b = s[c + '_max'];
+    return (a != null && b != null) ? Number(a).toLocaleString('es-VE') + ' – ' + Number(b).toLocaleString('es-VE') + ' ' + ((NOMBRES_ATRIB[c] || {}).unidad || '') : '';
+  }
+  const v = s[clave];
+  return typeof v === 'number' ? v.toLocaleString('es-VE') + (d.unidad ? ' ' + d.unidad : '') : String(v);
+}
+function fichaVariantesHTML(p){
+  if (!catalogoBeta) return '';
+  const hs = hermanosDe(p);
+  if (hs.length < 2) return '';
+  const eje = ejeVarianteDe(p);
+  const clave = eje ? eje.clave : null;
+  const orden = (a, b) => String(valorFac(a, clave) || '~').localeCompare(String(valorFac(b, clave) || '~'), 'es', { numeric: true });
+  return '<div class="det-variantes"><span class="det-desc-label">' + escHtml(eje ? eje.nombre : 'Versión') + '</span><div class="vfd-chips">' +
+    hs.slice().sort(orden).map(h => {
+      const v = clave ? valorFac(h, clave) : null;
+      const txt = v != null ? String(v) : (clave ? 'Sin especificar' : h.modelo);
+      const marca = h.stock && h.stock !== 'pedido' ? ' var-stock' : (!h.disponible ? ' var-agotado' : '');
+      return '<button type="button" class="vfd-chip' + (h.modelo === p.modelo ? ' on' : '') + marca + '" data-var="' + escHtml(h.modelo) + '">' + escHtml(txt) + '</button>';
+    }).join('') + '</div><div class="vfd-ayuda">● en tu inventario · tachado: agotado</div></div>';
+}
+function fichaEspecsHTML(p){
+  if (!(catalogoBeta || conEspecs) || !p._specs) return '';
+  const s = p._specs, filas = [];
+  const vistos = new Set();
+  Object.keys(s).forEach(k => {
+    const base = k.replace(/_(min|max)$/, '');
+    if (vistos.has(base)) return; vistos.add(base);
+    const d = NOMBRES_ATRIB[base]; if (!d) return;
+    const t = textoEspec(k.endsWith('_min') || k.endsWith('_max') ? base + '_min' : k, s);
+    if (t) filas.push('<div><strong>' + escHtml(d.nombre) + '</strong>' + escHtml(t) + '</div>');
+  });
+  return filas.length ? '<span class="det-desc-label">Especificaciones</span><div class="det-grid det-especs">' + filas.join('') + '</div>' : '';
+}
+document.addEventListener('click', (e) => {
+  const b = e.target.closest && e.target.closest('#detalle-contenido [data-var]');
+  if (b) abrirDetalle(b.getAttribute('data-var'));
+});
+
+/* ---------- Mega menú ----------
+   Escritorio: familias a la izquierda, sus categorías a la derecha.
+   Celular: un paso a la vez (familias → categorías, con "Volver"). */
+const ACCESOS_TAREA = [
+  ['Variador por potencia', ['Variadores y Arrancadores', 'Variadores de Frecuencia']],
+  ['Contactor por amperaje', ['Control de Motores', 'Contactores']],
+  ['Guardamotor por corriente del motor', ['Control de Motores', 'Guardamotores']],
+  ['Breaker por polos y amperaje', ['Protección Eléctrica', 'Breakers Automáticos']],
+];
+let megaFamilia = null;
+function conteosMenu(){
+  const c = new Map();
+  for (const p of productos){ const r = rutaDe(p); const k1 = r[0], k2 = r[0] + '|||' + (r[1] || ''); c.set(k1, (c.get(k1) || 0) + 1); c.set(k2, (c.get(k2) || 0) + 1); }
+  return c;
+}
+function megaHTML(){
+  const c = conteosMenu();
+  const familias = FAMILIAS.map(f => f.nombre).filter(f => c.get(f));
+  if (!megaFamilia || !c.get(megaFamilia)) megaFamilia = familias[0];
+  const fam = FAMILIAS.find(f => f.nombre === megaFamilia);
+  const cats = (fam ? fam.categorias : []).filter(cn => (c.get(megaFamilia + '|||' + cn) || 0) >= 5);
+  const otros = (fam ? fam.categorias : []).filter(cn => { const n = c.get(megaFamilia + '|||' + cn) || 0; return n > 0 && n < 5; });
+  const subDe = (cn) => { const s = new Map(); productos.forEach(p => { const r = rutaDe(p); if (r[0] === megaFamilia && r[1] === cn && r[2]) s.set(r[2], (s.get(r[2]) || 0) + 1); }); return [...s.entries()].sort((a, b) => (a[0] === 'Accesorios') - (b[0] === 'Accesorios') || b[1] - a[1]); };
+  const enlace = (ruta, html, cls) => '<a class="enlace-cat ' + (cls || '') + '" href="' + hashDeRuta(ruta) + '" data-ruta="' + encodeURIComponent(ruta.join('|||')) + '">' + html + '</a>';
+  return '<div class="mega-in">' +
+    '<div class="mega-cab"><strong>Categorías</strong><button type="button" class="mega-cerrar" id="mega-cerrar" aria-label="Cerrar">✕</button></div>' +
+    '<div class="mega-tareas">' + ACCESOS_TAREA.filter(t => c.get(t[1].join('|||'))).map(t => enlace(t[1], escHtml(t[0]) + ' →', 'mega-tarea')).join('') + '</div>' +
+    '<div class="mega-cols">' +
+      '<div class="mega-familias" role="tablist">' + familias.map(f =>
+        '<button type="button" role="tab" class="mega-fam' + (f === megaFamilia ? ' on' : '') + '" data-fam="' + escHtml(f) + '"><span>' + escHtml(f) + '</span><span class="mega-n">' + c.get(f).toLocaleString('es-VE') + '</span></button>').join('') + '</div>' +
+      '<div class="mega-cats">' +
+        '<div class="mega-volver"><button type="button" id="mega-volver">← Familias</button><strong>' + escHtml(megaFamilia) + '</strong></div>' +
+        '<div class="mega-grid">' + cats.map(cn => {
+          const subs = subDe(cn);
+          return '<div class="mega-cat">' + enlace([megaFamilia, cn], '<span class="mega-cat-nom">' + escHtml(cn) + '</span><span class="mega-n">' + c.get(megaFamilia + '|||' + cn).toLocaleString('es-VE') + '</span>') +
+            (subs.length ? '<div class="mega-subs">' + subs.map(([s]) => enlace([megaFamilia, cn, s], escHtml(s))).join(' · ') + '</div>' : '') + '</div>';
+        }).join('') +
+        (otros.length ? '<div class="mega-cat">' + '<span class="mega-cat-nom">Otros</span><div class="mega-subs">' + otros.map(cn => enlace([megaFamilia, cn], escHtml(cn))).join(' · ') + '</div></div>' : '') +
+        enlace([megaFamilia], 'Ver todo ' + escHtml(megaFamilia) + ' →', 'mega-todo') + '</div>' +
+      '</div>' +
+    '</div>' +
+    '<div class="mega-marcas">' + Object.keys(LOGOS_MARCAS).map(m => '<a href="#/marca/' + slugDe(m) + '" class="mega-marca" title="' + escHtml(m) + '"><img src="' + LOGOS_MARCAS[m] + '" alt="' + escHtml(m) + '" loading="lazy"></a>').join('') + '</div>' +
+  '</div>';
+}
+function abrirMega(familia){
+  const m = document.getElementById('mega');
+  if (familia) megaFamilia = familia;
+  m.innerHTML = megaHTML();
+  m.classList.add('abierto');
+  m.classList.toggle('paso-cats', !!familia && window.innerWidth <= 760);
+  document.getElementById('btn-mega').setAttribute('aria-expanded', 'true');
+  m.querySelectorAll('.mega-fam').forEach(b => {
+    const ir = () => { megaFamilia = b.dataset.fam; abrirMega(megaFamilia); };
+    b.addEventListener('click', ir);
+    b.addEventListener('mouseenter', () => { if (window.innerWidth > 760 && megaFamilia !== b.dataset.fam){ megaFamilia = b.dataset.fam; abrirMega(); } });
+  });
+  document.getElementById('mega-cerrar').onclick = cerrarMega;
+  document.getElementById('mega-volver').onclick = () => m.classList.remove('paso-cats');
+  m.querySelectorAll('a').forEach(a => a.addEventListener('click', () => setTimeout(cerrarMega, 0)));
+}
+function cerrarMega(){
+  const m = document.getElementById('mega');
+  m.classList.remove('abierto', 'paso-cats');
+  document.getElementById('btn-mega').setAttribute('aria-expanded', 'false');
+}
+document.getElementById('btn-mega').addEventListener('click', () => {
+  document.getElementById('mega').classList.contains('abierto') ? cerrarMega() : abrirMega();
+});
+document.getElementById('mega').addEventListener('click', (e) => { if (e.target.id === 'mega') cerrarMega(); });
+document.addEventListener('keydown', (e) => { if (e.key === 'Escape') cerrarMega(); });
+
 function aplicarFiltros(){
   const texto = document.getElementById('buscador').value.trim().toLowerCase();
   const palabras = palabrasDe(texto);
@@ -3163,9 +3786,21 @@ function aplicarFiltros(){
   panelVfdBase = (!hayBusqueda && esRutaVariadores(seleccion)) ? filtrados : null;
   // En la categoría Arrancadores Suaves se muestran los filtros técnicos de arrancadores.
   panelArrBase = (!hayBusqueda && esRutaArrancadores(seleccion)) ? filtrados : null;
-  render(panelVfdBase ? filtrados.filter(p => pasaFiltroVfd(p))
+  // Filtros por especificación del catálogo único (se reinician al cambiar de categoría)
+  // En variadores, arrancadores y al buscar, el panel solo trae la marca (los técnicos van en su panel).
+  const claveFac = (hayBusqueda ? 'q|' : '') + seleccion.slice(0, 2).join('|||');
+  if (claveFac !== facClaveRuta){ filtrosFac = {}; facClaveRuta = claveFac; }
+  panelFacDefs = (catalogoBeta || conEspecs) ? ((hayBusqueda || panelVfdBase || panelArrBase) ? [] : defsFacDe(seleccion)) : null;
+  const conTecnicos = panelVfdBase ? filtrados.filter(p => pasaFiltroVfd(p))
        : panelArrBase ? filtrados.filter(p => pasaFiltroArr(p))
-       : filtrados);
+       : filtrados;
+  panelFacBase = panelFacDefs ? conTecnicos : null;   // la marca cuenta con los filtros técnicos puestos…
+  if (panelFacDefs){                                 // …y los técnicos cuentan con la marca puesta
+    if (panelVfdBase) panelVfdBase = panelVfdBase.filter(p => pasaFac(p));
+    if (panelArrBase) panelArrBase = panelArrBase.filter(p => pasaFac(p));
+  }
+  const lista = panelFacBase ? conTecnicos.filter(p => pasaFac(p)) : conTecnicos;
+  render(agruparVariantes(lista));
 }
 
 /* ---------- Sugerencias del buscador (autocompletar) ---------- */
@@ -3393,6 +4028,7 @@ function abrirDetalle(modelo){
           (logoMarca ? '<img class="det-marca-logo" src="' + logoMarca + '" alt="' + p.marca + '">' : '') +
         '</div>' +
         '<nav class="det-categoria migas">' + (migasHTML(rutaDe(p)) || 'Sin categoría') + '</nav>' +
+        fichaVariantesHTML(p) +
         '<div class="det-precio-bloque">' +
           '<div class="det-precio">' + formatoMoneda(precioFinal) +
             (muestraAntes ? '<span class="det-precio-antes">' + formatoMoneda(p.precio) + '</span>' : '') +
@@ -3405,6 +4041,7 @@ function abrirDetalle(modelo){
         '</div>' +
         '<span class="det-desc-label">Descripción</span>' +
         '<div class="det-desc">' + (p.descripcion || 'Sin descripción disponible para este producto.') + '</div>' +
+        fichaEspecsHTML(p) +
         '<ul class="det-condiciones">' + CONDICIONES_VENTA.map(c => '<li>' + c + '</li>').join('') + '</ul>' +
         '<div class="det-grid">' +
           '<div><strong>SKU</strong>' + (p.sku || '—') + '</div>' +
@@ -3696,6 +4333,7 @@ async function cargar(silencioso){
     const delScraper = (data.productos || []).filter(p => !modelosManuales.has(p.modelo));
     delScraper.forEach(p => { p._manual = false; });
     productos = unirInventario(manuales.concat(delScraper), panel.inventario, ocultos);
+    prepararEspecsLocales(productos);
 
     let estado = productos.length + " productos";
     if (data.en_progreso) {
@@ -3760,11 +4398,11 @@ document.getElementById('filtro-disponibilidad').addEventListener('change', () =
    La preferencia se guarda en el navegador del visitante (por separado para
    teléfono y computadora, porque el número de columnas útil es distinto). */
 (function(){
-  const CLAVE = 'suin_vista_productos';
+  const CLAVE = 'suin_vista_productos_v2';
   const mqMovil = window.matchMedia('(max-width: 640px)');
   const OPC_PC = [['auto','Auto'],['2','2 por fila'],['3','3 por fila'],['4','4 por fila'],['5','5 por fila'],['6','6 por fila']];
   const OPC_MOVIL = [['1','1 / fila'],['2','2 / fila'],['3','3 / fila']];
-  let pref = { pc:{ modo:'cuadros', cols:'auto' }, movil:{ modo:'cuadros', cols:'2' } };
+  let pref = { pc:{ modo:'ficha', cols:'auto' }, movil:{ modo:'ficha', cols:'2' } };
   try { const g = JSON.parse(localStorage.getItem(CLAVE)); if (g && g.pc && g.movil) pref = g; } catch (e) {}
   const guardar = () => { try { localStorage.setItem(CLAVE, JSON.stringify(pref)); } catch (e) {} };
   const actual = () => pref[mqMovil.matches ? 'movil' : 'pc'];
@@ -3830,7 +4468,7 @@ document.getElementById('barra-inicio').addEventListener('click', () => {
   mostrarVista();
   window.scrollTo({ top: 0, behavior: 'smooth' });
 });
-document.getElementById('barra-menu').addEventListener('click', abrirSidebar);
+document.getElementById('barra-menu').addEventListener('click', () => abrirMega());   // celular: mega menú por pasos
 document.getElementById('btn-cerrar-sidebar').addEventListener('click', cerrarSidebar);
 document.getElementById('sidebar-backdrop').addEventListener('click', cerrarSidebar);
 document.getElementById('barra-buscar').addEventListener('click', () => {
@@ -4521,7 +5159,8 @@ cargar();
       filtroMarca: filtroMarca,
       q: $('buscador').value,
       disp: $('filtro-disponibilidad').value,
-      orden: $('filtro-orden') ? $('filtro-orden').value : ''
+      orden: $('filtro-orden') ? $('filtro-orden').value : '',
+      fac: typeof facSerial === 'function' ? facSerial() : ''
     };
   }
   function panelesAbiertos(){
@@ -4663,6 +5302,7 @@ cargar();
         vista = n.vista;
         seleccion = n.seleccion.slice();
         filtroMarca = n.filtroMarca;
+        filtrosFac = facDeSerial(n.fac); facClaveRuta = seleccion.slice(0, 2).join('|||');
         $('buscador').value = n.q;
         $('filtro-disponibilidad').value = n.disp;
         if ($('filtro-orden') && n.orden != null) $('filtro-orden').value = n.orden;

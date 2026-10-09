@@ -45,7 +45,7 @@ CSS = r"""
   #contenido.vista-ficha .precio-linea{ justify-content:flex-end; }
   #contenido.vista-ficha .precio{ font-size:20px; }
   #contenido.vista-ficha .precio-nota{ display:none; }
-  #contenido.vista-ficha .card-body > .estado{ white-space:nowrap; }
+  #contenido.vista-ficha .card-body > .estado{ white-space:normal; line-height:1.25; min-width:0; max-width:100%; }
   #contenido.vista-ficha .precio-registro{ margin-top:4px; padding:3px 7px; align-items:flex-end; text-align:right; }
   #contenido.vista-ficha .precio-registro .pr-monto{ font-size:14px; }
   #contenido.vista-ficha .card-body > .actions{ display:flex; flex-wrap:nowrap; gap:6px; margin-top:8px; }

@@ -908,7 +908,7 @@
   #contenido.vista-ficha .precio-linea{ justify-content:flex-end; }
   #contenido.vista-ficha .precio{ font-size:20px; }
   #contenido.vista-ficha .precio-nota{ display:none; }
-  #contenido.vista-ficha .card-body > .estado{ white-space:nowrap; }
+  #contenido.vista-ficha .card-body > .estado{ white-space:normal; line-height:1.25; min-width:0; max-width:100%; }
   #contenido.vista-ficha .precio-registro{ margin-top:4px; padding:3px 7px; align-items:flex-end; text-align:right; }
   #contenido.vista-ficha .precio-registro .pr-monto{ font-size:14px; }
   #contenido.vista-ficha .card-body > .actions{ display:flex; flex-wrap:nowrap; gap:6px; margin-top:8px; }
@@ -1489,6 +1489,7 @@
 </div>
 
 <script>window.SUIN_RASTREO_MANUAL = true; /* rastreo.js arranca cuando se sabe si es administrador */</script>
+<script src="/especificaciones.js?v=1"></script>
 <!-- beta: sin rastreo.js para no mezclar las pruebas con las visitas reales -->
 <script>window.suinRastreo = { visitante: '', evento: function(){}, iniciar: function(){}, tarjetas: function(){}, noContarMas: function(){}, vaciar: function(){} };</script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -3308,6 +3309,27 @@ async function traerCatalogoBeta(silencioso){
   } catch (e) {}
   return null;
 }
+/* ---------- Especificaciones leídas aquí mismo (tienda oficial) ----------
+   /especificaciones.js lee de la descripción y de la categoría de cada producto
+   sus datos técnicos. Se calculan al cargar: un producto nuevo o una descripción
+   editada entra solo en los filtros. */
+let conEspecs = false;
+function prepararEspecsLocales(lista){
+  const E = window.Especificaciones;
+  if (!E) return;
+  const aux = { extraerSpecsVfd, extraerSpecsArr, VFD_USOS, NODOS_MARCA };
+  const rutas = new Map();
+  for (const p of lista){
+    const r = rutaDe(p);
+    try { p._specs = E.especificacionesDe(p, r, aux); } catch (e) { p._specs = {}; }
+    const k = r.join('|||');
+    if (!rutas.has(k)) rutas.set(k, r);
+  }
+  FILTROS_BETA = E.filtrosPorRuta([...rutas.values()], slugFac);
+  NOMBRES_ATRIB = {};
+  Object.values(FILTROS_BETA).forEach(l => l.forEach(d => { NOMBRES_ATRIB[d.clave] = d; }));
+  conEspecs = true;
+}
 function prepararBeta(beta){
   catalogoBeta = true;
   FILTROS_BETA = beta.filtros || {};
@@ -3375,7 +3397,7 @@ function textoCortoEspec(d, v){
   return String(v);
 }
 function especsMiniHTML(p){
-  if (!catalogoBeta || !p._specs) return '';
+  if (!(catalogoBeta || conEspecs) || !p._specs) return '';
   const s = p._specs, defs = defsFacDe(rutaDe(p)) || [], out = [];
   for (const d of defs){
     if (out.length >= 5) break;
@@ -3405,7 +3427,7 @@ const FAC_MARCA = { clave: 'marca', nombre: 'Marca', tipo: 'lista' };
 const FAC_VISIBLES = window.innerWidth <= 640 ? 8 : 14;
 
 function defsFacDe(sel){
-  if (!catalogoBeta) return null;
+  if (!catalogoBeta && !conEspecs) return null;
   if (sel.length < 2) return [];   // familia o todo el catálogo: solo marca
   for (let n = sel.length; n >= 2; n--){   // la subcategoría más cercana con filtros propios manda
     const k = sel.slice(0, n).map(slugFac).join('/');
@@ -3651,7 +3673,7 @@ function fichaVariantesHTML(p){
     }).join('') + '</div><div class="vfd-ayuda">● en tu inventario · tachado: agotado</div></div>';
 }
 function fichaEspecsHTML(p){
-  if (!catalogoBeta || !p._specs) return '';
+  if (!(catalogoBeta || conEspecs) || !p._specs) return '';
   const s = p._specs, filas = [];
   const vistos = new Set();
   Object.keys(s).forEach(k => {
@@ -3770,7 +3792,7 @@ function aplicarFiltros(){
   // En variadores, arrancadores y al buscar, el panel solo trae la marca (los técnicos van en su panel).
   const claveFac = (hayBusqueda ? 'q|' : '') + seleccion.slice(0, 2).join('|||');
   if (claveFac !== facClaveRuta){ filtrosFac = {}; facClaveRuta = claveFac; }
-  panelFacDefs = catalogoBeta ? ((hayBusqueda || panelVfdBase || panelArrBase) ? [] : defsFacDe(seleccion)) : null;
+  panelFacDefs = (catalogoBeta || conEspecs) ? ((hayBusqueda || panelVfdBase || panelArrBase) ? [] : defsFacDe(seleccion)) : null;
   const conTecnicos = panelVfdBase ? filtrados.filter(p => pasaFiltroVfd(p))
        : panelArrBase ? filtrados.filter(p => pasaFiltroArr(p))
        : filtrados;
@@ -4332,6 +4354,7 @@ async function cargar(silencioso){
     const delScraper = (data.productos || []).filter(p => !modelosManuales.has(p.modelo));
     delScraper.forEach(p => { p._manual = false; });
     productos = unirInventario(manuales.concat(delScraper), panel.inventario, ocultos);
+    prepararEspecsLocales(productos);
 
     let estado = productos.length + " productos";
     if (data.en_progreso) {

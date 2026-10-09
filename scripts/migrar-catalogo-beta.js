@@ -56,34 +56,14 @@ const num = (s) => { if (s == null) return null; const v = parseFloat(String(s).
 const slug = (s) => String(s).normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-|-$/g, '');
 const marcaLimpia = (m) => { m = String(m || '').trim().toUpperCase().replace(/^(SIEMENS)+$/, 'SIEMENS'); return m === 'SCHNEIDER ELECTRIC' ? 'SCHNEIDER' : (m || 'SIN MARCA'); };
 
-/* ---------- 4. Árbol de 3 niveles ---------- */
-function subcategoria(categoria, resto){
-  if (resto.some(s => /\baccesorios?\b/i.test(s))) return 'Accesorios';
-  if (categoria === 'Contactores'){
-    if (resto.some(s => /auxiliar/i.test(s))) return 'Auxiliares';
-    if (resto.some(s => /estado s[oó]lido/i.test(s))) return 'Estado sólido';
-    return 'De potencia';
-  }
-  return null;
-}
-// La serie del fabricante deja de ser categoría y pasa a ser un filtro
-function serieDe(categoria, resto){
-  if (/sensores de proximidad|finales de carrera|encoders/i.test(categoria)) return null;
-  for (const s of resto){
-    if (T.NODOS_MARCA.has(s) || /^accesorios?$/i.test(s) || /^otros/i.test(s)) continue;
-    if (/^(tama[ñn]o|bobina|di[aá]metro|\d|[123] fases?|capacidad)/i.test(s)) continue;
-    const m = s.match(/\bSerie\s+([A-Z0-9][\w\/-]*)/);
-    const r = (m ? m[1] : s.split(' - ')[0].split(' (')[0]).trim();
-    if (r && r.length <= 40) return r;
-  }
-  return null;
-}
-
-/* ---------- 5. Atributos técnicos ---------- */
-// Los atributos y los filtros de cada categoría viven en scripts/atributos-catalogo.js
-// (los usa también scripts/recalcular-atributos-beta.js).
-const { ATRIBUTOS, FILTROS, atributosExtra, unirSpecs } = require('./atributos-catalogo');
-
+/* ---------- 4 y 5. Árbol, serie y atributos: viven en /especificaciones.js ---------- */
+const E = require('../especificaciones.js');
+const { ATRIBUTOS, FILTROS } = E;
+const subcategoria = E.subcategoria;
+const serieDe = (categoria, resto) => E.serieDe(categoria, resto, T);
+const atributosDe = (p, categoria, sub, resto, serie) => E.atributosBase(p, categoria, sub, resto, serie, T);
+const atributosExtra = E.atributosExtra, unirSpecs = E.unirSpecs;
+// Nombre de bobina para las variantes Hyundai HGC (mismo formato que la base)
 function bobinaNorm(v, tipo){
   v = Number(v); tipo = /dc|cc/i.test(tipo || '') ? 'DC' : 'AC';
   if (tipo === 'DC') return v + ' VDC';
@@ -93,78 +73,6 @@ function bobinaNorm(v, tipo){
   if (v >= 200 && v <= 240) return '220-240 VAC';
   if (v >= 380 && v <= 480) return '380-440 VAC';
   return v + ' VAC';
-}
-const rangoDe = (t) => {
-  const pats = [
-    /(?:Regulaci[oó]n|Rango(?: de ajuste)?)\s*(?:\(A\))?\s*:?\s*(\d+(?:[.,]\d+)?)\s*(?:-|–|a)\s*(\d+(?:[.,]\d+)?)/i,
-    /(\d+(?:[.,]\d+)?)\s*(?:\.{2,3}|…)\s*(\d+(?:[.,]\d+)?)\s*A\b/,
-    /(\d+(?:[.,]\d+)?)\s*(?:–|-)\s*(\d+(?:[.,]\d+)?)\s*A\b/,
-    /\b(\d+(?:[.,]\d+)?)\s*a\s*(\d+(?:[.,]\d+)?)\s*(?:A|Amp)\b/i,
-  ];
-  for (const re of pats){ const m = t.match(re); if (m){ const a = num(m[1]), b = num(m[2]); if (a != null && b != null && a < b) return [a, b]; } }
-  return null;
-};
-const polosDe = (t) => {
-  let m = t.match(/(\d)\s*polos?\b/i) || t.match(/polos\s*(\d)\b/i);
-  if (m) return +m[1];
-  if (/tetrapolar/i.test(t)) return 4; if (/tripolar/i.test(t)) return 3; if (/bipolar/i.test(t)) return 2; if (/monopolar|unipolar/i.test(t)) return 1;
-  return null;
-};
-
-function atributosDe(p, categoria, sub, resto, serie){
-  const s = {};
-  if (serie) s.serie = serie;
-  if (sub === 'Accesorios') return s;
-  const t = [p.modelo, p.nombre !== p.modelo ? p.nombre : '', p.descripcion || ''].join(' ').replace(/\s+/g, ' ');
-  const rutaTxt = resto.join(' > ');
-  let m;
-  if (categoria === 'Variadores de Frecuencia'){
-    const v = T.extraerSpecsVfd(p);
-    if (v){ if (v.kw) s.potencia_kw = v.kw; if (v.hp) s.potencia_hp = v.hp; if (v.v) s.tension_v = v.v; if (v.fase) s.fases = v.fase === 13 ? 1 : v.fase; if (v.a) s.corriente_a = v.a; if (v.uso != null) s.aplicacion = T.VFD_USOS[v.uso]; }
-  } else if (categoria === 'Arrancadores Suaves'){
-    const v = T.extraerSpecsArr(p);
-    if (v && v.a) s.corriente_a = v.a;
-  } else if (categoria === 'Contactores'){
-    if ((m = t.match(/(\d+(?:[.,]\d+)?)\s*A\s*\(AC-?3\)/i)) || (m = t.match(/AC-?3\)?\s*(?:\(A\))?\s*:?\s*(\d+(?:[.,]\d+)?)\s*A?\b/i)) ||
-        (m = String(p.modelo).match(/^HGC(\d+)(?:11|22)NS/)) || (m = t.match(/(\d+)\s*amperios/i)) || (m = rutaTxt.match(/(\d+(?:[.,]\d+)?)\s*Amp\b/i)))
-      s.corriente_ac3_a = num(m[1]);
-    if ((m = t.match(/(\d{2,3})\s*V\s*(AC|DC)\b/i)) || (m = t.match(/\b(AC|DC)\s*(\d{2,3})\s*V\b/i))){
-      const v = /\d/.test(m[1]) ? m[1] : m[2], tipo = /\d/.test(m[1]) ? m[2] : m[1];
-      s.bobina = bobinaNorm(v, tipo);
-    }
-    const pol = polosDe(t); if (pol) s.polos = pol; else if (sub === 'De potencia' && /tripolar|contactor de potencia/i.test(t)) s.polos = 3;
-    if ((m = t.match(/(\d)\s*N[AO]\s*\+\s*(\d)\s*NC/i))) s.contactos_aux = m[1] + 'NA+' + m[2] + 'NC';
-    if ((m = (t + ' ' + rutaTxt).match(/tama[ñn]o\s*(S\d{1,2})\b/i))) s.tamano = m[1].toUpperCase();
-  } else if (categoria === 'Guardamotores' || categoria === 'Relés de Sobrecarga'){
-    const r = rangoDe(t) || rangoDe(rutaTxt);
-    if (r){ s.ajuste_a_min = r[0]; s.ajuste_a_max = r[1]; }
-    if ((m = t.match(/clase\s*(\d{1,2})\b/i))) s.clase = 'Clase ' + m[1];
-    if ((m = (t + ' ' + rutaTxt).match(/tama[ñn]o\s*(S\d{1,2})\b/i))) s.tamano = m[1].toUpperCase();
-  } else if (categoria === 'Breakers Automáticos'){
-    if ((m = t.match(/\b([BCD])\s?(\d{1,3})\s?A\b/))){ s.curva = m[1]; s.corriente_a = +m[2]; }
-    if (!s.curva && (m = t.match(/curva\s*([BCD])\b/i))) s.curva = m[1].toUpperCase();
-    if (!s.corriente_a && ((m = t.match(/\bIn\s*(?:\(A\))?\s*[:=]\s*(\d+)/i)) || (m = t.match(/(\d+)\s*amp\b/i)))) s.corriente_a = +m[1];
-    const pol = polosDe(t); if (pol) s.polos = pol;
-    if ((m = t.match(/(\d+(?:[.,]\d+)?)\s*kA/i))) s.poder_corte_ka = num(m[1]);
-  } else if (categoria === 'Breakers en Caja Moldeada'){
-    if ((m = t.match(/\bIn\s*(?:\(A\))?\s*[:=]\s*(\d+(?:[.,]\d+)?)/i))) s.corriente_a = num(m[1]);
-    else if ((m = t.match(/(\d+)\s*-\s*(\d+)\s*A(?:mp)?\b/i))) s.corriente_a = +m[2];   // regulable: se toma el máximo
-    const pol = polosDe(t); if (pol) s.polos = pol;
-    if ((m = t.match(/Icu\s*=?\s*(\d+(?:[.,]\d+)?)\s*kA/i)) || (m = t.match(/Icu[^:]{0,30}\(kA\)\s*:\s*(\d+(?:[.,]\d+)?)/i)) || (m = t.match(/(\d+(?:[.,]\d+)?)\s*kA/i))) s.poder_corte_ka = num(m[1]);
-    if (/electr[oó]nic/i.test(t)) s.disparador = 'Electrónico'; else if (/termomagn|TM-?D|\bTM\d/i.test(t)) s.disparador = 'Termomagnético'; else if (/magn[eé]tico/i.test(t)) s.disparador = 'Magnético';
-  } else if (categoria === 'Sensores de Proximidad'){
-    const tt = rutaTxt + ' ' + t;
-    if ((m = tt.match(/inductiv|capacitiv|[oó]ptic|ultras[oó]nic|magn[eé]tic/i))){
-      const k = m[0].toLowerCase().normalize('NFD').replace(/[̀-ͯ]/g, '');
-      s.tipo_sensor = { inductiv: 'Inductivo', capacitiv: 'Capacitivo', optic: 'Óptico', ultrasonic: 'Ultrasónico', magnetic: 'Magnético' }[k];
-    }
-    if ((m = tt.match(/Di[aá]metro\s*(8|12|18|30)\s*mm/i)) || (m = tt.match(/\bM(8|12|18|30)\b(?!\s*\/)/))) s.rosca = 'M' + m[1];
-    if (/NPN\s*\/\s*PNP|PNP\s*\/\s*NPN/i.test(tt)) s.salida = 'PNP/NPN'; else if (/PNP/.test(tt)) s.salida = 'PNP'; else if (/NPN/.test(tt)) s.salida = 'NPN'; else if (/REL[EÉ]/i.test(tt)) s.salida = 'Relé';
-    if ((m = t.match(/Sn:\s*(\d+(?:[.,]\d+)?)\s*(mm|mts?|m)\b/i))){ const v = num(m[1]); s.distancia_mm = /mm/i.test(m[2]) ? v : Math.round(v * 1000); }
-    if ((m = tt.match(/conector\s*(M8|M12)/i))) s.conexion = 'Conector ' + m[1].toUpperCase(); else if (/cable/i.test(tt)) s.conexion = 'Cable';
-  }
-  for (const k of Object.keys(s)) if (s[k] == null || s[k] === '' || Number.isNaN(s[k])) delete s[k];
-  return s;
 }
 
 /* ---------- 6. Variantes: contactores Hyundai HGC con bobina ---------- */
