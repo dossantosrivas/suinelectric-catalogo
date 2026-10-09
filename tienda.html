@@ -150,8 +150,18 @@
   .cta-sub{ color:var(--texto-2); font-size:14px; margin:0 0 16px; }
   .cta-cabecera{ display:flex; justify-content:space-between; align-items:flex-start; gap:12px; padding-right:40px; }
   .cta-cabecera .btn-enlace{ margin-left:0; flex:none; }
-  .cta-admin-links{ display:flex; flex-wrap:wrap; gap:6px 18px; }
-  .cta-admin{ display:inline-block; margin:4px 0 8px; font-weight:600; color:var(--azul-texto); }
+  .cta-admin-links{ display:grid; grid-template-columns:repeat(auto-fit, minmax(210px, 1fr)); gap:10px; margin:6px 0 12px; }
+  .cta-admin{ display:flex; align-items:center; gap:12px; padding:12px 14px; background:#fff; border:1px solid var(--linea);
+    border-radius:var(--radio); text-decoration:none; color:var(--tinta); transition:border-color .15s, box-shadow .15s, transform .15s; }
+  .cta-admin:hover{ border-color:var(--azul); box-shadow:0 4px 14px rgba(14,42,59,.12); transform:translateY(-1px); }
+  .cta-admin-ico{ flex:none; display:grid; place-items:center; width:42px; height:42px; border-radius:10px; background:var(--tinta); color:#fff; }
+  .cta-admin-ico svg{ width:22px; height:22px; }
+  .cta-admin.ventas .cta-admin-ico{ background:var(--amarillo); color:var(--tinta); }
+  .cta-admin-txt{ display:flex; flex-direction:column; min-width:0; }
+  .cta-admin-txt strong{ font-size:15px; line-height:1.2; }
+  .cta-admin-txt span{ font-size:12.5px; color:var(--texto-3); margin-top:2px; }
+  .cta-admin-ir{ margin-left:auto; flex:none; width:18px; height:18px; color:var(--texto-3); }
+  .cta-admin:hover .cta-admin-ir{ color:var(--azul-texto); }
   .cta-nota{ font-size:13.5px; color:var(--ok); background:var(--ok-suave); border-radius:var(--radio); padding:8px 12px; margin:8px 0 14px; }
   .cta-tabs{ display:flex; gap:4px; border-bottom:1px solid var(--linea); margin-bottom:14px; }
   .cta-tabs button{ font:inherit; font-weight:600; font-size:14.5px; padding:10px 14px; border:none; background:none; color:var(--texto-2); border-bottom:3px solid transparent; cursor:pointer; }
@@ -4029,8 +4039,10 @@ async function renderCuenta(pestana){
       '<div class="cta-sub">' + escHtml(sesion.email) + (tipo ? ' · ' + escHtml(tipo) : '') + (c.empresa ? ' · ' + escHtml(c.empresa) : '') + '</div></div>' +
       '<button type="button" class="btn-enlace" id="cta-salir">Cerrar sesión</button>' +
     '</div>' +
-    (sesion.admin ? '<div class="cta-admin-links"><a class="cta-admin" href="/admin" target="_blank" rel="noopener">⚙ Panel de administrador →</a>' +
-      '<a class="cta-admin" href="/ventas" target="_blank" rel="noopener">📊 Ventas →</a></div>' : '') +
+    (sesion.admin ? '<div class="cta-admin-links">' +
+      '<a class="cta-admin" href="/admin" target="_blank" rel="noopener"><span class="cta-admin-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M4 21v-7M4 10V3M12 21v-9M12 8V3M20 21v-5M20 12V3M1 14h6M9 8h6M17 16h6"/></svg></span><span class="cta-admin-txt"><strong>Panel de administrador</strong><span>Productos, clientes y estadísticas</span></span><svg class="cta-admin-ir" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17L17 7M8 7h9v9"/></svg></a>' +
+      '<a class="cta-admin ventas" href="/ventas" target="_blank" rel="noopener"><span class="cta-admin-ico"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M3 3v18h18"/><path d="M7 15l4-4 3 3 6-6"/><path d="M16 8h4v4"/></svg></span><span class="cta-admin-txt"><strong>Gestión de ventas</strong><span>Ventas, compras, ofertas e inventario</span></span><svg class="cta-admin-ir" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17L17 7M8 7h9v9"/></svg></a>' +
+      '</div>' : '') +
     '<p class="cta-nota">Los precios de la tienda ya muestran tu descuento de cliente.</p>' +
     '<div class="cta-tabs">' +
       '<button type="button" data-tab="pedidos" class="' + (pestana === 'pedidos' ? 'activa' : '') + '">Mis pedidos</button>' +
