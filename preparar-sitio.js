@@ -21,7 +21,6 @@ const DESTINO = path.join(RAIZ, 'sitio');
 const PUBLICAR = [
   'index.html', 'tienda.html', 'admin.html', 'links.html', 'ventas.html', 'cotizador.html',   // el cotizador lo abre Gestión (/ventas/cotizador)
   'tienda-beta.html', 'admin-beta.html', 'ventas-beta.html',   // versiones beta para pruebas
-  'tienda-preview.html',   // vista previa de cambios antes de pasarlos a la beta
   '_headers', '_redirects', 'robots.txt', 'sitemap.xml', 'publico.css', 'publico.js', 'rastreo.js',
   'catalogo-tienda.json', 'catalogo-beta.json',   // beta del catálogo único
   'imagenes',          // logos, fotos propias, fotos de productos y familias
