@@ -3,6 +3,7 @@ Allow: /
 Disallow: /admin
 Disallow: /admin.html
 Disallow: /tienda-beta
+Disallow: /tienda-preview
 Disallow: /admin-beta
 Disallow: /ventas-beta
 
