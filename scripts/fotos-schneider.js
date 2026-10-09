@@ -9,10 +9,9 @@ const { chromium } = require('playwright');
 let LISTA = require('./fotos-schneider-lista.json');
 if (process.env.LIMITE) LISTA = LISTA.slice(0, +process.env.LIMITE);
 const DESTINO = path.join(__dirname, '..', 'imagenes', 'schneider', 'oficial');
-const PAGINAS = (m) => [
-  `https://www.se.com/ww/en/product/${m}/`,
-  `https://www.se.com/mx/es/product/${m}/`,
-];
+const PAGINAS = (m) => ['co/es', 'mx/es', 'us/en', 'es/es', 'ar/es'].map((p) => `https://www.se.com/${p}/product/${m}/`);
+// Planos, íconos de manual y similares (no son fotos del producto)
+const NO_FOTO = /dimension|_TI\b|_TI-|TIB\d|_MI_|wiring|drawing|schema|curve|logo|Default/i;
 const pausa = (ms) => new Promise((r) => setTimeout(r, ms));
 
 function esFoto(u) {
@@ -33,30 +32,27 @@ function ref(u) { const m = u.match(/p_Doc_Ref=([^&]+)/); return m ? m[1] : u; }
   for (const { familia, modelo } of LISTA) {
     const fila = { familia, modelo, pagina: null, titulo: null, imagenes: [], archivos: [], error: null };
     for (const url of PAGINAS(modelo)) {
-      const vistas = new Set();
-      const oir = (r) => { const u = r.url(); if (esFoto(u)) vistas.add(u); };
-      pag.on('response', oir);
       try {
-        const r = await pag.goto(url, { waitUntil: 'domcontentloaded', timeout: 45000 });
-        await pausa(4000);
-        await pag.mouse.wheel(0, 600).catch(() => {});
-        await pausa(1500);
-        const html = await pag.content();
-        for (const m of html.matchAll(/https?:\/\/download\.schneider-electric\.com\/files\?[^"'\s<>)]+/g)) {
-          const u = m[0].replace(/&amp;/g, '&').replace(/\\u0026/g, '&');
-          if (esFoto(u)) vistas.add(u);
+        await pag.goto(url, { waitUntil: 'domcontentloaded', timeout: 45000 });
+        await pausa(4500);
+        if (!decodeURIComponent(pag.url()).toUpperCase().includes(`/PRODUCT/${modelo.toUpperCase()}/`)) { fila.error = 'no existe en ' + url; continue; }
+        const srcs = await pag.$$eval('img', (a) => a.map((e) => e.currentSrc || e.src || ''));
+        const og = await pag.$eval('meta[property="og:image"]', (e) => e.content).catch(() => null);
+        const refs = [];
+        for (const u of [...srcs, og].filter(Boolean)) {
+          if (!/download\.schneider-electric\.com\/files\?/.test(u)) continue;
+          const r = ref(u);
+          if (NO_FOTO.test(r) || refs.includes(r)) continue;
+          refs.push(r);
         }
-        fila.titulo = (await pag.title()).slice(0, 120);
-        if (vistas.size) { fila.pagina = url; fila.error = null; }
-        else fila.error = `HTTP ${r && r.status()} sin fotos en ${url}`;
+        fila.titulo = (await pag.title()).slice(0, 140);
+        if (refs.length) {
+          fila.pagina = pag.url(); fila.error = null;
+          fila.imagenes = refs.map((r) => `https://download.schneider-electric.com/files?p_Doc_Ref=${r}&p_File_Type=rendition_1500_jpg`);
+          break;
+        }
+        fila.error = 'sin fotos en ' + url;
       } catch (e) { fila.error = `${url}: ${e.message.slice(0, 100)}`; }
-      pag.off('response', oir);
-      if (vistas.size) { // ordena manteniendo el orden de aparición, sin repetir documento
-        const porRef = new Map();
-        for (const u of vistas) if (!porRef.has(ref(u))) porRef.set(ref(u), grande(u));
-        fila.imagenes = [...porRef.values()];
-        break;
-      }
     }
     for (const u of fila.imagenes.slice(0, 4)) {
       try {
