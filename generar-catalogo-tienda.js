@@ -167,6 +167,24 @@ function formaManualDePanel(r){
     existencias: r.existencias, descripcion: r.descripcion || '', imagen: imgs[0] || null, imagenes: imgs };
 }
 
+// Corrección de un producto del distribuidor hecha en el panel (productos_web.correccion = true):
+// cambia nombre, marca, descripción, categoría y fotos; el precio y la existencia siguen al distribuidor.
+function aplicarCorreccion(p, r){
+  const q = Object.assign({}, p, { _corregido: true });
+  if (r.nombre) q.nombre = r.nombre;
+  if (r.marca) q.marca = String(r.marca).toUpperCase();
+  if (r.descripcion) q.descripcion = r.descripcion;
+  if (r.categoria_principal){
+    const subs = (r.subcategorias || []).filter(Boolean);
+    q.categoria_principal = r.categoria_principal; q.subcategorias = subs; q.subcategoria = subs.join(' > ');
+    q.categorias = [r.categoria_principal].concat(subs, p.modelo); q.categoria = q.categorias.join(' > ');
+    delete q.rutas_categoria;
+  }
+  const imgs = (r.imagenes || []).filter(Boolean);
+  if (imgs.length){ q.imagen = imgs[0]; q.imagenes = imgs; delete q.imagen_miniatura; }
+  return q;
+}
+
 /* ---------- Principal ---------- */
 (async () => {
   const scraper = leer('productos.json');
@@ -176,11 +194,14 @@ function formaManualDePanel(r){
 
   const panel = await traerDelPanel();
   const ocultos = new Set(panel.ocultos);
-  const delPanel = panel.web.map(formaManualDePanel);
+  const correcciones = new Map(panel.web.filter(r => r.correccion).map(r => [r.modelo, r]));   // productos del distribuidor corregidos
+  if (correcciones.size) console.log('Correcciones del panel a productos del distribuidor: ' + correcciones.size);
+  const delPanel = panel.web.filter(r => !r.correccion).map(formaManualDePanel);
   const setPanel = new Set(delPanel.map(p => p.modelo));
   manuales = delPanel.concat(manuales.filter(p => !setPanel.has(p.modelo)));      // lo del panel gana
 
-  const listaScraper = (scraper.productos || []).filter(p => p.modelo && !ocultos.has(p.modelo)).map(reducir);
+  const listaScraper = (scraper.productos || []).filter(p => p.modelo && !ocultos.has(p.modelo))
+    .map(p => correcciones.has(p.modelo) ? aplicarCorreccion(p, correcciones.get(p.modelo)) : p).map(reducir);
   const listaManuales = manuales.filter(p => !ocultos.has(p.modelo)).map(reducir);
   if (ocultos.size) console.log('Ocultos (no salen en la web): ' + ocultos.size);
   const todos = listaManuales.concat(listaScraper);

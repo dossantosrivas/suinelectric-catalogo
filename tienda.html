@@ -4272,6 +4272,23 @@ function formaTiendaDePanel(r){
   if (r.existencias != null && n > 0 && p.disponible) p.stock = n > 10 ? '+10' : 'pocas';
   return p;
 }
+// Corrección de un producto del distribuidor hecha en el panel (productos_web.correccion = true):
+// cambia nombre, marca, descripción, categoría y fotos; el precio y la existencia siguen al distribuidor.
+function aplicarCorreccion(p, r){
+  const q = Object.assign({}, p, { _corregido: true });
+  if (r.nombre) q.nombre = r.nombre;
+  if (r.marca) q.marca = String(r.marca).toUpperCase();
+  if (r.descripcion) q.descripcion = r.descripcion;
+  if (r.categoria_principal){
+    const subs = (r.subcategorias || []).filter(Boolean);
+    q.categoria_principal = r.categoria_principal; q.subcategorias = subs; q.subcategoria = subs.join(' > ');
+    q.categorias = [r.categoria_principal].concat(subs, p.modelo); q.categoria = q.categorias.join(' > ');
+    delete q.rutas_categoria;
+  }
+  const imgs = (r.imagenes || []).filter(Boolean);
+  if (imgs.length){ q.imagen = imgs[0]; q.imagenes = imgs; delete q.imagen_miniatura; }
+  return q;
+}
 async function traerDelPanel(){
   const base = 'https://yqnlxhbjassrkudnhvpr.supabase.co/rest/v1/';
   const h = { apikey: 'sb_publishable_LOYjM5sqvQbBLIkH4KJTKQ_UfxrpTeC' };
@@ -4359,10 +4376,12 @@ async function cargar(silencioso){
     catalogoEnProgreso = !!data.en_progreso;
     // Lo del panel gana sobre productos_manuales.json; los ocultos no se muestran.
     const ocultos = new Set(panel.ocultos);
-    const delPanel = panel.web.map(formaTiendaDePanel);
+    const correcciones = new Map(panel.web.filter(r => r.correccion).map(r => [r.modelo, r]));   // productos del distribuidor corregidos
+    const delPanel = panel.web.filter(r => !r.correccion).map(formaTiendaDePanel);
     const setPanel = new Set(delPanel.map(p => p.modelo));
     const manuales = delPanel.concat(manualesJson.filter(p => !setPanel.has(p.modelo))).filter(p => !ocultos.has(p.modelo));
-    data.productos = (data.productos || []).filter(p => !ocultos.has(p.modelo));
+    data.productos = (data.productos || []).filter(p => !ocultos.has(p.modelo))
+      .map(p => correcciones.has(p.modelo) ? aplicarCorreccion(p, correcciones.get(p.modelo)) : p);
 
     // ¿Cambió algo desde la última vez? (para no re-renderizar de gratis)
     const firma = (data.generado || '') + '|' + (data.total_productos || 0) + '|' + manuales.length + '|' + ocultos.size + '|' +

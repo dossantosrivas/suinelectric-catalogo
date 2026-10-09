@@ -2474,11 +2474,31 @@ const formaDePanel = (r) => {
     disponible: r.disponible !== false && r.existencias !== 0, descripcion: r.descripcion || '', imagen: imgs[0] || null, imagenes: imgs,
     categoria_principal: r.categoria_principal, subcategorias: subs, _manual: true };
 };
+// Corrección de un producto del distribuidor hecha en el panel (productos_web.correccion = true):
+// cambia nombre, marca, descripción, categoría y fotos; el precio y la existencia siguen al distribuidor.
+function aplicarCorreccion(p, r){
+  const q = Object.assign({}, p, { _corregido: true });
+  if (r.nombre) q.nombre = r.nombre;
+  if (r.marca) q.marca = String(r.marca).toUpperCase();
+  if (r.descripcion) q.descripcion = r.descripcion;
+  if (r.categoria_principal){
+    const subs = (r.subcategorias || []).filter(Boolean);
+    q.categoria_principal = r.categoria_principal; q.subcategorias = subs; q.subcategoria = subs.join(' > ');
+    q.categorias = [r.categoria_principal].concat(subs, p.modelo); q.categoria = q.categorias.join(' > ');
+    delete q.rutas_categoria;
+  }
+  const imgs = (r.imagenes || []).filter(Boolean);
+  if (imgs.length){ q.imagen = imgs[0]; q.imagenes = imgs; delete q.imagen_miniatura; }
+  return q;
+}
 // Todos los productos con su origen: 'panel' (agregado o corregido aquí), 'manual' (productos_manuales.json) o 'proveedor'.
 function directorio(){
   const web = new Map(prodWeb.map(r => [r.modelo, r]));
-  const lista = productos.filter(p => !web.has(p.modelo)).map(p => ({ p, origen: p._manual ? 'manual' : 'proveedor' }));
-  prodWeb.forEach(r => lista.unshift({ p: formaDePanel(r), origen: 'panel', row: r, enCatalogo: productos.some(x => x.modelo === r.modelo) }));
+  // Las correcciones (productos del distribuidor editados aquí) se aplican sobre el producto del distribuidor.
+  const lista = productos.filter(p => { const r = web.get(p.modelo); return !r || (r.correccion && !p._manual); })
+    .map(p => { const r = web.get(p.modelo); return r ? { p: aplicarCorreccion(p, r), origen: 'proveedor', row: r, corregido: true } : { p, origen: p._manual ? 'manual' : 'proveedor' }; });
+  const enLista = new Set(lista.filter(x => x.row).map(x => x.p.modelo));
+  prodWeb.forEach(r => { if (!enLista.has(r.modelo)) lista.unshift({ p: formaDePanel(r), origen: 'panel', row: r, enCatalogo: productos.some(x => x.modelo === r.modelo) }); });
   // Tu inventario (lo publica la app de ventas): se marca lo que coincide (mismo modelo sin
   // guiones/espacios/mayúsculas) y se agrega lo que solo tienes tú. Muestra lo que ve la tienda.
   if (prodInv.length){
@@ -2565,10 +2585,10 @@ function pintarProductos(){
       const p = x.p, ruta = rutaCruda(p);
       const estado = x.oculto ? '<span class="pill rojo">Oculto</span>' : x.borrador ? '<span class="pill">Borrador</span>' : p.disponible === false ? '<span class="pill amar">Agotado</span>' : '<span class="pill verde">En la web</span>';
       // Lo que está en tu inventario se edita en Gestión; aquí solo se decide si se muestra en la tienda.
-      const editable = !prodErr && x.origen !== 'proveedor' && x.origen !== 'inventario' && !x.inv;
+      const editable = !prodErr && x.origen !== 'inventario' && !x.inv;   // lo del distribuidor se edita como corrección
       return '<tr class="' + (x.oculto || x.borrador ? 'inactivo' : '') + '" data-mod="' + esc(p.modelo) + '">' +
         '<td class="pro-foto">' + (p.imagen ? '<img src="' + esc(imgSrc(p.imagen)) + '" alt="" loading="lazy" onerror="this.replaceWith(document.createTextNode(\'—\'))">' : '<span class="muted">sin foto</span>') + '</td>' +
-        '<td><strong class="mono">' + esc(p.modelo) + '</strong> ' + PILL_ORIGEN[x.origen] + (x.inv && x.origen !== 'inventario' ? ' <span class="pill verde" title="Sale con tu marca, precio y existencia">+ tu inventario</span>' : '') + (p.nombre && p.nombre !== p.modelo ? '<div class="muted pro-desc">' + esc(p.nombre) + '</div>' : p.descripcion ? '<div class="muted pro-desc">' + esc(p.descripcion) + '</div>' : '') + '</td>' +
+        '<td><strong class="mono">' + esc(p.modelo) + '</strong> ' + PILL_ORIGEN[x.origen] + (x.corregido ? ' <span class="pill azul" title="Tiene tu corrección; precio y existencia siguen al distribuidor">Corregido</span>' : '') + (x.inv && x.origen !== 'inventario' ? ' <span class="pill verde" title="Sale con tu marca, precio y existencia">+ tu inventario</span>' : '') + (p.nombre && p.nombre !== p.modelo ? '<div class="muted pro-desc">' + esc(p.nombre) + '</div>' : p.descripcion ? '<div class="muted pro-desc">' + esc(p.descripcion) + '</div>' : '') + '</td>' +
         '<td>' + esc(p.marca || '—') + '</td>' +
         '<td class="pro-cat">' + esc(ruta.join(' › ')) + '</td>' +
         '<td style="white-space:nowrap">' + (p.precio != null ? '<strong>' + money(p.precio) + '</strong>' : '<span class="muted">Sin precio</span>') + '</td>' +
@@ -2611,12 +2631,15 @@ function prepararFoto(file){
 function abrirProducto(modelo, copiar){
   const todos = directorio();
   const x = modelo ? todos.find(y => y.p.modelo === modelo) : null;
-  const base = x ? (x.row ? Object.assign({}, x.row) : { modelo: x.p.modelo, nombre: x.p.nombre && x.p.nombre !== x.p.modelo ? x.p.nombre : '', marca: x.p.marca, categoria_principal: rutaCruda(x.p)[0], subcategorias: rutaCruda(x.p).slice(1),
+  const base = x ? (x.row && !x.row.correccion ? Object.assign({}, x.row) : { modelo: x.p.modelo, nombre: x.p.nombre && x.p.nombre !== x.p.modelo ? x.p.nombre : '', marca: x.p.marca, categoria_principal: rutaCruda(x.p)[0], subcategorias: rutaCruda(x.p).slice(1),
     descripcion: x.p.descripcion, precio: x.p.precio, disponible: x.p.disponible !== false, imagenes: (x.p.imagenes && x.p.imagenes.length ? x.p.imagenes : [x.p.imagen]).filter(Boolean).map(imgSrc), activo: true }) : { disponible: true, activo: true, imagenes: [], subcategorias: [] };
   if (copiar){ base.modelo = ''; base.nombre = ''; base.imagenes = []; base.precio = null; base.notas = ''; }
   const nuevo = !x || copiar;
   const esCorreccion = !nuevo && x.origen === 'manual';
-  let fotos = (base.imagenes || []).slice();
+  const esDist = !nuevo && x.origen === 'proveedor';   // producto del distribuidor: se guarda como corrección
+  // En una corrección solo se guardan TUS fotos; sin fotos propias se sigue usando la del distribuidor.
+  let fotos = esDist ? ((x.row && x.row.imagenes) || []).filter(Boolean).slice() : (base.imagenes || []).filter(u => u && !/woocommerce-placeholder/i.test(u)).slice();
+  const fotoDist = esDist ? ((productos.find(y => y.modelo === base.modelo) || {}).imagen || null) : null;
   const rutas = new Map();
   todos.forEach(y => { const r = rutaCruda(y.p).join(' › '); rutas.set(r, (rutas.get(r) || 0) + 1); });
   const marcasL = [...new Set(todos.map(y => (y.p.marca || '').toUpperCase()).filter(Boolean))].sort();
@@ -2625,7 +2648,7 @@ function abrirProducto(modelo, copiar){
 
   abrirPanel('<form id="pf" style="display:contents" novalidate>' +
     '<div class="panel-cab"><div class="avatar">' + ICO.caja + '</div><div><h2>' + (nuevo ? (copiar ? 'Nuevo producto (copiado de ' + esc(modelo) + ')' : 'Agregar producto a la web') : 'Editar ' + esc(base.modelo)) + '</h2>' +
-      '<div class="muted">' + (nuevo ? 'Los campos con * son obligatorios. Sale en la tienda apenas guardas.' : esCorreccion ? 'Viene de productos_manuales.json: tu versión del panel queda por encima.' : 'Agregado desde el panel') + '</div></div>' +
+      '<div class="muted">' + (nuevo ? 'Los campos con * son obligatorios. Sale en la tienda apenas guardas.' : esCorreccion ? 'Viene de productos_manuales.json: tu versión del panel queda por encima.' : esDist ? 'Viene del distribuidor: tu nombre, descripción, categoría y fotos quedan por encima. El precio y la existencia siguen actualizándose solos cada día.' : 'Agregado desde el panel') + '</div></div>' +
       '<button type="button" class="btn chico fantasma cerrar" id="pf-cerrar" aria-label="Cerrar">' + ICO.cerrar + '</button></div>' +
     '<div class="panel-cuerpo pf-cuerpo"><div class="pf-form">' +
       '<div class="seccion"><h3>1 · Identificación</h3><div class="campos">' +
@@ -2641,35 +2664,39 @@ function abrirProducto(modelo, copiar){
         '<datalist id="pf-modelos">' + todos.slice(0, 6000).map(y => '<option value="' + esc(y.p.modelo) + '">').join('') + '</datalist></div>' +
       '<div class="seccion"><h3>3 · Descripción *</h3><textarea name="descripcion" rows="6" maxlength="4000" required placeholder="Qué es, para qué sirve y sus datos técnicos: potencia, voltaje, corriente, medidas, norma…">' + esc(base.descripcion || '') + '</textarea>' +
         '<div class="muted" style="font-size:12px;text-align:right;margin-top:4px" id="pf-cuenta"></div></div>' +
-      '<div class="seccion"><h3>4 · Precio y disponibilidad</h3><div class="campos">' +
+      (esDist ? '<div class="seccion"><h3>4 · Precio y disponibilidad</h3><p class="muted" style="margin:0">Siguen al distribuidor y se actualizan solos cada día. Hoy: <strong>' + (x.p.precio != null ? money(x.p.precio) : 'sin precio') + '</strong> · ' + (x.p.disponible === false ? 'agotado' : 'disponible') + '. En la tienda se le aplica el descuento general, como a los demás productos del distribuidor.</p></div>' : '') +
+      (esDist ? '' : '<div class="seccion"><h3>4 · Precio y disponibilidad</h3><div class="campos">' +
         '<label class="campo">Precio en USD *<input name="precio" type="number" min="0" step="0.01" required value="' + (base.precio != null ? esc(base.precio) : '') + '" placeholder="0.00"></label>' +
         '<label class="campo">Cantidad disponible <small class="muted" style="font-weight:400">(opcional)</small><input name="existencias" type="number" min="0" step="1" value="' + (base.existencias != null ? esc(base.existencias) : '') + '" placeholder="La web solo muestra +10 o Últimas"></label>' +
         '<div class="ancho">' + interruptor('disponible', 'Disponible para la venta', 'Si lo apagas, la tienda lo muestra como agotado.', base.disponible !== false) + '</div>' +
-      '</div><p class="muted" style="margin:8px 0 0;font-size:12.5px">Como los demás productos manuales, se muestra con este precio tal cual; solo le aplican los descuentos de su marca o modelo (Descuentos).</p></div>' +
+      '</div><p class="muted" style="margin:8px 0 0;font-size:12.5px">Como los demás productos manuales, se muestra con este precio tal cual; solo le aplican los descuentos de su marca o modelo (Descuentos).</p></div>') +
       '<div class="seccion"><h3>5 · Fotos</h3><div class="pf-fotos" id="pf-fotos"></div>' +
         '<div class="fila" style="margin-top:10px"><label class="btn chico" style="cursor:pointer">' + ICO.mas + 'Subir fotos<input type="file" id="pf-archivo" accept="image/*" multiple hidden></label>' +
         '<input id="pf-url" placeholder="…o pega el enlace de una foto (https://…)" style="flex:1 1 220px;height:32px;font-size:13px"><button type="button" class="btn chico" id="pf-url-ok">Agregar</button></div>' +
         '<p class="muted" style="margin:6px 0 0;font-size:12.5px">La primera es la principal (arrástralas para cambiar el orden). Se reducen solas a 1200 px. Hasta 8.</p></div>' +
-      '<div class="seccion"><h3>6 · Publicación</h3><div class="interruptores">' +
+      '<div class="seccion"><h3>6 · Publicación</h3>' + (esDist ? '<p class="muted" style="margin:0">Para que no salga en la tienda usa <b>Ocultar</b> en la lista.</p>' : '<div class="interruptores">' +
         interruptor('activo', 'Publicado en la web', 'Apágalo para guardarlo como borrador sin que salga en la tienda.', base.activo !== false) +
-      '</div><label class="campo" style="margin-top:12px">Notas internas <small class="muted" style="font-weight:400">(solo las ves tú)</small><textarea name="notas" rows="2" maxlength="1000" placeholder="Ej. costo, proveedor, fecha de llegada">' + esc(base.notas || '') + '</textarea></label></div>' +
+      '</div>') + '<label class="campo" style="margin-top:12px">Notas internas <small class="muted" style="font-weight:400">(solo las ves tú)</small><textarea name="notas" rows="2" maxlength="1000" placeholder="Ej. costo, proveedor, fecha de llegada">' + esc(base.notas || '') + '</textarea></label></div>' +
       '<p class="error" id="pf-err"></p>' +
     '</div><aside class="pf-previa"><h3>Así se verá</h3><div id="pf-previa"></div></aside></div>' +
     '<div class="panel-pie"><button class="btn prim" id="pf-guardar">' + ICO.ok + (nuevo ? 'Publicar producto' : 'Guardar cambios') + '</button><button type="button" class="btn" id="pf-cancelar">Cancelar</button>' +
-      (!nuevo && x.origen === 'panel' ? '<button type="button" class="btn peligro" id="pf-borrar" style="margin-left:auto">' + ICO.borrar + (x.enCatalogo && productos.some(p => p.modelo === base.modelo && p._manual) ? 'Quitar mi versión' : 'Eliminar') + '</button>' : '') +
+      (!nuevo && (x.origen === 'panel' || (esDist && x.row)) ? '<button type="button" class="btn peligro" id="pf-borrar" style="margin-left:auto">' + ICO.borrar + (esDist ? 'Quitar mi corrección' : x.enCatalogo && productos.some(p => p.modelo === base.modelo && p._manual) ? 'Quitar mi versión' : 'Eliminar') + '</button>' : '') +
     '</div></form>', true);
 
   const f = $('pf');
   const leer = () => {
     const partes = f.elements.ruta.value.split(/\s*[›>]\s*/).map(s => s.trim()).filter(Boolean);
-    const pr = f.elements.precio.value, ex = f.elements.existencias.value;
-    return { modelo: f.elements.modelo.value.trim(), nombre: f.elements.nombre.value.trim() || null, marca: f.elements.marca.value.trim().toUpperCase(),
+    const pr = f.elements.precio ? f.elements.precio.value : '', ex = f.elements.existencias ? f.elements.existencias.value : '';
+    const d = { modelo: f.elements.modelo.value.trim(), nombre: f.elements.nombre.value.trim() || null, marca: f.elements.marca.value.trim().toUpperCase(),
       categoria_principal: partes[0] || '', subcategorias: partes.slice(1), descripcion: f.elements.descripcion.value.trim(),
-      precio: pr === '' ? null : Number(pr), existencias: ex === '' ? null : Math.round(Number(ex)), disponible: f.elements.disponible.checked,
-      imagenes: fotos.slice(0, 8), activo: f.elements.activo.checked, notas: f.elements.notas.value.trim() || null };
+      precio: pr === '' ? null : Number(pr), existencias: ex === '' ? null : Math.round(Number(ex)), disponible: f.elements.disponible ? f.elements.disponible.checked : true,
+      imagenes: fotos.slice(0, 8), activo: f.elements.activo ? f.elements.activo.checked : true, notas: f.elements.notas.value.trim() || null };
+    // Corrección de un producto del distribuidor: precio y existencia no se guardan (siguen al distribuidor).
+    if (esDist) Object.assign(d, { correccion: true, precio: null, existencias: null, disponible: true, activo: true });
+    return d;
   };
   const pintarFotos = () => {
-    $('pf-fotos').innerHTML = !fotos.length ? '<div class="pf-sinfoto">' + ICO.caja + '<span>Sin fotos todavía</span></div>' : fotos.map((u, i) =>
+    $('pf-fotos').innerHTML = !fotos.length ? '<div class="pf-sinfoto">' + ICO.caja + '<span>' + (esDist ? 'Sin fotos propias: se usa la del distribuidor' : 'Sin fotos todavía') + '</span></div>' : fotos.map((u, i) =>
       '<div class="pf-foto' + (i === 0 ? ' principal' : '') + '" draggable="true" data-i="' + i + '"><img src="' + esc(u) + '" alt="">' + (i === 0 ? '<b>Principal</b>' : '') +
       '<button type="button" data-quitar-foto="' + i + '" aria-label="Quitar foto">' + ICO.cerrar + '</button></div>').join('');
     $('pf-fotos').querySelectorAll('[data-quitar-foto]').forEach(b => b.onclick = () => { fotos.splice(Number(b.dataset.quitarFoto), 1); pintarFotos(); previa(); });
@@ -2682,12 +2709,13 @@ function abrirProducto(modelo, copiar){
   };
   const previa = () => {
     const d = leer(); const ruta = [d.categoria_principal].concat(d.subcategorias).filter(Boolean);
+    const pv = esDist ? { precio: x.p.precio, disponible: x.p.disponible !== false, existencias: null } : d;   // lo que se ve: precio y existencia
     $('pf-cuenta').textContent = d.descripcion.length + ' / 4000';
-    $('pf-previa').innerHTML = '<div class="pf-tarjeta"><div class="pf-t-img">' + (fotos[0] ? '<img src="' + esc(fotos[0]) + '" alt="">' : ICO.caja) + '</div>' +
+    $('pf-previa').innerHTML = '<div class="pf-tarjeta"><div class="pf-t-img">' + ((fotos[0] || fotoDist) ? '<img src="' + esc(imgSrc(fotos[0] || fotoDist)) + '" alt="">' : ICO.caja) + '</div>' +
       '<div class="pf-t-cuerpo"><div class="pf-t-marca">' + esc(d.marca || 'MARCA') + '</div><div class="pf-t-mod">' + esc(d.modelo || 'MODELO') + '</div>' +
       (d.nombre ? '<div class="pf-t-nom">' + esc(d.nombre) + '</div>' : '') + '<div class="pf-t-desc">' + esc(d.descripcion || 'La descripción aparece aquí.') + '</div>' +
-      '<div class="pf-t-precio">' + (d.precio != null && !isNaN(d.precio) ? money(d.precio) : 'Sin precio') + '</div>' +
-      '<div class="pf-t-stock ' + (d.disponible && d.existencias !== 0 ? 'ok' : 'off') + '">' + (!d.disponible || d.existencias === 0 ? 'Agotado' : d.existencias > 10 ? '+10 disponibles' : d.existencias > 0 ? 'Últimas unidades' : 'Disponible') + '</div></div></div>' +
+      '<div class="pf-t-precio">' + (pv.precio != null && !isNaN(pv.precio) ? money(pv.precio) : 'Sin precio') + '</div>' +
+      '<div class="pf-t-stock ' + (pv.disponible && pv.existencias !== 0 ? 'ok' : 'off') + '">' + (!pv.disponible || pv.existencias === 0 ? 'Agotado' : pv.existencias > 10 ? '+10 disponibles' : pv.existencias > 0 ? 'Últimas unidades' : 'Disponible') + '</div></div></div>' +
       '<p class="muted" style="font-size:12.5px;margin:10px 0 0">' + (ruta.length ? 'Categoría: <strong>' + esc(ruta.join(' › ')) + '</strong>' : 'Elige la categoría') + '</p>' +
       (ruta.length && !primeros.has(ruta[0].toLowerCase()) ? '<div class="aviso" style="margin:8px 0 0;font-size:12.5px">' + ICO.alerta + '<div>“' + esc(ruta[0]) + '” no existe todavía en la tienda: el producto saldrá en <b>Otros Productos</b>. Mejor elige una categoría de la lista.</div></div>' : '') +
       (!d.activo ? '<p class="pill" style="margin-top:8px">Borrador: no sale en la web</p>' : '');
@@ -2715,26 +2743,26 @@ function abrirProducto(modelo, copiar){
   setTimeout(() => (nuevo ? f.elements.modelo : f.elements.descripcion).focus(), 80);
 
   if ($('pf-borrar')) $('pf-borrar').onclick = async () => {
-    const vuelve = productos.some(p => p.modelo === base.modelo && p._manual);
-    if (!await confirmar({ titulo: (vuelve ? '¿Quitar tu versión de ' : '¿Eliminar ') + base.modelo + '?', peligro: true, boton: vuelve ? 'Quitar mi versión' : 'Eliminar',
-      texto: vuelve ? 'La tienda vuelve a mostrar la versión de productos_manuales.json.' : 'Deja de verse en la tienda al instante. Las fotos subidas quedan guardadas por si lo vuelves a crear.' })) return;
+    const vuelve = esDist || productos.some(p => p.modelo === base.modelo && p._manual);
+    if (!await confirmar({ titulo: (esDist ? '¿Quitar tu corrección de ' : vuelve ? '¿Quitar tu versión de ' : '¿Eliminar ') + base.modelo + '?', peligro: true, boton: esDist ? 'Quitar mi corrección' : vuelve ? 'Quitar mi versión' : 'Eliminar',
+      texto: esDist ? 'La tienda vuelve a mostrar el nombre, la descripción, la categoría y las fotos del distribuidor.' : vuelve ? 'La tienda vuelve a mostrar la versión de productos_manuales.json.' : 'Deja de verse en la tienda al instante. Las fotos subidas quedan guardadas por si lo vuelves a crear.' })) return;
     const { error } = await sb.from('productos_web').delete().eq('modelo', base.modelo);
     if (error) return toast('Error: ' + mensajeError(error));
-    await cargarPanelProductos(); cerrarPanel(); toast(base.modelo + (vuelve ? ': se usa otra vez la versión del archivo' : ' eliminado')); if (tab === 'productos') vistaProductos();
+    await cargarPanelProductos(); cerrarPanel(); toast(base.modelo + (esDist ? ': vuelve a los datos del distribuidor' : vuelve ? ': se usa otra vez la versión del archivo' : ' eliminado')); if (tab === 'productos') vistaProductos();
   };
   f.onsubmit = async (e) => {
     e.preventDefault();
     const d = leer(), err = $('pf-err'); err.textContent = '';
-    const falta = [!d.modelo && 'modelo', !d.marca && 'marca', !d.categoria_principal && 'categoría', !d.descripcion && 'descripción', (d.precio == null || isNaN(d.precio)) && 'precio'].filter(Boolean);
+    const falta = [!d.modelo && 'modelo', !d.marca && 'marca', !d.categoria_principal && 'categoría', !d.descripcion && !esDist && 'descripción', !esDist && (d.precio == null || isNaN(d.precio)) && 'precio'].filter(Boolean);
     if (falta.length){ err.textContent = 'Falta: ' + falta.join(', ') + '.'; return; }
     if (nuevo && todos.some(y => y.p.modelo.toUpperCase() === d.modelo.toUpperCase())){ err.textContent = 'Ya existe un producto con el modelo ' + d.modelo + ' en la web. Búscalo en el directorio y usa Editar, o cambia el código.'; return; }
-    if (!fotos.length && !await confirmar({ titulo: '¿Publicar sin foto?', boton: 'Publicar igual', texto: 'Los productos con foto se ven mejor y venden más. Puedes agregarla después con Editar.' })) return;
+    if (!fotos.length && !esDist && !await confirmar({ titulo: '¿Publicar sin foto?', boton: 'Publicar igual', texto: 'Los productos con foto se ven mejor y venden más. Puedes agregarla después con Editar.' })) return;
     $('pf-guardar').disabled = true;
     const { error } = await sb.from('productos_web').upsert(d, { onConflict: 'modelo' });
     $('pf-guardar').disabled = false;
     if (error){ err.textContent = mensajeError(error); return; }
     await cargarPanelProductos(); cerrarPanel();
-    toast(d.activo ? (nuevo ? d.modelo + ' ya está en la tienda' : 'Cambios publicados') : 'Guardado como borrador');
+    toast(esDist ? 'Corrección publicada: el precio y la existencia siguen al distribuidor' : d.activo ? (nuevo ? d.modelo + ' ya está en la tienda' : 'Cambios publicados') : 'Guardado como borrador');
     if (tab === 'productos') vistaProductos();
   };
 }
