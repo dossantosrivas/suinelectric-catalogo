@@ -1,0 +1,734 @@
+[
+ {
+  "familia": "easypact-ezc100-3p",
+  "modelo": "EZC100H3015"
+ },
+ {
+  "familia": "easypact-ezc100-3p",
+  "modelo": "EZC100H3050"
+ },
+ {
+  "familia": "easypact-ezc250-3p",
+  "modelo": "EZC250H3100"
+ },
+ {
+  "familia": "easypact-ezc250-3p",
+  "modelo": "EZC250H3175"
+ },
+ {
+  "familia": "easypact-ezc400-630-3p",
+  "modelo": "EZC400H3320N"
+ },
+ {
+  "familia": "easypact-ezc400-630-3p",
+  "modelo": "EZC250N3160"
+ },
+ {
+  "familia": "easypact-ezc100-2p",
+  "modelo": "EZC100H2015"
+ },
+ {
+  "familia": "easypact-ezc100-2p",
+  "modelo": "EZC100H2050"
+ },
+ {
+  "familia": "easypact-ezc100-1p",
+  "modelo": "EZC100H1015"
+ },
+ {
+  "familia": "easypact-ezc100-1p",
+  "modelo": "EZC100H1050"
+ },
+ {
+  "familia": "easypact-cvs",
+  "modelo": "LV510330"
+ },
+ {
+  "familia": "easypact-cvs",
+  "modelo": "LV516332"
+ },
+ {
+  "familia": "sin-foto:EZB250MLUG",
+  "modelo": "EZB250MLUG"
+ },
+ {
+  "familia": "sin-foto:EZALUG0502",
+  "modelo": "EZALUG0502"
+ },
+ {
+  "familia": "sin-foto:EZALUG0503",
+  "modelo": "EZALUG0503"
+ },
+ {
+  "familia": "sin-foto:EZALUG1002",
+  "modelo": "EZALUG1002"
+ },
+ {
+  "familia": "sin-foto:EZALUG1003",
+  "modelo": "EZALUG1003"
+ },
+ {
+  "familia": "sin-foto:EZELUG2503",
+  "modelo": "EZELUG2503"
+ },
+ {
+  "familia": "sin-foto:LV432479",
+  "modelo": "LV432479"
+ },
+ {
+  "familia": "sin-foto:LV432481",
+  "modelo": "LV432481"
+ },
+ {
+  "familia": "sin-foto:EZAROTE",
+  "modelo": "EZAROTE"
+ },
+ {
+  "familia": "sin-foto:EZEROTE",
+  "modelo": "EZEROTE"
+ },
+ {
+  "familia": "easypact-ezb-bus-barras",
+  "modelo": "EZB250W04"
+ },
+ {
+  "familia": "easypact-ezb-bus-barras",
+  "modelo": "EZB400W08"
+ },
+ {
+  "familia": "easypact-ezbns-extension",
+  "modelo": "EZBNS2"
+ },
+ {
+  "familia": "easypact-ezbns-extension",
+  "modelo": "EZBNS4"
+ },
+ {
+  "familia": "compact-nsx-f-tmd",
+  "modelo": "LV429637"
+ },
+ {
+  "familia": "compact-nsx-f-tmd",
+  "modelo": "LV429631"
+ },
+ {
+  "familia": "compact-nsx-n-tmd",
+  "modelo": "LV429847"
+ },
+ {
+  "familia": "compact-nsx-n-tmd",
+  "modelo": "LV429841"
+ },
+ {
+  "familia": "compact-nsx-h-tmd",
+  "modelo": "LV429677"
+ },
+ {
+  "familia": "compact-nsx-h-tmd",
+  "modelo": "LV429671"
+ },
+ {
+  "familia": "compact-nsx-f-micrologic22",
+  "modelo": "LV429772"
+ },
+ {
+  "familia": "compact-nsx-f-micrologic22",
+  "modelo": "LV429770"
+ },
+ {
+  "familia": "compact-nsx-f-micrologic22m",
+  "modelo": "LV429827"
+ },
+ {
+  "familia": "compact-nsx-f-micrologic22m",
+  "modelo": "LV429825"
+ },
+ {
+  "familia": "compact-nsx-n-micrologic22",
+  "modelo": "LV429797"
+ },
+ {
+  "familia": "compact-nsx-n-micrologic22",
+  "modelo": "LV429795"
+ },
+ {
+  "familia": "compact-nsx-n-micrologic22m",
+  "modelo": "LV429832"
+ },
+ {
+  "familia": "compact-nsx-n-micrologic22m",
+  "modelo": "LV429830"
+ },
+ {
+  "familia": "compact-nsx-h-micrologic22",
+  "modelo": "LV429792"
+ },
+ {
+  "familia": "compact-nsx-h-micrologic22",
+  "modelo": "LV429790"
+ },
+ {
+  "familia": "compact-nsx-h-micrologic22m",
+  "modelo": "LV429837"
+ },
+ {
+  "familia": "compact-nsx-h-micrologic22m",
+  "modelo": "LV429835"
+ },
+ {
+  "familia": "compact-nsx400-630",
+  "modelo": "LV432693"
+ },
+ {
+  "familia": "compact-nsx400-630",
+  "modelo": "LV432895"
+ },
+ {
+  "familia": "sin-foto:LV429242",
+  "modelo": "LV429242"
+ },
+ {
+  "familia": "sin-foto:LV429227",
+  "modelo": "LV429227"
+ },
+ {
+  "familia": "sin-foto:LV429218",
+  "modelo": "LV429218"
+ },
+ {
+  "familia": "sin-foto:LV429259",
+  "modelo": "LV429259"
+ },
+ {
+  "familia": "sin-foto:LV429248",
+  "modelo": "LV429248"
+ },
+ {
+  "familia": "sin-foto:LV429337T",
+  "modelo": "LV429337T"
+ },
+ {
+  "familia": "sin-foto:LV429338T",
+  "modelo": "LV429338T"
+ },
+ {
+  "familia": "sin-foto:LV429343T",
+  "modelo": "LV429343T"
+ },
+ {
+  "familia": "sin-foto:LV432598T",
+  "modelo": "LV432598T"
+ },
+ {
+  "familia": "sin-foto:LV432603T",
+  "modelo": "LV432603T"
+ },
+ {
+  "familia": "sin-foto:LV431540",
+  "modelo": "LV431540"
+ },
+ {
+  "familia": "sin-foto:LV431541",
+  "modelo": "LV431541"
+ },
+ {
+  "familia": "sin-foto:LV432640",
+  "modelo": "LV432640"
+ },
+ {
+  "familia": "sin-foto:LV432641",
+  "modelo": "LV432641"
+ },
+ {
+  "familia": "sin-foto:LV429386",
+  "modelo": "LV429386"
+ },
+ {
+  "familia": "sin-foto:LV429387",
+  "modelo": "LV429387"
+ },
+ {
+  "familia": "sin-foto:29450",
+  "modelo": "29450"
+ },
+ {
+  "familia": "compact-nsx-new-f-tmd",
+  "modelo": "C10F3TM016"
+ },
+ {
+  "familia": "compact-nsx-new-f-tmd",
+  "modelo": "C10F3TM080"
+ },
+ {
+  "familia": "compact-nsx-new-h-tmd",
+  "modelo": "C10H3TM016"
+ },
+ {
+  "familia": "compact-nsx-new-h-tmd",
+  "modelo": "C10H3TM080"
+ },
+ {
+  "familia": "compact-nsx-new-h-micrologic22",
+  "modelo": "C10H32D040"
+ },
+ {
+  "familia": "compact-nsx-new-h-micrologic22",
+  "modelo": "C16H32D160"
+ },
+ {
+  "familia": "compact-nsx-new-h-micrologic22m",
+  "modelo": "C10H32M025"
+ },
+ {
+  "familia": "compact-nsx-new-h-micrologic22m",
+  "modelo": "C10H32M100"
+ },
+ {
+  "familia": "compact-nsx-new-2p",
+  "modelo": "C10F2TM016"
+ },
+ {
+  "familia": "compact-nsx-new-2p",
+  "modelo": "C10F2TM050"
+ },
+ {
+  "familia": "compact-nsx-new-1p",
+  "modelo": "C10F1TM016"
+ },
+ {
+  "familia": "compact-nsx-new-1p",
+  "modelo": "C10F1TM050"
+ },
+ {
+  "familia": "compact-nsx-new-400-630",
+  "modelo": "C40N32D400"
+ },
+ {
+  "familia": "compact-nsx-new-400-630",
+  "modelo": "C40N31M320"
+ },
+ {
+  "familia": "compact-ns-micrologic20e",
+  "modelo": "C080N32EFM"
+ },
+ {
+  "familia": "compact-ns-micrologic20e",
+  "modelo": "C080H32EFM"
+ },
+ {
+  "familia": "compact-ns-micrologic20",
+  "modelo": "C080N320FM"
+ },
+ {
+  "familia": "compact-ns-micrologic20",
+  "modelo": "C080H320FM"
+ },
+ {
+  "familia": "sin-foto:33640",
+  "modelo": "33640"
+ },
+ {
+  "familia": "sin-foto:33628",
+  "modelo": "33628"
+ },
+ {
+  "familia": "sin-foto:33584",
+  "modelo": "33584"
+ },
+ {
+  "familia": "sin-foto:33622",
+  "modelo": "33622"
+ },
+ {
+  "familia": "sin-foto:33878",
+  "modelo": "33878"
+ },
+ {
+  "familia": "sin-foto:33661",
+  "modelo": "33661"
+ },
+ {
+  "familia": "sin-foto:33662",
+  "modelo": "33662"
+ },
+ {
+  "familia": "tesys-d-lc1d09-38",
+  "modelo": "LC1D09BD"
+ },
+ {
+  "familia": "tesys-d-lc1d09-38",
+  "modelo": "LC1D25BD"
+ },
+ {
+  "familia": "tesys-d-lc1d40a-65a",
+  "modelo": "LC1D40ABD"
+ },
+ {
+  "familia": "tesys-d-lc1d40a-65a",
+  "modelo": "LC1D50AF7"
+ },
+ {
+  "familia": "tesys-d-lc1d80-150",
+  "modelo": "LC1D80F7"
+ },
+ {
+  "familia": "tesys-d-lc1d80-150",
+  "modelo": "LC1D115F7"
+ },
+ {
+  "familia": "tesys-d-lc1dk-condensadores",
+  "modelo": "LC1DGK11F7"
+ },
+ {
+  "familia": "tesys-d-lc1dk-condensadores",
+  "modelo": "LC1DTK12F7"
+ },
+ {
+  "familia": "tesys-f-lc1f115-265",
+  "modelo": "LC1F115F7"
+ },
+ {
+  "familia": "tesys-f-lc1f115-265",
+  "modelo": "LC1F185M7"
+ },
+ {
+  "familia": "tesys-f-lc1f330-780",
+  "modelo": "LC1F330F7"
+ },
+ {
+  "familia": "tesys-f-lc1f330-780",
+  "modelo": "LC1F500M7"
+ },
+ {
+  "familia": "tesys-d-cad",
+  "modelo": "CAD32B7"
+ },
+ {
+  "familia": "tesys-d-cad",
+  "modelo": "CAD50F7"
+ },
+ {
+  "familia": "tesys-k-ca2kn",
+  "modelo": "CA2KN22B7"
+ },
+ {
+  "familia": "tesys-k-ca2kn",
+  "modelo": "CA2KN31M7"
+ },
+ {
+  "familia": "tesys-ladn",
+  "modelo": "LADN10"
+ },
+ {
+  "familia": "tesys-ladn",
+  "modelo": "LADN40"
+ },
+ {
+  "familia": "tesys-lad8n",
+  "modelo": "LAD8N11"
+ },
+ {
+  "familia": "tesys-lad8n",
+  "modelo": "LAD8N20"
+ },
+ {
+  "familia": "tesys-ladt-ladr",
+  "modelo": "LADR0"
+ },
+ {
+  "familia": "tesys-ladt-ladr",
+  "modelo": "LADT0"
+ },
+ {
+  "familia": "rele-rm17",
+  "modelo": "RM17TA00"
+ },
+ {
+  "familia": "rele-rm17",
+  "modelo": "RM17TG00"
+ },
+ {
+  "familia": "rele-re8",
+  "modelo": "RE8RA21FUTQ"
+ },
+ {
+  "familia": "rele-re8",
+  "modelo": "RE8TA31BUTQ"
+ },
+ {
+  "familia": "tesys-gv2me",
+  "modelo": "GV2ME03"
+ },
+ {
+  "familia": "tesys-gv2me",
+  "modelo": "GV2ME10"
+ },
+ {
+  "familia": "tesys-gv2p",
+  "modelo": "GV2P05"
+ },
+ {
+  "familia": "tesys-gv2p",
+  "modelo": "GV2P14"
+ },
+ {
+  "familia": "tesys-gv3p",
+  "modelo": "GV3P25"
+ },
+ {
+  "familia": "tesys-gv3p",
+  "modelo": "GV3P40"
+ },
+ {
+  "familia": "tesys-gva-auxiliar",
+  "modelo": "GVAE1"
+ },
+ {
+  "familia": "tesys-gva-auxiliar",
+  "modelo": "GVAN20"
+ },
+ {
+  "familia": "tesys-lrd33-lrd4",
+  "modelo": "LRD01"
+ },
+ {
+  "familia": "tesys-lrd33-lrd4",
+  "modelo": "LRD313"
+ },
+ {
+  "familia": "sin-foto:LAD7B106",
+  "modelo": "LAD7B106"
+ },
+ {
+  "familia": "tesys-lad96560",
+  "modelo": "LAD96560"
+ },
+ {
+  "familia": "sin-foto:LA7D3064",
+  "modelo": "LA7D3064"
+ },
+ {
+  "familia": "harmony-xb4-pulsador",
+  "modelo": "XB4BA21"
+ },
+ {
+  "familia": "harmony-xb4-pulsador",
+  "modelo": "XB4BP21"
+ },
+ {
+  "familia": "sin-foto:XB4BW3365",
+  "modelo": "XB4BW3365"
+ },
+ {
+  "familia": "sin-foto:XB4BW3465",
+  "modelo": "XB4BW3465"
+ },
+ {
+  "familia": "sin-foto:XB4BW3565",
+  "modelo": "XB4BW3565"
+ },
+ {
+  "familia": "harmony-xb4-pulsador-doble",
+  "modelo": "XB4BL73415"
+ },
+ {
+  "familia": "harmony-xb4-emergencia",
+  "modelo": "XB4BT842"
+ },
+ {
+  "familia": "harmony-xb4-emergencia",
+  "modelo": "XB4BS8442"
+ },
+ {
+  "familia": "harmony-xb4-selector",
+  "modelo": "XB4BD21"
+ },
+ {
+  "familia": "harmony-xb4-selector",
+  "modelo": "XB4BJ21"
+ },
+ {
+  "familia": "harmony-xb4-piloto",
+  "modelo": "XB4BV63"
+ },
+ {
+  "familia": "harmony-xb4-piloto",
+  "modelo": "XB4BV64"
+ },
+ {
+  "familia": "sin-foto:ZB4BZ009",
+  "modelo": "ZB4BZ009"
+ },
+ {
+  "familia": "sin-foto:ZBE101",
+  "modelo": "ZBE101"
+ },
+ {
+  "familia": "sin-foto:ZBE102",
+  "modelo": "ZBE102"
+ },
+ {
+  "familia": "sin-foto:ZBP0A",
+  "modelo": "ZBP0A"
+ },
+ {
+  "familia": "harmony-zbz1605",
+  "modelo": "ZBZ1605"
+ },
+ {
+  "familia": "sin-foto:ZBY9330T",
+  "modelo": "ZBY9330T"
+ },
+ {
+  "familia": "sin-foto:DL1CE024",
+  "modelo": "DL1CE024"
+ },
+ {
+  "familia": "sin-foto:DL1CE130",
+  "modelo": "DL1CE130"
+ },
+ {
+  "familia": "sin-foto:DL1CF220",
+  "modelo": "DL1CF220"
+ },
+ {
+  "familia": "9001k-pulsador",
+  "modelo": "9001KR1BH13"
+ },
+ {
+  "familia": "9001k-pulsador",
+  "modelo": "9001KR1GH13"
+ },
+ {
+  "familia": "9001k-emergencia",
+  "modelo": "9001KR24RH13"
+ },
+ {
+  "familia": "9001k-emergencia",
+  "modelo": "9001KR9RH13"
+ },
+ {
+  "familia": "9001k-selector",
+  "modelo": "9001KS11BH13"
+ },
+ {
+  "familia": "9001k-selector",
+  "modelo": "9001KS43BH13"
+ },
+ {
+  "familia": "9001k-piloto",
+  "modelo": "9001KP38G9"
+ },
+ {
+  "familia": "9001k-piloto",
+  "modelo": "9001KP38R9"
+ },
+ {
+  "familia": "sin-foto:9001KA1",
+  "modelo": "9001KA1"
+ },
+ {
+  "familia": "sin-foto:9001KA2",
+  "modelo": "9001KA2"
+ },
+ {
+  "familia": "sin-foto:9001KA3",
+  "modelo": "9001KA3"
+ },
+ {
+  "familia": "harmony-xvr-baliza",
+  "modelo": "XVR13B04L"
+ },
+ {
+  "familia": "harmony-xvr-baliza",
+  "modelo": "XVR13G05L"
+ },
+ {
+  "familia": "harmony-xvs-sirena",
+  "modelo": "XVS10BMW"
+ },
+ {
+  "familia": "harmony-xvs-sirena",
+  "modelo": "XVS10GMW"
+ },
+ {
+  "familia": "altivar-12-f1",
+  "modelo": "ATV12H018F1"
+ },
+ {
+  "familia": "altivar-12-f1",
+  "modelo": "ATV12H037F1"
+ },
+ {
+  "familia": "altivar-12-m2",
+  "modelo": "ATV12H018M2"
+ },
+ {
+  "familia": "altivar-12-m2",
+  "modelo": "ATV12H075M2"
+ },
+ {
+  "familia": "altivar-12-m3",
+  "modelo": "ATV12H018M3"
+ },
+ {
+  "familia": "altivar-12-m3",
+  "modelo": "ATV12HU15M3"
+ },
+ {
+  "familia": "altivar-212",
+  "modelo": "ATV212H075N4"
+ },
+ {
+  "familia": "altivar-212",
+  "modelo": "ATV212HD15N4"
+ },
+ {
+  "familia": "altivar-320-m2c",
+  "modelo": "ATV320U02M2C"
+ },
+ {
+  "familia": "altivar-320-m2c",
+  "modelo": "ATV320U07M2C"
+ },
+ {
+  "familia": "altivar-320-m3c",
+  "modelo": "ATV320U02M3C"
+ },
+ {
+  "familia": "altivar-320-m3c",
+  "modelo": "ATV320U22M3C"
+ },
+ {
+  "familia": "altivar-320-n4c",
+  "modelo": "ATV320U04N4C"
+ },
+ {
+  "familia": "altivar-320-n4c",
+  "modelo": "ATV320U30N4C"
+ },
+ {
+  "familia": "altivar-930",
+  "modelo": "ATV930D11N4"
+ },
+ {
+  "familia": "altivar-930",
+  "modelo": "ATV930D37N4"
+ },
+ {
+  "familia": "altistart-22",
+  "modelo": "ATS22D17S6"
+ },
+ {
+  "familia": "altistart-22",
+  "modelo": "ATS22C14S6"
+ },
+ {
+  "familia": "altistart-ats480",
+  "modelo": "ATS480D17Y"
+ },
+ {
+  "familia": "altistart-ats480",
+  "modelo": "ATS480C17Y"
+ }
+]

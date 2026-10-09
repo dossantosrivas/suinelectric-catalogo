@@ -1,0 +1,28 @@
+name: Fotos oficiales Schneider
+
+on:
+  push:
+    branches: [fotos-schneider]
+    paths: ["scripts/fotos-schneider*.js", "scripts/fotos-schneider-lista.json", ".github/workflows/fotos-schneider.yml"]
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  fotos:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - name: Descargar fotos oficiales
+        run: node scripts/fotos-schneider.js
+      - name: Guardar en la rama fotos-schneider
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add imagenes/schneider/oficial scripts/fotos-schneider-resultado.json
+          git commit -m "Fotos oficiales Schneider descargadas" || exit 0
+          git push origin HEAD:fotos-schneider
