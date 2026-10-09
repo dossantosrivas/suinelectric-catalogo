@@ -896,18 +896,19 @@
     border:1px solid var(--linea-suave); border-radius:8px; }
   #contenido.vista-ficha .thumb.sin-imagen{ font-size:11px; text-align:center; }
   #contenido.vista-ficha .card:hover .thumb img{ transform:none; }
-  #contenido.vista-ficha .card-body{ grid-column:2; grid-row:1 / span 3; padding:12px 14px 12px 12px;
-    display:grid; grid-template-columns:minmax(0,1fr) auto; column-gap:10px; align-content:start; }
-  #contenido.vista-ficha .card-body > *{ grid-column:1 / -1; }
+  #contenido.vista-ficha .card-body{ grid-column:2; grid-row:1 / span 3; padding:12px 14px 12px 12px; min-width:0;
+    display:flex; flex-direction:row; flex-wrap:wrap; align-items:center; align-content:flex-start; column-gap:10px; }
+  /* cada parte ocupa su línea; disponibilidad y precio comparten una sola si caben (si no, el precio baja) */
+  #contenido.vista-ficha .card-body > *{ flex:0 0 100%; min-width:0; }
   #contenido.vista-ficha .modelo{ font-size:17px; }
   #contenido.vista-ficha .desc{ font-size:13px; line-height:1.4; -webkit-line-clamp:4; margin:4px 0 6px; }
-  #contenido.vista-ficha .card-body > .estado{ grid-column:1; align-self:center; justify-self:start; font-size:12px; padding:2px 8px 2px 7px; margin:0; }
-  #contenido.vista-ficha .card-body > .price-row{ grid-column:2; margin:0; justify-content:flex-end; text-align:right; }
+  #contenido.vista-ficha .card-body > .estado{ flex:0 0 auto; align-self:center; font-size:12px; padding:2px 8px 2px 7px; margin:4px 0 0; white-space:nowrap; }
+  #contenido.vista-ficha .card-body > .price-row{ flex:0 1 auto; margin:4px 0 0 auto; justify-content:flex-end; text-align:right; }
   #contenido.vista-ficha .precio-box{ align-items:flex-end; }
   #contenido.vista-ficha .precio-linea{ justify-content:flex-end; }
   #contenido.vista-ficha .precio{ font-size:20px; }
   #contenido.vista-ficha .precio-nota{ display:none; }
-  #contenido.vista-ficha .card-body > .estado{ white-space:normal; line-height:1.25; min-width:0; max-width:100%; }
+  #contenido.vista-ficha .adm-precios{ text-align:left; }
   #contenido.vista-ficha .precio-registro{ margin-top:4px; padding:3px 7px; align-items:flex-end; text-align:right; }
   #contenido.vista-ficha .precio-registro .pr-monto{ font-size:14px; }
   #contenido.vista-ficha .card-body > .actions{ display:flex; flex-wrap:nowrap; gap:6px; margin-top:8px; }
