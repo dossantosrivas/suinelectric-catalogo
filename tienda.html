@@ -285,7 +285,7 @@
   }
   .thumb{
     height:180px; background:#fff; display:flex; align-items:center; justify-content:center;
-    padding:38px 18px 12px; cursor:zoom-in; position:relative; overflow:hidden;
+    padding:38px 18px 12px; cursor:pointer; position:relative; overflow:hidden;
     border-bottom:1px solid var(--linea-suave);
   }
   .thumb img{ max-width:100%; max-height:100%; object-fit:contain; transition:transform .25s ease; }
@@ -625,6 +625,9 @@
     display:flex; align-items:center; justify-content:center; padding:20px;
   }
   #modal-detalle .det-imagen img{ max-width:100%; max-height:100%; object-fit:contain; }
+  #modal-detalle .det-imagen.con-zoom{ cursor:zoom-in; position:relative; }
+  #modal-detalle .det-imagen .det-zoom-aviso{ position:absolute; right:10px; bottom:10px; background:rgba(9,24,34,0.72); color:#fff; font-size:12px; font-weight:600; padding:4px 9px; border-radius:999px; pointer-events:none; }
+  #modal-imagen{ z-index:95; } /* el zoom se abre encima de la ficha */
   .det-galeria{ display:flex; flex-wrap:wrap; gap:8px; margin-top:10px; }
   .det-mini{ width:60px; height:60px; padding:4px; background:#fff; border:1px solid var(--linea-suave); border-radius:var(--radio); cursor:pointer; display:flex; align-items:center; justify-content:center; }
   .det-mini img{ max-width:100%; max-height:100%; object-fit:contain; }
@@ -2175,7 +2178,7 @@ function renderNodo(nodo, rutaPadre, nivel, out){
     const clave = claveDe(ruta);
     const tieneHijos = Object.keys(hijo.hijos).length > 0;
     const abierto = expandidos.has(clave);
-    const activa = claveDe(seleccion) === clave ? 'activa' : '';
+    const activa = renderSidebar._claveActiva === clave ? 'activa' : '';
     const flecha = tieneHijos ? (abierto ? '▼' : '▶') : '';
     const claseNivel = nivel === 0 ? 'cat-marca' : 'cat-sub';
     const pad = 18 + nivel * 16;
@@ -2189,11 +2192,42 @@ function renderNodo(nodo, rutaPadre, nivel, out){
   }
 }
 
+// El menú lateral siempre muestra dónde está el cliente: cuando cambia la
+// categoría (por el menú, el mega menú, las tarjetas, las migas, el buscador o
+// el botón atrás) se abre solo su rama y se cierran las demás.
+let claveSincronizada = null;
+function sincronizarArbol(){
+  const k = (vista === 'catalogo') ? claveDe(seleccion) : '';
+  if (k === claveSincronizada) return;
+  claveSincronizada = k;
+  expandidos = new Set();
+  for (let i = 1; i <= seleccion.length && vista === 'catalogo'; i++) expandidos.add(seleccion.slice(0, i).join('|||'));
+}
+// Deja visible (dentro del menú) la categoría marcada.
+function mostrarActivaEnMenu(cont){
+  const el = cont.querySelector('.cat-item.activa[data-clave]:not([data-clave=""])');
+  if (!el) return;
+  let sc = el.parentElement;
+  while (sc && sc !== document.body){
+    const ov = getComputedStyle(sc).overflowY;
+    if ((ov === 'auto' || ov === 'scroll') && sc.scrollHeight > sc.clientHeight) break;
+    sc = sc.parentElement;
+  }
+  if (!sc || sc === document.body) return;
+  const a = el.getBoundingClientRect(), b = sc.getBoundingClientRect();
+  if (a.top < b.top + 8) sc.scrollTop += a.top - b.top - 40;
+  else if (a.bottom > b.bottom - 8) sc.scrollTop += a.bottom - b.bottom + 40;
+}
 function renderSidebar(){
   const cont = document.getElementById('cat-tree');
   const arbol = construirArbol();
+  sincronizarArbol();
+  // Con texto en el buscador se busca en todo el catálogo: no se marca ninguna categoría.
+  const hayBusqueda = document.getElementById('buscador').value.trim() !== '';
+  const marcar = vista === 'catalogo' && !hayBusqueda;
+  renderSidebar._claveActiva = marcar ? claveDe(seleccion) : null;
 
-  const activaTodas = (vista === 'catalogo' && seleccion.length === 0) ? 'activa' : '';
+  const activaTodas = (marcar && seleccion.length === 0 && !filtroMarca) ? 'activa' : '';
   const out = [];
   out.push(
     '<a class="cat-item cat-inicio ' + (vista === 'inicio' ? 'activa' : '') + '" href="#/" data-vista="inicio">' +
@@ -2212,6 +2246,7 @@ function renderSidebar(){
   );
   renderNodo(arbol, [], 0, out);
   cont.innerHTML = out.join('');
+  mostrarActivaEnMenu(cont);
 
   cont.querySelectorAll('.cat-item').forEach(el => {
     el.addEventListener('click', (e) => {
@@ -2236,11 +2271,15 @@ function renderSidebar(){
         cerrarSidebar(); // "Todas las categorías" es una elección final
       } else {
         const ruta = clave.split('|||');
-        if (expandidos.has(clave)) expandidos.delete(clave);
-        else expandidos.add(clave);
-        for (let i = 1; i < ruta.length; i++) expandidos.add(ruta.slice(0, i).join('|||'));
-        seleccion = ruta;
+        const yaEstaba = claveDe(seleccion) === clave && claveSincronizada === clave &&
+                         document.getElementById('buscador').value.trim() === '';
+        if (yaEstaba){
+          // Clic en la categoría donde ya estás: solo abre/cierra sus subcategorías.
+          if (expandidos.has(clave)) expandidos.delete(clave); else expandidos.add(clave);
+        }
+        seleccion = ruta; // al ser una categoría nueva, sincronizarArbol abre su rama y cierra las demás
         document.getElementById('buscador').value = '';
+        document.getElementById('sugerencias').style.display = 'none';
         // Solo cerramos si es una categoría "hoja" (sin subcategorías) —
         // así el panel se queda abierto mientras se exploran varias ramas.
         if (!tieneHijos) cerrarSidebar();
@@ -2776,10 +2815,9 @@ function vincularEventos(){}
     if (!card) return;
     const thumb = e.target.closest('.thumb');
     if (thumb){
-      const src = thumb.getAttribute('data-img');
-      if (!src) return;
-      document.getElementById('modal-imagen-img').src = src;
-      document.getElementById('modal-imagen').classList.add('abierto');
+      // La foto de la tarjeta abre la ficha del producto (el zoom está dentro de la ficha).
+      const m = card.querySelector('.modelo[data-modelo]');
+      if (m) abrirDetalle(m.getAttribute('data-modelo'));
       return;
     }
     const mod = e.target.closest('.modelo');
@@ -4012,7 +4050,7 @@ function abrirDetalle(modelo){
   cont.innerHTML =
     '<div class="det-layout">' +
       '<div class="det-col-img">' +
-        (p.imagen ? '<div class="det-imagen"><img id="det-img-principal" src="' + p.imagen + '" alt="' + p.modelo + '"></div>'
+        (p.imagen ? '<div class="det-imagen con-zoom" id="det-imagen-zoom" title="Toca para ampliar"><img id="det-img-principal" src="' + p.imagen + '" alt="' + p.modelo + '"><span class="det-zoom-aviso">🔍&#xFE0E; Ampliar</span></div>'
                   : '<div class="det-imagen vacia">Sin imagen</div>') +
         (Array.isArray(p.imagenes) && p.imagenes.length > 1
           ? '<div class="det-galeria">' + p.imagenes.map((src, i) =>
@@ -4064,6 +4102,14 @@ function abrirDetalle(modelo){
     if (principal) principal.src = b.dataset.src;
     cont.querySelectorAll('.det-mini').forEach(x => x.classList.toggle('activa', x === b));
   }));
+  // Zoom: al tocar la foto grande de la ficha se abre ampliada (la que esté elegida en la galería).
+  const zoom = document.getElementById('det-imagen-zoom');
+  if (zoom) zoom.addEventListener('click', () => {
+    const principal = document.getElementById('det-img-principal');
+    if (!principal || !principal.getAttribute('src')) return;
+    document.getElementById('modal-imagen-img').src = principal.getAttribute('src');
+    document.getElementById('modal-imagen').classList.add('abierto');
+  });
   document.getElementById('modal-detalle').classList.add('abierto');
 }
 
@@ -4381,11 +4427,30 @@ document.getElementById('buscador').addEventListener('input', () => {
   clearTimeout(timerBusqueda);
   timerBusqueda = setTimeout(() => {
     const hay = document.getElementById('buscador').value.trim() !== '';
-    if (hay && vista !== 'catalogo'){ vista = 'catalogo'; renderSidebar(); } // al buscar, salimos de inicio/catálogos
+    if (hay && vista !== 'catalogo') vista = 'catalogo'; // al buscar, salimos de inicio/catálogos
+    renderSidebar(); // el menú lateral refleja si hay búsqueda o categoría
     mostrarVista();
   }, 150);
 });
 document.getElementById('buscador').addEventListener('focus', renderSugerencias);
+// Enter: cierra las sugerencias y muestra los resultados; el texto se queda en el buscador.
+document.getElementById('buscador').addEventListener('keydown', (e) => {
+  if (e.key !== 'Enter' || e.isComposing) return;
+  e.preventDefault();
+  const input = e.currentTarget;
+  clearTimeout(timerBusqueda);
+  const sug = document.getElementById('sugerencias');
+  sug.style.display = 'none';
+  if (input.value.trim() === '') return;
+  cerrarMega();
+  vista = 'catalogo';
+  renderSidebar();
+  mostrarVista();
+  clearTimeout(timerRegistroBusqueda);
+  registrarBusqueda();
+  input.blur(); // en el teléfono baja el teclado para ver los resultados
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+});
 document.addEventListener('click', (e) => {
   // Cerrar sugerencias al hacer clic fuera del buscador
   if (!e.target.closest('.buscador-wrap')) document.getElementById('sugerencias').style.display = 'none';
