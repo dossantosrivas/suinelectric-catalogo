@@ -19,7 +19,7 @@
   }
   window.SUIN_RASTREO_MANUAL = true;
   var s = document.createElement('script');
-  s.src = '/rastreo.js?v=3';
+  s.src = '/rastreo.js?v=4';
   s.async = true;
   s.onload = arrancar;
   document.head.appendChild(s);

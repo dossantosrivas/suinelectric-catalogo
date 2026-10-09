@@ -135,7 +135,32 @@
     [/tiktok\./, 'TikTok'], [/(^|\.)(t\.me|telegram\.)/, 'Telegram'], [/mercadoli[bv]re\./, 'MercadoLibre'],
     [/(chatgpt\.com|openai\.com)/, 'ChatGPT'], [/(perplexity\.ai)/, 'Perplexity'], [/(claude\.ai)/, 'Claude'],
   ];
+  /* Links con etiqueta: suinelectric.com/links?de=ig dice que llegó por Instagram
+     (los navegadores de Instagram y WhatsApp casi nunca avisan de dónde vienen).
+     Se lee al cargar y se quita de la dirección, para que si la persona comparte
+     el link no se lleve la etiqueta. Lista de etiquetas: panel → Enlaces. */
+  var ETIQUETAS = {
+    ig: 'Instagram', instagram: 'Instagram', fb: 'Facebook', facebook: 'Facebook',
+    wa: 'WhatsApp', whatsapp: 'WhatsApp', estado: 'Estado de WhatsApp', ml: 'MercadoLibre',
+    qr: 'Código QR', maps: 'Google Maps', gmaps: 'Google Maps', tg: 'Telegram', tt: 'TikTok',
+    yt: 'YouTube', correo: 'Correo', firma: 'Firma de correo', tarjeta: 'Tarjeta de presentación',
+    volante: 'Volante impreso', factura: 'Factura / nota de entrega', oferta: 'Oferta enviada'
+  };
+  var ETIQUETA = (function(){
+    try {
+      var u = new URL(location.href), t = null;
+      ['de', 'ref', 'src'].forEach(function(k){
+        var v = u.searchParams.get(k);
+        if (v !== null){ if (!t && v.trim()) t = v.trim(); u.searchParams.delete(k); }
+      });
+      if (!t) return null;
+      if (u.href !== location.href && history.replaceState) history.replaceState(history.state, '', u.href);
+      var nom = ETIQUETAS[t.toLowerCase()] || t.replace(/[-_]+/g, ' ');
+      return ('Link: ' + nom).slice(0, 120);
+    } catch (e) { return null; }
+  })();
   function referencia(){
+    if (ETIQUETA) return ETIQUETA;
     var q = {};
     try { new URLSearchParams(location.search).forEach(function(v, k){ q[k.toLowerCase()] = v; }); } catch (e) {}
     if (q.gclid || q.gbraid || q.wbraid) return 'Google Ads';

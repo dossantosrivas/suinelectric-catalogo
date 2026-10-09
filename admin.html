@@ -1928,6 +1928,43 @@ function plegGuardar(grupo){
   const ab = [...document.querySelectorAll('[data-pleg-grupo="' + grupo + '"].abierta')].map(x => x.dataset.pleg);
   try { localStorage.setItem('suin_pleg_' + grupo, JSON.stringify(ab)); } catch (e) {}
 }
+/* Links con etiqueta (rastreo.js lee ?de= y lo anota como "Link: …" en ¿De dónde llegan?) */
+const LINKS_ETIQ = [
+  ['ig', 'Instagram', 'Bio y mensajes de Instagram'],
+  ['fb', 'Facebook', 'Página y publicaciones de Facebook'],
+  ['wa', 'WhatsApp', 'Perfil de WhatsApp Business y mensajes'],
+  ['estado', 'Estado de WhatsApp', 'Lo que publiques en estados'],
+  ['ml', 'MercadoLibre', 'Respuestas y descripción de publicaciones'],
+  ['maps', 'Google Maps', 'Sitio web del perfil de Google'],
+  ['qr', 'Código QR', 'QR impreso (local, productos, camioneta)'],
+  ['tarjeta', 'Tarjeta de presentación', 'Tarjetas impresas'],
+  ['firma', 'Firma de correo', 'Firma de ventas@suinelectric.com'],
+  ['oferta', 'Oferta enviada', 'PDF de ofertas y notas de entrega'],
+];
+function linkEtiq(destino, etiq){ return 'https://suinelectric.com/' + destino + '?de=' + encodeURIComponent(etiq); }
+function linksEtiquetados(){
+  const fila = (etiq, nom, donde) => {
+    const url = linkEtiq('links', etiq);
+    return '<li style="display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid var(--borde, rgba(127,127,127,.2))">' +
+      '<span style="flex:1;min-width:0"><strong>' + esc(nom) + '</strong><small class="muted" style="display:block">' + esc(donde) + '</small>' +
+      '<span class="mono" style="display:block;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(url.replace('https://', '')) + '</span></span>' +
+      '<button type="button" class="btn" onclick="copiarLinkEtiq(this)" data-url="' + esc(url) + '">Copiar</button></li>';
+  };
+  return '<p class="muted" style="margin:0 0 8px;font-size:13px">Pon en cada sitio su propio link. Cuando alguien entre, en <strong>¿De dónde llegan?</strong> aparecerá como <em>Link: Instagram</em>, <em>Link: Código QR</em>, etc. La etiqueta se borra de la dirección al entrar, así que si la persona lo comparte no se mezcla. También sirve para la tienda: cambia <span class="mono">/links</span> por <span class="mono">/tienda</span>.</p>' +
+    '<ul style="list-style:none;margin:0;padding:0">' + LINKS_ETIQ.map(x => fila(x[0], x[1], x[2])).join('') + '</ul>' +
+    '<div style="display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:12px">' +
+      '<input id="etiq-propia" type="text" placeholder="Otra etiqueta (ej. feria-2026)" style="flex:1;min-width:160px" oninput="this.value=this.value.replace(/[^a-zA-Z0-9_-]/g,\'\')">' +
+      '<select id="etiq-destino"><option value="links">a /links</option><option value="tienda">a /tienda</option></select>' +
+      '<button type="button" class="btn" onclick="copiarLinkPropio(this)">Copiar link</button>' +
+    '</div>';
+}
+async function copiarTexto(t, ok){ try { await navigator.clipboard.writeText(t); toast(ok); } catch (e) { prompt('Copia este link:', t); } }
+function copiarLinkEtiq(b){ copiarTexto(b.dataset.url, 'Link copiado'); }
+function copiarLinkPropio(){
+  const e = (document.getElementById('etiq-propia').value || '').trim().toLowerCase();
+  if (!e){ toast('Escribe una etiqueta'); return; }
+  copiarTexto(linkEtiq(document.getElementById('etiq-destino').value, e), 'Link copiado');
+}
 function plegable(grupo, id, icono, titulo, resumen, contenido){
   const ab = plegAbiertas(grupo).includes(id);
   return '<section class="caja plegable' + (ab ? ' abierta' : '') + '" data-pleg-grupo="' + grupo + '" data-pleg="' + id + '">' +
@@ -2376,7 +2413,8 @@ async function vistaEnlaces(){
         ranking(data.botones, (x, i) => '<li><span class="pos">' + (i + 1) + '</span><span class="nom"><strong>' + esc(x.texto) + '</strong><small>' + x.personas + ' persona' + (x.personas === 1 ? '' : 's') + ' · último ' + haceCuanto(x.ultima) + '</small>' + barra(x.clics, maxBt) + '</span><span class="num">' + x.clics + '<small>' + pct(x.clics, t.clics) + '</small></span></li>', 'Todavía nadie ha tocado un botón en este período.', 20)) +
       plegable('lnk', 'origen', ICO.globo, '¿De dónde llegan?', (data.origenes || [])[0] ? esc(origenDe(data.origenes[0].referencia)) + ' · ' + pct(data.origenes[0].visitas, t.visitas) + ' de las visitas' : 'Sin datos todavía',
         ranking(data.origenes, (x, i) => '<li><span class="pos">' + (i + 1) + '</span><span class="nom"><strong>' + esc(origenDe(x.referencia)) + '</strong><small>' + (x.referencia ? '' : 'Enlace en la bio, un QR, WhatsApp o escribieron la dirección · ') + pct(x.con_clic, x.visitas) + ' tocó algún botón</small>' + barra(x.visitas, maxO) + '</span><span class="num">' + x.visitas + '<small>' + pct(x.visitas, t.visitas) + '</small></span></li>', 'Sin datos todavía.') +
-        '<p class="muted" style="margin:12px 0 0;font-size:12.5px">Para saber exactamente de dónde viene cada visita, usa enlaces con etiqueta, por ejemplo <span class="mono">suinelectric.com/links?utm_source=instagram</span> en la bio de Instagram o <span class="mono">?utm_source=qr</span> en un QR impreso.</p>') +
+        '<p class="muted" style="margin:12px 0 0;font-size:12.5px">Instagram y WhatsApp casi nunca dicen de dónde viene la visita. Para saberlo, usa los links de <strong>Links para saber de dónde llegan</strong> (abajo).</p>') +
+      plegable('lnk', 'etiquetas', ICO.globo, 'Links para saber de dónde llegan', 'Un link distinto para cada lugar donde lo publiques', linksEtiquetados()) +
       plegable('lnk', 'dia', ICO.grafica, 'Visitas y clics por día', n(t.visitas) + ' visitas · ' + n(t.clics) + ' clics',
         '<div class="leyenda" style="margin-bottom:6px"><span><i style="background:color-mix(in srgb, var(--azul) 28%, var(--superficie))"></i>Visitas</span><span><i style="background:var(--azul)"></i>Clics en botones</span></div>' + grafico) +
       plegable('lnk', 'desde', ICO.globo, '¿Desde dónde?', (data.paises || [])[0] ? bandera(data.paises[0].pais) + esc(nomPais(data.paises[0].pais)) + ' · ' + pct(data.paises[0].visitas, t.visitas) + ' de las visitas' : 'Sin datos todavía',
