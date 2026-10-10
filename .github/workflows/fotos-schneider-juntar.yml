@@ -1,0 +1,33 @@
+name: Fotos Schneider - juntar resultados
+
+on:
+  push:
+    branches: [fotos-schneider]
+    paths: ["scripts/fotos-schneider-corrida.txt"]
+
+permissions:
+  contents: write
+  actions: read
+
+jobs:
+  juntar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - name: Leer número de corrida
+        id: corrida
+        run: echo "id=$(cat scripts/fotos-schneider-corrida.txt | tr -d '[:space:]')" >> "$GITHUB_OUTPUT"
+      - uses: actions/download-artifact@v4
+        with:
+          run-id: ${{ steps.corrida.outputs.id }}
+          github-token: ${{ github.token }}
+          path: salida-fotos
+          merge-multiple: true
+      - name: Guardar en la rama
+        run: |
+          ls salida-fotos | head; ls salida-fotos/fotos | wc -l
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add salida-fotos
+          git commit -m "Fotos Schneider descargadas (corrida ${{ steps.corrida.outputs.id }})" || exit 0
+          git push origin HEAD:fotos-schneider

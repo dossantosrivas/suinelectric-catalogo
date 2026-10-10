@@ -3,7 +3,7 @@ name: Fotos oficiales Schneider
 on:
   push:
     branches: [fotos-schneider]
-    paths: ["scripts/fotos-schneider*", ".github/workflows/fotos-schneider.yml"]
+    paths: ["scripts/fotos-schneider.js", "scripts/fotos-schneider-lista.json", ".github/workflows/fotos-schneider.yml"]
   workflow_dispatch: {}
 
 permissions:
