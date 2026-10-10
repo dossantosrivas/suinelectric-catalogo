@@ -1,0 +1,41 @@
+name: Regenerar tienda (sin scraper)
+
+# Vuelve a armar catalogo-tienda.json, las páginas /p/ y /c/ y el sitemap con
+# los productos que ya están en el repo. Sirve después de cambiar
+# productos_manuales.json (fotos, descripciones…) sin esperar al scraping diario.
+on:
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+concurrency:
+  group: actualizar-catalogo
+  cancel-in-progress: false
+
+jobs:
+  regenerar:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: npm install
+      - name: Generar catálogo y vistas previas
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          for intento in 1 2 3 4 5; do
+            git fetch origin main && git reset --hard origin/main
+            node generar-catalogo-tienda.js
+            node generar-vistas-previas.js
+            git add catalogo-tienda.json imagenes/productos imagenes/familias p c sitemap.xml
+            if git diff --staged --quiet; then echo "Sin cambios."; break; fi
+            git commit -m "Tienda regenerada $(date -u +'%Y-%m-%d %H:%M UTC')"
+            if git push origin HEAD:main; then break; fi
+            sleep 5
+          done
