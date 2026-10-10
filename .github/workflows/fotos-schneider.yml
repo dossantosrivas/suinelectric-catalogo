@@ -3,29 +3,32 @@ name: Fotos oficiales Schneider
 on:
   push:
     branches: [fotos-schneider]
-    paths: ["scripts/fotos-schneider*.js", "scripts/fotos-schneider-lista.json", ".github/workflows/fotos-schneider.yml"]
+    paths: ["scripts/fotos-schneider*", ".github/workflows/fotos-schneider.yml"]
   workflow_dispatch: {}
 
 permissions:
-  contents: write
+  contents: read
 
 jobs:
   fotos:
     runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        parte: [0, 1, 2, 3, 4, 5]
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with:
           node-version: "20"
-      - name: Instalar navegador
-        run: npm install --no-save playwright@1.48.2
+      - name: Instalar dependencias y navegador
+        run: npm install && npm install --no-save playwright@1.48.2
       - name: Descargar fotos oficiales
+        env:
+          PARTES: "6"
+          PARTE: ${{ matrix.parte }}
         run: xvfb-run -a node scripts/fotos-schneider.js
-      - name: Guardar en la rama fotos-schneider
-        run: |
-          git config user.name "github-actions[bot]"
-          git config user.email "github-actions[bot]@users.noreply.github.com"
-          git add imagenes/schneider/oficial scripts/fotos-schneider-resultado.json
-          git commit -m "Fotos oficiales Schneider descargadas" || exit 0
-          git pull --rebase -q origin fotos-schneider || true
-          git push origin HEAD:fotos-schneider
+      - uses: actions/upload-artifact@v4
+        with:
+          name: fotos-${{ matrix.parte }}
+          path: salida/
