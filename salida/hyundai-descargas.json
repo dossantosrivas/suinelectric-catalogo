@@ -1,0 +1,69 @@
+[
+ {
+  "encontrados": [
+   "[MC,MS]_영문 카탈로그_HGC,HGT,HGR(2608).pdf",
+   "[디지털전력계측기]_영문 카탈로그_HGCAM-PQ,S,A,DC (2606).pdf",
+   "[MC,MS]_영문 카탈로그_HGC-B, HGT-B (2602).pdf",
+   "[MCCB,ELCB]_영문 카탈로그_HGM,HGE,HGP(2602).pdf",
+   "[디지털복합계전기]_영문 카탈로그_HGMAP-BCS(2603).pdf",
+   "[ACB]_영문 카탈로그_HGN,HGS.pdf",
+   "[ACB]_영문 카탈로그_DC HGN (2501).pdf",
+   "[MCB,MSD,RCCB,RCBO,MMS,SPD,FUSE,DB]_영문 카탈로그_HGD,HSD,HRC,HRO,HBD,HIC,HMMS,HSP,FH,FB,FL,FS,HRDB (2406).pdf",
+   "[MCB,MSD,RCCB,RCBO,MMS,SPD,FUSE,DB]_영문 카탈로그_HGD,HSD,HRC,HRO,HBD,HIC,HMMS,HSP,FH,FB,FL,FS,HRDB (2406).pdf",
+   "[ACB]_영문 카탈로그_HGL.pdf"
+  ]
+ },
+ {
+  "goDetailSrc": "function goDetail(val, fileName,filePath,fileOrgName ){\n\t\ttry {\n\t\t\t$.ajax({\n\t\t\t\tdataType: \"json\",\n\t\t\t\turl: \"/elect/ajax/boardHitAjax.jsp\",\n\t\t\t\tdata : { code: \"download\", seq : val },\n\t\t\t\tcache: false\n\t\t\t}).done(function(json){\n\t\t\t\tconsole.log(json);\n\t\t\t\tfileDown(fileName,filePath,fileOrgName);\n\t\t\t});\n\t\t} catch(e) {\n\t\t\tconsole.log(e);\n\t\t}\n\t}"
+ },
+ {
+  "id": "1561",
+  "nombre": "[MC,MS]_영문 카탈로그_HGC,HGT,HGR(2608).pdf",
+  "bytes": 15642215
+ },
+ {
+  "id": "8221",
+  "nombre": "[디지털전력계측기]_영문 카탈로그_HGCAM-PQ,S,A,DC (2606).pdf",
+  "bytes": 11228202
+ },
+ {
+  "id": "6861",
+  "nombre": "[MC,MS]_영문 카탈로그_HGC-B, HGT-B (2602).pdf",
+  "bytes": 8949297
+ },
+ {
+  "id": "1494",
+  "nombre": "[MCCB,ELCB]_영문 카탈로그_HGM,HGE,HGP(2602).pdf",
+  "bytes": 47282306
+ },
+ {
+  "id": "8533",
+  "nombre": "[디지털복합계전기]_영문 카탈로그_HGMAP-BCS(2603).pdf",
+  "bytes": 11892154
+ },
+ {
+  "id": "8361",
+  "nombre": "[ACB]_영문 카탈로그_HGN,HGS.pdf",
+  "bytes": 42820634
+ },
+ {
+  "id": "7462",
+  "nombre": "[ACB]_영문 카탈로그_DC HGN (2501).pdf",
+  "bytes": 16137527
+ },
+ {
+  "id": "3224",
+  "nombre": "[MCB,MSD,RCCB,RCBO,MMS,SPD,FUSE,DB]_영문 카탈로그_HGD,HSD,HRC,HRO,HBD,HIC,HMMS,HSP,FH,FB,FL,FS,HRDB (2406).pdf",
+  "bytes": 21257684
+ },
+ {
+  "id": "7102",
+  "nombre": "[MCB,MSD,RCCB,RCBO,MMS,SPD,FUSE,DB]_영문 카탈로그_HGD,HSD,HRC,HRO,HBD,HIC,HMMS,HSP,FH,FB,FL,FS,HRDB (2406).pdf",
+  "bytes": 21257684
+ },
+ {
+  "id": "8121",
+  "nombre": "[ACB]_영문 카탈로그_HGL.pdf",
+  "bytes": 24324348
+ }
+]
