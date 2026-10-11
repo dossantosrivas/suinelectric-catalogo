@@ -1,0 +1,133 @@
+name: Respaldo diario de Supabase
+
+# Copia completa de la base de datos de Supabase (clientes, ventas, ofertas,
+# notas, inventario, cuentas de la tienda, políticas de seguridad, funciones…).
+#
+# IMPORTANTE: este repo es PÚBLICO, así que el respaldo NUNCA se guarda en git.
+# Se cifra con tu clave (RESPALDO_CLAVE) y queda:
+#   · 90 días en GitHub → Actions → "Respaldo diario de Supabase" → la corrida → Artifacts
+#   · los domingos, además, te llega el archivo por Telegram (SuinBot)
+# Cómo restaurar: ver supabase/RESPALDOS.md
+#
+# Secrets necesarios (GitHub → Settings → Secrets and variables → Actions):
+#   SUPABASE_DB_URL   cadena de conexión "Session pooler" de Supabase (con la contraseña)
+#   RESPALDO_CLAVE    una frase larga que inventes; sin ella el respaldo no se puede abrir
+#   TELEGRAM_TOKEN / TELEGRAM_CHAT_ID  (ya existen, los usa el catálogo)
+
+on:
+  schedule:
+    - cron: "52 7 * * *"   # 3:52 a.m. hora de Venezuela, antes del scraper
+  workflow_dispatch:
+    inputs:
+      enviar_telegram:
+        description: "Enviarme también el respaldo por Telegram"
+        type: boolean
+        default: true
+
+permissions:
+  contents: read
+
+concurrency:
+  group: respaldo-supabase
+  cancel-in-progress: false
+
+jobs:
+  respaldo:
+    runs-on: ubuntu-latest
+    timeout-minutes: 30
+    steps:
+      - name: Revisar que estén los secrets
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+          RESPALDO_CLAVE: ${{ secrets.RESPALDO_CLAVE }}
+        run: |
+          falta=""
+          [ -z "$SUPABASE_DB_URL" ] && falta="$falta SUPABASE_DB_URL"
+          [ -z "$RESPALDO_CLAVE" ] && falta="$falta RESPALDO_CLAVE"
+          if [ -n "$falta" ]; then
+            echo "::error::Faltan los secrets:$falta (ver supabase/RESPALDOS.md)"; exit 1
+          fi
+
+      - name: Instalar Supabase CLI
+        uses: supabase/setup-cli@v1
+        with:
+          version: latest
+
+      - name: Exportar roles, estructura y datos
+        env:
+          SUPABASE_DB_URL: ${{ secrets.SUPABASE_DB_URL }}
+        run: |
+          set -euo pipefail
+          FECHA=$(TZ=America/Caracas date +'%Y-%m-%d')
+          echo "FECHA=$FECHA" >> "$GITHUB_ENV"
+          mkdir -p "respaldo-$FECHA"
+          cd "respaldo-$FECHA"
+          supabase db dump --db-url "$SUPABASE_DB_URL" -f roles.sql --role-only
+          supabase db dump --db-url "$SUPABASE_DB_URL" -f esquema.sql
+          supabase db dump --db-url "$SUPABASE_DB_URL" -f datos.sql --use-copy --data-only \
+            -x "storage.buckets_vectors" -x "storage.vector_indexes"
+
+          # Comprobación: que el respaldo no esté vacío.
+          tablas=$(grep -c '^COPY ' datos.sql || true)
+          echo "Tablas con datos en el respaldo: $tablas"
+          if [ "$tablas" -lt 5 ]; then
+            echo "::error::El respaldo de datos salió casi vacío ($tablas tablas)."; exit 1
+          fi
+          grep -q 'CREATE TABLE' esquema.sql || { echo "::error::El esquema salió vacío."; exit 1; }
+          ls -la
+          echo "TABLAS=$tablas" >> "$GITHUB_ENV"
+
+      - name: Comprimir y cifrar
+        env:
+          RESPALDO_CLAVE: ${{ secrets.RESPALDO_CLAVE }}
+        run: |
+          set -euo pipefail
+          tar czf "respaldo-$FECHA.tar.gz" "respaldo-$FECHA"
+          printf '%s' "$RESPALDO_CLAVE" | gpg --batch --yes --pinentry-mode loopback --passphrase-fd 0 \
+            --symmetric --cipher-algo AES256 -o "suinelectric-respaldo-$FECHA.tar.gz.gpg" "respaldo-$FECHA.tar.gz"
+          # Borra las copias sin cifrar antes de subir nada.
+          rm -rf "respaldo-$FECHA" "respaldo-$FECHA.tar.gz"
+          ls -la suinelectric-respaldo-*.gpg
+          echo "TAMANO=$(du -h "suinelectric-respaldo-$FECHA.tar.gz.gpg" | cut -f1)" >> "$GITHUB_ENV"
+
+      - name: Guardar el respaldo cifrado (90 días)
+        uses: actions/upload-artifact@v4
+        with:
+          name: suinelectric-respaldo-${{ env.FECHA }}
+          path: suinelectric-respaldo-${{ env.FECHA }}.tar.gz.gpg
+          retention-days: 90
+          compression-level: 0
+          if-no-files-found: error
+
+      - name: Enviar copia por Telegram (domingos o a mano)
+        if: github.event_name == 'schedule' || inputs.enviar_telegram
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          MANUAL: ${{ inputs.enviar_telegram }}
+        run: |
+          if [ -z "$TELEGRAM_TOKEN" ] || [ -z "$TELEGRAM_CHAT_ID" ]; then
+            echo "Sin secretos de Telegram: no se envía."; exit 0
+          fi
+          # En la corrida automática solo los domingos (hora de Venezuela).
+          if [ "$MANUAL" != "true" ] && [ "$(TZ=America/Caracas date +%u)" != "7" ]; then
+            echo "Hoy no es domingo: no se envía por Telegram."; exit 0
+          fi
+          curl -sS -X POST "https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendDocument" \
+            -F "chat_id=${TELEGRAM_CHAT_ID}" \
+            -F "document=@suinelectric-respaldo-${FECHA}.tar.gz.gpg" \
+            -F "caption=🗄️ Respaldo semanal de Supabase (${FECHA}, ${TABLAS} tablas, ${TAMANO}). Cifrado con tu RESPALDO_CLAVE. Cómo abrirlo: supabase/RESPALDOS.md en el repo." \
+            -o /dev/null -w "Telegram HTTP %{http_code}\n"
+
+      - name: Avisar por Telegram si el respaldo falló
+        if: failure()
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          ENLACE: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [ -z "$TELEGRAM_TOKEN" ] || [ -z "$TELEGRAM_CHAT_ID" ]; then exit 0; fi
+          curl -sS -X POST "https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage" \
+            --data-urlencode "chat_id=${TELEGRAM_CHAT_ID}" \
+            --data-urlencode "text=⚠️ Falló el respaldo diario de Supabase. Los respaldos anteriores siguen guardados. Detalles: ${ENLACE}" \
+            -o /dev/null

@@ -3,7 +3,12 @@ name: Actualizar catálogo diario
 on:
   schedule:
     - cron: "0 9 * * *"
-  workflow_dispatch: {}
+  workflow_dispatch:
+    inputs:
+      forzar:
+        description: "Publicar aunque la verificación falle (solo si sabes que el cambio es real)"
+        type: boolean
+        default: false
 
 permissions:
   contents: write
@@ -29,6 +34,15 @@ jobs:
 
       - name: Correr el scraper (catálogo completo)
         run: node scraper.js
+
+      - name: Verificar el catálogo antes de publicarlo (frena si algo se ve raro)
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          ENLACE: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+          VERIF_FORZAR: ${{ inputs.forzar }}
+          MARCA_AVISO: /tmp/aviso-verificacion-enviado
+        run: node verificar-catalogo.js
 
       - name: Subir existencias reales a Supabase (solo las ven admins y clientes con permiso)
         env:
@@ -111,6 +125,9 @@ jobs:
           TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
           ENLACE: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
         run: |
+          if [ -f /tmp/aviso-verificacion-enviado ]; then
+            echo "La verificación ya avisó con el detalle."; exit 0
+          fi
           if [ -z "$TELEGRAM_TOKEN" ] || [ -z "$TELEGRAM_CHAT_ID" ]; then
             echo "Sin secretos de Telegram: no se envía aviso."; exit 0
           fi
