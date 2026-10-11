@@ -1,0 +1,646 @@
+[
+ {
+  "url": "https://www.hd-hyundaielectric.com/",
+  "fin": "https://www.hd-hyundaielectric.com/elect/ko/index.jsp",
+  "status": 200,
+  "titulo": "HD현대일렉트릭",
+  "imgs": [
+   [
+    "https://www.hd-hyundaielectric.com/assets/img/main/ms5.jpg",
+    1920,
+    1180,
+    "메인슬라이드5"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/assets/img/main/ms2.jpg",
+    1920,
+    1180,
+    "메인슬라이드2"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/assets/img/main/ms3.jpg",
+    1920,
+    1180,
+    "메인슬라이드3"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/assets/img/main/ms4.jpg",
+    1920,
+    1180,
+    "메인슬라이드4"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/assets/img/main/ms5.jpg",
+    1920,
+    1180,
+    "메인슬라이드5"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/assets/img/main/ms-banner.png",
+    221,
+    53,
+    ""
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/assets/img/main/main-cyber-center.png",
+    1170,
+    365,
+    "Cybersecurity Center"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/assets/img/main/sec4-bg.jpg",
+    1920,
+    810,
+    "풍차배경"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/assets/img/common/ft-logo.png?ver=2",
+    262,
+    40,
+    "HD현대일렉트릭 로고"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/assets/img/common/ico_yt.svg",
+    175,
+    150,
+    "유튜브 바로가기"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/assets/img/common/ico_insta.svg",
+    150,
+    150,
+    "인스타그램 바로가기"
+   ]
+  ],
+  "links": [
+   [
+    "https://www.hd-hyundaielectric.com/elect/ko/product/product1.jsp",
+    "사업영역"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/elect/ko/product/product1.jsp",
+    "주요 제품"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/elect/ko/product/product1.jsp",
+    "초고압 변압기"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/elect/ko/product/product2.jsp",
+    "초고압 차단기"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/elect/ko/product/product3.jsp",
+    "고압 전동기"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/elect/ko/product/product4.jsp",
+    "발전기"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/elect/ko/product/product5.jsp",
+    "배전반"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/elect/ko/product/product6.jsp",
+    "배전 변압기"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/elect/ko/product/product7.jsp",
+    "저압 전동기"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/elect/ko/product/product8.jsp",
+    "중저압 차단기"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/elect/ko/product/product1.jsp",
+    "초고압 변압기"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/elect/ko/product/product2.jsp",
+    "초고압 차단기"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/elect/ko/product/product1.jsp",
+    "초고압 변압기"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/elect/ko/product/product2.jsp",
+    "초고압 차단기"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/elect/ko/product/product5.jsp",
+    "배전반"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/elect/ko/product/product5.jsp",
+    "배전반"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/elect/ko/product/product8.jsp",
+    "중저압 차단기"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/elect/ko/product/product6.jsp",
+    "배전 변압기"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/elect/ko/product/product4.jsp",
+    "발전기"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/elect/ko/product/product3.jsp",
+    "고압 전동기"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/elect/ko/product/product2.jsp",
+    "고압 인버터"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/elect/ko/product/product8.jsp",
+    "중저압 차단기"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/elect/ko/product/product3.jsp",
+    "고압 전동기"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/elect/ko/product/product7.jsp",
+    "저압 전동기"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/elect/ko/product/product2.jsp?anchor=section2",
+    "145kV GIS"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/elect/ko/product/product2.jsp",
+    "초고압 차단기"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/elect/ko/product/product2.jsp?anchor=section3",
+    "170kV GIS"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/elect/ko/product/product2.jsp",
+    "초고압 차단기"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/elect/ko/product/product2.jsp?anchor=section4",
+    "245/300kV GIS"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/elect/ko/product/product2.jsp",
+    "초고압 차단기"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/elect/ko/product/product2.jsp?anchor=section5",
+    "362kV GIS"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/elect/ko/product/product2.jsp",
+    "초고압 차단기"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/elect/ko/product/product2.jsp?anchor=section6",
+    "420/550kV GIS"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/elect/ko/product/product2.jsp",
+    "초고압 차단기"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/elect/ko/product/product2.jsp?anchor=section1",
+    "72.5kV GIS"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/elect/ko/product/product2.jsp",
+    "초고압 차단기"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/elect/ko/product/product2.jsp?anchor=section7",
+    "800kV GIS"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/elect/ko/product/product2.jsp",
+    "초고압 차단기"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/elect/ko/product/product5.jsp?anchor=section7",
+    "BUSDUCT(BUSDUCT)"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/elect/ko/product/product5.jsp",
+    "배전반"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/elect/ko/product/product5.jsp?anchor=section8",
+    "BUSDUCT(BUSWAY)"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/elect/ko/product/product5.jsp",
+    "배전반"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/elect/ko/marine/marine1.jsp?anchor=loca13",
+    "Emergency Switchboard"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/elect/ko/marine/marine1.jsp?anchor=loca15",
+    "Group Starter Panel"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/elect/ko/product/product1.jsp?anchor=section3&anchor2=loca37&opt=menu3",
+    "HVDC 용 변압기"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/elect/ko/product/product1.jsp",
+    "특수 변압기"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/elect/ko/greentric/greentric.jsp?anchor=loca15",
+    "IE4 LV MOTOR"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/elect/ko/product/product7.jsp?anchor=section2&anchor2=loca23&opt=menu2",
+    "IEEE841 전동기"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/elect/ko/product/product7.jsp",
+    "저압 전동기(NEMA)"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/elect/ko/marine/marine1.jsp?anchor=loca12",
+    "LV Switchboard"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/elect/ko/marine/marine1.jsp?anchor=loca11",
+    "MV Switchboard"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/elect/ko/product/product1.jsp?anchor=section3&anchor2=loca35&opt=menu3",
+    "SVC용 변압기"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/elect/ko/product/product1.jsp",
+    "특수 변압기"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/elect/ko/marine/marine1.jsp?anchor=loca14",
+    "Thruster Starter"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/elect/ko/product/product7.jsp?anchor=section2&anchor2=loca24&opt=menu2",
+    "UL 방폭형 모터"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/elect/ko/product/product7.jsp",
+    "저압 전동기(NEMA)"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/elect/ko/product/product1.jsp?anchor=section3&anchor2=loca34&opt=menu3",
+    "가스 절연 변압기"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/elect/ko/product/product1.jsp",
+    "특수 변압기"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/elect/ko/product/product7.jsp?anchor=section2&anchor2=loca22&opt=menu2",
+    "고기동토크 전동기"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/elect/ko/product/product7.jsp",
+    "저압 전동기(NEMA)"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/elect/ko/product/product4.jsp?anchor=section1",
+    "고속기"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/elect/ko/product/product4.jsp",
+    "발전기"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/elect/ko/product/product5.jsp?anchor=section3",
+    "고압배전반"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/elect/ko/product/product5.jsp",
+    "배전반"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/elect/ko/product/product5.jsp?anchor=section4",
+    "고압배전반(원자력용)"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/elect/ko/product/product5.jsp",
+    "배전반"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/elect/ko/product/product1.jsp?anchor=section3&anchor2=loca33&opt=menu3",
+    "고효율/저소음 변압기"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/elect/ko/product/product1.jsp",
+    "특수 변압기"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/elect/ko/product/product3.jsp?anchor=section3&anchor2=loca31&opt=menu3",
+    "권선형 전폐형"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/elect/ko/product/product3.jsp",
+    "고압 전동기"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/elect/ko/product/product3.jsp?anchor=section3&anchor2=loca32&opt=menu3",
+    "권선형 반폐형"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/elect/ko/product/product3.jsp",
+    "고압 전동기"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/elect/ko/product/product3.jsp?anchor=section2&anchor2=loca21&opt=menu2",
+    "농형 반폐 핀형"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/elect/ko/product/product3.jsp",
+    "고압 전동기"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/elect/ko/product/product3.jsp?anchor=section2&anchor2=loca22&opt=menu2",
+    "농형 반폐 WPII"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/elect/ko/product/product3.jsp",
+    "고압 전동기"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/elect/ko/product/product3.jsp?anchor=section1",
+    "농형 전폐형"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/elect/ko/product/product3.jsp",
+    "고압 전동기"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/elect/ko/product/product3.jsp?anchor=section1&anchor2=loca12&opt=menu1",
+    "농형 전폐 공랭형"
+   ],
+   [
+    "https://www.hd-hyundaielectric.com/elect/ko/product/product3.jsp",
+    "고압 전동기"
+   ]
+  ]
+ },
+ {
+  "url": "https://www.hd-hyundaielectric.com/en/",
+  "fin": "https://www.hd-hyundaielectric.com/en/",
+  "status": 404,
+  "titulo": "HD현대일렉트릭",
+  "imgs": [],
+  "links": []
+ },
+ {
+  "url": "https://www.hyundai-elec.com/",
+  "error": "page.goto: net::ERR_NAME_NOT_RESOLVED at https://www.hyundai-elec.com/\nCall log:\n  - navigating to \"https://www.hyundai-elec.com/\", waiting until \"dom"
+ },
+ {
+  "url": "https://www.hyundai-electric.com/",
+  "error": "page.goto: Navigation to \"https://www.hyundai-electric.com/\" is interrupted by another navigation to \"chrome-error://chromewebdata/\"\nCall log:\n  - nav"
+ },
+ {
+  "url": "https://www.hd-hyundaielectric.com/elect/ko/product/product1.jsp",
+  "error": "page.goto: Navigation to \"https://www.hd-hyundaielectric.com/elect/ko/product/product1.jsp\" is interrupted by another navigation to \"https://www.hyund"
+ },
+ {
+  "url": "https://www.hd-hyundaielectric.com/elect/ko/product/product2.jsp",
+  "error": "page.goto: Navigation to \"https://www.hd-hyundaielectric.com/elect/ko/product/product2.jsp\" is interrupted by another navigation to \"https://www.hd-hy"
+ },
+ {
+  "url": "https://www.hd-hyundaielectric.com/elect/ko/product/product3.jsp",
+  "error": "page.goto: Navigation to \"https://www.hd-hyundaielectric.com/elect/ko/product/product3.jsp\" is interrupted by another navigation to \"https://www.hd-hy"
+ },
+ {
+  "url": "https://www.hd-hyundaielectric.com/elect/ko/product/product4.jsp",
+  "error": "page.goto: Navigation to \"https://www.hd-hyundaielectric.com/elect/ko/product/product4.jsp\" is interrupted by another navigation to \"https://www.hd-hy"
+ },
+ {
+  "url": "https://www.hd-hyundaielectric.com/elect/ko/product/product5.jsp",
+  "error": "page.goto: Navigation to \"https://www.hd-hyundaielectric.com/elect/ko/product/product5.jsp\" is interrupted by another navigation to \"https://www.hd-hy"
+ },
+ {
+  "url": "https://www.hd-hyundaielectric.com/elect/ko/product/product6.jsp",
+  "error": "page.goto: Navigation to \"https://www.hd-hyundaielectric.com/elect/ko/product/product6.jsp\" is interrupted by another navigation to \"https://www.hd-hy"
+ },
+ {
+  "url": "https://www.hd-hyundaielectric.com/elect/ko/product/product7.jsp",
+  "error": "page.goto: Navigation to \"https://www.hd-hyundaielectric.com/elect/ko/product/product7.jsp\" is interrupted by another navigation to \"https://www.hd-hy"
+ },
+ {
+  "url": "https://www.hd-hyundaielectric.com/elect/ko/product/product8.jsp",
+  "error": "page.goto: Navigation to \"https://www.hd-hyundaielectric.com/elect/ko/product/product8.jsp\" is interrupted by another navigation to \"https://www.hd-hy"
+ },
+ {
+  "url": "https://www.hd-hyundaielectric.com/elect/ko/product/product2.jsp?anchor=section2",
+  "error": "page.goto: Navigation to \"https://www.hd-hyundaielectric.com/elect/ko/product/product2.jsp?anchor=section2\" is interrupted by another navigation to \"h"
+ },
+ {
+  "url": "https://www.hd-hyundaielectric.com/elect/ko/product/product2.jsp?anchor=section3",
+  "error": "page.goto: Navigation to \"https://www.hd-hyundaielectric.com/elect/ko/product/product2.jsp?anchor=section3\" is interrupted by another navigation to \"h"
+ },
+ {
+  "url": "https://www.hd-hyundaielectric.com/elect/ko/product/product2.jsp?anchor=section4",
+  "error": "page.goto: Navigation to \"https://www.hd-hyundaielectric.com/elect/ko/product/product2.jsp?anchor=section4\" is interrupted by another navigation to \"h"
+ },
+ {
+  "url": "https://www.hd-hyundaielectric.com/elect/ko/product/product2.jsp?anchor=section5",
+  "error": "page.goto: Navigation to \"https://www.hd-hyundaielectric.com/elect/ko/product/product2.jsp?anchor=section5\" is interrupted by another navigation to \"h"
+ },
+ {
+  "url": "https://www.hd-hyundaielectric.com/elect/ko/product/product2.jsp?anchor=section6",
+  "error": "page.goto: Navigation to \"https://www.hd-hyundaielectric.com/elect/ko/product/product2.jsp?anchor=section6\" is interrupted by another navigation to \"h"
+ },
+ {
+  "url": "https://www.hd-hyundaielectric.com/elect/ko/product/product2.jsp?anchor=section1",
+  "error": "page.goto: Navigation to \"https://www.hd-hyundaielectric.com/elect/ko/product/product2.jsp?anchor=section1\" is interrupted by another navigation to \"h"
+ },
+ {
+  "url": "https://www.hd-hyundaielectric.com/elect/ko/product/product2.jsp?anchor=section7",
+  "error": "page.goto: Navigation to \"https://www.hd-hyundaielectric.com/elect/ko/product/product2.jsp?anchor=section7\" is interrupted by another navigation to \"h"
+ },
+ {
+  "url": "https://www.hd-hyundaielectric.com/elect/ko/product/product5.jsp?anchor=section7",
+  "error": "page.goto: Navigation to \"https://www.hd-hyundaielectric.com/elect/ko/product/product5.jsp?anchor=section7\" is interrupted by another navigation to \"h"
+ },
+ {
+  "url": "https://www.hd-hyundaielectric.com/elect/ko/product/product5.jsp?anchor=section8",
+  "error": "page.goto: Navigation to \"https://www.hd-hyundaielectric.com/elect/ko/product/product5.jsp?anchor=section8\" is interrupted by another navigation to \"h"
+ },
+ {
+  "url": "https://www.hd-hyundaielectric.com/elect/ko/product/product1.jsp?anchor=section3&anchor2=loca37&opt=menu3",
+  "error": "page.goto: Navigation to \"https://www.hd-hyundaielectric.com/elect/ko/product/product1.jsp?anchor=section3&anchor2=loca37&opt=menu3\" is interrupted by"
+ },
+ {
+  "url": "https://www.hd-hyundaielectric.com/elect/ko/product/product7.jsp?anchor=section2&anchor2=loca23&opt=menu2",
+  "error": "page.goto: Navigation to \"https://www.hd-hyundaielectric.com/elect/ko/product/product7.jsp?anchor=section2&anchor2=loca23&opt=menu2\" is interrupted by"
+ },
+ {
+  "url": "https://www.hd-hyundaielectric.com/elect/ko/product/product1.jsp?anchor=section3&anchor2=loca35&opt=menu3",
+  "error": "page.goto: Navigation to \"https://www.hd-hyundaielectric.com/elect/ko/product/product1.jsp?anchor=section3&anchor2=loca35&opt=menu3\" is interrupted by"
+ },
+ {
+  "url": "https://www.hd-hyundaielectric.com/elect/ko/product/product7.jsp?anchor=section2&anchor2=loca24&opt=menu2",
+  "error": "page.goto: Navigation to \"https://www.hd-hyundaielectric.com/elect/ko/product/product7.jsp?anchor=section2&anchor2=loca24&opt=menu2\" is interrupted by"
+ },
+ {
+  "url": "https://www.hd-hyundaielectric.com/elect/ko/product/product1.jsp?anchor=section3&anchor2=loca34&opt=menu3",
+  "error": "page.goto: Navigation to \"https://www.hd-hyundaielectric.com/elect/ko/product/product1.jsp?anchor=section3&anchor2=loca34&opt=menu3\" is interrupted by"
+ },
+ {
+  "url": "https://www.hd-hyundaielectric.com/elect/ko/product/product7.jsp?anchor=section2&anchor2=loca22&opt=menu2",
+  "error": "page.goto: Navigation to \"https://www.hd-hyundaielectric.com/elect/ko/product/product7.jsp?anchor=section2&anchor2=loca22&opt=menu2\" is interrupted by"
+ },
+ {
+  "url": "https://www.hd-hyundaielectric.com/elect/ko/product/product4.jsp?anchor=section1",
+  "error": "page.goto: Navigation to \"https://www.hd-hyundaielectric.com/elect/ko/product/product4.jsp?anchor=section1\" is interrupted by another navigation to \"h"
+ },
+ {
+  "url": "https://www.hd-hyundaielectric.com/elect/ko/product/product5.jsp?anchor=section3",
+  "error": "page.goto: Navigation to \"https://www.hd-hyundaielectric.com/elect/ko/product/product5.jsp?anchor=section3\" is interrupted by another navigation to \"h"
+ },
+ {
+  "url": "https://www.hd-hyundaielectric.com/elect/ko/product/product5.jsp?anchor=section4",
+  "error": "page.goto: Navigation to \"https://www.hd-hyundaielectric.com/elect/ko/product/product5.jsp?anchor=section4\" is interrupted by another navigation to \"h"
+ },
+ {
+  "url": "https://www.hd-hyundaielectric.com/elect/ko/product/product1.jsp?anchor=section3&anchor2=loca33&opt=menu3",
+  "error": "page.goto: Navigation to \"https://www.hd-hyundaielectric.com/elect/ko/product/product1.jsp?anchor=section3&anchor2=loca33&opt=menu3\" is interrupted by"
+ },
+ {
+  "url": "https://www.hd-hyundaielectric.com/elect/ko/product/product3.jsp?anchor=section3&anchor2=loca31&opt=menu3",
+  "error": "page.goto: Navigation to \"https://www.hd-hyundaielectric.com/elect/ko/product/product3.jsp?anchor=section3&anchor2=loca31&opt=menu3\" is interrupted by"
+ },
+ {
+  "url": "https://www.hd-hyundaielectric.com/elect/ko/product/product3.jsp?anchor=section3&anchor2=loca32&opt=menu3",
+  "error": "page.goto: Navigation to \"https://www.hd-hyundaielectric.com/elect/ko/product/product3.jsp?anchor=section3&anchor2=loca32&opt=menu3\" is interrupted by"
+ },
+ {
+  "url": "https://www.hd-hyundaielectric.com/elect/ko/product/product3.jsp?anchor=section2&anchor2=loca21&opt=menu2",
+  "error": "page.goto: Navigation to \"https://www.hd-hyundaielectric.com/elect/ko/product/product3.jsp?anchor=section2&anchor2=loca21&opt=menu2\" is interrupted by"
+ },
+ {
+  "url": "https://www.hd-hyundaielectric.com/elect/ko/product/product3.jsp?anchor=section2&anchor2=loca22&opt=menu2",
+  "error": "page.goto: Navigation to \"https://www.hd-hyundaielectric.com/elect/ko/product/product3.jsp?anchor=section2&anchor2=loca22&opt=menu2\" is interrupted by"
+ },
+ {
+  "url": "https://www.hd-hyundaielectric.com/elect/ko/product/product3.jsp?anchor=section1",
+  "error": "page.goto: Navigation to \"https://www.hd-hyundaielectric.com/elect/ko/product/product3.jsp?anchor=section1\" is interrupted by another navigation to \"h"
+ },
+ {
+  "url": "https://www.hd-hyundaielectric.com/elect/ko/product/product3.jsp?anchor=section1&anchor2=loca12&opt=menu1",
+  "error": "page.goto: Navigation to \"https://www.hd-hyundaielectric.com/elect/ko/product/product3.jsp?anchor=section1&anchor2=loca12&opt=menu1\" is interrupted by"
+ },
+ {
+  "url": "https://www.hd-hyundaielectric.com/elect/ko/product/product3.jsp?anchor=section1&anchor2=loca13&opt=menu1",
+  "error": "page.goto: Navigation to \"https://www.hd-hyundaielectric.com/elect/ko/product/product3.jsp?anchor=section1&anchor2=loca13&opt=menu1\" is interrupted by"
+ },
+ {
+  "url": "https://www.hd-hyundaielectric.com/elect/ko/product/product7.jsp?anchor=section1&anchor2=loca13&opt=menu1",
+  "error": "page.goto: Navigation to \"https://www.hd-hyundaielectric.com/elect/ko/product/product7.jsp?anchor=section1&anchor2=loca13&opt=menu1\" is interrupted by"
+ },
+ {
+  "url": "https://www.hd-hyundaielectric.com/elect/ko/product/product3.jsp?anchor=section4",
+  "error": "page.goto: Navigation to \"https://www.hd-hyundaielectric.com/elect/ko/product/product3.jsp?anchor=section4\" is interrupted by another navigation to \"h"
+ },
+ {
+  "url": "https://www.hd-hyundaielectric.com/elect/ko/product/product1.jsp?anchor=section3&anchor2=loca39&opt=menu3",
+  "error": "page.goto: Navigation to \"https://www.hd-hyundaielectric.com/elect/ko/product/product1.jsp?anchor=section3&anchor2=loca39&opt=menu3\" is interrupted by"
+ },
+ {
+  "url": "https://www.hd-hyundaielectric.com/elect/ko/product/product7.jsp?anchor=section1&anchor2=loca14&opt=menu1",
+  "error": "page.goto: Navigation to \"https://www.hd-hyundaielectric.com/elect/ko/product/product7.jsp?anchor=section1&anchor2=loca14&opt=menu1\" is interrupted by"
+ },
+ {
+  "url": "https://www.hd-hyundaielectric.com/elect/ko/product/product1.jsp?anchor=section3&anchor2=loca32&opt=menu3",
+  "error": "page.goto: Navigation to \"https://www.hd-hyundaielectric.com/elect/ko/product/product1.jsp?anchor=section3&anchor2=loca32&opt=menu3\" is interrupted by"
+ },
+ {
+  "url": "https://www.hd-hyundaielectric.com/elect/ko/product/product1.jsp?anchor=section2",
+  "error": "page.goto: Navigation to \"https://www.hd-hyundaielectric.com/elect/ko/product/product1.jsp?anchor=section2\" is interrupted by another navigation to \"h"
+ },
+ {
+  "url": "https://www.hd-hyundaielectric.com/elect/ko/product/product6.jsp?anchor=loca11",
+  "error": "page.goto: Navigation to \"https://www.hd-hyundaielectric.com/elect/ko/product/product6.jsp?anchor=loca11\" is interrupted by another navigation to \"htt"
+ },
+ {
+  "url": "https://www.hd-hyundaielectric.com/elect/ko/product/product6.jsp?anchor=loca12",
+  "error": "page.goto: Navigation to \"https://www.hd-hyundaielectric.com/elect/ko/product/product6.jsp?anchor=loca12\" is interrupted by another navigation to \"htt"
+ },
+ {
+  "url": "https://www.hd-hyundaielectric.com/elect/ko/product/product1.jsp?anchor=section3&anchor2=loca31&opt=menu3",
+  "error": "page.goto: Navigation to \"https://www.hd-hyundaielectric.com/elect/ko/product/product1.jsp?anchor=section3&anchor2=loca31&opt=menu3\" is interrupted by"
+ },
+ {
+  "url": "https://www.hd-hyundaielectric.com/elect/ko/product/product7.jsp?anchor=section1&anchor2=loca12&opt=menu1",
+  "error": "page.goto: Navigation to \"https://www.hd-hyundaielectric.com/elect/ko/product/product7.jsp?anchor=section1&anchor2=loca12&opt=menu1\" is interrupted by"
+ },
+ {
+  "url": "https://www.hd-hyundaielectric.com/elect/ko/product/product5.jsp?anchor=section2",
+  "error": "page.goto: Navigation to \"https://www.hd-hyundaielectric.com/elect/ko/product/product5.jsp?anchor=section2\" is interrupted by another navigation to \"h"
+ },
+ {
+  "url": "https://www.hd-hyundaielectric.com/elect/ko/product/product1.jsp?anchor=section3&anchor2=loca36&opt=menu3",
+  "error": "page.goto: Navigation to \"https://www.hd-hyundaielectric.com/elect/ko/product/product1.jsp?anchor=section3&anchor2=loca36&opt=menu3\" is interrupted by"
+ },
+ {
+  "url": "https://www.hd-hyundaielectric.com/elect/ko/product/product1.jsp?anchor=section3&anchor2=loca311&opt=menu3",
+  "error": "page.goto: Navigation to \"https://www.hd-hyundaielectric.com/elect/ko/product/product1.jsp?anchor=section3&anchor2=loca311&opt=menu3\" is interrupted b"
+ },
+ {
+  "url": "https://www.hd-hyundaielectric.com/elect/ko/product/product5.jsp?anchor=section5",
+  "error": "page.goto: Navigation to \"https://www.hd-hyundaielectric.com/elect/ko/product/product5.jsp?anchor=section5\" is interrupted by another navigation to \"h"
+ },
+ {
+  "url": "https://www.hd-hyundaielectric.com/elect/ko/product/product7.jsp?anchor=section2&anchor2=loca25&opt=menu2",
+  "error": "page.goto: Navigation to \"https://www.hd-hyundaielectric.com/elect/ko/product/product7.jsp?anchor=section2&anchor2=loca25&opt=menu2\" is interrupted by"
+ },
+ {
+  "url": "https://www.hd-hyundaielectric.com/elect/ko/product/product5.jsp?anchor=section6&anchor2=loca61&opt=menu6",
+  "error": "page.goto: Navigation to \"https://www.hd-hyundaielectric.com/elect/ko/product/product5.jsp?anchor=section6&anchor2=loca61&opt=menu6\" is interrupted by"
+ },
+ {
+  "url": "https://www.hd-hyundaielectric.com/elect/ko/product/product7.jsp?anchor=section1&anchor2=loca11&opt=menu1",
+  "error": "page.goto: Navigation to \"https://www.hd-hyundaielectric.com/elect/ko/product/product7.jsp?anchor=section1&anchor2=loca11&opt=menu1\" is interrupted by"
+ },
+ {
+  "url": "https://www.hd-hyundaielectric.com/elect/ko/product/product7.jsp?anchor=section2&anchor2=loca21&opt=menu2",
+  "error": "page.goto: Navigation to \"https://www.hd-hyundaielectric.com/elect/ko/product/product7.jsp?anchor=section2&anchor2=loca21&opt=menu2\" is interrupted by"
+ },
+ {
+  "url": "https://www.hd-hyundaielectric.com/elect/ko/product/product4.jsp?anchor=section2&anchor2=loca21&opt=menu2",
+  "error": "page.goto: Navigation to \"https://www.hd-hyundaielectric.com/elect/ko/product/product4.jsp?anchor=section2&anchor2=loca21&opt=menu2\" is interrupted by"
+ },
+ {
+  "url": "https://www.hd-hyundaielectric.com/elect/ko/product/product8.jsp?anchor=loca11",
+  "error": "page.goto: Navigation to \"https://www.hd-hyundaielectric.com/elect/ko/product/product8.jsp?anchor=loca11\" is interrupted by another navigation to \"htt"
+ },
+ {
+  "url": "https://www.hd-hyundaielectric.com/elect/ko/product/product1.jsp?anchor=section3&anchor2=loca38&opt=menu3",
+  "error": "page.goto: Navigation to \"https://www.hd-hyundaielectric.com/elect/ko/product/product1.jsp?anchor=section3&anchor2=loca38&opt=menu3\" is interrupted by"
+ },
+ {
+  "url": "https://www.hd-hyundaielectric.com/elect/ko/product/product1.jsp?anchor=section1",
+  "error": "page.goto: Navigation to \"https://www.hd-hyundaielectric.com/elect/ko/product/product1.jsp?anchor=section1\" is interrupted by another navigation to \"h"
+ },
+ {
+  "url": "https://www.hd-hyundaielectric.com/elect/ko/product/product5.jsp?anchor=section1",
+  "error": "page.goto: Navigation to \"https://www.hd-hyundaielectric.com/elect/ko/product/product5.jsp?anchor=section1\" is interrupted by another navigation to \"h"
+ },
+ {
+  "url": "https://www.hd-hyundaielectric.com/elect/ko/product/product1.jsp?anchor=section3&anchor2=loca310&opt=menu3",
+  "error": "page.goto: Navigation to \"https://www.hd-hyundaielectric.com/elect/ko/product/product1.jsp?anchor=section3&anchor2=loca310&opt=menu3\" is interrupted b"
+ }
+]
