@@ -1,0 +1,30 @@
+name: Fotos Hyundai
+
+on:
+  push:
+    branches: [fotos-hyundai]
+    paths: ["scripts/fotos-hyundai*", ".github/workflows/fotos-hyundai.yml"]
+  workflow_dispatch: {}
+
+permissions:
+  contents: write
+
+jobs:
+  fotos:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v4
+      - uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+      - run: npm install && npm install --no-save playwright@1.48.2
+      - name: Correr
+        run: xvfb-run -a node scripts/fotos-hyundai-explorar.js
+      - name: Guardar salida en la rama
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          git add -f salida
+          git commit -m "Salida fotos Hyundai" || exit 0
+          git pull --rebase -q origin fotos-hyundai || true
+          git push origin HEAD:fotos-hyundai
