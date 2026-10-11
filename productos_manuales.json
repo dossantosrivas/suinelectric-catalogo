@@ -3783,7 +3783,7 @@
       "disponible": true,
       "existencias": null,
       "descripcion": "Bobina de apertura (disparo lateral derecho). Para MMS32. Voltaje: 220/240 Vac.",
-      "imagen": null,
+      "imagen": "https://raw.githubusercontent.com/dossantosrivas/suinelectric-catalogo/main/imagenes/hyundai/oficial/mms32k-sht.jpg",
       "url": null,
       "actualizado": "2026-09-19T17:58:21.205387+00:00",
       "categoria": "Hyundai > Accesorios para Guardamotores > Accesorios para guardamotores > MMS32KSHT240",
@@ -3792,6 +3792,9 @@
         "Accesorios para Guardamotores",
         "Accesorios para guardamotores",
         "MMS32KSHT240"
+      ],
+      "imagenes": [
+        "https://raw.githubusercontent.com/dossantosrivas/suinelectric-catalogo/main/imagenes/hyundai/oficial/mms32k-sht.jpg"
       ]
     },
     {
@@ -3809,7 +3812,7 @@
       "disponible": true,
       "existencias": null,
       "descripcion": "Bobina de mínima tensión (lateral derecho). Para MMS32. Voltaje: 220/240 Vac.",
-      "imagen": null,
+      "imagen": "https://raw.githubusercontent.com/dossantosrivas/suinelectric-catalogo/main/imagenes/hyundai/oficial/mms32k-uvt.jpg",
       "url": null,
       "actualizado": "2026-09-19T17:58:21.205387+00:00",
       "categoria": "Hyundai > Accesorios para Guardamotores > Accesorios para guardamotores > MMS32KUVT240",
@@ -3818,6 +3821,9 @@
         "Accesorios para Guardamotores",
         "Accesorios para guardamotores",
         "MMS32KUVT240"
+      ],
+      "imagenes": [
+        "https://raw.githubusercontent.com/dossantosrivas/suinelectric-catalogo/main/imagenes/hyundai/oficial/mms32k-uvt.jpg"
       ]
     },
     {
@@ -3835,7 +3841,7 @@
       "disponible": true,
       "existencias": null,
       "descripcion": "Caja plástica superficial IP55. Para MMS32.",
-      "imagen": null,
+      "imagen": "https://raw.githubusercontent.com/dossantosrivas/suinelectric-catalogo/main/imagenes/hyundai/oficial/mms32k-enc.jpg",
       "url": null,
       "actualizado": "2026-09-19T17:58:21.205387+00:00",
       "categoria": "Hyundai > Accesorios para Guardamotores > Accesorios para guardamotores > MMS32KENC",
@@ -3844,6 +3850,9 @@
         "Accesorios para Guardamotores",
         "Accesorios para guardamotores",
         "MMS32KENC"
+      ],
+      "imagenes": [
+        "https://raw.githubusercontent.com/dossantosrivas/suinelectric-catalogo/main/imagenes/hyundai/oficial/mms32k-enc.jpg"
       ]
     },
     {
@@ -4113,7 +4122,7 @@
       "disponible": true,
       "existencias": null,
       "descripcion": "Caja plástica IP40. Para 1-2 polos, 142 x 43,4 x 61 mm.",
-      "imagen": null,
+      "imagen": "https://raw.githubusercontent.com/dossantosrivas/suinelectric-catalogo/main/imagenes/hyundai/oficial/enc-hgd63h-2p.jpg",
       "url": null,
       "actualizado": "2026-09-19T17:58:21.205387+00:00",
       "categoria": "Hyundai > Accesorios para Automáticos > Accesorios HGD63H > ENCHGD63H 2P",
@@ -4122,6 +4131,9 @@
         "Accesorios para Automáticos",
         "Accesorios HGD63H",
         "ENCHGD63H 2P"
+      ],
+      "imagenes": [
+        "https://raw.githubusercontent.com/dossantosrivas/suinelectric-catalogo/main/imagenes/hyundai/oficial/enc-hgd63h-2p.jpg"
       ]
     },
     {
@@ -4139,7 +4151,7 @@
       "disponible": true,
       "existencias": null,
       "descripcion": "Caja plástica IP40. Para 2-4 polos, 142 x 79,0 x 61 mm.",
-      "imagen": null,
+      "imagen": "https://raw.githubusercontent.com/dossantosrivas/suinelectric-catalogo/main/imagenes/hyundai/oficial/enc-hgd63h-4p.jpg",
       "url": null,
       "actualizado": "2026-09-19T17:58:21.205387+00:00",
       "categoria": "Hyundai > Accesorios para Automáticos > Accesorios HGD63H > ENCHGD63H 4P",
@@ -4148,6 +4160,9 @@
         "Accesorios para Automáticos",
         "Accesorios HGD63H",
         "ENCHGD63H 4P"
+      ],
+      "imagenes": [
+        "https://raw.githubusercontent.com/dossantosrivas/suinelectric-catalogo/main/imagenes/hyundai/oficial/enc-hgd63h-4p.jpg"
       ]
     },
     {
@@ -9140,7 +9155,7 @@
       "disponible": true,
       "existencias": null,
       "descripcion": "Variador de frecuencia serie GD20LA. Serie GD20LA. 18.5 kW / 25 HP. entrada trifásica 220V, corriente entrada 71 A, salida trifásica 220V, corriente salida 70 A. Tipo de motor: asíncrono. 4 entradas digitales (1kHz) y 1 de alta frecuencia 50kHz. 1 salida digital Open Collector. 2 salidas analógicas: 0-10V ó 20mA. 2 entradas analógicas: una 0-10V ó 20mA y otra -10V+10V. 2 salidas de relé, 1A/250V, NO+NC. Tipo de control: modulación por ancho de pulso de vector espacial y control vectorial sin sensor. Protecciones: sobre corriente, sobre voltaje, bajo voltaje, sobre calentamiento, pérdida de fase. Protecciones contra sobrecarga: 150% 1 minuto, 180% 10 segundos, 200% 1 segundo. Unidad de frenado: no incorporada, usar DBU (unidad dinámica de frenado).",
-      "imagen": null,
+      "imagen": "https://cdn.shopify.com/s/files/1/0662/9877/3604/collections/INVT_VDF_GD20_0R7G_4_2.png?v=1738269206",
       "url": null,
       "actualizado": "2026-09-19T17:58:21.205387+00:00",
       "categoria": "Variadores de Frecuencia > INVT > Uso General > 220V > GD20LA-018G-2",
@@ -10372,7 +10387,7 @@
       "disponible": false,
       "existencias": null,
       "descripcion": "Variador de frecuencia solar serie GD100PV, para bombas de agua. Serie GD100PV. 0.75 kW / 1 HP. entrada monofásica 220V, corriente entrada 9.3 A, salida monofásica 220V, corriente salida 7.2 A. 4 entradas digitales. 2 entradas analógicas: 0-10V, 0-20mA, -10V+10V. 2 salidas analógicas: 0-10V, 0-20mA. 2 salidas de relé programable: 3A/250V, 1A/30VDC. Tipo de control: vectorial espacial y vectorial sin sensor. Protección contra: sobre corriente, sobre voltaje, bajo voltaje, sobre calentamiento, pérdida de fase. Protección contra sobrecargas: 150% 1 minuto, 180% 10 segundos, 200% 1 segundo. Control automático de arranque y parada de bombas sumergibles (solo requiere conectar el variador a los paneles solares, sin programación). Protecciones al circuito fotovoltaico: sobre voltaje, polaridad invertida y desconexión por sobre temperatura.",
-      "imagen": null,
+      "imagen": "https://5.imimg.com/data5/SELLER/Default/2022/2/YQ/XF/CE/8340813/gd100-004g-4-pv-inf-1000x1000.png",
       "url": null,
       "actualizado": "2026-09-19T17:58:21.205387+00:00",
       "categoria": "Variadores de Frecuencia > INVT > Bombeo Solar > 220V > GD100-0R7G-SS2-PV",
@@ -10400,7 +10415,7 @@
       "disponible": false,
       "existencias": null,
       "descripcion": "Variador de frecuencia solar serie GD100PV, para bombas de agua. Serie GD100PV. 1.5 kW / 2 HP. entrada monofásica 220V, corriente entrada 15.7 A, salida monofásica 220V, corriente salida 10.2 A. 4 entradas digitales. 2 entradas analógicas: 0-10V, 0-20mA, -10V+10V. 2 salidas analógicas: 0-10V, 0-20mA. 2 salidas de relé programable: 3A/250V, 1A/30VDC. Tipo de control: vectorial espacial y vectorial sin sensor. Protección contra: sobre corriente, sobre voltaje, bajo voltaje, sobre calentamiento, pérdida de fase. Protección contra sobrecargas: 150% 1 minuto, 180% 10 segundos, 200% 1 segundo. Control automático de arranque y parada de bombas sumergibles (solo requiere conectar el variador a los paneles solares, sin programación). Protecciones al circuito fotovoltaico: sobre voltaje, polaridad invertida y desconexión por sobre temperatura.",
-      "imagen": null,
+      "imagen": "https://5.imimg.com/data5/SELLER/Default/2022/2/YQ/XF/CE/8340813/gd100-004g-4-pv-inf-1000x1000.png",
       "url": null,
       "actualizado": "2026-09-19T17:58:21.205387+00:00",
       "categoria": "Variadores de Frecuencia > INVT > Bombeo Solar > 220V > GD100-1R5G-SS2-PV",
@@ -10456,7 +10471,7 @@
       "disponible": false,
       "existencias": null,
       "descripcion": "Variador de frecuencia solar serie GD100PV, para bombas de agua. Serie GD100PV. 2.2 kW / 3 HP. entrada monofásica 220V, corriente entrada 24 A, salida monofásica 220V, corriente salida 14 A. 4 entradas digitales. 2 entradas analógicas: 0-10V, 0-20mA, -10V+10V. 2 salidas analógicas: 0-10V, 0-20mA. 2 salidas de relé programable: 3A/250V, 1A/30VDC. Tipo de control: vectorial espacial y vectorial sin sensor. Protección contra: sobre corriente, sobre voltaje, bajo voltaje, sobre calentamiento, pérdida de fase. Protección contra sobrecargas: 150% 1 minuto, 180% 10 segundos, 200% 1 segundo. Control automático de arranque y parada de bombas sumergibles (solo requiere conectar el variador a los paneles solares, sin programación). Protecciones al circuito fotovoltaico: sobre voltaje, polaridad invertida y desconexión por sobre temperatura.",
-      "imagen": null,
+      "imagen": "https://5.imimg.com/data5/SELLER/Default/2022/2/YQ/XF/CE/8340813/gd100-004g-4-pv-inf-1000x1000.png",
       "url": null,
       "actualizado": "2026-09-19T17:58:21.205387+00:00",
       "categoria": "Variadores de Frecuencia > INVT > Bombeo Solar > 220V > GD100-2R2G-SS2-PV",
