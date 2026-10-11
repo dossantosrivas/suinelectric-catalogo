@@ -70,6 +70,65 @@ function datosPrecio(p){
   const lista = (p.precio != null && !isNaN(Number(p.precio))) ? Number(p.precio) : '';
   return ' data-lista="' + esc(lista) + '" data-marca="' + esc(p.marca || '') + '" data-modelo="' + esc(p.modelo) + '"' + (p._manual ? ' data-manual="1"' : '');
 }
+/* ---------- Imagen para la vista previa (WhatsApp, Facebook, Telegram…) ----------
+   WhatsApp no muestra (o muestra diminuta) una foto de menos de 300 px, y la
+   carga mejor si la página dice el tamaño. Las fotos chicas se copian centradas
+   sobre un fondo blanco de 600×600 en imagenes/og/ (al final del script). */
+const OG_MIN = 300, OG_LADO = 600;
+const ogPendientes = new Map();   // origen local → destino local
+function medidasImagen(rel){
+  // Lee ancho y alto de un JPG o PNG sin dependencias (rápido y sincrónico).
+  try {
+    const b = fs.readFileSync(path.join(RAIZ, rel));
+    if (b[0] === 0x89 && b[1] === 0x50) return { w: b.readUInt32BE(16), h: b.readUInt32BE(20), tipo: 'image/png' };
+    if (b[0] === 0xFF && b[1] === 0xD8){
+      let i = 2;
+      while (i < b.length - 9){
+        if (b[i] !== 0xFF){ i++; continue; }
+        const mk = b[i + 1];
+        if (mk >= 0xC0 && mk <= 0xCF && ![0xC4, 0xC8, 0xCC].includes(mk))
+          return { h: b.readUInt16BE(i + 5), w: b.readUInt16BE(i + 7), tipo: 'image/jpeg' };
+        i += 2 + b.readUInt16BE(i + 2);
+      }
+    }
+  } catch (e) {}
+  return null;
+}
+const MEDIDAS_GENERAL = medidasImagen('imagenes/og-suinelectric.jpg');
+function imagenOg(src, alt){
+  // Devuelve { url, w, h, tipo, alt } lista para las etiquetas og:image.
+  if (src && !/^https?:\/\//.test(src)){
+    const rel = String(src).replace(/^\/+/, '');
+    const m = medidasImagen(rel);
+    if (m && Math.min(m.w, m.h) >= OG_MIN) return { url: DOMINIO + '/' + rel, ...m, alt };
+    if (m){
+      const destino = 'imagenes/og/' + path.basename(rel).replace(/\.[a-z]+$/i, '') + '.jpg';
+      ogPendientes.set(rel, destino);
+      return { url: DOMINIO + '/' + destino, w: OG_LADO, h: OG_LADO, tipo: 'image/jpeg', alt };
+    }
+  }
+  if (src) return { url: imagenAbsoluta(src), alt };
+  return { url: IMAGEN_GENERAL, ...(MEDIDAS_GENERAL || {}), alt: 'Suinelectric' };
+}
+// Quita frases repetidas ("Variador serie GD20. Serie GD20. 0.4 kW" → "Variador serie GD20. 0.4 kW").
+function sinRepetidos(t){
+  const vistos = new Set(), out = [];
+  for (const f of String(t || '').replace(/\s+/g, ' ').trim().split(/(?<=\.)\s+/)){
+    const k = f.toLowerCase().replace(/[^a-z0-9áéíóúñ]/g, '');
+    // Se salta si ya apareció, aunque sea dentro de una frase anterior.
+    if (k && (vistos.has(k) || (k.length >= 4 && [...vistos].some(v => v.endsWith(k))))) continue;
+    vistos.add(k); out.push(f);
+  }
+  return out.join(' ');
+}
+// Recorta sin partir palabras.
+function cortoPalabra(s, n){
+  s = String(s || '').replace(/\s+/g, ' ').trim();
+  if (s.length <= n) return s;
+  const c = s.slice(0, n - 1); const e = c.lastIndexOf(' ');
+  return (e > n * 0.6 ? c.slice(0, e) : c).replace(/[\s.,;:·-]+$/, '') + '…';
+}
+
 function imagenAbsoluta(src){
   if (!src) return IMAGEN_GENERAL;
   if (/^https?:\/\//.test(src)) return src;
@@ -110,7 +169,16 @@ function escribir(rel, contenido){
 }
 
 /* ---------- Plantilla común ---------- */
-function pagina({ titulo, descripcion, imagen, canonica, cuerpo, datos, tipoOg }){
+function pagina({ titulo, descripcion, imagen, canonica, cuerpo, datos, tipoOg, ogTitulo, ogDescripcion, og, extraOg }){
+  ogTitulo = ogTitulo || titulo; ogDescripcion = ogDescripcion || descripcion;
+  og = og || { url: imagen };
+  const ogImg = [
+    `<meta property="og:image" content="${esc(og.url)}">`,
+    `<meta property="og:image:secure_url" content="${esc(og.url)}">`,
+    og.tipo ? `<meta property="og:image:type" content="${og.tipo}">` : '',
+    og.w ? `<meta property="og:image:width" content="${og.w}">\n<meta property="og:image:height" content="${og.h}">` : '',
+    og.alt ? `<meta property="og:image:alt" content="${esc(og.alt)}">` : '',
+  ].filter(Boolean).join('\n');
   return `<!DOCTYPE html>
 <html lang="es">
 <head>
@@ -122,14 +190,14 @@ function pagina({ titulo, descripcion, imagen, canonica, cuerpo, datos, tipoOg }
 <meta property="og:type" content="${tipoOg || 'website'}">
 <meta property="og:site_name" content="Suinelectric">
 <meta property="og:locale" content="es_VE">
-<meta property="og:title" content="${esc(titulo)}">
-<meta property="og:description" content="${esc(descripcion)}">
-<meta property="og:image" content="${esc(imagen)}">
-<meta property="og:url" content="${esc(canonica)}">
-<meta name="twitter:card" content="summary_large_image">
-<meta name="twitter:title" content="${esc(titulo)}">
-<meta name="twitter:description" content="${esc(descripcion)}">
-<meta name="twitter:image" content="${esc(imagen)}">
+<meta property="og:title" content="${esc(ogTitulo)}">
+<meta property="og:description" content="${esc(ogDescripcion)}">
+${ogImg}
+<meta property="og:url" content="${esc(canonica)}">${extraOg ? '\n' + extraOg : ''}
+<meta name="twitter:card" content="${og.w && og.w === og.h ? 'summary' : 'summary_large_image'}">
+<meta name="twitter:title" content="${esc(ogTitulo)}">
+<meta name="twitter:description" content="${esc(ogDescripcion)}">
+<meta name="twitter:image" content="${esc(og.url)}">
 <meta name="theme-color" content="#0e2a3b">
 <link rel="preconnect" href="https://fonts.googleapis.com">
 <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
@@ -206,11 +274,26 @@ for (const p of productos){
   const precio = precioVisitante(p);
   const marca = p.marca ? String(p.marca).toUpperCase() : '';
   const canonica = DOMINIO + '/p/' + slug;
-  const titulo = p.modelo + (marca ? ' ' + marca : '') + (p.descripcion ? ' · ' + corto(p.descripcion, 50) : '') + ' | Suinelectric';
+  const descLimpia = sinRepetidos(p.descripcion);
+  // Para Google (pestaña y resultados): modelo, marca y de qué se trata.
+  const titulo = p.modelo + (marca ? ' ' + marca : '') + (descLimpia ? ' · ' + cortoPalabra(descLimpia, 55) : '') + ' | Suinelectric';
   const partes = [];
   partes.push((precio != null ? dinero(precio) + ' · ' : '') + textoStock(p) + ' en Suinelectric Venezuela');
-  if (p.descripcion) partes.push(corto(p.descripcion, 140));
+  if (descLimpia) partes.push(cortoPalabra(descLimpia, 140).replace(/\.$/, ''));
   const descripcion = partes.join('. ') + '. Cotiza por WhatsApp.';
+  // Para WhatsApp y redes: en el teléfono casi solo se ve el título, así que
+  // lleva modelo, marca y precio; la descripción dice qué es y las condiciones.
+  const ogTitulo = p.modelo + (marca ? ' · ' + marca : '') + ' — ' + (precio != null ? dinero(precio) + ' USD' : 'Consultar precio');
+  const ogDescripcion = [descLimpia ? cortoPalabra(descLimpia, 110).replace(/\.$/, '') : '', textoStock(p),
+    'Garantía 6 meses', 'Entrega 1-2 días hábiles'].filter(Boolean).join(' · ');
+  const og = imagenOg(p.imagen, p.modelo + (marca ? ' ' + marca : ''));
+  const extraOg = [
+    precio != null ? `<meta property="product:price:amount" content="${precio}">\n<meta property="product:price:currency" content="USD">` : '',
+    `<meta property="product:availability" content="${p.disponible === false ? 'out of stock' : 'in stock'}">`,
+    `<meta property="product:condition" content="new">`,
+    marca ? `<meta property="product:brand" content="${esc(marca)}">` : '',
+    `<meta property="product:retailer_item_id" content="${esc(p.modelo)}">`,
+  ].filter(Boolean).join('\n');
   const m = migas(ruta, p.modelo);
   const hermanos = (nodos.get(ruta.join('|||')) || { productos: [] }).productos.filter(x => x !== p).slice(0, 8);
   const textoWa = 'Hola, quiero cotizar: ' + p.modelo + (marca ? ' (' + marca + ')' : '') + '\n' + canonica;
@@ -219,9 +302,9 @@ for (const p of productos){
 
   const producto = {
     '@context': 'https://schema.org', '@type': 'Product',
-    name: p.modelo + (p.descripcion ? ' - ' + corto(p.descripcion, 100) : ''),
+    name: p.modelo + (descLimpia ? ' - ' + cortoPalabra(descLimpia, 100) : ''),
     sku: p.sku || p.modelo, mpn: p.modelo,
-    description: corto(p.descripcion || p.nombre || p.modelo, 500),
+    description: corto(descLimpia || p.nombre || p.modelo, 500),
     image: imgs.length ? imgs.map(imagenAbsoluta) : [IMAGEN_GENERAL],
     category: ruta.join(' > '),
     url: canonica,
@@ -259,7 +342,7 @@ for (const p of productos){
     '</article>' +
     (hermanos.length ? '<section><h2>También en ' + esc(ruta[ruta.length - 1] || 'esta categoría') + '</h2><div class="rejilla">' + hermanos.map(tarjeta).join('') + '</div></section>' : '');
 
-  escribir('p/' + slug + '.html', pagina({ titulo, descripcion, imagen: imagenAbsoluta(p.imagen), canonica, cuerpo, datos: [producto, m.ld], tipoOg: 'product' }));
+  escribir('p/' + slug + '.html', pagina({ titulo, descripcion, ogTitulo, ogDescripcion, og, extraOg, canonica, cuerpo, datos: [producto, m.ld], tipoOg: 'product' }));
   urls.push('/p/' + slug);
   nP++;
 }
@@ -300,7 +383,8 @@ for (const n of nodos.values()){
 
   escribir('c/' + n.ruta.map(T.slugDe).join('/') + '.html', pagina({
     titulo, descripcion, canonica, cuerpo, datos: [lista, m.ld],
-    imagen: imagenAbsoluta((n.ruta.length === 1 && imgFam[nombre]) || n.imagen),
+    og: imagenOg((n.ruta.length === 1 && imgFam[nombre]) || n.imagen, nombre + ' · Suinelectric'),
+    ogTitulo: nombre + ' — ' + n.total.toLocaleString('es-VE') + (n.total === 1 ? ' producto' : ' productos') + ' | Suinelectric',
   }));
   urls.push(urlC(n.ruta));
   nC++;
@@ -311,5 +395,27 @@ const lista = ['/tienda'].concat(fs.existsSync(path.join(RAIZ, 'links.html')) ? 
 const xml = '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' +
   [...new Set(lista)].map(u => '  <url><loc>' + esc(DOMINIO + u) + '</loc><lastmod>' + FECHA + '</lastmod></url>').join('\n') + '\n</urlset>\n';
 fs.writeFileSync(path.join(RAIZ, 'sitemap.xml'), xml);
+
+/* ---------- Fotos chicas → versión 600×600 para la vista previa ---------- */
+(async () => {
+  if (!ogPendientes.size) return;
+  let sharp = null;
+  try { sharp = require('sharp'); } catch (e) { console.log('(sharp no instalado: no se crean las imágenes de vista previa)'); return; }
+  let hechas = 0;
+  for (const [origen, destino] of ogPendientes){
+    const f = path.join(RAIZ, destino);
+    if (fs.existsSync(f)) continue;   // el nombre lleva el de la foto original: si cambia, se crea otra
+    try {
+      fs.mkdirSync(path.dirname(f), { recursive: true });
+      const lado = Math.round(OG_LADO * 0.86);
+      const foto = await sharp(path.join(RAIZ, origen)).flatten({ background: '#ffffff' })
+        .resize(lado, lado, { fit: 'inside' }).toBuffer();
+      await sharp({ create: { width: OG_LADO, height: OG_LADO, channels: 3, background: '#ffffff' } })
+        .composite([{ input: foto, gravity: 'center' }]).jpeg({ quality: 82, mozjpeg: true }).toFile(f);
+      hechas++;
+    } catch (e) { console.log('No se pudo crear ' + destino + ': ' + e.message); }
+  }
+  console.log('Imágenes de vista previa: ' + ogPendientes.size + ' fotos chicas (' + hechas + ' nuevas en imagenes/og/).');
+})();
 
 console.log('Páginas creadas: ' + nP + ' productos y ' + nC + ' categorías · sitemap.xml con ' + new Set(lista).size + ' direcciones.');
