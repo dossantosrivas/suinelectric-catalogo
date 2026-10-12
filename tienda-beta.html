@@ -4347,6 +4347,28 @@ function fotosParecidas(salida, fuentes){
   });
 }
 function unirInventario(lista, inventario, ocultos){ return fotosParecidas(unirInventarioBase(lista, inventario, ocultos), lista); }
+/* Fotos sueltas para productos que no tienen (imagenes/fotos-extra.json):
+   { "clave del modelo": "imagenes/…jpg" }; una clave que termina en * vale
+   para todos los modelos que empiezan así. La clave es el modelo sin
+   espacios, guiones ni mayúsculas. */
+let _fotosExtra = null;
+async function traerFotosExtra(){
+  if (_fotosExtra) return _fotosExtra;
+  try { const r = await fetch('imagenes/fotos-extra.json', { cache: 'no-cache' }); _fotosExtra = r.ok ? await r.json() : {}; }
+  catch (e) { _fotosExtra = {}; }
+  return _fotosExtra;
+}
+function ponerFotosExtra(lista, extra){
+  const claves = Object.keys(extra || {}).filter(k => !k.startsWith('_'));
+  if (!claves.length) return lista;
+  const prefijos = claves.filter(k => k.endsWith('*')).map(k => [k.slice(0, -1), extra[k]]).sort((a, b) => b[0].length - a[0].length);
+  return lista.map(p => {
+    if (p.imagen) return p;
+    const k = claveModelo(p.modelo);
+    const img = extra[k] || (prefijos.find(([x]) => k.startsWith(x)) || [])[1];
+    return img ? Object.assign({}, p, { imagen: img, imagenes: [img] }) : p;
+  });
+}
 function unirInventarioBase(lista, inventario, ocultos){
   if (!inventario.length) return lista;
   const inv = new Map(), pedido = new Map(), ocultosClave = new Set([...ocultos].map(claveModelo)), pedidoEnLista = new Map();
@@ -4428,7 +4450,7 @@ async function cargar(silencioso){
       mostrarVista();
       return;
     }
-    const [{ data, manuales: manualesJson }, panel] = await Promise.all([traerCatalogo(silencioso), traerDelPanel()]);
+    const [{ data, manuales: manualesJson }, panel, fotosExtra] = await Promise.all([traerCatalogo(silencioso), traerDelPanel(), traerFotosExtra()]);
     catalogoEnProgreso = !!data.en_progreso;
     // Lo del panel gana sobre productos_manuales.json; los ocultos no se muestran.
     const ocultos = new Set(panel.ocultos);
@@ -4454,7 +4476,7 @@ async function cargar(silencioso){
     const modelosManuales = new Set(manuales.map(p => p.modelo));
     const delScraper = (data.productos || []).filter(p => !modelosManuales.has(p.modelo));
     delScraper.forEach(p => { p._manual = false; });
-    productos = unirInventario(manuales.concat(delScraper), panel.inventario, ocultos);
+    productos = ponerFotosExtra(unirInventario(manuales.concat(delScraper), panel.inventario, ocultos), fotosExtra);
     prepararEspecsLocales(productos);
 
     let estado = productos.length + " productos";
