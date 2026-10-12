@@ -167,6 +167,114 @@ a.kpi:hover{border-color:#B9C3CF}
 .tip{position:absolute;pointer-events:none;background:var(--plate);color:#fff;border-radius:5px;padding:8px 10px;font-size:15px;line-height:1.5;min-width:150px;transform:translate(-50%,-100%);margin-top:-8px;white-space:nowrap;z-index:5}
 .tip .num{text-align:left}
 .cols2{display:grid;grid-template-columns:minmax(0,1.4fr) minmax(0,1fr);gap:14px}
+/* ---------- Resumen (tablero) ---------- */
+.hoy-f{margin-top:2px}
+.rgrid{display:grid;grid-template-columns:repeat(12,minmax(0,1fr));gap:16px;align-items:start}
+.rb{grid-column:span 6;min-width:0}
+.rb.w-full{grid-column:1/-1}.rb.w-big{grid-column:span 8}.rb.w-side{grid-column:span 4}.rb.w-half{grid-column:span 6}
+.rb.bare{background:none;border:none;padding:0}
+@media (max-width:1100px){.rb,.rb.w-big,.rb.w-side,.rb.w-half{grid-column:1/-1}}
+.acc-g{display:grid;grid-template-columns:repeat(8,minmax(0,1fr));gap:10px}
+@media (max-width:1250px){.acc-g{grid-template-columns:repeat(4,minmax(0,1fr))}}
+@media (max-width:600px){.acc-g{gap:6px}.acc-t{min-height:0;padding:10px 4px;align-items:center;text-align:center}.acc-g .acc-t small,.acc-g .acc-t .lg{display:none}.acc-g .acc-t .ct{display:inline}.acc-t b{font-size:13px;font-weight:500}.acc-t .ai{margin:0 0 2px}}
+.acc-t{display:flex;flex-direction:column;align-items:flex-start;gap:3px;padding:14px;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);text-decoration:none;color:var(--ink);transition:border-color .15s,box-shadow .15s,transform .15s;min-height:108px}
+.acc-t:hover{border-color:var(--steel);box-shadow:0 4px 14px rgba(14,42,59,.08);transform:translateY(-1px)}
+.acc-t .ai{width:40px;height:40px;border-radius:10px;background:var(--steel-soft);color:var(--steel);display:grid;place-items:center;margin-bottom:6px}
+.acc-t .ai svg{width:22px;height:22px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.acc-t:first-child .ai{background:var(--amber);color:var(--plate)}
+.acc-t b{font-size:16px;font-weight:600;line-height:1.2}
+.acc-t small{font-size:13.5px;color:var(--muted);line-height:1.25}
+.acc-t .ct{display:none}
+.kp-g{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px}
+.kp-g.k3{grid-template-columns:repeat(3,minmax(0,1fr));margin-top:14px}
+.kp{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:16px 18px;text-decoration:none;color:inherit;display:flex;flex-direction:column;gap:2px;min-width:0}
+a.kp:hover{border-color:#B9C3CF}
+.kp .kl{font-size:15px;color:var(--ink-2);font-weight:500}
+.kp .kv{font:600 30px/1.15 var(--f-sans);letter-spacing:-.02em;margin-top:2px}
+.kp.hero{background:var(--plate);border-color:var(--plate);color:#fff}
+.kp.hero .kl,.kp.hero .kf,.kp.hero .dlt{color:rgba(255,255,255,.75)}
+.kp.hero .kv{font-size:36px}
+.kp.sm .kv{font-size:22px}
+.kp .kd{display:flex;gap:6px;align-items:baseline;flex-wrap:wrap;min-height:22px}
+.dl{font:600 14px var(--f-sans);padding:1px 7px;border-radius:10px;white-space:nowrap}
+.dl.up{background:var(--ok-soft);color:var(--ok)}.dl.dn{background:var(--red-soft);color:var(--red)}.dl.eq{background:var(--line-2);color:var(--muted)}
+.kp.hero .dl.up{background:rgba(74,222,128,.18);color:#86EFAC}.kp.hero .dl.dn{background:rgba(248,113,113,.2);color:#FCA5A5}.kp.hero .dl.eq{background:rgba(255,255,255,.12);color:#fff}
+.dlt{font-size:13.5px;color:var(--muted)}
+.kp .kf{display:flex;align-items:flex-end;justify-content:space-between;gap:8px;font-size:14.5px;color:var(--muted);margin-top:auto;padding-top:6px}
+.kp.hero .kf a{color:#fff}
+.spark{width:110px;height:32px;flex:none}
+.kp.hero .spark polyline{stroke:rgba(255,255,255,.45)}.kp.hero .spark circle{fill:var(--amber);stroke:var(--plate)}
+@media (max-width:1100px){.kp-g{grid-template-columns:repeat(2,minmax(0,1fr))}.kp-g.k3{grid-template-columns:repeat(3,minmax(0,1fr))}}
+@media (max-width:600px){.kp.hero,.kp-g:not(.k3)>.kp:last-child{grid-column:1/-1}.kp-g.k3{grid-template-columns:minmax(0,1fr)}.kp-g.k3 .kp{flex-direction:row;align-items:baseline;flex-wrap:wrap;gap:2px 10px}.kp-g.k3 .kp .kl{width:100%}.kp-g.k3 .kp .kf{margin:0;padding:0}}
+@media (max-width:520px){.kp .kv{font-size:24px}.kp.hero .kv{font-size:30px}.spark{width:76px}.kp{padding:14px}}
+.hb{display:flex;flex-direction:column;gap:12px}
+.hb-r{display:grid;grid-template-columns:minmax(0,1fr);gap:3px;border-radius:8px;padding:3px 6px;margin:0 -6px}
+.hb-r.click{cursor:pointer}.hb-r.click:hover{background:var(--panel-2)}
+.hb-l{display:flex;align-items:center;gap:8px;font-size:15.5px;font-weight:500;min-width:0}
+.hb-l i{width:10px;height:10px;border-radius:3px;flex:none}
+.hb-l .pos{width:22px;height:22px;border-radius:50%;background:var(--line-2);color:var(--ink-2);font:600 12.5px/22px var(--f-sans);text-align:center;flex:none}
+.hb-l .tx{white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0}
+.hb-b{display:flex;align-items:center;gap:8px}
+.hb-b span{height:14px;border-radius:0 4px 4px 0;background:var(--steel);min-width:3px}
+.hb-b b{font:600 15px var(--f-sans);font-variant-numeric:tabular-nums;white-space:nowrap}
+.hb-s{font-size:13.5px;color:var(--muted)}
+.of-res{display:flex;gap:18px;align-items:center;margin-bottom:16px}
+.of-res .kv{font:600 34px/1 var(--f-sans);letter-spacing:-.02em}
+.stk{display:flex;gap:2px;height:14px;border-radius:4px;overflow:hidden;background:var(--line-2)}
+.stk span{min-width:4px}.stk .ok,.stk-l i.ok{background:var(--ok)}.stk .bad,.stk-l i.bad{background:var(--red)}.stk .op,.stk-l i.op{background:#9FB3C2}
+.stk-l{display:flex;flex-wrap:wrap;gap:4px 14px;margin-top:8px;font-size:14px;color:var(--ink-2)}
+.stk-l span{display:inline-flex;align-items:center;gap:5px}.stk-l i{width:10px;height:10px;border-radius:3px}.stk-l small{color:var(--muted)}
+.sub3{font-size:15.5px;font-weight:600;margin:4px 0 6px}
+.lst{display:flex;flex-direction:column;margin-bottom:8px}
+.lst-r{display:flex;align-items:center;gap:10px;padding:9px 4px;border-bottom:1px solid var(--line-2);text-decoration:none;color:inherit}
+.lst-r:last-child{border-bottom:none}.lst-r:hover{background:var(--panel-2)}
+.lst-r .pill{min-width:50px;text-align:center;font-size:13px;padding:2px 8px}
+.lst-r .tx{flex:1;min-width:0;display:flex;flex-direction:column;line-height:1.3}
+.lst-r .tx b{font-weight:500;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}.lst-r .tx small{color:var(--muted);font-size:13px}
+.lst-r .num{font-weight:600}
+.tramos{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:8px;margin-bottom:12px}
+.tramos div{border-radius:8px;padding:8px 10px;display:flex;flex-direction:column}
+.tramos small{font-size:13px}.tramos b{font-size:17px;font-variant-numeric:tabular-nums}
+.tr-info{background:var(--steel-soft);color:var(--steel-2)}.tr-warn{background:var(--amber-soft);color:#7A4F00}.tr-bad{background:var(--red-soft);color:var(--red)}
+.tip .sw{display:inline-block;width:9px;height:9px;border-radius:2px;margin-right:6px}
+.tabla-v{margin-top:8px}.tabla-v summary{cursor:pointer}
+.seg.sm button{padding:6px 12px;font-size:14.5px}
+.banner.info-b{background:var(--steel-soft);border-color:#B7DCE8;color:var(--steel-2)}
+.acepta-b{justify-content:space-between;flex-wrap:wrap;margin-bottom:0}
+.seg.wrap{flex-wrap:wrap}
+.seg-venta{border-top:3px solid var(--steel)}
+.etapas{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));gap:10px;margin-bottom:14px}
+.et{display:flex;gap:10px;align-items:flex-start;padding:10px 12px;border-radius:10px;background:var(--panel-2);border:1px solid var(--line-2);min-width:0}
+.et i{width:26px;height:26px;border-radius:50%;flex:none;display:grid;place-items:center;border:2px solid #B7C2CF;background:#fff}
+.et i svg{width:16px;height:16px;stroke:#fff;fill:none;stroke-width:3;stroke-linecap:round;stroke-linejoin:round}
+.et.ok{background:var(--ok-soft);border-color:#BFE3CB}.et.ok i{background:var(--ok);border-color:var(--ok)}
+.et.mid{background:var(--amber-soft);border-color:#EBCB80}.et.mid i{border-color:#C68A00;background:linear-gradient(90deg,#C68A00 50%,#fff 50%)}
+.et b{display:block;font-size:15.5px;font-weight:600;line-height:1.25}.et small{display:block;font-size:13.5px;color:var(--muted);line-height:1.35;overflow-wrap:anywhere}
+.seg-acc{margin-bottom:10px}
+.seg-det{border-top:1px solid var(--line-2);padding-top:10px;margin-top:6px}.seg-det summary{cursor:pointer;font-weight:600;font-size:15.5px}
+.hist{list-style:none;padding:0;margin:8px 0 0;display:flex;flex-direction:column;gap:6px;font-size:15px}
+@media (max-width:700px){.etapas{grid-template-columns:minmax(0,1fr)}.seg-acc .btn{flex:1 1 auto}}
+.rgrid.editando .rb{outline:2px dashed #9FB3C2;outline-offset:3px;cursor:grab}
+.rgrid.editando .rb.drag{opacity:.45}
+.rgrid.editando .rb.oculto{opacity:.6}
+.rgrid.editando .rb.bare{background:var(--panel);border:1px solid var(--line);padding:14px}
+.rgrid.editando .rb a,.rgrid.editando .rb .hb-r,.rgrid.editando .rb .chart,.rgrid.editando .rb details,.rgrid.editando .rb .seg{pointer-events:none}
+.ed-bar{display:flex;align-items:center;gap:4px;flex-wrap:wrap;background:var(--plate);color:#fff;border-radius:8px;padding:5px 6px 5px 10px;margin-bottom:12px}
+.ed-bar b{margin-right:auto;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;min-width:0;flex:1}
+.ed-bar{flex-wrap:nowrap}.ed-bar .btn.sm{padding:6px 8px}
+.rb.w-side .ed-bar .hm2,.rb.w-half .ed-bar .hm2{display:none}
+.ed-bar .btn{color:#fff;min-height:34px}.ed-bar .btn.ghost:hover{background:rgba(255,255,255,.12)}.ed-bar .btn.pri{background:var(--amber);border-color:var(--amber);color:var(--plate)}
+.grip{display:inline-flex}.grip svg{width:18px;height:18px;stroke:currentColor;fill:currentColor;stroke-width:0;opacity:.8}
+.ord-lista{list-style:none;margin:0;padding:0;display:flex;flex-direction:column;gap:6px}
+.ord-lista li{display:flex;align-items:center;gap:6px;border:1px solid var(--line);border-radius:8px;padding:5px 8px;background:#fff;cursor:grab}
+.ord-lista li.drag{opacity:.4}.ord-lista li.off .on,.ord-lista li.off .oi{opacity:.45;text-decoration:line-through}
+.ord-lista .on{flex:1;font-weight:500}
+.ord-lista .oi{display:flex}.ord-lista .oi svg{width:20px;height:20px;stroke:var(--steel);fill:none;stroke-width:1.8;stroke-linecap:round;stroke-linejoin:round}
+.ord-lista .grip{color:var(--muted)}
+.ord-lista .ver{font-size:14.5px;margin-left:4px}
+.nav-edit{display:flex;align-items:center;gap:8px;margin:0 8px 8px;padding:7px 12px;background:none;border:1px dashed rgba(255,255,255,.22);border-radius:8px;color:rgba(255,255,255,.7);font-size:15px}
+.nav-edit:hover{color:#fff;border-color:rgba(255,255,255,.45)}
+.nav-edit svg{width:18px;height:18px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
 
 /* ---------- Editor de documento ---------- */
 .ed{display:grid;grid-template-columns:minmax(0,1fr) 340px;gap:16px;align-items:start}
@@ -1421,12 +1529,23 @@ const ICON = {
   copy: '<rect x="8" y="8" width="12" height="12" rx="2"/><path d="M16 8V6a2 2 0 0 0-2-2H6a2 2 0 0 0-2 2v8a2 2 0 0 0 2 2h2"/>',
   save: '<path d="M6 3h10l4 4v13a1 1 0 0 1-1 1H5a1 1 0 0 1-1-1V4a1 1 0 0 1 1-1z"/><path d="M8 3v5h7"/><path d="M8 21v-6h8v6"/>',
   back: '<path d="M15 18l-6-6 6-6"/>',
+  half: '<rect x="3" y="5" width="18" height="14" rx="2"/><path d="M12 5v14"/><path d="M3 12h9" opacity=".0"/><rect x="4" y="6" width="7" height="12" fill="currentColor" stroke="none" opacity=".35"/>',
+  wide: '<rect x="3" y="5" width="18" height="14" rx="2"/><rect x="4" y="6" width="16" height="12" fill="currentColor" stroke="none" opacity=".35"/>',
+  eyeoff: '<path d="M3 3l18 18"/><path d="M10.6 5.1A9.9 9.9 0 0 1 12 5c6 0 10 7 10 7a17 17 0 0 1-3.2 3.9M6.1 6.1C3.6 7.8 2 12 2 12s4 7 10 7a9.6 9.6 0 0 0 5-1.4"/><path d="M9.9 9.9a3 3 0 0 0 4.2 4.2"/>',
+  edit: '<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/>',
+  grip: '<circle cx="9" cy="6" r="1.6"/><circle cx="15" cy="6" r="1.6"/><circle cx="9" cy="12" r="1.6"/><circle cx="15" cy="12" r="1.6"/><circle cx="9" cy="18" r="1.6"/><circle cx="15" cy="18" r="1.6"/>',
+  up: '<path d="M6 15l6-6 6 6"/>',
+  down: '<path d="M6 9l6 6 6-6"/>',
+  check: '<path d="M5 12.5l4.5 4.5L19 7.5"/>',
+  cash: '<rect x="2.5" y="6" width="19" height="12" rx="2"/><circle cx="12" cy="12" r="2.6"/><path d="M6 9.5v5M18 9.5v5"/>',
+  note: '<path d="M6 3h9l4 4v14H6z"/><path d="M15 3v4h4"/><path d="M9.5 13.5l2 2 3.5-4"/>',
+  list: '<path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/>',
   sync: '<path d="M20 11a8 8 0 0 0-14.3-4.9L4 8"/><path d="M4 4v4h4"/><path d="M4 13a8 8 0 0 0 14.3 4.9L20 16"/><path d="M20 20v-4h-4"/>'
 };
 const ico = (n) => `<svg viewBox="0 0 24 24">${ICON[n] || ''}</svg>`;
 
 const NAV = [
-  ['resumen', 'Resumen', 'home'], ['ofertas', 'Ofertas', 'offer'], ['ventas', 'Ventas y notas', 'sale'], ['compras', 'Compras', 'buy'],
+  ['resumen', 'Resumen', 'home'], ['ofertas', 'Ofertas', 'offer'], ['ventas', 'Ventas', 'sale'], ['compras', 'Compras', 'buy'],
   ['empleados', 'Empleados', 'badge'], ['clientes', 'Clientes', 'users'], ['distribuidores', 'Distribuidores', 'truck'],
   ['inventario', 'Inventario', 'box'], ['pedidos', 'Pedidos a distribuidores', 'bolt'], ['ajustes', 'Ajustes', 'gear']
 ];
@@ -1459,13 +1578,15 @@ const UI = {
 const App = {
   route: { name: 'resumen', args: [] }, guard: null,
   shell() {
-    const navHtml = NAV.map(([id, label, ic]) => (id === 'inventario' ? '<div class="sep"></div>' : '') + `<a href="#/${id}" data-nav="${id}" title="${label}">${ico(ic)}<span>${label}</span>${id === 'pedidos' ? '<span class="cnt hide" id="cnt-dist"></span>' : ''}</a>`).join('');
+    const navPers = !!Prefs.get().nav; this.navFirma = JSON.stringify([Prefs.get().nav, Prefs.get().navOcultas]);
+    const navHtml = navOrdenado().map(([id, label, ic]) => (id === 'inventario' && !navPers ? '<div class="sep"></div>' : '') + `<a href="#/${id}" data-nav="${id}" title="${label}">${ico(ic)}<span>${label}</span>${id === 'pedidos' ? '<span class="cnt hide" id="cnt-dist"></span>' : ''}</a>`).join('');
     $('#root').innerHTML = `
       <div class="shell">
         <aside class="plate">
           <div class="brand"><img src="${DEFAULT_LOGO}" alt=""><div><b>SUINELECTRIC</b><span>Gestión</span></div></div>
           <div class="apps" aria-label="Apps de Suinelectric"><a href="/tienda" target="_blank" rel="noopener" title="Abrir la tienda"><svg viewBox="0 0 24 24"><path d="M4 9h16l-1.5 11h-13z"/><path d="M8 9V7a4 4 0 0 1 8 0v2"/></svg>Tienda</a><a href="/admin" title="Panel web: pedidos, clientes y estadísticas de la tienda"><svg viewBox="0 0 24 24"><rect x="3" y="4" width="18" height="13" rx="2"/><path d="M8 21h8M12 17v4"/></svg>Panel web</a><a class="on" aria-current="page" title="Gestión: ofertas, ventas, compras e inventario"><svg viewBox="0 0 24 24"><path d="M4 20V10M10 20V4M16 20v-7M22 20H2"/></svg>Gestión</a></div>
           <nav class="nav">${navHtml}</nav>
+          <button type="button" class="nav-edit" data-navedit title="Mover u ocultar secciones del menú">${ico('edit')} Organizar menú</button>
           <div class="sync" id="sync-d"><i></i><span></span><button type="button" data-sync title="Sincronizar ahora">${'↻'}</button></div>
           ${Letra.html()}
         </aside>
@@ -1485,14 +1606,19 @@ const App = {
     $('[data-new]').onclick = () => App.newMenu();
     Letra.wire($('#root'));
     $('[data-more]').onclick = () => {
-      const m = UI.modal({ title: 'Ir a', foot: false, body: `<div class="stack">${NAV.map(([id, label, ic]) => `<a class="btn" style="justify-content:flex-start" href="#/${id}">${ico(ic)} ${label}</a>`).join('')}<div class="muted small" style="margin-top:6px">Otras apps</div><a class="btn" style="justify-content:flex-start" href="/admin">${ico('gear')} Panel web</a><a class="btn" style="justify-content:flex-start" href="/tienda" target="_blank" rel="noopener">${ico('box')} Tienda ↗</a></div>` });
+      const m = UI.modal({ title: 'Ir a', foot: false, body: `<div class="stack">${navOrdenado().map(([id, label, ic]) => `<a class="btn" style="justify-content:flex-start" href="#/${id}">${ico(ic)} ${label}</a>`).join('')}<div class="muted small" style="margin-top:6px">Otras apps</div><a class="btn" style="justify-content:flex-start" href="/admin">${ico('gear')} Panel web</a><a class="btn" style="justify-content:flex-start" href="/tienda" target="_blank" rel="noopener">${ico('box')} Tienda ↗</a></div>` });
       $$('a', m.body).forEach(a => a.addEventListener('click', () => m.close()));
+      const ed = document.createElement('button'); ed.type = 'button'; ed.className = 'btn ghost'; ed.style.justifyContent = 'flex-start'; ed.innerHTML = ico('edit') + ' Organizar menú';
+      ed.onclick = () => { m.close(); editarMenu(); }; $('.stack', m.body).appendChild(ed);
     };
+    $$('[data-navedit]').forEach(b => b.onclick = () => editarMenu());
     this.paintSync(); Bus.on('sync', () => this.paintSync());
+    if (!this._navBus) { this._navBus = true; Bus.on('data', (c) => { if (c === 'config') App.navCambio(); }); Bus.on('sync', () => App.navCambio()); }
     Bus.on('data', () => this.paintCounts()); this.paintCounts();
   },
+  navCambio() { const P = Prefs.get(); const f = JSON.stringify([P.nav, P.navOcultas]); if (f !== this.navFirma && !document.querySelector('.ov')) { this.shell(); this.go(); } },
   newMenu() {
-    const opts = [['oferta', 'Oferta comercial (generador)', 'offer'], ['nota', 'Nota de entrega (generador)', 'sale'], ['venta', 'Venta sin nota', 'sale'], ['compra', 'Compra', 'buy']];
+    const opts = [['oferta', 'Oferta comercial (generador)', 'offer'], ['nota', 'Venta con nota de entrega (generador)', 'sale'], ['compra', 'Compra', 'buy']];
     const m = UI.modal({ title: 'Nuevo', foot: false, body: `<div class="stack">${opts.map(([t, l, i]) => `<a class="btn" style="justify-content:flex-start" href="#/nuevo/${t}">${ico(i)} ${l}</a>`).join('')}</div>` });
     $$('a', m.body).forEach(a => a.addEventListener('click', () => m.close()));
   },
@@ -1772,6 +1898,7 @@ const estadoPill = (d) => {
   if (d.estado === 'anulada') return '<span class="pill bad">Anulada</span>';
   if (d.tipo === 'oferta') { const e = ESTADOS_OFERTA[d.estado || 'abierta'] || ESTADOS_OFERTA.abierta; return `<span class="pill ${e[1]}">${e[0]}</span>`; }
   if (d.tipo === 'ajuste') return '<span class="pill">Ajuste</span>';
+  if (esVenta(d)) { const [, t, c] = etapaVenta(d); return `<span class="pill ${c}">${esc(t)}</span>`; }
   const T = Calc.totals(d);
   if (T.total <= 0.005) return '';
   if (T.saldo <= 0.005) return '<span class="pill ok">Pagada</span>';
@@ -1812,13 +1939,13 @@ function docListView(v, { titulo, tipos, nuevo, sub }) {
     <div class="row" style="margin-bottom:12px">
       <input class="inp" style="flex:1 1 240px" type="search" placeholder="Buscar por número, ${party.toLowerCase()} o producto" data-f="q" value="${esc(F.q)}">
       <select class="inp" style="width:auto" data-f="per">${periodoOpts().map(([k, l]) => `<option value="${k}" ${F.per === k ? 'selected' : ''}>${l}</option>`).join('')}</select>
-      <select class="inp" style="width:auto" data-f="est">${(tipos.includes('oferta') ? [['', 'Todos los estados'], ['abierta', 'Abiertas'], ['aceptada', 'Aceptadas'], ['rechazada', 'Rechazadas']] : [['', 'Todos'], ['cobrar', compra ? 'Por pagar' : 'Por cobrar'], ['anulada', 'Anuladas']]).map(([k, l]) => `<option value="${k}" ${F.est === k ? 'selected' : ''}>${l}</option>`).join('')}</select>
+      <select class="inp" style="width:auto" data-f="est">${(tipos.includes('oferta') ? [['', 'Todos los estados'], ['abierta', 'Abiertas'], ['aceptada', 'Aceptadas'], ['rechazada', 'Rechazadas']] : (compra ? [['', 'Todos'], ['cobrar', 'Por pagar'], ['anulada', 'Anuladas']] : [['', 'Todas'], ['encurso', 'En curso (sin cerrar)'], ['entregar', 'Por entregar'], ['enviar', 'Por enviar'], ['cobrar', 'Por cobrar'], ['cerrada', 'Cerradas'], ['anulada', 'Anuladas']])).map(([k, l]) => `<option value="${k}" ${F.est === k ? 'selected' : ''}>${l}</option>`).join('')}</select>
       <select class="inp" style="width:auto" data-f="vend"><option value="">${compra ? 'Todos los compradores' : 'Todos los vendedores'}</option>${Array.from(new Set(vendedoresActivos().concat(Store.all('docs').filter(x => tipos.includes(x.tipo)).map(x => x[campo]).filter(Boolean)))).sort().map(n => `<option ${F.vend === n ? 'selected' : ''}>${esc(n)}</option>`).join('')}<option value="-" ${F.vend === '-' ? 'selected' : ''}>${compra ? 'Sin comprador' : 'Sin vendedor'}</option></select>
       <select class="inp" style="width:auto" data-f="inv"><option value="">Todos los orígenes</option>${(compra ? ['manuel', 'papa'] : ORIGENES).map(o => `<option value="${o}" ${F.inv === o ? 'selected' : ''}>${esc(o === 'dist' ? 'Cualquier distribuidor' : origenNombre(o))}</option>`).join('')}${compra ? '' : Dists().map(d => `<option value="dist|${esc(d.id)}" ${F.inv === 'dist|' + d.id ? 'selected' : ''}>— ${esc(d.nombre)}</option>`).join('')}</select>
     </div>
     <div id="lst"></div>`;
   /* columnas: el orden de los encabezados y cómo se ordena cada una (para ordenar toda la lista, no solo lo visible) */
-  const estadoKey = (d) => d.estado === 'anulada' ? 'zz anulada' : d.tipo === 'oferta' ? (d.estado || 'abierta') : (() => { const T = Calc.totals(d); return T.saldo <= 0.005 ? 'pagada' : 'debe ' + String(Math.round(T.saldo * 100)).padStart(12, '0'); })();
+  const estadoKey = (d) => d.estado === 'anulada' ? 'zz anulada' : d.tipo === 'oferta' ? (d.estado || 'abierta') : esVenta(d) ? ({ entregar: 1, enviar: 2, cobrar: 3, cerrada: 4 }[etapaVenta(d)[0]] || 5) + etapaVenta(d)[1] : (() => { const T = Calc.totals(d); return T.saldo <= 0.005 ? 'pagada' : 'debe ' + String(Math.round(T.saldo * 100)).padStart(12, '0'); })();
   const COLS = [
     { h: 'Fecha', get: d => TablaOrden.aFecha(String(d.fecha || '')) || null },
     { h: 'Número', get: d => d.numero || null },
@@ -1835,6 +1962,7 @@ function docListView(v, { titulo, tipos, nuevo, sub }) {
     let rows = Store.all('docs').filter(d => tipos.includes(d.tipo)).filter(d => enPeriodo(d.fecha, F.per));
     if (F.est === 'anulada') rows = rows.filter(d => d.estado === 'anulada');
     else if (F.est === 'cobrar') rows = rows.filter(d => d.estado !== 'anulada' && Calc.totals(d).saldo > 0.005);
+    else if (['encurso', 'entregar', 'enviar', 'cerrada'].includes(F.est)) rows = rows.filter(d => { const k = etapaVenta(d)[0]; return F.est === 'encurso' ? !['cerrada', 'anulada'].includes(k) : k === F.est; });
     else if (F.est) rows = rows.filter(d => (d.estado || 'abierta') === F.est);
     if (F.inv && F.inv.startsWith('dist|')) { const id = F.inv.slice(5); rows = rows.filter(d => (d.items || []).some(i => i.origen === 'dist' && itDist(i) === id)); }
     else if (F.inv) rows = rows.filter(d => docOrigins(d).includes(F.inv));
@@ -1870,7 +1998,10 @@ function docListView(v, { titulo, tipos, nuevo, sub }) {
     const more = $('[data-more]', v); if (more) more.onclick = () => { F.lim = (F.lim || 150) + 150; paint(); };
     if (!conEstado) return;
     // estado de una oferta, sin entrar
-    $$('[data-est]', v).forEach(s => s.onchange = () => { cambiarEstados([s.dataset.est], s.value); });
+    $$('[data-est]', v).forEach(s => s.onchange = async () => {
+      if (s.value === 'aceptada') { const d = Store.get('docs', s.dataset.est); const r = d && await aceptarOferta(d, { alSolo: () => cambiarEstados([s.dataset.est], 'aceptada') }); if (r === null) paint(); return; }
+      cambiarEstados([s.dataset.est], s.value);
+    });
     // selección
     $$('[data-sel]', v).forEach(c => c.onchange = () => { if (c.checked) sel.add(c.dataset.sel); else sel.delete(c.dataset.sel); c.closest('tr').classList.toggle('sel', c.checked); pintarLote(); });
     const todas = $('[data-todas]', v);
@@ -1892,7 +2023,12 @@ function docListView(v, { titulo, tipos, nuevo, sub }) {
     bar.classList.toggle('hide', !sel.size);
     if (!sel.size) { bar.innerHTML = ''; return; }
     bar.innerHTML = `<b>${sel.size} seleccionada${sel.size === 1 ? '' : 's'}</b><span>Marcar como:</span>${Object.entries(ESTADOS_OFERTA).map(([k, [l, c]]) => `<button type="button" class="btn sm ${c === 'info' ? '' : c}" data-lote-est="${k}">${l}</button>`).join('')}<button type="button" class="x" data-lote-x>Quitar selección</button>`;
-    $$('[data-lote-est]', bar).forEach(b => b.onclick = () => cambiarEstados(Array.from(sel), b.dataset.loteEst));
+    $$('[data-lote-est]', bar).forEach(b => b.onclick = async () => {
+      const ids = Array.from(sel);
+      if (b.dataset.loteEst === 'aceptada' && ids.length === 1) { const d = Store.get('docs', ids[0]); const r = d && await aceptarOferta(d, { alSolo: () => cambiarEstados(ids, 'aceptada') }); if (r === null) paint(); return; }
+      cambiarEstados(ids, b.dataset.loteEst);
+      if (b.dataset.loteEst === 'aceptada' && ids.length > 1) UI.toast('Abre cada oferta aceptada y toca "Crear la venta" para registrar la venta', 4500);
+    });
     $('[data-lote-x]', bar).onclick = () => { sel.clear(); paint(); };
   };
   TablaOrden.ext(sortId, () => paint());
@@ -1936,7 +2072,10 @@ document.addEventListener('click', (e) => {
   e.preventDefault(); abrirCotizador(m[1], m[2] ? decodeURIComponent(m[2]) : '');
 }, true);
 Views.rapida = (v) => { Route.nav('#/ofertas/generador', { replace: true }); };
-Views.ventas = (v) => docListView(v, { titulo: 'Ventas y notas de entrega', tipos: ['nota', 'venta'], nuevo: [['nota', 'Nota de entrega'], ['venta', 'Venta sin nota']] });
+Views.ventas = (v, filtro) => {
+  if (filtro) { const k = 'suinadm_f_notaventa'; lsSet(k, Object.assign(lsGet(k, {}), { est: filtro, per: 'todo' })); Route.nav('#/ventas', { replace: true, silent: true }); }
+  docListView(v, { titulo: 'Ventas', tipos: ['nota', 'venta'], nuevo: [['nota', 'Nueva venta']], sub: 'Cada venta lleva su nota de entrega (se comparte o imprime cuando la pidan), su pago y su entrega o envío.' });
+};
 Views.compras = (v) => docListView(v, { titulo: 'Compras', tipos: ['compra', 'ajuste'], nuevo: [['compra', 'Nueva compra']], sub: 'Lo que entra a tu inventario o al de tu papá. Los ajustes son correcciones de existencia.' });
 
 /* ---------------- nuevo documento ---------------- */
@@ -2028,16 +2167,238 @@ function productFinder(host, { tipo, onPick, placeholder }) {
 }
 
 /* ---------------- editor ---------------- */
+/* ---------------- Flujo de venta: oferta → venta → pago → entrega/envío ----------------
+   Cada venta lleva su entrega (cómo y cuándo) y un historial de lo que pasó.
+   Las ventas anteriores a INICIO_ENTREGAS se toman como ya entregadas. */
+const INICIO_ENTREGAS = '2026-10-12';
+const EMPRESAS_ENVIO = ['MRW', 'Zoom', 'Tealca', 'Domesa', 'Liberty Express'];
+const MODOS_ENTREGA = { retira: 'Retira el cliente', entrega: 'Lo entregamos', envio: 'Envío' };
+const entregaDe = (d) => d.entrega || ((d.fecha || '').slice(0, 10) >= INICIO_ENTREGAS && !d.importado && !d.historial ? { modo: 'retira', estado: 'pendiente' } : { modo: 'retira', estado: 'entregado', legado: true });
+const entregaHecha = (d) => { const e = entregaDe(d); return e.estado === 'entregado' || e.estado === 'enviado'; };
+const ventaPagada = (d) => { const T = Calc.totals(d); return T.total <= 0.005 || T.saldo <= 0.005; };
+// Etapa de una venta: [clave, texto, color]
+const etapaVenta = (d) => {
+  if (d.estado === 'anulada') return ['anulada', 'Anulada', 'bad'];
+  const e = entregaDe(d), pagada = ventaPagada(d), hecha = entregaHecha(d), env = e.modo === 'envio';
+  if (pagada && hecha) return ['cerrada', e.estado === 'enviado' ? 'Enviada y pagada' : 'Cerrada', 'ok'];
+  if (!hecha) return [env ? 'enviar' : 'entregar', (pagada ? 'Pagada · ' : '') + (env ? 'por enviar' : 'por entregar'), pagada ? 'warn' : 'info'];
+  const T = Calc.totals(d);
+  return ['cobrar', (e.estado === 'enviado' ? 'Enviada' : 'Entregada') + ' · debe ' + fmtUSD0(T.saldo), 'bad'];
+};
+const logDoc = (d, e, extra) => { (d.hist = d.hist || []).push(Object.assign({ t: localStamp(), e, q: Yo.nombre() || (Sync.user && Sync.user.email) || '' }, extra || {})); };
+
+/* WhatsApp del cliente (teléfono del documento o de su ficha) */
+function telCliente(d) {
+  const ex = ((d.cliente && d.cliente.extras) || []).find(x => normTxt(x.l).startsWith('tel'));
+  const c = d.clienteId && Store.get('clientes', d.clienteId);
+  let t = String((ex && ex.v) || (c && c.telefono) || '').replace(/\D/g, '');
+  if (!t) return '';
+  if (t.startsWith('0')) t = '58' + t.slice(1); else if (t.length === 10 && t.startsWith('4')) t = '58' + t;
+  return t;
+}
+const abrirWhatsApp = (d, texto) => { const t = telCliente(d); window.open('https://wa.me/' + t + '?text=' + encodeURIComponent(texto), '_blank', 'noopener'); };
+const nombreCorto = (d) => String((d.cliente && d.cliente.nombre) || '').split(/\s+/).slice(0, 3).join(' ');
+
+/* Nota de entrega: compartir por WhatsApp o imprimir (es la misma venta en PDF) */
+async function compartirNota(d) {
+  const T = Calc.totals(d);
+  const texto = `Hola ${nombreCorto(d)}, te envío la nota de entrega ${d.numero} por ${fmtUSD(T.total)}.`;
+  try {
+    const { blob, name } = await PDF.build(d, { output: 'blob' });
+    const f = new File([blob], name, { type: 'application/pdf' });
+    if (navigator.canShare && navigator.canShare({ files: [f] })) { await navigator.share({ files: [f], text: texto, title: name }); return; }
+    const a = document.createElement('a'); a.href = URL.createObjectURL(blob); a.download = name; document.body.appendChild(a); a.click(); a.remove();
+    setTimeout(() => abrirWhatsApp(d, texto), 400);
+    UI.toast('Se descargó el PDF: adjúntalo en el chat de WhatsApp', 4000);
+  } catch (e) { if (e && e.name !== 'AbortError') UI.toast('No se pudo preparar la nota: ' + e.message, 3500); }
+}
+async function imprimirNota(d) {
+  try {
+    const { blob } = await PDF.build(d, { output: 'blob' });
+    const url = URL.createObjectURL(blob);
+    if (window.innerWidth < 860) { window.open(url, '_blank'); return; }
+    const fr = document.createElement('iframe'); fr.style.cssText = 'position:fixed;right:0;bottom:0;width:0;height:0;border:0'; fr.src = url;
+    fr.onload = () => { try { fr.contentWindow.focus(); fr.contentWindow.print(); } catch (e) { window.open(url, '_blank'); } setTimeout(() => fr.remove(), 60000); };
+    document.body.appendChild(fr);
+  } catch (e) { UI.toast('No se pudo preparar la nota: ' + e.message, 3500); }
+}
+
+/* Crea la venta (con su nota) desde una oferta aceptada */
+function convertirOferta(O, { entrega, pagos } = {}) {
+  const cfg = CFG();
+  const nd = newDoc('nota', { clienteId: O.clienteId, cliente: clone(O.cliente || {}), items: clone(O.items || []).map(it => Object.assign(it, { id: uid('i') })), descPct: O.descPct, ivaPct: O.ivaPct, tasa: O.tasa, tasaFuente: O.tasaFuente, vendedor: O.vendedor, origenDoc: O.id, notas: O.notas });
+  nd.condiciones = (cfg.condiciones.nota || []).slice();
+  nd.items.forEach(it => { delete it.auto; if (it.origen === 'dist') { it.pedido = 'por pedir'; if (!it.dist) it.dist = itDist(it); } });
+  nd.entrega = Object.assign({ modo: 'retira', estado: 'pendiente' }, entrega || {});
+  nd.pagos = pagos || [];
+  logDoc(nd, 'aceptada', { ref: O.numero });
+  nd.pagos.forEach(p => logDoc(nd, 'pago', { monto: p.monto, forma: p.forma }));
+  if (entregaHecha(nd)) logDoc(nd, nd.entrega.estado, nd.entrega.empresa ? { empresa: nd.entrega.empresa, guia: nd.entrega.guia } : null);
+  if (nd.cliente && nd.cliente.nombre && !nd.clienteId) { const c = clienteFromDoc(nd); if (c) nd.clienteId = c.id; }
+  Store.put('docs', nd);
+  const orig = Store.get('docs', O.id); if (orig) { orig.estado = 'aceptada'; orig.convertidoA = nd.id; Store.put('docs', orig); }
+  return nd;
+}
+
+/* Ventana al aceptar una oferta: cómo se entrega y si ya pagó → crea la venta.
+   Devuelve una promesa: la venta creada, 'solo' (solo marcar aceptada) o null (cancelar). */
+function dialogoAceptar(O) {
+  return new Promise(res => {
+    let hecho = false; const fin = (r) => { if (hecho) return; hecho = true; res(r); };
+    const cfg = CFG(), formas = cfg.formasPago || [], T = Calc.totals(O);
+    const st = { modo: 'retira', ya: false, pago: 'despues', forma: formas[0] || '', monto: round2(T.total), ref: '', empresa: '', destino: (O.cliente && O.cliente.direccion) || '' };
+    const m = UI.modal({ title: `Oferta ${O.numero || ''} aceptada`, body: '<div data-b></div>', onClose: () => fin(null),
+      foot: [['Solo marcar aceptada', 'ghost', (c) => { fin('solo'); c(); }], ['Cancelar', '', (c) => c()], ['Crear la venta', 'pri', (c) => {
+        if (st.pago !== 'despues' && !(num(st.monto) > 0)) { UI.toast('Escribe el monto que pagó'); return false; }
+        const entrega = { modo: st.modo, estado: st.ya ? (st.modo === 'envio' ? 'enviado' : 'entregado') : 'pendiente' };
+        if (st.ya) entrega.fecha = localStamp();
+        if (st.modo === 'envio') { entrega.empresa = st.empresa.trim(); entrega.destino = st.destino.trim(); }
+        const pagos = st.pago === 'despues' ? [] : [{ id: uid('g'), fecha: localStamp(), forma: st.forma, monto: round2(num(st.monto)), ref: st.ref }];
+        const nd = convertirOferta(O, { entrega, pagos });
+        fin(nd); c();
+      }]] });
+    const paint = () => {
+      const b = $('[data-b]', m.body);
+      b.innerHTML = `<p class="small" style="margin-top:0"><b>${esc((O.cliente && O.cliente.nombre) || 'Cliente')}</b> · ${fmtUSD(T.total)}<br><span class="muted">Se crea la venta con su nota de entrega (mismos productos y precios). Sale del inventario y lo del distribuidor queda por pedir.</span></p>
+        <div class="fld"><span>¿Cómo se entrega?</span><div class="seg wrap" data-s="modo">${Object.entries(MODOS_ENTREGA).map(([k, l]) => `<button type="button" data-v="${k}" class="${st.modo === k ? 'on' : ''}">${l}</button>`).join('')}</div></div>
+        ${st.modo === 'envio' ? `<div class="grid g2" style="margin-top:12px"><label class="fld"><span>Empresa de envío</span><input class="inp" data-i="empresa" list="dl-envio" value="${esc(st.empresa)}" placeholder="MRW, Zoom, Tealca…"><datalist id="dl-envio">${EMPRESAS_ENVIO.map(x => `<option value="${esc(x)}">`).join('')}</datalist></label>
+          <label class="fld"><span>Destino</span><input class="inp" data-i="destino" value="${esc(st.destino)}" placeholder="Ciudad u oficina"></label></div>` : ''}
+        <label class="chk" style="margin-top:10px"><input type="checkbox" data-ya ${st.ya ? 'checked' : ''}> ${st.modo === 'envio' ? 'Ya se envió' : 'Ya se entregó'}</label>
+        <div class="fld" style="margin-top:16px"><span>¿El pago?</span><div class="seg wrap" data-s="pago">${[['despues', 'Paga al entregar'], ['todo', 'Ya pagó todo'], ['anticipo', 'Dejó un anticipo']].map(([k, l]) => `<button type="button" data-v="${k}" class="${st.pago === k ? 'on' : ''}">${l}</button>`).join('')}</div></div>
+        ${st.pago !== 'despues' ? `<div class="grid g3" style="margin-top:12px"><label class="fld"><span>Forma de pago</span><select class="inp" data-i="forma">${formas.map(f => `<option ${st.forma === f ? 'selected' : ''}>${esc(f)}</option>`).join('')}</select></label>
+          <label class="fld"><span>Monto $</span><input class="inp num" inputmode="decimal" data-i="monto" value="${esc(st.monto)}" ${st.pago === 'todo' ? 'readonly' : ''}></label>
+          <label class="fld"><span>Referencia</span><input class="inp" data-i="ref" value="${esc(st.ref)}" placeholder="Opcional"></label></div>` : ''}`;
+      $$('[data-s]', b).forEach(sg => sg.onclick = (e) => { const x = e.target.closest('[data-v]'); if (!x) return; st[sg.dataset.s] = x.dataset.v; if (sg.dataset.s === 'pago') st.monto = st.pago === 'todo' ? round2(T.total) : st.pago === 'anticipo' ? '' : st.monto; paint(); });
+      $$('[data-i]', b).forEach(i => i.addEventListener(i.tagName === 'SELECT' ? 'change' : 'input', () => { st[i.dataset.i] = i.value; }));
+      $('[data-ya]', b).onchange = (e) => { st.ya = e.target.checked; };
+    };
+    paint();
+  });
+}
+/* Aceptar desde cualquier lugar: pregunta y, si crea la venta, la abre */
+async function aceptarOferta(O, { alSolo } = {}) {
+  if (O.convertidoA && Store.get('docs', O.convertidoA)) { if (alSolo) alSolo(); return 'solo'; }
+  const r = await dialogoAceptar(O);
+  if (r === 'solo') { if (alSolo) alSolo(); }
+  else if (r) { UI.toast(`Venta creada: ${r.numero}`); Route.nav('#/doc/' + r.id); }
+  return r;
+}
+
+/* Ventanas cortas para registrar un pago o un envío */
+function dialogoPago(D, { titulo = 'Registrar pago', conEntrega } = {}) {
+  return new Promise(res => {
+    let hecho = false; const fin = (r) => { if (!hecho) { hecho = true; res(r); } };
+    const formas = CFG().formasPago || [], T = Calc.totals(D);
+    const m = UI.modal({ title: titulo, onClose: () => fin(null), body: `<p class="small muted" style="margin-top:0">${esc(D.numero || '')} · ${esc((D.cliente && D.cliente.nombre) || '')} · debe <b>${fmtUSD(Math.max(0, T.saldo))}</b></p>
+      <div class="grid g3"><label class="fld"><span>Forma de pago</span><select class="inp" data-i="forma">${formas.map(f => `<option>${esc(f)}</option>`).join('')}</select></label>
+      <label class="fld"><span>Monto $</span><input class="inp num" inputmode="decimal" data-i="monto" value="${esc(round2(Math.max(0, T.saldo)))}"></label>
+      <label class="fld"><span>Referencia</span><input class="inp" data-i="ref" placeholder="Opcional"></label></div>
+      ${conEntrega ? `<p class="small muted" style="margin:10px 0 0">También queda marcada como ${entregaDe(D).modo === 'envio' ? 'enviada' : 'entregada'} hoy.</p>` : ''}`,
+      foot: [['Cancelar', '', (c) => c()], ['Guardar', 'pri', (c) => {
+        const g = (k) => $(`[data-i="${k}"]`, m.body).value; const monto = round2(num(g('monto')));
+        if (!(monto > 0)) { UI.toast('Escribe el monto'); return false; }
+        fin({ id: uid('g'), fecha: localStamp(), forma: g('forma'), monto, ref: g('ref') }); c();
+      }]] });
+  });
+}
+function dialogoEnvio(D) {
+  return new Promise(res => {
+    let hecho = false; const fin = (r) => { if (!hecho) { hecho = true; res(r); } };
+    const e = entregaDe(D);
+    const m = UI.modal({ title: 'Registrar envío', onClose: () => fin(null), body: `<div class="grid g2">
+      <label class="fld"><span>Empresa de envío</span><input class="inp" data-i="empresa" list="dl-envio2" value="${esc(e.empresa || '')}" placeholder="MRW, Zoom, Tealca…"><datalist id="dl-envio2">${EMPRESAS_ENVIO.map(x => `<option value="${esc(x)}">`).join('')}</datalist></label>
+      <label class="fld"><span>Número de guía</span><input class="inp mono" data-i="guia" value="${esc(e.guia || '')}"></label>
+      <label class="fld" style="grid-column:1/-1"><span>Destino</span><input class="inp" data-i="destino" value="${esc(e.destino || (D.cliente && D.cliente.direccion) || '')}" placeholder="Ciudad u oficina"></label></div>`,
+      foot: [['Cancelar', '', (c) => c()], ['Marcar como enviado', 'pri', (c) => { const g = (k) => $(`[data-i="${k}"]`, m.body).value.trim(); fin({ empresa: g('empresa'), guia: g('guia'), destino: g('destino') }); c(); }]] });
+  });
+}
+
+/* Panel de seguimiento dentro de cada venta: etapas, acciones rápidas, entrega e historial */
+function seguimientoVenta(box, D, { guardar, repintar }) {
+  const paint = () => {
+    const e = D.entrega || (D.entrega = clone(entregaDe(D)));
+    const T = Calc.totals(D), pagada = ventaPagada(D), hecha = entregaHecha(D), env = e.modo === 'envio';
+    const [, etTxt, etCls] = etapaVenta(D);
+    const h = D.hist || [];
+    const cuando = (ev) => { const x = h.filter(z => z.e === ev).pop(); return x ? fmtFecha(x.t) : ''; };
+    const ultPago = (D.pagos || []).slice().sort((a, b) => String(a.fecha).localeCompare(String(b.fecha))).pop();
+    const paso = (ok, parcial, titulo, sub) => `<div class="et ${ok ? 'ok' : parcial ? 'mid' : ''}"><i>${ok ? ico('check') : ''}</i><div><b>${titulo}</b><small>${sub}</small></div></div>`;
+    const pasoEntrega = hecha ? (e.estado === 'enviado' ? `Enviada${e.empresa ? ' por ' + esc(e.empresa) : ''}${e.guia ? ' · guía ' + esc(e.guia) : ''}` : 'Entregada') + (e.fecha && !e.legado ? ' · ' + esc(fmtFecha(e.fecha)) : '') : (env ? `Por enviar${e.empresa ? ' · ' + esc(e.empresa) : ''}` : esc(MODOS_ENTREGA[e.modo] || ''));
+    const btn = (a, label, cls = '', ic = '') => `<button type="button" class="btn sm ${cls}" data-sa="${a}">${ic ? ico(ic) : ''}${label}</button>`;
+    let acc = '';
+    if (D.estado !== 'anulada') {
+      if (!hecha && !pagada) acc += btn('todo', env ? 'Pagado y enviado' : 'Entregado y cobrado', 'pri', 'check') + btn('pago', 'Registrar pago', '', 'cash') + btn(env ? 'envio' : 'entregado', env ? 'Registrar envío' : 'Marcar entregado');
+      else if (!hecha) acc += btn(env ? 'envio' : 'entregado', env ? 'Registrar envío' : 'Marcar entregado', 'pri', 'check');
+      else if (!pagada) acc += btn('pago', 'Registrar pago', 'pri', 'cash') + btn('recordar', 'Recordar pago por WhatsApp');
+      if (e.estado === 'enviado' && e.guia) acc += btn('guiawa', 'Enviar guía por WhatsApp');
+    }
+    box.innerHTML = `<div class="ph"><h2>Seguimiento</h2><div class="act"><span class="pill ${etCls}">${esc(etTxt)}</span></div></div>
+      <div class="etapas">
+        ${paso(true, false, D.origenDoc ? 'Oferta aceptada' : 'Venta creada', esc(fmtFecha(cuando('aceptada') || D.fecha)) + (D.origenDoc && Store.get('docs', D.origenDoc) ? ` · <a href="#/doc/${esc(D.origenDoc)}">${esc(Store.get('docs', D.origenDoc).numero)}</a>` : ''))}
+        ${paso(pagada, T.pagado > 0.005, pagada ? 'Pagada' : T.pagado > 0.005 ? 'Anticipo' : 'Pago pendiente', pagada ? (ultPago ? esc(ultPago.forma || '') + ' · ' + esc(fmtFecha(ultPago.fecha)) : 'Sin monto') : T.pagado > 0.005 ? `Pagó ${fmtUSD(T.pagado)} · debe ${fmtUSD(T.saldo)}` : `Debe ${fmtUSD(T.saldo)}`)}
+        ${paso(hecha, false, hecha ? (e.estado === 'enviado' ? 'Enviada' : 'Entregada') : env ? 'Envío pendiente' : 'Entrega pendiente', pasoEntrega)}
+      </div>
+      ${acc ? `<div class="row seg-acc">${acc}</div>` : ''}
+      <div class="row seg-acc">${btn('compartir', 'Compartir nota por WhatsApp', '', 'pdf')}${btn('imprimir', 'Imprimir nota', '', 'pdf')}</div>
+      <details class="seg-det"${!hecha ? ' open' : ''}><summary>Entrega${e.legado ? ' <span class="muted small">(venta anterior: se toma como entregada)</span>' : ''}</summary>
+        <div class="grid g4" style="margin-top:10px">
+          <div class="fld" style="grid-column:1/-1"><span>Cómo se entrega</span><div class="seg wrap" data-se="modo">${Object.entries(MODOS_ENTREGA).map(([k, l]) => `<button type="button" data-v="${k}" class="${e.modo === k ? 'on' : ''}">${l}</button>`).join('')}</div></div>
+          <label class="fld"><span>Estado</span><select class="inp" data-ei="estado">${[['pendiente', 'Pendiente'], ['entregado', 'Entregada'], ['enviado', 'Enviada']].map(([k, l]) => `<option value="${k}" ${e.estado === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
+          <label class="fld"><span>Fecha</span><input class="inp" type="date" data-ei="fecha" value="${esc((e.fecha || '').slice(0, 10))}"></label>
+          ${env ? `<label class="fld"><span>Empresa</span><input class="inp" data-ei="empresa" list="dl-envio3" value="${esc(e.empresa || '')}"><datalist id="dl-envio3">${EMPRESAS_ENVIO.map(x => `<option value="${esc(x)}">`).join('')}</datalist></label>
+          <label class="fld"><span>Guía</span><input class="inp mono" data-ei="guia" value="${esc(e.guia || '')}"></label>
+          <label class="fld" style="grid-column:span 2"><span>Destino</span><input class="inp" data-ei="destino" value="${esc(e.destino || '')}"></label>` : ''}
+        </div></details>
+      ${h.length ? `<details class="seg-det"><summary>Historial (${h.length})</summary><ul class="hist">${h.slice().reverse().map(x => `<li><span class="mono small">${esc(fmtFecha(x.t))} ${esc(String(x.t).slice(11, 16))}</span> ${esc(textoHist(x))}${x.q ? ` <span class="muted small">· ${esc(x.q)}</span>` : ''}</li>`).join('')}</ul></details>` : ''}`;
+
+    $$('[data-sa]', box).forEach(b => b.onclick = () => accion(b.dataset.sa));
+    const sm = $('[data-se="modo"]', box); if (sm) sm.onclick = (ev) => { const x = ev.target.closest('[data-v]'); if (!x) return; e.modo = x.dataset.v; delete e.legado; repintar(true); paint(); };
+    $$('[data-ei]', box).forEach(i => i.addEventListener(i.tagName === 'SELECT' || i.type === 'date' ? 'change' : 'input', () => {
+      const k = i.dataset.ei; delete e.legado;
+      if (k === 'fecha') e.fecha = i.value ? i.value + ' 12:00' : ''; else e[k] = i.value;
+      if (k === 'estado') { if (i.value !== 'pendiente' && !e.fecha) e.fecha = localStamp(); logDoc(D, i.value === 'pendiente' ? 'pendiente' : i.value); }
+      repintar(true); if (k === 'estado') paint();
+    }));
+  };
+  const accion = async (a) => {
+    const e = D.entrega; const env = e.modo === 'envio';
+    const marcarHecha = (extra) => { e.estado = env ? 'enviado' : 'entregado'; e.fecha = localStamp(); delete e.legado; Object.assign(e, extra || {}); logDoc(D, e.estado, env ? { empresa: e.empresa, guia: e.guia } : null); };
+    if (a === 'compartir') return compartirNota(D);
+    if (a === 'imprimir') return imprimirNota(D);
+    if (a === 'recordar') return abrirWhatsApp(D, `Hola ${nombreCorto(D)}, te escribo por la nota de entrega ${D.numero}: queda pendiente ${fmtUSD(Calc.totals(D).saldo)}. ¡Gracias!`);
+    if (a === 'guiawa') return abrirWhatsApp(D, `Hola ${nombreCorto(D)}, tu pedido (${D.numero}) salió por ${e.empresa || 'envío'}${e.destino ? ' hacia ' + e.destino : ''}. Número de guía: ${e.guia}.`);
+    if (a === 'pago' || a === 'todo') {
+      if (a === 'todo' && env && !e.guia) { const x = await dialogoEnvio(D); if (!x) return; Object.assign(e, x); }
+      const p = await dialogoPago(D, { titulo: a === 'todo' ? (env ? 'Pagado y enviado' : 'Entregado y cobrado') : 'Registrar pago', conEntrega: a === 'todo' }); if (!p) return;
+      (D.pagos = D.pagos || []).push(p); logDoc(D, 'pago', { monto: p.monto, forma: p.forma });
+      if (a === 'todo') marcarHecha();
+    } else if (a === 'entregado') marcarHecha();
+    else if (a === 'envio') { const x = await dialogoEnvio(D); if (!x) return; marcarHecha(x); }
+    if (guardar()) { paint(); repintar(false); UI.toast(etapaVenta(D)[1]); }
+  };
+  paint();
+  return { paint };
+}
+const textoHist = (x) => ({
+  aceptada: 'Oferta aceptada' + (x.ref ? ' (' + x.ref + ')' : '') + ': se creó la venta',
+  creada: 'Venta creada',
+  pago: 'Pago de ' + fmtUSD(x.monto || 0) + (x.forma ? ' · ' + x.forma : ''),
+  entregado: 'Entregada', enviado: 'Enviada' + (x.empresa ? ' por ' + x.empresa : '') + (x.guia ? ' · guía ' + x.guia : ''),
+  pendiente: 'Entrega marcada como pendiente'
+}[x.e] || x.e);
+
+
 function docEditor(v, D, isNew) {
   const cfg = CFG();
   const venta = esVenta(D), compra = D.tipo === 'compra', oferta = D.tipo === 'oferta', ajuste = D.tipo === 'ajuste';
   const conDocumento = oferta || venta;
   let dirty = isNew, saved = isNew ? null : Store.get('docs', D.id);
   const setDirty = (x = true) => { dirty = x; const dd = $('#dirty', v); if (dd) dd.classList.toggle('hide', !dirty); };
+  let segCtl = null;
   App.guard = async () => !dirty || !(D.items.length || (D.cliente && D.cliente.nombre)) || UI.confirm('Hay cambios sin guardar en este documento. ¿Salir sin guardar?', { ok: 'Salir sin guardar', danger: true });
   window.onbeforeunload = () => (dirty && D.items.length ? true : undefined);
 
-  const titleTxt = isNew ? `${TIPOS[D.tipo]} nueva` : `${TIPOS[D.tipo]} ${D.numero || ''}`;
+  const titleTxt = venta ? (isNew ? 'Venta nueva' : `Venta ${D.numero || ''}`) : isNew ? `${TIPOS[D.tipo]} nueva` : `${TIPOS[D.tipo]} ${D.numero || ''}`;
   const backHref = oferta ? '#/ofertas' : compra || ajuste ? '#/compras' : '#/ventas';
   const vendOpts = Array.from(new Set(vendedoresActivos().concat(D.vendedor ? [D.vendedor] : []))).map(x => `<option ${D.vendedor === x ? 'selected' : ''}>${esc(x)}</option>`).join('');
   const provList = Store.all('proveedores').map(p => `<option value="${esc(p.nombre)}">`).join('');
@@ -2051,6 +2412,8 @@ function docEditor(v, D, isNew) {
   ${(oferta || venta) && !isNew && D.tipo !== 'venta' ? `<div class="row" style="margin:-4px 0 12px"><button class="btn sm" data-a="engen">${ico('offer')} Abrir en el generador</button><span class="muted small">Los cambios de aquí y del generador se mantienen iguales.</span></div>` : ''}
   <div class="ed">
     <div class="stack">
+      ${venta && !isNew ? '<section class="panel seg-venta" id="sec-seg"></section>' : ''}
+      ${oferta && !isNew && !(D.convertidoA && Store.get('docs', D.convertidoA)) && D.estado !== 'rechazada' ? `<div class="banner info-b acepta-b"><span>¿El cliente aceptó? Crea la venta con su nota, pago y entrega en un paso.</span><button class="btn pri sm" data-a="aceptar">${ico('check')} Aceptada: crear la venta</button></div>` : ''}
       <section class="panel">
         <div class="grid g4">
           ${conDocumento ? `<label class="fld" style="grid-column:span 2"><span>Título en el documento</span><input class="inp" data-k="titulo" value="${esc(D.titulo || cfg.titulos[D.tipo] || '')}"></label>` : ''}
@@ -2094,7 +2457,7 @@ function docEditor(v, D, isNew) {
       <section class="panel stack" style="gap:8px">
         <button class="btn pri" data-a="save">${ico('save')} Guardar</button>
         ${conDocumento ? `<div class="row" style="flex-wrap:nowrap"><button class="btn" style="flex:1" data-a="pdf">${ico('pdf')} Descargar PDF</button><button class="btn" data-a="preview" title="Vista previa">${ico('eye')}</button>${navigator.canShare ? `<button class="btn" data-a="share" title="Compartir PDF">↗</button>` : ''}</div>` : ''}
-        ${oferta ? `<button class="btn" data-a="toNota">Convertir en nota de entrega</button><button class="btn" data-a="toVenta">Registrar como venta sin nota</button>` : ''}
+        ${oferta && !(D.convertidoA && Store.get('docs', D.convertidoA)) ? `<button class="btn" data-a="aceptar">${ico('check')} Aceptada: crear la venta</button>` : ''}
         ${D.tipo === 'venta' ? `<button class="btn" data-a="toNotaV">Hacer nota de entrega de esta venta</button>` : ''}
         ${!isNew ? `<button class="btn" data-a="dup">${ico('copy')} Duplicar</button>` : ''}
         ${!isNew && !oferta ? `<button class="btn ${D.estado === 'anulada' ? '' : 'red'}" data-a="anular">${D.estado === 'anulada' ? 'Reactivar' : 'Anular'}</button>` : ''}
@@ -2272,6 +2635,7 @@ function docEditor(v, D, isNew) {
     }
     box.innerHTML = h;
     const sp = $('#sec-pagos', v); if (sp && !sp.contains(document.activeElement)) paintPagos();
+    const ss = $('#sec-seg', v); if (segCtl && ss && !ss.contains(document.activeElement)) segCtl.paint();
   };
 
   /* ----- tasas ----- */
@@ -2294,6 +2658,11 @@ function docEditor(v, D, isNew) {
       else if (k === 'firmas') D.firmas = el.checked;
       else if (k === 'descPct' || k === 'ivaPct') D[k] = num(el.value);
       else if (k === 'tasa') { D.tasa = el.value.trim() ? num(el.value) : null; D.tasaFuente = 'manual'; }
+      else if (k === 'estado' && oferta && el.value === 'aceptada' && !isNew && !(D.convertidoA && Store.get('docs', D.convertidoA))) {
+        const prev = D.estado || 'abierta'; el.value = prev;
+        (async () => { if (dirty && !save()) return; dirty = false; App.guard = null; await aceptarOferta(Store.get('docs', D.id) || D, { alSolo: () => { D.estado = 'aceptada'; el.value = 'aceptada'; save(); } }); })();
+        return;
+      }
       else D[k] = el.value;
       setDirty(); paintTotals(); if (k === 'tasa') paintRates();
     });
@@ -2326,6 +2695,7 @@ function docEditor(v, D, isNew) {
     }
     if (venta || oferta) D.items.forEach(it => { if (it.origen === 'dist') { if (venta && !it.pedido) it.pedido = 'por pedir'; if (!it.dist) it.dist = itDist(it); } });
     if (!D.importado && !D.historial && D.tipo !== 'oferta') D.afectaStock = true;
+    if (venta && !D.entrega) { D.entrega = clone(entregaDe(D)); if (isNew) logDoc(D, 'creada'); }
     D.items.forEach(it => delete it.auto); delete D.origenAuto;
     Store.put('docs', D);
     saved = clone(D); setDirty(false);
@@ -2365,6 +2735,7 @@ function docEditor(v, D, isNew) {
     else if (act === 'contar') { D.historial = false; D.afectaStock = true; save(); App.render(); }
     else if (act === 'toNota') convert('nota');
     else if (act === 'toVenta') convert('venta');
+    else if (act === 'aceptar') { if (dirty && !save()) return; dirty = false; App.guard = null; await aceptarOferta(Store.get('docs', D.id) || D, { alSolo: () => { D.estado = 'aceptada'; save(); App.render(); } }); }
     else if (act === 'toNotaV') { D.tipo = 'nota'; D.numero = nextNumero('nota', D.fecha); D.titulo = cfg.titulos.nota; D.condiciones = (cfg.condiciones.nota || []).slice(); D.firmas = true; setDirty(); save(); App.render(); }
     else if (act === 'dup') {
       const nd = newDoc(D.tipo, { clienteId: D.clienteId, cliente: clone(D.cliente || {}), proveedor: clone(D.proveedor || {}), proveedorId: D.proveedorId, inventario: D.inventario, items: clone(D.items).map(it => Object.assign(it, { id: uid('i'), pedido: it.origen === 'dist' ? 'por pedir' : undefined })), descPct: D.descPct, ivaPct: D.ivaPct, condiciones: clone(D.condiciones || []), firmas: D.firmas, titulo: D.titulo });
@@ -2379,6 +2750,7 @@ function docEditor(v, D, isNew) {
   });
   v.addEventListener('keydown', (e) => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); save(); } });
 
+  if (venta && !isNew && $('#sec-seg', v)) segCtl = seguimientoVenta($('#sec-seg', v), D, { guardar: save, repintar: (sucio) => { if (sucio) setDirty(); else { paintPagos(); paintTotals(); } } });
   paintCliente(); paintLines(); paintPagos(); paintRates(); paintTotals();
   if (!Object.keys(Rates.data).length) Rates.fetch();
 }
@@ -2469,106 +2841,391 @@ const ordenOrigenes = (keys) => { const ds = Dists().map(x => 'dist|' + x.id); c
 const TONOS_DIST = ['#1D4ED8', '#0891B2', '#7C3AED', '#0F766E', '#4338CA', '#0369A1', '#6D28D9'];
 const colorOrigen = (k) => { if (!k.startsWith('dist|')) return COLOR_O[k] || '#64748B'; const ds = Dists().map(x => 'dist|' + x.id); const i = ds.indexOf(k); return i < 0 ? '#94A3B8' : TONOS_DIST[i % TONOS_DIST.length]; };
 
+/* ---------------- Preferencias de pantalla (orden del menú y del Resumen) ----------------
+   Cada usuario ordena y oculta secciones a su gusto. Se guarda en config ("ui_<correo>"),
+   así sigue igual en la computadora y en el teléfono. */
+const Prefs = {
+  id() { const em = Sync.user && Sync.user.email ? normTxt(Sync.user.email).replace(/[^a-z0-9]+/g, '_') : 'local'; return 'ui_' + em; },
+  get() { return Object.assign({ nav: null, navOcultas: [], res: null, resOcultos: [], resAncho: {} }, clone(Store.get('config', this.id()) || (this.id() !== 'ui_local' && Store.get('config', 'ui_local')) || {})); },
+  set(mut) { const r = this.get(); r.id = this.id(); mut(r); Store.put('config', r, { quiet: true }); },
+  // Aplica el orden guardado; lo nuevo que no estaba se mete en su lugar de siempre.
+  orden(base, guardado) {
+    if (!Array.isArray(guardado) || !guardado.length) return base.slice();
+    const out = guardado.filter(x => base.includes(x));
+    base.forEach((x, i) => { if (!out.includes(x)) out.splice(Math.min(i, out.length), 0, x); });
+    return out;
+  }
+};
+
+/* Lista para ordenar con arrastre (computadora) o flechas (teléfono) y mostrar/ocultar */
+function ordenarLista({ title, sub, items, ocultas, onSave, onReset }) {
+  let orden = items.map(x => x.id); const oc = new Set(ocultas || []);
+  const nom = (id) => (items.find(x => x.id === id) || {}).label || id;
+  const icn = (id) => (items.find(x => x.id === id) || {}).ic || '';
+  const m = UI.modal({ title, body: '<p class="muted small" style="margin-top:0">' + esc(sub || '') + '</p><ul class="ord-lista" data-l></ul>',
+    foot: [['Restablecer', 'ghost', (c) => { c(); onReset(); }], ['Cancelar', '', (c) => c()], ['Guardar', 'pri', (c) => { c(); onSave(orden.slice(), [...oc]); }]] });
+  const ul = $('[data-l]', m.body); let arrastrando = null;
+  const paint = () => {
+    ul.innerHTML = orden.map((id, i) => `<li draggable="true" data-id="${esc(id)}" class="${oc.has(id) ? 'off' : ''}">
+      <span class="grip" title="Arrastra para mover" aria-hidden="true">${ico('grip')}</span>
+      ${icn(id) ? `<span class="oi">${ico(icn(id))}</span>` : ''}<span class="on">${esc(nom(id))}</span>
+      <button type="button" class="btn ghost sm" data-mv="-1" ${i === 0 ? 'disabled' : ''} aria-label="Subir ${esc(nom(id))}">${ico('up')}</button>
+      <button type="button" class="btn ghost sm" data-mv="1" ${i === orden.length - 1 ? 'disabled' : ''} aria-label="Bajar ${esc(nom(id))}">${ico('down')}</button>
+      <label class="chk ver" title="Mostrar u ocultar"><input type="checkbox" data-ver ${oc.has(id) ? '' : 'checked'}> <span>Ver</span></label></li>`).join('');
+  };
+  paint();
+  ul.addEventListener('click', (e) => {
+    const b = e.target.closest('[data-mv]'); if (!b) return;
+    const id = b.closest('li').dataset.id, i = orden.indexOf(id), j = i + Number(b.dataset.mv);
+    if (j < 0 || j >= orden.length) return; orden.splice(i, 1); orden.splice(j, 0, id); paint();
+    const nb = ul.querySelector(`li[data-id="${CSS.escape(id)}"] [data-mv="${b.dataset.mv}"]`); if (nb && !nb.disabled) nb.focus();
+  });
+  ul.addEventListener('change', (e) => { const c = e.target.closest('[data-ver]'); if (!c) return; const id = c.closest('li').dataset.id; if (c.checked) oc.delete(id); else oc.add(id); c.closest('li').classList.toggle('off', !c.checked); });
+  ul.addEventListener('dragstart', (e) => { const li = e.target.closest('li'); if (!li) return; arrastrando = li.dataset.id; li.classList.add('drag'); e.dataTransfer.effectAllowed = 'move'; try { e.dataTransfer.setData('text/plain', arrastrando); } catch (_) {} });
+  ul.addEventListener('dragend', () => { arrastrando = null; paint(); });
+  ul.addEventListener('dragover', (e) => {
+    if (!arrastrando) return; e.preventDefault();
+    const li = e.target.closest('li'); if (!li || li.dataset.id === arrastrando) return;
+    const r = li.getBoundingClientRect(), antes = e.clientY < r.top + r.height / 2;
+    orden.splice(orden.indexOf(arrastrando), 1);
+    orden.splice(orden.indexOf(li.dataset.id) + (antes ? 0 : 1), 0, arrastrando);
+    const dl = ul.querySelector(`li[data-id="${CSS.escape(arrastrando)}"]`); if (antes) li.before(dl); else li.after(dl);
+  });
+  ul.addEventListener('drop', (e) => e.preventDefault());
+}
+
+/* Menú lateral en el orden de cada usuario */
+const navOrdenado = () => { const P = Prefs.get(); const ids = Prefs.orden(NAV.map(n => n[0]), P.nav); return ids.map(id => NAV.find(n => n[0] === id)).filter(n => n && (n[0] === 'ajustes' || !P.navOcultas.includes(n[0]))); };
+function editarMenu() {
+  const P = Prefs.get();
+  ordenarLista({
+    title: 'Organizar el menú', sub: 'Arrastra las secciones (o usa las flechas) para ponerlas en el orden que quieras. Desmarca "Ver" para esconder las que no usas. Ajustes siempre queda visible.',
+    items: Prefs.orden(NAV.map(n => n[0]), P.nav).map(id => { const n = NAV.find(x => x[0] === id); return { id, label: n[1], ic: n[2] }; }),
+    ocultas: P.navOcultas.filter(x => x !== 'ajustes'),
+    onSave: (orden, oc) => { Prefs.set(r => { r.nav = orden; r.navOcultas = oc.filter(x => x !== 'ajustes'); }); App.shell(); App.go(); UI.toast('Menú guardado'); },
+    onReset: () => { Prefs.set(r => { r.nav = null; r.navOcultas = []; }); App.shell(); App.go(); UI.toast('Menú como al principio'); }
+  });
+}
+
 /* ---------------- Resumen ---------------- */
-Views.resumen = (v) => {
-  const F = Object.assign({ per: 'mes' }, lsGet('suinadm_f_res', {}));
+const MESES_C = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
+const isoD = (dt) => `${dt.getFullYear()}-${pad(dt.getMonth() + 1)}-${pad(dt.getDate())}`;
+// Período anterior comparable (mes en curso contra los mismos días del mes pasado, etc.)
+const periodoAnterior = (p) => {
+  const d = new Date(), y = d.getFullYear(), m = d.getMonth(), dia = d.getDate();
+  const finMes = (yy, mm) => new Date(yy, mm + 1, 0).getDate();
+  if (p === 'mes') return { desde: isoD(new Date(y, m - 1, 1)), hasta: isoD(new Date(y, m - 1, Math.min(dia, finMes(y, m - 1)) + 1)), txt: 'mismos días del mes pasado' };
+  if (p === 'mesant') return { desde: isoD(new Date(y, m - 2, 1)), hasta: isoD(new Date(y, m - 1, 1)), txt: 'el mes anterior' };
+  if (p === '30') return { desde: isoD(new Date(Date.now() - 60 * 864e5)), hasta: isoD(new Date(Date.now() - 30 * 864e5)), txt: 'los 30 días anteriores' };
+  if (p === 'anio') return { desde: `${y - 1}-01-01`, hasta: isoD(new Date(y - 1, m, dia + 1)), txt: 'el mismo tramo del año pasado' };
+  if (p === 'anioant') return { desde: `${y - 2}-01-01`, hasta: `${y - 1}-01-01`, txt: 'el año anterior' };
+  return null;
+};
+const enRango = (fecha, r) => { const f = String(fecha || '').slice(0, 10); return f >= r.desde && f < r.hasta; };
+const diasDesde = (fecha) => Math.max(0, Math.floor((Date.now() - new Date(String(fecha || '').slice(0, 10) + 'T12:00:00').getTime()) / 864e5));
+const compacto = (v) => { const a = Math.abs(v); return (v < 0 ? '-' : '') + '$' + (a >= 1e6 ? fmtNum(a / 1e6, 1) + 'M' : a >= 1e4 ? fmtNum(a / 1e3, 0) + 'K' : a >= 1e3 ? fmtNum(a / 1e3, 1) + 'K' : fmtNum(a, 0)); };
+
+// Cuenta todo una sola vez para el Resumen
+function datosResumen(per) {
   const docs = ventasActivas();
-  const enPer = docs.filter(d => enPeriodo(d.fecha, F.per));
-  let ventas = 0, gan = 0, sinCosto = 0; const porO = {};
-  enPer.forEach(d => { const T = Calc.totals(d); ventas += T.base; Object.entries(porOrigenDet(d)).forEach(([o, g]) => { const x = porO[o] || (porO[o] = { venta: 0, costo: 0, gan: 0, sc: false, n: 0 }); x.venta += g.venta; x.costo += g.costo; x.gan += g.gan; x.sc = x.sc || g.sinCosto; }); if (T.sinCosto) sinCosto++; });
-  Object.values(porO).forEach(x => gan += x.gan);
-  const cobrar = docs.map(d => ({ d, T: Calc.totals(d) })).filter(x => x.T.saldo > 0.005).sort((a, b) => (a.d.fecha || '').localeCompare(b.d.fecha || ''));
+  const ant = periodoAnterior(per);
+  const R = { docs, ant, ventas: 0, gan: 0, n: 0, sinCosto: 0, ventasAnt: 0, ganAnt: 0, nAnt: 0, porO: {}, clientes: {}, productos: {} };
+  // 12 meses para los minigráficos y el gráfico mensual
+  const now = new Date(); R.meses = [];
+  for (let i = 11; i >= 0; i--) { const d = new Date(now.getFullYear(), now.getMonth() - i, 1); R.meses.push({ m: `${d.getFullYear()}-${pad(d.getMonth() + 1)}`, venta: 0, gan: 0, o: {}, og: {} }); }
+  docs.forEach(d => {
+    const T = Calc.totals(d), det = porOrigenDet(d), f = T.sub ? T.base / T.sub : 1;
+    const mes = R.meses.find(x => x.m === (d.fecha || '').slice(0, 7));
+    if (mes) { mes.venta += T.base; Object.entries(det).forEach(([o, g]) => { mes.o[o] = (mes.o[o] || 0) + g.venta; mes.og[o] = (mes.og[o] || 0) + g.gan; mes.gan += g.gan; }); }
+    if (ant && enRango(d.fecha, ant)) { R.ventasAnt += T.base; R.nAnt++; Object.values(det).forEach(g => { R.ganAnt += g.gan; }); }
+    if (!enPeriodo(d.fecha, per)) return;
+    R.ventas += T.base; R.n++;
+    let sc = false;
+    Object.entries(det).forEach(([o, g]) => { const x = R.porO[o] || (R.porO[o] = { venta: 0, costo: 0, gan: 0, sc: false }); x.venta += g.venta; x.costo += g.costo; x.gan += g.gan; if (g.sinCosto) { x.sc = true; sc = true; } R.gan += g.gan; });
+    if (sc) R.sinCosto++;
+    const ck = d.clienteId || ('n:' + normTxt((d.cliente && d.cliente.nombre) || 'Sin nombre'));
+    const c = R.clientes[ck] || (R.clientes[ck] = { id: d.clienteId || null, nombre: (d.cliente && d.cliente.nombre) || 'Sin nombre', venta: 0, n: 0 });
+    c.venta += T.base; c.n++;
+    (d.items || []).forEach(it => {
+      const k = it.productoId || normTxt(it.codigo || plainFirst(it.desc)).slice(0, 60); if (!k) return;
+      const p = R.productos[k] || (R.productos[k] = { id: it.productoId || null, codigo: it.codigo || '', desc: plainFirst(it.desc), venta: 0, cant: 0 });
+      p.venta += num(it.cant) * num(it.precio) * f; p.cant += num(it.cant);
+    });
+  });
+  return R;
+}
+
+function sparkline(vals, { w = 120, h = 34, color = 'var(--steel)' } = {}) {
+  const max = Math.max(...vals, 1), min = Math.min(...vals, 0), n = vals.length;
+  const x = (i) => 3 + i * (w - 6) / (n - 1), y = (v) => 3 + (h - 6) * (1 - (v - min) / ((max - min) || 1));
+  const pts = vals.map((v, i) => `${x(i).toFixed(1)},${y(v).toFixed(1)}`).join(' ');
+  return `<svg class="spark" viewBox="0 0 ${w} ${h}" aria-hidden="true"><polyline points="${pts}" fill="none" stroke="#9fb3c2" stroke-width="2" stroke-linejoin="round" stroke-linecap="round"/><circle cx="${x(n - 1)}" cy="${y(vals[n - 1])}" r="4" fill="${color}" stroke="#fff" stroke-width="2"/></svg>`;
+}
+// Cambio contra el período anterior: flecha + texto (no solo color)
+function deltaHtml(act, prev, txt, { menosEsBueno } = {}) {
+  if (!txt || !(prev > 0)) return '';
+  const p = (act - prev) / prev * 100; if (!isFinite(p)) return '';
+  const sube = p >= 0.5, baja = p <= -0.5, bueno = menosEsBueno ? baja : sube;
+  const cls = !sube && !baja ? 'eq' : bueno ? 'up' : 'dn';
+  return `<span class="dl ${cls}" title="Comparado con ${esc(txt)}: ${fmtUSD0(prev)}">${sube ? '▲' : baja ? '▼' : '='} ${fmtNum(Math.abs(p), 0)}%</span><span class="dlt">vs ${esc(txt)}</span>`;
+}
+
+const BLOQUES_RES = [
+  ['accesos', 'Accesos rápidos', 'full'], ['kpis', 'Indicadores', 'full'], ['mensual', 'Ventas por mes', 'big'],
+  ['origen', 'Ventas por origen', 'side'], ['clientes', 'Mejores clientes', 'half'], ['productos', 'Productos más vendidos', 'half'],
+  ['ofertas', 'Ofertas y cierre', 'half'], ['cobrar', 'Por cobrar', 'half'], ['empleados', 'Empleados', 'full']
+];
+
+Views.resumen = (v) => {
+  const F = Object.assign({ per: 'mes', met: 'venta' }, lsGet('suinadm_f_res', {}));
+  const editando = !!App.editRes;
+  const P = Prefs.get();
+  const R = datosResumen(F.per);
+  const perLabel = (periodoOpts().find(p => p[0] === F.per) || [, ''])[1].toLowerCase();
+  const antTxt = R.ant ? R.ant.txt : '';
+  const hoy = new Date().toLocaleDateString('es-VE', { weekday: 'long', day: 'numeric', month: 'long', year: 'numeric' });
+  const webNuevos = Tienda.ok ? Tienda.porAtender() : null;
+
+  /* --- datos sueltos --- */
+  const cobrar = R.docs.map(d => ({ d, T: Calc.totals(d) })).filter(x => x.T.saldo > 0.005).sort((a, b) => (a.d.fecha || '').localeCompare(b.d.fecha || ''));
   const totCobrar = cobrar.reduce((a, x) => a + x.T.saldo, 0);
+  const vencido = cobrar.filter(x => diasDesde(x.d.fecha) > 15).reduce((a, x) => a + x.T.saldo, 0);
   const ped = pedidosPendientes(); const porPedir = ped.filter(x => (x.it.pedido || 'por pedir') === 'por pedir');
   const valInv = { manuel: 0, papa: 0 }, nInv = { manuel: 0, papa: 0 };
   Store.all('productos').forEach(p => { const s = Calc.st(p.id); ['manuel', 'papa'].forEach(i => { if (s[i].cant > 0) { valInv[i] += s[i].cant * s[i].costo; nInv[i]++; } }); });
-  const abiertas = Store.all('docs').filter(d => d.tipo === 'oferta' && (d.estado || 'abierta') === 'abierta').sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''));
-  const perLabel = (periodoOpts().find(p => p[0] === F.per) || [, ''])[1].toLowerCase();
-  const webNuevos = Tienda.ok ? Tienda.porAtender() : null;
+  const ofertas = Store.all('docs').filter(d => d.tipo === 'oferta');
+  const abiertas = ofertas.filter(d => (d.estado || 'abierta') === 'abierta').sort((a, b) => (a.fecha || '').localeCompare(b.fecha || ''));
+  const ofPer = ofertas.filter(d => enPeriodo(d.fecha, F.per));
+  const ofN = { aceptada: 0, rechazada: 0, abierta: 0 }, ofV = { aceptada: 0, rechazada: 0, abierta: 0 };
+  ofPer.forEach(d => { const e = ESTADOS_OFERTA[d.estado] ? d.estado : 'abierta'; ofN[e]++; ofV[e] += Calc.totals(d).base; });
+  const decididas = ofN.aceptada + ofN.rechazada;
+  const tasa = decididas ? ofN.aceptada / decididas * 100 : null;
+  const margen = R.ventas ? R.gan / R.ventas * 100 : null;
+  const margenAnt = R.ventasAnt ? R.ganAnt / R.ventasAnt * 100 : null;
+
+  /* --- bloques --- */
+  const enCurso = R.docs.filter(d => !['cerrada', 'anulada'].includes(etapaVenta(d)[0])).length;
+  const tile = (href, ic, label, sub, corto) => `<a class="acc-t" href="${href}" title="${esc(label)}"><span class="ai">${ico(ic)}</span><b><span class="lg">${esc(label)}</span><span class="ct">${esc(corto || label)}</span></b>${sub ? `<small>${esc(sub)}</small>` : ''}</a>`;
+  const B = {};
+  B.accesos = () => `<div class="acc-g">
+    ${tile('#/nuevo/oferta', 'offer', 'Nueva oferta', 'Generador', 'Oferta')}
+    ${tile('#/nuevo/nota', 'note', 'Nueva venta', 'Con su nota', 'Venta')}
+    ${tile('#/ventas/encurso', 'cash', 'Ventas en curso', enCurso ? `${enCurso} por entregar o cobrar` : 'Todo al día', 'En curso')}
+    ${tile('#/nuevo/compra', 'buy', 'Compra', 'Entra al inventario', 'Compra')}
+    ${tile('#/cliente-nuevo', 'users', 'Cliente nuevo', '', 'Cliente')}
+    ${tile('#/inventario', 'box', 'Inventario', `${nInv.manuel + nInv.papa} con existencia`)}
+    ${tile('#/pedidos', 'truck', 'Pedir a distribuidor', porPedir.length ? `${porPedir.length} por pedir` : 'Nada pendiente', 'Pedidos')}
+    ${tile('#/ofertas/lista', 'list', 'Mis ofertas', `${abiertas.length} abiertas`, 'Ofertas')}
+  </div>`;
+
+  B.kpis = () => {
+    const sv = R.meses.map(x => x.venta), sg = R.meses.map(x => x.gan);
+    return `<div class="kp-g">
+    <div class="kp hero"><div class="kl">Ventas · ${esc(perLabel)}</div><div class="kv">${fmtUSD0(R.ventas)}</div>
+      <div class="kd">${deltaHtml(R.ventas, R.ventasAnt, antTxt)}</div><div class="kf"><span>${R.n} venta${R.n === 1 ? '' : 's'}${R.n ? ' · promedio ' + fmtUSD0(R.ventas / R.n) : ''}</span>${sparkline(sv)}</div></div>
+    <div class="kp"><div class="kl">Ganancia · ${esc(perLabel)}</div><div class="kv">${fmtUSD0(R.gan)}</div>
+      <div class="kd">${deltaHtml(R.gan, R.ganAnt, antTxt)}</div><div class="kf"><span>${margen != null ? `Margen ${fmtNum(margen, 1)}%` : '—'}${margenAnt != null && margen != null ? ` <small class="muted">(antes ${fmtNum(margenAnt, 1)}%)</small>` : ''}${R.sinCosto ? ` · <a href="#/ventas" title="Ventas con líneas sin costo">${R.sinCosto} sin costo</a>` : ''}</span>${sparkline(sg, { color: 'var(--ok)' })}</div></div>
+    <a class="kp" href="#/ventas" data-cobrar><div class="kl">Por cobrar</div><div class="kv">${fmtUSD0(totCobrar)}</div>
+      <div class="kd">${vencido > 0 ? `<span class="dl dn">▲ ${fmtUSD0(vencido)}</span><span class="dlt">con más de 15 días</span>` : '<span class="dlt">Nada atrasado</span>'}</div><div class="kf"><span>${cobrar.length} documento${cobrar.length === 1 ? '' : 's'}</span></div></a>
+    <a class="kp" href="#/ofertas/lista"><div class="kl">Tasa de cierre · ${esc(perLabel)}</div><div class="kv">${tasa == null ? '—' : fmtNum(tasa, 0) + '%'}</div>
+      <div class="kd"><span class="dlt">${ofN.aceptada} aceptada${ofN.aceptada === 1 ? '' : 's'} de ${decididas} respondida${decididas === 1 ? '' : 's'}</span></div><div class="kf"><span>${abiertas.length} oferta${abiertas.length === 1 ? '' : 's'} esperando respuesta</span></div></a>
+  </div><div class="kp-g k3">
+    <a class="kp sm" href="#/inventario/manuel"><div class="kl">Inventario ${esc(origenNombre('manuel'))}</div><div class="kv">${fmtUSD0(valInv.manuel)}</div><div class="kf"><span>${nInv.manuel} productos · al costo</span></div></a>
+    <a class="kp sm" href="#/inventario/papa"><div class="kl">Inventario ${esc(origenNombre('papa'))}</div><div class="kv">${fmtUSD0(valInv.papa)}</div><div class="kf"><span>${nInv.papa} productos · al costo</span></div></a>
+    <a class="kp sm" href="#/pedidos"><div class="kl">Pedidos a distribuidores</div><div class="kv">${porPedir.length}</div><div class="kf"><span>por pedir · ${ped.length - porPedir.length} sin entregar</span></div></a>
+  </div>`;
+  };
+
+  B.mensual = () => `<div class="ph"><h2>${F.met === 'gan' ? 'Ganancia' : 'Ventas'} por mes</h2><div class="act"><div class="seg sm" role="group" aria-label="Qué mostrar"><button type="button" data-met="venta" class="${F.met !== 'gan' ? 'on' : ''}">Ventas</button><button type="button" data-met="gan" class="${F.met === 'gan' ? 'on' : ''}">Ganancia</button></div></div></div>
+    <p class="muted small" style="margin:-6px 0 10px">Últimos 12 meses, sin I.V.A., por de dónde salió la mercancía.</p><div id="chart"></div>`;
+
+  B.origen = () => {
+    const keys = ordenOrigenes(Object.keys(R.porO)).filter(o => R.porO[o].venta > 0.005);
+    if (!keys.length) return `<h2>Por origen · ${esc(perLabel)}</h2><div class="empty">Sin ventas en este período.</div>`;
+    const max = Math.max(...keys.map(o => R.porO[o].venta));
+    return `<div class="ph"><h2>Por origen · ${esc(perLabel)}</h2></div>
+      <div class="hb">${keys.map(o => { const x = R.porO[o]; const did = o.startsWith('dist|') ? o.slice(5) : ''; const mg = x.venta ? x.gan / x.venta * 100 : 0;
+        return `<div class="hb-r${did ? ' click' : ''}" ${did ? `data-dist="${esc(did)}" title="Ver la ficha del distribuidor"` : ''}>
+          <div class="hb-l"><i style="background:${colorOrigen(o)}"></i>${esc(nombreOrigen(o))}</div>
+          <div class="hb-b"><span style="width:${Math.max(2, x.venta / max * 100).toFixed(1)}%;background:${colorOrigen(o)}"></span><b>${fmtUSD0(x.venta)}</b></div>
+          <div class="hb-s">Ganancia ${fmtUSD0(x.gan)}${x.sc ? '*' : ''} · ${fmtNum(mg, 0)}% · ${R.ventas ? fmtNum(x.venta / R.ventas * 100, 0) : 0}% de lo vendido</div></div>`; }).join('')}</div>
+      ${keys.some(o => R.porO[o].sc) ? '<p class="muted small" style="margin:10px 0 0">* Hay líneas sin costo: su ganancia cuenta como el precio completo.</p>' : ''}`;
+  };
+
+  const barrasTop = (lista, { titulo, vacio, linea, sub, attr }) => {
+    if (!lista.length) return `<h2>${titulo}</h2><div class="empty">${vacio}</div>`;
+    const max = lista[0].venta || 1;
+    return `<div class="ph"><h2>${titulo}</h2></div><div class="hb">${lista.map((x, i) => `<div class="hb-r${attr(x) ? ' click' : ''}" ${attr(x)}>
+      <div class="hb-l"><span class="pos">${i + 1}</span>${linea(x)}</div>
+      <div class="hb-b"><span style="width:${Math.max(2, x.venta / max * 100).toFixed(1)}%"></span><b>${fmtUSD0(x.venta)}</b></div>
+      <div class="hb-s">${sub(x)}</div></div>`).join('')}</div>`;
+  };
+  B.clientes = () => barrasTop(Object.values(R.clientes).sort((a, b) => b.venta - a.venta).slice(0, 7), {
+    titulo: `Mejores clientes · ${esc(perLabel)}`, vacio: 'Sin ventas en este período.',
+    linea: (x) => `<span class="tx">${esc(x.nombre)}</span>`,
+    sub: (x) => `${x.n} compra${x.n === 1 ? '' : 's'} · ${R.ventas ? fmtNum(x.venta / R.ventas * 100, 0) : 0}% de las ventas`,
+    attr: (x) => x.id ? `data-cli="${esc(x.id)}" title="Ver ficha del cliente"` : ''
+  });
+  B.productos = () => barrasTop(Object.values(R.productos).sort((a, b) => b.venta - a.venta).slice(0, 7), {
+    titulo: `Productos más vendidos · ${esc(perLabel)}`, vacio: 'Sin ventas en este período.',
+    linea: (x) => `<span class="tx"><span class="mono">${esc(x.codigo || '')}</span>${x.codigo ? ' ' : ''}<span class="muted">${esc((x.desc || '').replace(x.codigo, '').trim().slice(0, 60))}</span></span>`,
+    sub: (x) => `${fmtNum(x.cant, 0)} unidad${x.cant === 1 ? '' : 'es'}`,
+    attr: (x) => x.id ? `data-prod="${esc(x.id)}" title="Ver producto"` : ''
+  });
+
+  B.ofertas = () => {
+    const tot = ofN.aceptada + ofN.rechazada + ofN.abierta;
+    const seg = (k, cls, label) => ofN[k] ? `<span class="${cls}" style="flex:${ofN[k]}" title="${label}: ${ofN[k]} (${fmtUSD0(ofV[k])})"></span>` : '';
+    const edad = (d) => { const n = diasDesde(d.fecha); return `<span class="pill ${n >= 5 ? 'bad' : n >= 3 ? 'warn' : 'info'}">${n === 0 ? 'hoy' : n + ' d'}</span>`; };
+    return `<div class="ph"><h2>Ofertas · ${esc(perLabel)}</h2><div class="act"><a class="btn sm" href="#/nuevo/oferta">${ico('plus')} Oferta</a></div></div>
+      ${tot ? `<div class="of-res"><div><div class="kv">${tasa == null ? '—' : fmtNum(tasa, 0) + '%'}</div><div class="muted small">de cierre</div></div>
+        <div style="flex:1;min-width:0"><div class="stk" role="img" aria-label="${ofN.aceptada} aceptadas, ${ofN.rechazada} rechazadas, ${ofN.abierta} abiertas">${seg('aceptada', 'ok', 'Aceptadas')}${seg('rechazada', 'bad', 'Rechazadas')}${seg('abierta', 'op', 'Abiertas')}</div>
+        <div class="stk-l"><span><i class="ok"></i>✓ Aceptadas <b>${ofN.aceptada}</b> <small>${fmtUSD0(ofV.aceptada)}</small></span><span><i class="bad"></i>✕ Rechazadas <b>${ofN.rechazada}</b> <small>${fmtUSD0(ofV.rechazada)}</small></span><span><i class="op"></i>… Abiertas <b>${ofN.abierta}</b> <small>${fmtUSD0(ofV.abierta)}</small></span></div></div></div>` : '<div class="empty" style="margin-bottom:10px">No hiciste ofertas en este período.</div>'}
+      <h3 class="sub3">Esperando respuesta <span class="muted">(${abiertas.length})</span></h3>
+      ${abiertas.length ? `<div class="lst">${abiertas.slice(0, 6).map(d => `<a class="lst-r" href="#/doc/${esc(d.id)}">${edad(d)}<span class="tx"><b>${esc((d.cliente && d.cliente.nombre) || '—')}</b><small class="mono">${esc(d.numero || '')}</small></span><span class="num">${fmtUSD0(Calc.totals(d).total)}</span></a>`).join('')}</div>${abiertas.length > 6 ? `<a class="small" href="#/ofertas/lista">Ver las ${abiertas.length} ofertas abiertas</a>` : ''}` : '<div class="empty">Ninguna oferta abierta.</div>'}`;
+  };
+
+  B.cobrar = () => {
+    if (!cobrar.length) return `<h2>Por cobrar</h2><div class="empty">Nadie te debe. 👌</div>`;
+    const tramos = [['0–7 días', 0, 7, 'info'], ['8–15 días', 8, 15, 'warn'], ['Más de 15', 16, 1e9, 'bad']].map(([l, a, b, c]) => ({ l, c, v: cobrar.filter(x => { const n = diasDesde(x.d.fecha); return n >= a && n <= b; }).reduce((s, x) => s + x.T.saldo, 0) }));
+    return `<div class="ph"><h2>Por cobrar</h2><div class="act"><b class="num">${fmtUSD0(totCobrar)}</b></div></div>
+      <div class="tramos">${tramos.map(t => `<div class="tr-${t.c}"><small>${t.l}</small><b>${fmtUSD0(t.v)}</b></div>`).join('')}</div>
+      <div class="lst">${cobrar.slice(0, 7).map(({ d, T }) => { const n = diasDesde(d.fecha); return `<a class="lst-r" href="#/doc/${esc(d.id)}"><span class="pill ${n > 15 ? 'bad' : n > 7 ? 'warn' : 'info'}">${n === 0 ? 'hoy' : n + ' d'}</span><span class="tx"><b>${esc((d.cliente && d.cliente.nombre) || '—')}</b><small class="mono">${esc(d.numero || '')}</small></span><span class="num">${fmtUSD0(T.saldo)}</span></a>`; }).join('')}</div>
+      ${cobrar.length > 7 ? `<a class="small" href="#/ventas" data-cobrar>Ver los ${cobrar.length} documentos</a>` : ''}`;
+  };
+  B.empleados = () => resumenEmpleadosHtml(F.per).replace(/^<section class="panel" style="margin-top:14px">/, '').replace(/<\/section>$/, '') || '<h2>Empleados</h2><div class="empty">Sin empleados activos.</div>';
+
+  /* --- armar en el orden del usuario --- */
+  const ids = Prefs.orden(BLOQUES_RES.map(b => b[0]), P.res);
+  const visibles = ids.filter(id => editando || !P.resOcultos.includes(id));
+  const ancho = (id) => P.resAncho[id] || (BLOQUES_RES.find(b => b[0] === id) || [])[2] || 'half';
+  const sinPanel = ['accesos', 'kpis'];
+  const caja = (id, i) => {
+    const nombre = (BLOQUES_RES.find(b => b[0] === id) || [])[1];
+    const oculto = P.resOcultos.includes(id);
+    const herr = editando ? `<div class="ed-bar"><span class="grip" aria-hidden="true">${ico('grip')}</span><b>${esc(nombre)}</b>
+      <button type="button" class="btn sm ghost" data-bmv="-1" ${i === 0 ? 'disabled' : ''} aria-label="Subir ${esc(nombre)}">${ico('up')}</button>
+      <button type="button" class="btn sm ghost" data-bmv="1" ${i === visibles.length - 1 ? 'disabled' : ''} aria-label="Bajar ${esc(nombre)}">${ico('down')}</button>
+      ${sinPanel.includes(id) ? '' : `<button type="button" class="btn sm ghost" data-bw title="${ancho(id) === 'full' ? 'Hacerlo de media página' : 'Hacerlo de página completa'}" aria-label="${ancho(id) === 'full' ? 'Media página' : 'Página completa'}">${ico(ancho(id) === 'full' ? 'half' : 'wide')}</button>`}
+      <button type="button" class="btn sm ${oculto ? 'pri' : 'ghost'}" data-bh title="${oculto ? 'Mostrar' : 'Ocultar'} este bloque">${ico(oculto ? 'eye' : 'eyeoff')}<span class="hm2">${oculto ? 'Mostrar' : 'Ocultar'}</span></button></div>` : '';
+    let cont = ''; try { cont = B[id](); } catch (e) { console.error(e); cont = `<div class="empty">No se pudo mostrar: ${esc(e.message)}</div>`; }
+    return `<section class="rb w-${ancho(id)}${sinPanel.includes(id) ? ' bare' : ' panel'}${oculto ? ' oculto' : ''}" data-b="${id}" ${editando ? 'draggable="true"' : ''}>${herr}${oculto ? '' : cont}</section>`;
+  };
 
   v.innerHTML = `
-  <div class="vh"><h1>Resumen</h1><div class="act"><select class="inp" style="width:auto" data-per>${periodoOpts().map(([k, l]) => `<option value="${k}" ${F.per === k ? 'selected' : ''}>${l}</option>`).join('')}</select><button class="btn pri" data-new>${ico('plus')} Nuevo</button></div></div>
+  <div class="vh"><div><h1>Resumen</h1><div class="muted small hoy-f">${esc(hoy.charAt(0).toUpperCase() + hoy.slice(1))}</div></div>
+    <div class="act">${editando ? `<button class="btn" data-ereset>Restablecer</button><button class="btn pri" data-edone>${ico('check')} Listo</button>` :
+      `<select class="inp" style="width:auto" data-per aria-label="Período">${periodoOpts().map(([k, l]) => `<option value="${k}" ${F.per === k ? 'selected' : ''}>${l}</option>`).join('')}</select>
+      <button class="btn" data-edit title="Mover, ocultar o agrandar los bloques del Resumen">${ico('edit')} Editar</button>
+      <button class="btn pri" data-new>${ico('plus')} Nuevo</button>`}</div></div>
+  ${editando ? '<div class="banner info-b">Modo edición: arrastra los bloques o usa las flechas para cambiarlos de lugar, cambia su ancho u ocúltalos. Toca <b>Listo</b> al terminar.</div>' : ''}
   ${!Sync.online() ? `<div class="banner">${Sync.configured() ? 'No has iniciado sesión: los cambios se guardan solo en este equipo.' : 'Los datos se guardan solo en este equipo. Conecta Supabase para verlos en el teléfono y compartirlos con tu papá.'} <a class="btn sm" href="#/ajustes/conexion">Conectar</a></div>` : ''}
   ${!Store.all('productos').length && !Store.all('docs').length ? `<div class="banner">Aún no hay datos. Importa tu inventario y ventas de Mi Negocio desde Ajustes → Datos. <a class="btn sm" href="#/ajustes/datos">Importar</a></div>` : ''}
-  ${webNuevos && webNuevos.length ? `<a class="banner hoy" href="/admin/pedidos" title="Abrir en el Panel web"><b>${webNuevos.length} pedido${webNuevos.length === 1 ? '' : 's'} web por atender</b><span>${esc(webNuevos.slice(0, 3).map(p => '#' + p.id + ' ' + ((Store.all('clientes').find(c => c.tiendaEmail === p.cliente_email) || {}).nombre || p.cliente_email)).join(' · '))}${webNuevos.length > 3 ? ' …' : ''}</span><span class="ir">Panel web →</span></a>` : ''}
-  <div class="kpis">
-    <div class="kpi"><div class="l">Ventas · ${esc(perLabel)}</div><div class="v">${fmtUSD0(ventas)}</div><div class="d">${enPer.length} venta${enPer.length === 1 ? '' : 's'}</div></div>
-    <div class="kpi"><div class="l">Ganancia · ${esc(perLabel)}</div><div class="v">${fmtUSD0(gan)}</div><div class="d">${ventas ? fmtNum(gan / ventas * 100, 1) + '% de margen' : '—'}${sinCosto ? ` · ${sinCosto} sin costo` : ''}</div></div>
-    <a class="kpi" href="#/ventas" data-cobrar><div class="l">Por cobrar</div><div class="v">${fmtUSD0(totCobrar)}</div><div class="d">${cobrar.length} documento${cobrar.length === 1 ? '' : 's'}</div></a>
-    <a class="kpi" href="#/pedidos"><div class="l">Pedidos a distribuidores</div><div class="v">${porPedir.length}</div><div class="d">por pedir · ${ped.length - porPedir.length} pedidos sin entregar</div></a>
-    <a class="kpi" href="#/inventario/manuel"><div class="l">Inventario ${esc(origenNombre('manuel'))}</div><div class="v">${fmtUSD0(valInv.manuel)}</div><div class="d">${nInv.manuel} productos con existencia, al costo</div></a>
-    <a class="kpi" href="#/inventario/papa"><div class="l">Inventario ${esc(origenNombre('papa'))}</div><div class="v">${fmtUSD0(valInv.papa)}</div><div class="d">${nInv.papa} productos con existencia, al costo</div></a>
-  </div>
-  <div class="cols2">
-    <section class="panel"><div class="ph"><h2>Ventas por mes</h2><div class="act"><span class="muted small">últimos 12 meses, sin I.V.A.</span></div></div><div id="chart"></div></section>
-    <section class="panel"><h2>Por origen · ${esc(perLabel)}</h2>
-      ${Object.keys(porO).length ? `<table class="tbl"><thead><tr><th>Origen</th><th class="r">Ventas</th><th class="r">Ganancia</th><th class="r hm">Margen</th></tr></thead><tbody>
-      ${ordenOrigenes(Object.keys(porO)).map(o => { const x = porO[o]; const did = o.startsWith('dist|') ? o.slice(5) : ''; return `<tr${did ? ` class="click" data-dist="${esc(did)}" title="Ver la ficha del distribuidor"` : ''}><td>${tagOrigen(o)}</td><td class="num">${fmtUSD(x.venta)}</td><td class="num">${fmtUSD(x.gan)}${x.sc ? ' <span class="muted" title="Hay líneas sin costo">*</span>' : ''}</td><td class="num hm">${x.venta ? fmtNum(x.gan / x.venta * 100, 1) + '%' : '—'}</td></tr>`; }).join('')}
-      </tbody></table>${Object.values(porO).some(x => x.sc) ? '<p class="muted small" style="margin:8px 0 0">* Hay líneas sin costo: su ganancia cuenta como el precio completo. Pon el descuento de cada distribuidor en su ficha (Distribuidores).</p>' : ''}` : '<div class="empty">Sin ventas en este período.</div>'}
-    </section>
-  </div>
-  <div class="cols2" style="margin-top:14px">
-    <section class="panel"><div class="ph"><h2>Por cobrar</h2></div>
-      ${cobrar.length ? `<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Fecha</th><th>Cliente</th><th class="r">Debe</th></tr></thead><tbody>${cobrar.slice(0, 12).map(({ d, T }) => `<tr class="click" data-doc="${esc(d.id)}"><td class="mono small">${esc(fmtFecha(d.fecha))}</td><td>${esc(docParty(d))}<div class="muted small mono">${esc(d.numero)}</div></td><td class="num">${fmtUSD(T.saldo)}</td></tr>`).join('')}</tbody></table></div>${cobrar.length > 12 ? `<p class="small"><a href="#/ventas">Ver los ${cobrar.length}</a></p>` : ''}` : '<div class="empty">Nada pendiente por cobrar.</div>'}
-    </section>
-    <section class="panel"><div class="ph"><h2>Ofertas abiertas</h2><div class="act"><a class="btn sm" href="#/nuevo/oferta">${ico('plus')} Oferta</a></div></div>
-      ${abiertas.length ? `<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Fecha</th><th>Cliente</th><th class="r">Total</th></tr></thead><tbody>${abiertas.slice(0, 10).map(d => `<tr class="click" data-doc="${esc(d.id)}"><td class="mono small">${esc(fmtFecha(d.fecha))}</td><td>${esc(docParty(d))}<div class="muted small mono">${esc(d.numero)}</div></td><td class="num">${fmtUSD(Calc.totals(d).total)}</td></tr>`).join('')}</tbody></table></div>` : '<div class="empty">No hay ofertas abiertas.</div>'}
-    </section>
-  </div>
-  ${resumenEmpleadosHtml(F.per)}`;
-  $('[data-per]', v).onchange = (e) => { F.per = e.target.value; lsSet('suinadm_f_res', F); App.render(); };
+  ${webNuevos && webNuevos.length && !editando ? `<a class="banner hoy" href="/admin/pedidos" title="Abrir en el Panel web"><b>${webNuevos.length} pedido${webNuevos.length === 1 ? '' : 's'} web por atender</b><span>${esc(webNuevos.slice(0, 3).map(p => '#' + p.id + ' ' + (p.cliente || '')).join(' · '))}</span><span class="ir">Ver en el Panel web →</span></a>` : ''}
+  <div class="rgrid${editando ? ' editando' : ''}">${visibles.map(caja).join('')}</div>`;
+
+  /* --- eventos --- */
+  const per = $('[data-per]', v); if (per) per.onchange = (e) => { F.per = e.target.value; lsSet('suinadm_f_res', F); App.render(); };
+  $$('[data-met]', v).forEach(b => b.onclick = () => { F.met = b.dataset.met; lsSet('suinadm_f_res', F); App.render(); });
   if (!Tienda.ok) Tienda.cargar().then(ok => { if (ok && document.body.contains(v) && App.route.name === 'resumen') App.render(); });
-  $('[data-new]', v).onclick = () => App.newMenu();
-  $('[data-cobrar]', v).addEventListener('click', () => lsSet('suinadm_f_notaventa', Object.assign(lsGet('suinadm_f_notaventa', {}), { est: 'cobrar', per: 'todo' })));
+  const nb = $('[data-new]', v); if (nb) nb.onclick = () => App.newMenu();
+  const eb = $('[data-edit]', v); if (eb) eb.onclick = () => { App.editRes = true; App.render(); };
+  const db = $('[data-edone]', v); if (db) db.onclick = () => { App.editRes = false; App.render(); UI.toast('Resumen guardado'); };
+  const rb = $('[data-ereset]', v); if (rb) rb.onclick = () => { Prefs.set(r => { r.res = null; r.resOcultos = []; r.resAncho = {}; }); App.render(); UI.toast('Resumen como al principio'); };
+  $$('[data-cobrar]', v).forEach(a => a.addEventListener('click', () => lsSet('suinadm_f_notaventa', Object.assign(lsGet('suinadm_f_notaventa', {}), { est: 'cobrar', per: 'todo' }))));
   $$('[data-doc]', v).forEach(tr => tr.onclick = () => Route.nav('#/doc/' + tr.dataset.doc));
   $$('[data-emp]', v).forEach(tr => tr.onclick = () => Route.nav('#/empleado/' + tr.dataset.emp));
-  $$('[data-dist]', v).forEach(tr => tr.onclick = () => Route.nav('#/distribuidores/' + tr.dataset.dist));
-  monthlyChart($('#chart', v), docs);
+  if (!editando) {
+    $$('[data-dist]', v).forEach(tr => tr.onclick = () => Route.nav('#/distribuidores/' + tr.dataset.dist));
+    $$('[data-cli]', v).forEach(tr => tr.onclick = () => Route.nav('#/cliente/' + tr.dataset.cli));
+    $$('[data-prod]', v).forEach(tr => tr.onclick = () => { const p = Store.get('productos', tr.dataset.prod); if (p) productoModal(p); });
+  }
+  const ch = $('#chart', v); if (ch) monthlyChart(ch, R.docs, { metrica: F.met === 'gan' ? 'gan' : 'venta', meses: R.meses });
+
+  if (editando) {
+    const grid = $('.rgrid', v);
+    const guardarOrden = () => { const actual = $$('[data-b]', grid).map(s => s.dataset.b); Prefs.set(r => { r.res = actual; }); };
+    grid.addEventListener('click', (e) => {
+      const s = e.target.closest('[data-b]'); if (!s) return; const id = s.dataset.b;
+      if (e.target.closest('[data-bmv]')) { const dir = +e.target.closest('[data-bmv]').dataset.bmv; const lista = $$('[data-b]', grid).map(x => x.dataset.b); const i = lista.indexOf(id), j = i + dir; if (j < 0 || j >= lista.length) return; lista.splice(i, 1); lista.splice(j, 0, id); Prefs.set(r => { r.res = lista; }); App.render(); const nbb = $(`[data-b="${id}"] [data-bmv="${dir}"]`); if (nbb && !nbb.disabled) nbb.focus(); }
+      else if (e.target.closest('[data-bw]')) { Prefs.set(r => { r.resAncho[id] = ancho(id) === 'full' ? 'half' : 'full'; }); App.render(); }
+      else if (e.target.closest('[data-bh]')) { Prefs.set(r => { const k = new Set(r.resOcultos); if (k.has(id)) k.delete(id); else k.add(id); r.resOcultos = [...k]; }); App.render(); }
+    });
+    let arr = null;
+    grid.addEventListener('dragstart', (e) => { const s = e.target.closest('[data-b]'); if (!s) return; arr = s; s.classList.add('drag'); e.dataTransfer.effectAllowed = 'move'; try { e.dataTransfer.setData('text/plain', s.dataset.b); } catch (_) {} });
+    grid.addEventListener('dragover', (e) => { if (!arr) return; e.preventDefault(); const s = e.target.closest('[data-b]'); if (!s || s === arr) return; const r = s.getBoundingClientRect(); const antes = (e.clientY - r.top) < r.height / 2; if (antes) s.before(arr); else s.after(arr); });
+    grid.addEventListener('drop', (e) => e.preventDefault());
+    grid.addEventListener('dragend', () => { if (arr) arr.classList.remove('drag'); arr = null; guardarOrden(); App.render(); });
+  }
 };
 
-/* barras apiladas por mes, por origen (con leyenda, separadores y detalle al pasar) */
-function monthlyChart(host, docs) {
-  const now = new Date(); const months = [];
-  for (let i = 11; i >= 0; i--) { const d = new Date(now.getFullYear(), now.getMonth() - i, 1); months.push(`${d.getFullYear()}-${pad(d.getMonth() + 1)}`); }
-  const data = months.map(m => ({ m, o: {}, gan: 0 }));
-  docs.forEach(d => { const k = (d.fecha || '').slice(0, 7); const row = data.find(x => x.m === k); if (!row) return; const T = Calc.totals(d); Object.entries(porOrigenDet(d)).forEach(([o, g]) => { row.o[o] = (row.o[o] || 0) + g.venta; }); row.gan += T.gan; });
-  const order = ordenOrigenes([...new Set(data.flatMap(r => Object.keys(r.o)))].filter(o => data.some(r => r.o[o] > 0)));
-  data.forEach(r => order.forEach(o => { r.o[o] = r.o[o] || 0; }));
-  const max = Math.max(1, ...data.map(r => order.reduce((a, o) => a + r.o[o], 0)));
+/* Gráfico de columnas apiladas por origen (ventas o ganancia), con tooltip y tabla */
+function monthlyChart(host, docs, opts = {}) {
+  const metrica = opts.metrica || 'venta';
+  let data = opts.meses;
+  if (!data) {   // la ficha de cada empleado lo llama solo con sus documentos
+    const now = new Date(); data = [];
+    for (let i = 11; i >= 0; i--) { const d = new Date(now.getFullYear(), now.getMonth() - i, 1); data.push({ m: `${d.getFullYear()}-${pad(d.getMonth() + 1)}`, o: {}, og: {} }); }
+    docs.forEach(d => { const row = data.find(x => x.m === (d.fecha || '').slice(0, 7)); if (!row) return; Object.entries(porOrigenDet(d)).forEach(([o, g]) => { row.o[o] = (row.o[o] || 0) + g.venta; row.og[o] = (row.og[o] || 0) + g.gan; }); });
+  }
+  const campo = metrica === 'gan' ? 'og' : 'o';
+  // Más de 6 orígenes: los distribuidores que menos venden se juntan en "Otros"
+  const tot = {}; data.forEach(r => Object.entries(r[campo]).forEach(([o, v]) => { tot[o] = (tot[o] || 0) + v; }));
+  let order = ordenOrigenes(Object.keys(tot).filter(o => Math.abs(tot[o]) > 0.005));
+  const dist = order.filter(o => o.startsWith('dist|')).sort((a, b) => tot[b] - tot[a]);
+  const juntar = order.length > 6 ? new Set(dist.slice(Math.max(1, 6 - (order.length - dist.length)))) : new Set();
+  const filas = data.map(r => { const o = {}; Object.entries(r[campo]).forEach(([k, v]) => { const kk = juntar.has(k) ? 'otros' : k; o[kk] = (o[kk] || 0) + v; }); return { m: r.m, o }; });
+  order = order.filter(o => !juntar.has(o)); if (juntar.size) order.push('otros');
+  const col = (o) => o === 'otros' ? '#94A3B8' : colorOrigen(o);
+  const nom = (o) => o === 'otros' ? 'Otros distribuidores' : nombreOrigen(o);
+  filas.forEach(r => { order.forEach(o => { r.o[o] = r.o[o] || 0; }); r.t = order.reduce((a, o) => a + r.o[o], 0); });
+  const max = Math.max(1, ...filas.map(r => order.reduce((a, o) => a + Math.max(0, r.o[o]), 0)));
   const step = (() => { const raw = max / 4; const p = Math.pow(10, Math.floor(Math.log10(raw))); const n = raw / p; return (n <= 1 ? 1 : n <= 2 ? 2 : n <= 5 ? 5 : 10) * p; })();
   const top = step * Math.ceil(max / step);
-  const W = 640, H = 240, L = 54, R = 8, T = 10, B = 26, cw = (W - L - R) / data.length, bw = Math.min(28, cw * 0.62);
+  const anchoHost = Math.round(host.clientWidth || 680);
+  const angosto = anchoHost < 560;
+  if (angosto) filas.splice(0, filas.length - 6);   // en el teléfono: últimos 6 meses, letras de tamaño real
+  const W = Math.max(300, anchoHost), H = angosto ? 230 : 260, L = 46, R = 6, T = 22, B = 28, cw = (W - L - R) / filas.length, bw = Math.min(24, cw * 0.56);
   const y = (val) => T + (H - T - B) * (1 - val / top);
-  const mes = ['ene', 'feb', 'mar', 'abr', 'may', 'jun', 'jul', 'ago', 'sep', 'oct', 'nov', 'dic'];
   let g = '';
-  for (let t = 0; t <= top + 1e-9; t += step) g += `<line x1="${L}" x2="${W - R}" y1="${y(t)}" y2="${y(t)}" stroke="#E7ECF1"/><text x="${L - 8}" y="${y(t) + 4}" text-anchor="end" font-size="13" fill="#5B6778" font-family="IBM Plex Mono">${t >= 1000 ? '$' + (t / 1000) + 'k' : '$' + t}</text>`;
-  data.forEach((r, i) => {
+  for (let t = 0; t <= top + 1e-9; t += step) g += `<line x1="${L}" x2="${W - R}" y1="${y(t).toFixed(1)}" y2="${y(t).toFixed(1)}" stroke="${t === 0 ? '#C9D3DC' : '#EDF0F3'}" stroke-width="1"/><text x="${L - 8}" y="${y(t) + 4}" text-anchor="end" font-size="12.5" fill="#5B6778" font-family="IBM Plex Sans, system-ui, sans-serif" style="font-variant-numeric:tabular-nums">${compacto(t)}</text>`;
+  const ultimo = filas.length - 1;
+  const maxI = filas.reduce((bi, r, i) => r.t > filas[bi].t ? i : bi, 0);
+  filas.forEach((r, i) => {
     const x = L + i * cw + (cw - bw) / 2; let acc = 0;
-    const segs = order.filter(o => r.o[o] > 0);
+    const segs = order.filter(o => r.o[o] > 0.005);
     segs.forEach((o, j) => {
-      const v0 = acc, v1 = acc + r.o[o]; acc = v1;
-      const y0 = y(v0), y1 = y(v1); const h = Math.max(0, y0 - y1 - (j > 0 ? 2 : 0));
-      const isTop = j === segs.length - 1, rr = isTop ? Math.min(4, h / 2) : 0;
-      const yy = y1, bot = yy + h;
-      g += isTop && rr > 0 ? `<path d="M${x},${bot} V${yy + rr} Q${x},${yy} ${x + rr},${yy} H${x + bw - rr} Q${x + bw},${yy} ${x + bw},${yy + rr} V${bot} Z" fill="${colorOrigen(o)}"/>` : `<rect x="${x}" y="${yy}" width="${bw}" height="${h}" fill="${colorOrigen(o)}"/>`;
+      const y0 = y(acc), y1 = y(acc + r.o[o]); acc += r.o[o];
+      const gap = j > 0 ? 2 : 0, h = Math.max(0, y0 - y1 - gap); if (h < 0.5) return;
+      const isTop = j === segs.length - 1, rr = isTop ? Math.min(4, h) : 0, bot = y1 + h;
+      g += isTop && rr > 0 ? `<path d="M${x},${bot} V${y1 + rr} Q${x},${y1} ${x + rr},${y1} H${x + bw - rr} Q${x + bw},${y1} ${x + bw},${y1 + rr} V${bot} Z" fill="${col(o)}"/>` : `<rect x="${x}" y="${y1}" width="${bw}" height="${h}" fill="${col(o)}"/>`;
     });
+    // Etiqueta solo en el mes actual y en el mejor mes
+    if ((i === ultimo || i === maxI) && r.t > 0.005) g += `<text x="${x + bw / 2}" y="${y(r.t) - 7}" text-anchor="middle" font-size="12.5" font-weight="600" fill="#14222c" font-family="IBM Plex Sans, system-ui, sans-serif">${compacto(r.t)}</text>`;
     const [yy, mm] = r.m.split('-');
-    g += `<text x="${L + i * cw + cw / 2}" y="${H - 8}" text-anchor="middle" font-size="13" fill="#5B6778">${mes[+mm - 1]}${mm === '01' || i === 0 ? ' ' + yy.slice(2) : ''}</text>`;
-    g += `<rect x="${L + i * cw}" y="${T}" width="${cw}" height="${H - T - B}" fill="transparent" data-i="${i}"/>`;
+    g += `<text x="${L + i * cw + cw / 2}" y="${H - 8}" text-anchor="middle" font-size="12.5" fill="${i === ultimo ? '#14222c' : '#5B6778'}" ${i === ultimo ? 'font-weight="600"' : ''} font-family="IBM Plex Sans, system-ui, sans-serif">${MESES_C[+mm - 1]}${mm === '01' || i === 0 ? ' ' + yy.slice(2) : ''}</text>`;
+    g += `<rect class="hit" x="${L + i * cw}" y="${T}" width="${cw}" height="${H - T - B}" fill="transparent" data-i="${i}"/>`;
   });
-  host.innerHTML = `<div class="legend">${order.map(o => `<span><i style="background:${colorOrigen(o)}"></i>${esc(nombreOrigen(o))}</span>`).join('')}</div>
-    <div class="chart"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="Ventas por mes y origen">${g}</svg><div class="tip hide"></div></div>
-    <details style="margin-top:8px"><summary class="small muted" style="cursor:pointer">Ver como tabla</summary><table class="tbl" style="margin-top:6px"><thead><tr><th>Mes</th>${order.map(o => `<th class="r">${esc(nombreOrigen(o))}</th>`).join('')}<th class="r">Total</th></tr></thead><tbody>${data.slice().reverse().map(r => `<tr><td data-s="${r.m.replace('-', '')}">${r.m}</td>${order.map(o => `<td class="num">${fmtUSD0(r.o[o])}</td>`).join('')}<td class="num">${fmtUSD0(order.reduce((a, o) => a + r.o[o], 0))}</td></tr>`).join('')}</tbody></table></details>`;
+  const nombreM = metrica === 'gan' ? 'Ganancia' : 'Ventas';
+  host.innerHTML = `${order.length > 1 ? `<div class="legend">${order.map(o => `<span><i style="background:${col(o)}"></i>${esc(nom(o))}</span>`).join('')}</div>` : ''}
+    <div class="chart"><svg viewBox="0 0 ${W} ${H}" role="img" aria-label="${nombreM} por mes y origen, últimos 12 meses">${g}</svg><div class="tip hide"></div></div>
+    <details class="tabla-v"><summary class="small muted">Ver como tabla</summary><div class="tbl-wrap" style="margin-top:6px"><table class="tbl"><thead><tr><th>Mes</th>${order.map(o => `<th class="r">${esc(nom(o))}</th>`).join('')}<th class="r">Total</th></tr></thead><tbody>${filas.slice().reverse().map(r => { const [yy, mm] = r.m.split('-'); return `<tr><td>${MESES_C[+mm - 1]} ${yy}</td>${order.map(o => `<td class="num">${fmtUSD0(r.o[o])}</td>`).join('')}<td class="num"><b>${fmtUSD0(r.t)}</b></td></tr>`; }).join('')}</tbody></table></div></details>`;
   const svg = $('svg', host), tip = $('.tip', host);
-  svg.addEventListener('mousemove', (e) => {
-    const t = e.target.closest('[data-i]'); if (!t) { tip.classList.add('hide'); return; }
-    const r = data[+t.dataset.i]; const [yy, mm] = r.m.split('-'); const tot = order.reduce((a, o) => a + r.o[o], 0);
-    tip.innerHTML = `<b>${mes[+mm - 1]} ${yy}</b><br>${order.map(o => `<span style="display:inline-block;width:8px;height:8px;border-radius:2px;background:${colorOrigen(o)};margin-right:6px"></span>${esc(nombreOrigen(o))}: <span class="num">${fmtUSD0(r.o[o])}</span>`).join('<br>')}<br>Total: <span class="num">${fmtUSD0(tot)}</span> · ganancia <span class="num">${fmtUSD0(r.gan)}</span>`;
+  // si cambia mucho el ancho (girar el teléfono, abrir el menú), se vuelve a dibujar
+  if (window.ResizeObserver && !host._ro) { let w0 = anchoHost; host._ro = new ResizeObserver(debounce(() => { const w = Math.round(host.clientWidth); if (w && Math.abs(w - w0) > 40 && document.body.contains(host)) { w0 = w; monthlyChart(host, docs, opts); } }, 250)); host._ro.observe(host); }
+  const mostrar = (t) => {
+    if (!t) { tip.classList.add('hide'); svg.querySelectorAll('.hit').forEach(h => h.setAttribute('fill', 'transparent')); return; }
+    svg.querySelectorAll('.hit').forEach(h => h.setAttribute('fill', h === t ? 'rgba(0,109,140,.06)' : 'transparent'));
+    const r = filas[+t.dataset.i]; const [yy, mm] = r.m.split('-');
+    tip.innerHTML = `<b>${MESES_C[+mm - 1]} ${yy}</b><br>${order.filter(o => Math.abs(r.o[o]) > 0.005).map(o => `<span class="sw" style="background:${col(o)}"></span>${esc(nom(o))}: <span class="num">${fmtUSD0(r.o[o])}</span>`).join('<br>') || '<span class="muted">Sin movimiento</span>'}<br><b>${nombreM}: <span class="num">${fmtUSD0(r.t)}</span></b>`;
     const box = host.querySelector('.chart').getBoundingClientRect(); const sb = t.getBoundingClientRect();
-    tip.style.left = Math.min(Math.max(sb.left - box.left + sb.width / 2, 80), box.width - 80) + 'px'; tip.style.top = '20px'; tip.classList.remove('hide');
-  });
-  svg.addEventListener('mouseleave', () => tip.classList.add('hide'));
+    tip.style.left = Math.min(Math.max(sb.left - box.left + sb.width / 2, 90), box.width - 90) + 'px'; tip.style.top = '18px'; tip.classList.remove('hide');
+  };
+  svg.addEventListener('mousemove', (e) => mostrar(e.target.closest('[data-i]')));
+  svg.addEventListener('mouseleave', () => mostrar(null));
+  svg.addEventListener('click', (e) => mostrar(e.target.closest('[data-i]')));   // teléfono: tocar una columna
 }
+
 
 /* ---------------- Clientes ---------------- */
 const statsCliente = (cid) => {
