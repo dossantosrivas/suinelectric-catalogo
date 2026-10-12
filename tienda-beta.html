@@ -505,6 +505,29 @@
   .sug-ruta{ font-size:12px; margin-top:3px; }
   .sug-ruta .miga-sep{ margin:0 4px; }
 
+  /* ---------- Lo más pedido (subcategorías destacadas) ---------- */
+  .dest-cards{ display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:14px; }
+  a.enlace-cat.dest-card{
+    background:#fff; border:1px solid var(--linea); border-radius:var(--radio); overflow:hidden; color:var(--texto);
+    display:flex; flex-direction:column; text-decoration:none; transition:border-color .15s, box-shadow .15s, transform .15s;
+  }
+  a.enlace-cat.dest-card:hover{ border-color:var(--azul); box-shadow:0 8px 22px rgba(14,42,59,0.10); transform:translateY(-2px); text-decoration:none; }
+  .dest-img{ height:150px; display:flex; align-items:center; justify-content:center; padding:14px; background:#fff; position:relative; }
+  .dest-img img{ max-width:100%; max-height:100%; object-fit:contain; }
+  .dest-img .cat-card-noimg{ font-size:42px; }
+  .dest-n{ position:absolute; top:10px; left:10px; background:var(--tinta); color:#fff; font:700 12px var(--sans); border-radius:12px; padding:3px 9px; }
+  .dest-cuerpo{ border-top:1px solid var(--linea-suave); padding:12px 14px 14px; display:flex; flex-direction:column; gap:8px; flex:1; }
+  .dest-tit{ font-family:var(--display); font-weight:700; font-size:20px; line-height:1.15; color:var(--tinta); display:flex; justify-content:space-between; gap:8px; align-items:flex-start; }
+  a.enlace-cat.dest-card:hover .dest-tit{ color:var(--azul-texto); }
+  a.enlace-cat.dest-card:hover .cat-card-flecha{ transform:translateX(3px); }
+  .dest-meta{ font-size:13px; color:var(--texto-3); }
+  .dest-meta b{ color:var(--ok); font-weight:600; }
+  .dest-marcas{ display:flex; flex-wrap:wrap; gap:6px; align-items:center; margin-top:auto; }
+  .dest-marcas span{ height:30px; min-width:30px; padding:4px 8px; border:1px solid var(--linea-suave); border-radius:5px; background:#fff; display:inline-flex; align-items:center; justify-content:center; font:600 11.5px var(--sans); color:var(--texto-2); }
+  .dest-marcas img{ max-height:20px; max-width:62px; object-fit:contain; }
+  @media (max-width:1100px){ .dest-cards{ grid-template-columns:repeat(2, minmax(0,1fr)); } }
+  @media (max-width:520px){ .dest-cards{ gap:10px; } .dest-img{ height:110px; padding:10px; } .dest-tit{ font-size:17px; } .dest-cuerpo{ padding:10px 10px 12px; } .dest-marcas span{ height:26px; padding:3px 6px; } .dest-marcas img{ max-height:16px; max-width:48px; } }
+
   /* ---------- Familias en Inicio ---------- */
   .fam-cards{ display:grid; grid-template-columns:repeat(auto-fill, minmax(250px,1fr)); gap:14px; }
   .fam-card{
@@ -2315,6 +2338,49 @@ const IMAGENES_FAMILIA = {
   'Mando y Señalización': 'imagenes/familias/mando-y-senalizacion.jpg',
 };
 
+// Subcategorías destacadas en Inicio ("Lo más pedido"), con todas sus marcas.
+// Se eligieron por ventas, búsquedas en la tienda y cantidad de modelos. Cambia el orden aquí.
+const DESTACADOS = [
+  { titulo: 'LOGO! y relés programables', ruta: ['Automatización y PLC', 'PLC Básicos', 'LOGO!'], foto: '6ED1052-1FB08-0BA2' },
+  { titulo: 'Variadores de frecuencia',   ruta: ['Variadores y Arrancadores', 'Variadores de Frecuencia'], foto: 'GD20-7R5G-4' },
+  { titulo: 'Contactores',                ruta: ['Control de Motores', 'Contactores'], foto: '3RT1025-1AN20' },
+  { titulo: 'Breakers automáticos',       ruta: ['Protección Eléctrica', 'Breakers Automáticos'], foto: '5SL6206-7MB' },
+  { titulo: 'Breakers en caja moldeada',  ruta: ['Protección Eléctrica', 'Breakers en Caja Moldeada'], foto: '3VT2725-2AA36-0250' },
+  { titulo: 'Pulsadores y pilotos',       ruta: ['Mando y Señalización', 'Pulsadores y Pilotos'], foto: '3SB3602-2KA11' },
+  { titulo: 'Guardamotores',              ruta: ['Control de Motores', 'Guardamotores'], foto: '3RV2021-4BA10' },
+  { titulo: 'Arrancadores suaves',        ruta: ['Variadores y Arrancadores', 'Arrancadores Suaves'], foto: '3RW4038-1BB14' },
+];
+function destacadosHtml(){
+  const tarjetas = DESTACADOS.map(d => {
+    const lista = productos.filter(p => { const r = rutaNavDe(p); return d.ruta.every((seg, i) => r[i] === seg); });
+    if (!lista.length) return '';
+    const porMarca = {};
+    lista.forEach(p => { const m = (p.marca || '').toUpperCase().trim(); if (m && !/^(SIN MARCA|GEN[EÉ]RIC[OA]|OTRA?S?|N\/?A|-)$/.test(m)) porMarca[m] = (porMarca[m] || 0) + 1; });
+    const marcas = Object.keys(porMarca).sort((a, b) => porMarca[b] - porMarca[a]);
+    const disp = lista.filter(p => p.disponible).length;
+    // foto: el modelo elegido para la tarjeta; si no está, un producto principal (no accesorio) con foto propia
+    const esPrincipal = (p) => p.imagen && !/accesorio/i.test(rutaNavDe(p).join(' ') + ' ' + String(p.descripcion || '').slice(0, 30));
+    const elegido = d.foto && productos.find(p => p.modelo === d.foto && p.imagen);
+    const candidatos = lista.filter(esPrincipal).sort((a, b) => (!/^https?:/.test(b.imagen)) - (!/^https?:/.test(a.imagen)) || (b.disponible ? 1 : 0) - (a.disponible ? 1 : 0));
+    const foto = (elegido || candidatos.find(p => (p.marca || '').toUpperCase() === marcas[0]) || candidatos[0] || lista.find(p => p.imagen) || {}).imagen;
+    const reserva = (candidatos.find(p => p.imagen !== foto) || {}).imagen;
+    const conLogo = marcas.filter(m => LOGOS_MARCAS[m]), sinLogo = marcas.filter(m => !LOGOS_MARCAS[m]);
+    const chips = conLogo.slice(0, 4).map(m => '<span title="' + escHtml(m) + '"><img src="' + LOGOS_MARCAS[m] + '" alt="' + escHtml(m) + '" loading="lazy"></span>')
+      .concat(sinLogo.slice(0, Math.max(0, 4 - conLogo.length)).map(m => '<span>' + escHtml(m.length > 12 ? m.slice(0, 11) + '…' : m) + '</span>'));
+    const resto = marcas.length - chips.length;
+    if (resto > 0) chips.push('<span title="' + escHtml(marcas.slice(chips.length).join(', ')) + '">+' + resto + '</span>');
+    const r = d.ruta.slice(0, MAX_NIVELES);
+    return '<a class="enlace-cat dest-card" href="' + hashDeRuta(r) + '" data-ruta="' + encodeURIComponent(claveDe(r)) + '">' +
+             '<div class="dest-img">' + (foto ? '<img src="' + foto + '" alt="" loading="lazy"' + (reserva ? ' onerror="this.onerror=null;this.src=\'' + reserva + '\'"' : '') + '>' : '<span class="cat-card-noimg">⚡</span>') +
+               '<span class="dest-n">' + lista.length.toLocaleString('es-VE') + ' modelos</span></div>' +
+             '<div class="dest-cuerpo"><div class="dest-tit">' + escHtml(d.titulo) + '<span class="cat-card-flecha">→</span></div>' +
+               '<div class="dest-meta"><b>' + disp.toLocaleString('es-VE') + ' disponibles</b> · ' + marcas.length + (marcas.length === 1 ? ' marca' : ' marcas') + '</div>' +
+               '<div class="dest-marcas">' + chips.join('') + '</div></div>' +
+           '</a>';
+  }).filter(Boolean);
+  return tarjetas.length ? '<h2 class="inicio-h2">Lo más pedido</h2><div class="dest-cards">' + tarjetas.join('') + '</div>' : '';
+}
+
 // Imagen representativa de una categoría (ruta): la primera imagen de un
 // producto que esté dentro de esa ruta (si existe).
 function imagenDeRuta(ruta){
@@ -2411,6 +2477,8 @@ function renderInicio(){
     html += '</div></div>';
   }
   html += '</section>';
+
+  html += destacadosHtml();
 
   // Carrusel de productos al azar, para mostrar la variedad del catálogo.
   const muestra = productosAleatorios(16);
