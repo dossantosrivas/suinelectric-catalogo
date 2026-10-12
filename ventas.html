@@ -240,6 +240,9 @@ a.kp:hover{border-color:#B9C3CF}
 .tabla-v{margin-top:8px}.tabla-v summary{cursor:pointer}
 .seg.sm button{padding:6px 12px;font-size:14.5px}
 .banner.info-b{background:var(--steel-soft);border-color:#B7DCE8;color:var(--steel-2)}
+.mg-pct{display:inline-block;font-size:14px;font-weight:700;border-radius:10px;padding:1px 9px;font-variant-numeric:tabular-nums;white-space:nowrap}
+.mg-pct.ok{background:#DCFCE7;color:#166534}.mg-pct.bajo{background:#FEF3C7;color:#92400E}.mg-pct.neg{background:#FEE2E2;color:#B91C1C}.mg-pct.sc{background:#F1F5F9;color:#64748b;font-weight:600}
+.mg-tabla tfoot td{border-top:2px solid var(--line);background:var(--panel-2)}.mg-tabla tr.sel td{background:#FFFBEB!important}
 .acepta-b{justify-content:space-between;flex-wrap:wrap;margin-bottom:0}
 .seg.wrap{flex-wrap:wrap}
 .seg-venta{border-top:3px solid var(--steel)}
@@ -5368,14 +5371,6 @@ const Cot = (() => {
   html body:not(.is-mobile) .catalog-result-row .stk-chip{font-size:11.5px!important;padding:0 6px 1px!important;border-width:1px!important;border-radius:5px!important;gap:4px!important}
   html body:not(.is-mobile) .catalog-result-row .stk-chip b{font-size:13px!important}
   html body:not(.is-mobile) .catalog-result-row .stk-tag{font-size:10px!important;padding:0 5px!important;margin-left:5px!important}
-  html body:not(.is-mobile) #adm-margen{margin-top:6px!important;padding-top:4px!important}
-  html body:not(.is-mobile) #adm-margen h4{font-size:13.5px!important}
-  html body:not(.is-mobile) #adm-margen .mg-aj{font-size:12.5px!important;padding:3px 8px!important}
-  html body:not(.is-mobile) #adm-margen .mg-ln{padding:4px 6px!important}
-  html body:not(.is-mobile) #adm-margen .mg-ln .mg-t{font-size:13px!important}
-  html body:not(.is-mobile) #adm-margen .mg-row{font-size:12.5px!important;margin-top:1px!important}
-  html body:not(.is-mobile) #adm-margen .mg-row .mg-gan b{font-size:13.5px!important}
-  html body:not(.is-mobile) #adm-margen .mg-tot{font-size:13px!important;padding:5px 8px!important}
   `;
   /* Tamaño de letra dentro del generador: solo los controles y el catálogo, nunca la hoja del PDF */
   const LETRA_CSS = `
@@ -5773,7 +5768,16 @@ const Cot = (() => {
     body:not(.is-mobile):not(.mode-rapida) > .catalog-panel .catalog-results{max-height:none!important;flex:1 1 auto;min-height:min(300px,40vh)}
     body:not(.is-mobile):not(.mode-rapida) > .catalog-panel #adm-margen{max-height:none}
     body:not(.is-mobile):not(.mode-rapida) > .catalog-panel #adm-margen:not(.cerrado){flex:1 1 0;min-height:170px}
+    /* sin búsqueda: el margen se ve completo y la columna del catálogo se desplaza */
+    body:not(.is-mobile):not(.mode-rapida) > .catalog-panel:has(#adm-margen:not(.cerrado):not(.buscando)){overflow-y:auto;overscroll-behavior:contain}
+    body:not(.is-mobile):not(.mode-rapida) > .catalog-panel #adm-margen.completo:not(.cerrado){flex:none;min-height:0;max-height:none}
+    body:not(.is-mobile):not(.mode-rapida) > .catalog-panel #adm-margen.completo .mg-list{overflow:visible;flex:none}
+    body:not(.is-mobile):not(.mode-rapida) > .catalog-panel #adm-margen.completo h4{position:sticky;top:-18px;background:#fff;z-index:2;padding:6px 2px}
+    body:not(.is-mobile):not(.mode-rapida) > .catalog-panel #adm-margen.completo .mg-tot{position:sticky;top:22px;background:#fff;z-index:2;margin-top:0;padding:4px 0 8px}
+    body:not(.is-mobile):not(.mode-rapida) > .catalog-panel #adm-margen.completo .mg-hd{position:static}
     body:not(.is-mobile):not(.mode-rapida) > .catalog-panel:has(#adm-margen:not(.cerrado)) .catalog-results{flex:0 1 auto;min-height:72px}
+    body:not(.is-mobile):not(.mode-rapida) > .catalog-panel:has(#adm-margen:not(.cerrado)) .catalog-results:has(> .catalog-hint:only-child){min-height:0!important;flex:0 0 auto!important;border:0!important;padding:0!important}
+    body:not(.is-mobile):not(.mode-rapida) > .catalog-panel:has(#adm-margen:not(.cerrado)) .catalog-results > .catalog-hint:only-child{display:none}
     body:not(.is-mobile):not(.mode-rapida) > .page{grid-column:2!important}
     .catalog-search-row{flex-wrap:wrap}
     #catalog-search{flex:1 1 100%!important}
@@ -5785,23 +5789,41 @@ const Cot = (() => {
   .mg-row .mg-dto{background:#EFF6FF;color:#1D4ED8;border-radius:5px;padding:1px 7px;font-weight:700}
   .mg-row .mg-src{color:#94a3b8;font-size:14px}
   .m-item .mg-row{margin:8px 12px 0;padding:8px 10px;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px}
-  #adm-margen{margin-top:10px;border-top:2px solid #e2e8f0;padding-top:8px;flex:0 1 auto;min-height:0;display:flex;flex-direction:column;max-height:46vh}
-  #adm-margen h4{margin:0;font-size:16px;display:flex;gap:6px 8px;align-items:center;flex-wrap:wrap;cursor:pointer;user-select:none;padding:3px 2px}
-  #adm-margen h4 small{font-weight:500;color:#64748b}
+  #adm-margen{margin-top:12px;border-top:2px solid #e2e8f0;padding-top:10px;flex:0 1 auto;min-height:0;display:flex;flex-direction:column;max-height:52vh}
+  #adm-margen h4{margin:0;font-size:16.5px;display:flex;gap:6px;align-items:center;flex-wrap:nowrap;cursor:pointer;user-select:none;padding:2px;white-space:nowrap;min-width:0}
+  #adm-margen h4 small{overflow:hidden;text-overflow:ellipsis}
+  #adm-margen h4 small{font-weight:500;color:#64748b;font-size:14px}
   #adm-margen .mg-car{display:inline-block;transition:transform .15s;color:#64748b;font-size:13px}
   #adm-margen.cerrado .mg-car{transform:rotate(-90deg)}
-  #adm-margen .mg-aj{margin-left:auto;border:1.5px solid #cbd5e1;background:#fff;border-radius:8px;padding:5px 10px;font:inherit;font-size:14px;font-weight:700;color:#0e2a3b;cursor:pointer}
+  #adm-margen .mg-bts{margin-left:auto;display:flex;gap:6px}
+  #adm-margen .mg-aj{border:1.5px solid #cbd5e1;background:#fff;border-radius:8px;padding:4px 9px;font:inherit;font-size:14px;font-weight:700;color:#0e2a3b;cursor:pointer;white-space:nowrap}
   #adm-margen .mg-aj:hover{border-color:#0e2a3b;background:#f8fafc}
-  #adm-margen .mg-list{overflow:auto;min-height:0;flex:0 1 auto;margin-top:6px}
-  #adm-margen.cerrado .mg-list{display:none}
+  #adm-margen .mg-tot{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-top:8px;flex:none}
+  #adm-margen .mg-tot div{background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px;padding:4px 8px;min-width:0}
+  #adm-margen .mg-tot small{display:block;font-size:12.5px;color:#64748b;font-weight:600}
+  #adm-margen .mg-tot b{display:block;font-size:16.5px;font-variant-numeric:tabular-nums;color:#0f172a;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #adm-margen .mg-tot .g{background:#F0FDF4;border-color:#BBF7D0}#adm-margen .mg-tot .g b{color:#15803D}
+  #adm-margen .mg-tot .neg{background:#FEF2F2;border-color:#FECACA}#adm-margen .mg-tot .neg b{color:#B91C1C}
+  #adm-margen .mg-aviso{font-size:13.5px;color:#92400E;background:#FFFBEB;border:1px solid #FDE68A;border-radius:7px;padding:4px 8px;margin-top:6px}
+  #adm-margen .mg-list{overflow:auto;min-height:0;flex:0 1 auto;margin-top:8px;border:1px solid #E2E8F0;border-radius:8px}
+  #adm-margen.cerrado .mg-list,#adm-margen.cerrado .mg-tot,#adm-margen.cerrado .mg-aviso{display:none}
   #adm-margen .mg-hid{display:none;font-size:14px;color:#94a3b8;margin-top:4px}
   #adm-margen.buscando .mg-hid{display:block}
-  #adm-margen .mg-ln{padding:7px 8px;border-radius:7px;border:1px solid transparent;cursor:pointer}
-  #adm-margen .mg-ln.on{background:#FFFBEB;border-color:#FCD34D}
-  #adm-margen .mg-ln .mg-t{font-size:15.5px;font-weight:700}
-  #adm-margen .mg-ln .mg-row{margin-top:2px}
-  #adm-margen .mg-tot{display:flex;gap:6px 14px;flex-wrap:wrap;font-size:15.5px;margin-top:6px;padding:8px;background:#F0FDF4;border-radius:7px;flex:none}
-  #adm-margen .mg-tot b{font-variant-numeric:tabular-nums}
+  #adm-margen .mg-hd,#adm-margen .mg-ln{display:grid;grid-template-columns:24px minmax(0,1fr) 78px 112px;gap:8px;align-items:center;padding:7px 10px}
+  #adm-margen .mg-hd{position:sticky;top:0;background:#F1F5F9;font-size:12.5px;font-weight:700;color:#475569;text-transform:uppercase;letter-spacing:.03em;z-index:1}
+  #adm-margen .mg-hd span:nth-child(n+3),#adm-margen .mg-ln .c,#adm-margen .mg-ln .gg{text-align:right}
+  #adm-margen .mg-ln{border-top:1px solid #EEF2F6;cursor:pointer}
+  #adm-margen .mg-ln:hover{background:#F8FAFC}
+  #adm-margen .mg-ln.on{background:#FFFBEB;box-shadow:inset 3px 0 0 #F59E0B}
+  #adm-margen .mg-ln .n{font-size:13px;color:#94a3b8;font-weight:700;text-align:center}
+  #adm-margen .mg-ln .p{min-width:0}
+  #adm-margen .mg-ln .p b{display:block;font-size:15px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;color:#0f172a}
+  #adm-margen .mg-ln .p small{display:block;font-size:13px;color:#64748b;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+  #adm-margen .mg-ln .c{font-size:14.5px;font-variant-numeric:tabular-nums;color:#334155}
+  #adm-margen .mg-ln .c small{display:block;font-size:12px;color:#94a3b8}
+  #adm-margen .mg-ln .gg b{display:block;font-size:15px;font-variant-numeric:tabular-nums;color:#0f172a}
+  .mg-pct{display:inline-block;font-size:13px;font-weight:700;border-radius:10px;padding:1px 8px;margin-top:2px;font-variant-numeric:tabular-nums}
+  .mg-pct.ok{background:#DCFCE7;color:#166534}.mg-pct.bajo{background:#FEF3C7;color:#92400E}.mg-pct.neg{background:#FEE2E2;color:#B91C1C}.mg-pct.sc{background:#F1F5F9;color:#64748b;font-weight:600}
   #items-tbody tr.item-row.adm-sel td{background:#FFFBEB}`;
   const chip = (cls, n, label) => { const v = num(String(n).replace(',', '.')); return `<span class="stk-chip ${cls}${v <= 0 ? ' zero' : ''}"><b>${esc(fmtQty(v))}</b>${esc(label)}</span>`; };
   const decorate = (dd) => {
@@ -5853,6 +5875,28 @@ const Cot = (() => {
     const g = precio > 0 ? (precio - m.costo) / m.costo * 100 : null;
     return `<span>Costo <b>${fmtUSD(m.costo)}</b></span>${m.dto != null ? `<span class="mg-dto">desc. ${fmtNum(m.dto, 1)}%</span>` : ''}${m.rec ? `<span>+${fmtNum(m.rec)}% traerlo</span>` : ''}${g != null ? `<span class="mg-gan ${g < 0 ? 'neg' : ''}">Ganancia <b>${fmtNum(g, 1)}%</b> · ${fmtUSD(precio - m.costo)}</span>` : ''}<span class="mg-src">${esc(m.fuente)}${m.regla && !m.inv ? ' · ' + esc(m.regla) : m.inv ? ' · ' + esc(m.regla) : ''}</span>`;
   };
+  /* % de ganancia sobre el costo, con color: rojo si pierde, ámbar si es poco (< MG_BAJO), verde si está bien */
+  const MG_BAJO = 15;
+  const pctMg = (precio, m) => { if (!m || !(m.costo > 0)) return '<span class="mg-pct sc">sin costo</span>'; const g = (precio - m.costo) / m.costo * 100; return `<span class="mg-pct ${g < 0 ? 'neg' : g < MG_BAJO ? 'bajo' : 'ok'}">${g < 0 ? '▼ ' : ''}${fmtNum(g, 1)}%</span>`; };
+  /* Margen del documento en grande (cuando hay muchos productos) */
+  const margenGrande = (dd) => {
+    const ls = lineasDoc(dd); const disc = num((dd.getElementById('discount-input') || {}).value) / 100;
+    let venta = 0, costo = 0, sinC = 0;
+    const filas = ls.map(l => { const pn = l.pr * (1 - disc), vn = l.q * pn; venta += vn; const tiene = l.m && l.m.costo > 0; if (tiene) costo += l.q * l.m.costo; else sinC++;
+      return `<tr class="${l.i === selIdx ? 'sel' : ''}"><td class="mono small">${l.i + 1}</td><td><b class="mono">${esc(l.model || 'Línea sin modelo')}</b></td><td class="num">${fmtQty(l.q)}</td><td class="num">${fmtUSD(pn)}</td>
+        <td class="num">${tiene ? fmtUSD(l.m.costo) : '<span class="muted">—</span>'}</td><td class="small">${tiene ? esc(l.m.fuente) + (l.m.dto != null ? ` · desc. ${fmtNum(l.m.dto, 1)}%` : '') + (l.m.rec ? ` · +${fmtNum(l.m.rec)}% traerlo` : '') : '<span class="muted">Sin costo</span>'}</td>
+        <td class="num">${tiene ? fmtUSD(pn - l.m.costo) : '—'}</td><td class="num"><b>${tiene ? fmtUSD(l.q * (pn - l.m.costo)) : '—'}</b></td><td class="r">${pctMg(pn, l.m)}</td></tr>`; }).join('');
+    const gan = venta - costo;
+    UI.modal({ title: 'Margen del documento', wide: true, foot: false, body: `
+      <div class="kpis k4" style="margin-bottom:14px"><div class="kpi"><div class="l">Venta${disc ? ' (con ' + fmtNum(disc * 100) + '% desc.)' : ''}</div><div class="v" style="font-size:23px">${fmtUSD(venta)}</div></div>
+        <div class="kpi"><div class="l">Costo</div><div class="v" style="font-size:23px">${fmtUSD(costo)}</div></div>
+        <div class="kpi"><div class="l">Ganancia${sinC ? ' (parcial)' : ''}</div><div class="v" style="font-size:23px;color:${gan < 0 ? 'var(--red)' : 'var(--ok)'}">${fmtUSD(gan)}</div></div>
+        <div class="kpi"><div class="l">% sobre el costo</div><div class="v" style="font-size:23px">${costo ? fmtNum(gan / costo * 100, 1) + '%' : '—'}</div><div class="d">${venta ? fmtNum(gan / venta * 100, 1) + '% de la venta' : ''}</div></div></div>
+      ${sinC ? `<div class="banner" style="margin-bottom:12px">${sinC} producto${sinC === 1 ? '' : 's'} sin costo: su ganancia no se cuenta (el total es parcial).</div>` : ''}
+      <div class="tbl-wrap"><table class="tbl mg-tabla"><thead><tr><th>#</th><th>Producto</th><th class="r">Cant.</th><th class="r">Precio</th><th class="r">Costo</th><th>De dónde</th><th class="r">Gana c/u</th><th class="r">Gana total</th><th class="r">%</th></tr></thead><tbody>${filas}</tbody>
+      <tfoot><tr><td></td><td><b>Total</b></td><td></td><td class="num"><b>${fmtUSD(venta)}</b></td><td class="num"><b>${fmtUSD(costo)}</b></td><td></td><td></td><td class="num"><b style="color:${gan < 0 ? 'var(--red)' : 'var(--ok)'}">${fmtUSD(gan)}</b></td><td class="r">${costo ? `<span class="mg-pct ${gan < 0 ? 'neg' : gan / costo * 100 < MG_BAJO ? 'bajo' : 'ok'}">${fmtNum(gan / costo * 100, 1)}%</span>` : ''}</td></tr></tfoot></table></div>
+      <p class="muted small" style="margin:10px 0 0">El % es la ganancia sobre el costo: <span class="mg-pct neg">rojo</span> pierdes dinero, <span class="mg-pct bajo">ámbar</span> menos de ${MG_BAJO}%, <span class="mg-pct ok">verde</span> ${MG_BAJO}% o más.</p>` });
+  };
   /* margen de cada línea del documento abierto (panel en escritorio, debajo de cada producto en el teléfono) */
   const lineasDoc = (dd) => {
     const ctlEl = dd.getElementById('doc-control-span'); const ctl = ctlEl ? ctlEl.innerText.trim() : '';
@@ -5873,14 +5917,17 @@ const Cot = (() => {
       // escritorio: panel debajo del buscador
       const cp = dd.querySelector('body > .catalog-panel');
       if (cp) {
-        let box = dd.getElementById('adm-margen'); if (!box) { box = dd.createElement('div'); box.id = 'adm-margen'; cp.appendChild(box); box.addEventListener('click', (e) => { if (e.target.closest('[data-aj]')) return; if (e.target.closest('[data-mg-tg]')) { if (buscandoMg(dd)) mgForce = !mgForce; else { mgOpen = !mgOpen; lsSet('suinadm_mg_open', mgOpen); } estadoMg(dd); return; } const l = e.target.closest('[data-mi]'); if (!l) return; const tr = dd.querySelectorAll('#items-tbody > tr.item-row')[+l.dataset.mi]; if (tr) { selIdx = +l.dataset.mi; tr.scrollIntoView({ behavior: 'smooth', block: 'center' }); paintMargen(dd); } }); }
+        let box = dd.getElementById('adm-margen'); if (!box) { box = dd.createElement('div'); box.id = 'adm-margen'; cp.appendChild(box); box.addEventListener('click', (e) => { if (e.target.closest('[data-aj]')) return; if (e.target.closest('[data-mg-big]')) { margenGrande(dd); return; } if (e.target.closest('[data-mg-tg]')) { if (buscandoMg(dd)) mgForce = !mgForce; else { mgOpen = !mgOpen; lsSet('suinadm_mg_open', mgOpen); } estadoMg(dd); return; } const l = e.target.closest('[data-mi]'); if (!l) return; const tr = dd.querySelectorAll('#items-tbody > tr.item-row')[+l.dataset.mi]; if (tr) { selIdx = +l.dataset.mi; tr.scrollIntoView({ behavior: 'smooth', block: 'center' }); paintMargen(dd); } }); }
         let venta = 0, costo = 0, sinC = 0;
         ls.forEach(l => { const vn = l.q * l.pr * (1 - disc); venta += vn; if (l.m && l.m.costo > 0) costo += l.q * l.m.costo; else sinC++; });
         const gan = venta - costo;
-        const html = ls.length ? `<h4 data-mg-tg title="Mostrar u ocultar la lista"><span class="mg-car">▾</span>Margen del documento <small>${ls.length} producto${ls.length === 1 ? '' : 's'}${disc ? ` · con ${fmtNum(disc * 100)}% de descuento` : ''}</small><button type="button" class="mg-aj" data-aj title="Subir o bajar precios, o dar descuento a productos específicos">% Ajustar precios</button></h4>
-          <div class="mg-tot"><span>Venta <b>${fmtUSD(venta)}</b></span><span>Costo <b>${fmtUSD(costo)}</b></span><span style="color:#15803D">Ganancia <b>${fmtUSD(gan)}</b>${costo ? ` (${fmtNum(gan / costo * 100, 1)}%)` : ''}</span>${sinC ? `<span class="mg-src">${sinC} sin costo</span>` : ''}</div>
+        const pctT = costo ? gan / costo * 100 : null;
+        const negs = ls.filter(l => l.m && l.m.costo > 0 && l.pr * (1 - disc) < l.m.costo).length;
+        const html = ls.length ? `<h4 data-mg-tg title="Mostrar u ocultar la lista"><span class="mg-car">▾</span>Margen <small>${ls.length} producto${ls.length === 1 ? '' : 's'}${disc ? ` · ${fmtNum(disc * 100)}% desc.` : ''}</small>${negs ? `<span class="mg-pct neg" title="${negs} por debajo del costo">▼ ${negs}</span>` : ''}${sinC ? `<span class="mg-pct sc" title="${sinC} sin costo: no suman ganancia">${sinC} s/c</span>` : ''}<span class="mg-bts"><button type="button" class="mg-aj" data-mg-big title="Ver la tabla completa en grande">⤢ En grande</button><button type="button" class="mg-aj" data-aj title="Subir o bajar precios, o dar descuento a productos específicos">% Ajustar</button></span></h4>
+          <div class="mg-tot"><div><small>Venta</small><b>${fmtUSD(venta)}</b></div><div><small>Costo</small><b>${fmtUSD(costo)}</b></div><div class="${gan < 0 ? 'neg' : 'g'}"><small>Ganancia${sinC ? '*' : ''}</small><b>${fmtUSD(gan)}</b></div><div class="${pctT != null && pctT < 0 ? 'neg' : 'g'}"><small>Margen</small><b>${pctT != null ? fmtNum(pctT, 1) + '%' : '—'}</b></div></div>
           <div class="mg-hid">La lista se oculta mientras buscas, para ver mejor los productos. Toca el título para verla.</div>
-          <div class="mg-list">${ls.map(l => `<div class="mg-ln ${l.i === selIdx ? 'on' : ''}" data-mi="${l.i}"><div class="mg-t">${l.i + 1}. ${esc(l.model || 'Línea sin modelo')} <span class="mg-src">${fmtQty(l.q)} × ${fmtUSD(l.pr)}</span></div><div class="mg-row">${margenHtml(l.m, l.pr * (1 - disc)) || '<span class="mg-src">Sin costo: no se puede calcular la ganancia</span>'}</div></div>`).join('')}</div>` : '';
+          <div class="mg-list"><div class="mg-hd"><span>#</span><span>Producto</span><span>Costo</span><span>Ganancia</span></div>${ls.map(l => { const pn = l.pr * (1 - disc), tiene = l.m && l.m.costo > 0;
+            return `<div class="mg-ln ${l.i === selIdx ? 'on' : ''}" data-mi="${l.i}" title="${esc(tiene ? l.m.fuente + (l.m.dto != null ? ' · desc. ' + fmtNum(l.m.dto, 1) + '%' : '') : 'Sin costo')}"><span class="n">${l.i + 1}</span><span class="p"><b>${esc(l.model || 'Línea sin modelo')}</b><small>${fmtQty(l.q)} × ${fmtUSD(pn)}${tiene ? ' · ' + esc(l.m.fuente) : ''}</small></span><span class="c">${tiene ? fmtUSD(l.m.costo) : '—'}${tiene && l.q !== 1 ? `<small>c/u</small>` : ''}</span><span class="gg"><b>${tiene ? fmtUSD(l.q * (pn - l.m.costo)) : '—'}</b>${pctMg(pn, l.m)}</span></div>`; }).join('')}</div>` : '';
         if (box.dataset.h !== html) { box.dataset.h = html; box.innerHTML = html; const on = box.querySelector('.mg-ln.on'); if (on) on.scrollIntoView({ block: 'nearest' }); }
         estadoMg(dd);
       }
@@ -5903,7 +5950,7 @@ const Cot = (() => {
     const box = dd.getElementById('adm-margen'); if (!box) return;
     const busca = buscandoMg(dd); if (!busca) mgForce = false;
     const ver = busca ? mgForce : mgOpen;
-    box.classList.toggle('cerrado', !ver); box.classList.toggle('buscando', busca && !ver);
+    box.classList.toggle('cerrado', !ver); box.classList.toggle('buscando', busca && !ver); box.classList.toggle('completo', !busca);
   };
   const setupMargen = (w) => {
     const dd = w.document; const run = debounce(() => paintMargen(dd), 200);
