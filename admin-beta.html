@@ -3302,10 +3302,7 @@ const TablaOrden = (() => {
 })();
 
 })();
-</script>
-<div id="beta-aviso" style="position:fixed;right:8px;bottom:8px;z-index:2147483647;background:#d97706;color:#fff;font:700 11px/1 system-ui,sans-serif;letter-spacing:.08em;padding:6px 9px;border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,.25);pointer-events:none;opacity:.9">BETA</div>
-</body>
-</html>
+
 /* Teléfono: cada celda recibe el nombre de su columna para mostrar las tablas como fichas */
 (function(){
   const etiquetar = (tabla) => {
@@ -3322,4 +3319,7 @@ const TablaOrden = (() => {
   new MutationObserver(() => { if (pend) return; pend = true; requestAnimationFrame(() => { pend = false; todo(); }); })
     .observe(document.documentElement, { childList: true, subtree: true });
 })();
-
+</script>
+<div id="beta-aviso" style="position:fixed;right:8px;bottom:8px;z-index:2147483647;background:#d97706;color:#fff;font:700 11px/1 system-ui,sans-serif;letter-spacing:.08em;padding:6px 9px;border-radius:6px;box-shadow:0 2px 8px rgba(0,0,0,.25);pointer-events:none;opacity:.9">BETA</div>
+</body>
+</html>

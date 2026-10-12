@@ -439,6 +439,28 @@
   .zona-peligro{ border:1px solid var(--off-borde); border-radius:var(--radio-chico); padding:14px; }
 
   /* Diálogo de confirmación */
+  /* Estadísticas unidas: pestañas */
+  .subtabs{ display:flex; gap:4px; padding:4px; background:var(--superficie); border:1px solid var(--linea); border-radius:12px; margin:0 0 18px; overflow-x:auto; box-shadow:var(--sombra); }
+  .subtabs a{ display:inline-flex; align-items:center; gap:8px; padding:9px 14px; border-radius:9px; color:var(--texto-2); text-decoration:none; font-weight:600; font-size:14px; white-space:nowrap; }
+  .subtabs a svg{ width:17px; height:17px; }
+  .subtabs a:hover{ background:var(--superficie-2); color:var(--texto); }
+  .subtabs a.activa{ background:var(--enfasis); color:var(--enfasis-texto); }
+  .subtabs small{ font-weight:500; opacity:.75; }
+  /* Organizar el menú */
+  .nav-editar{ display:flex; align-items:center; gap:8px; width:100%; margin:6px 0 2px; padding:8px 12px; background:none; border:1px dashed rgba(255,255,255,.22); border-radius:8px; color:rgba(255,255,255,.62); font:600 13px var(--sans); cursor:pointer; }
+  .nav-editar:hover{ color:#fff; border-color:rgba(255,255,255,.45); }
+  .nav-editar svg{ width:15px; height:15px; }
+  .ord-caja{ width:min(520px,100%); max-height:calc(100vh - 32px); display:flex; flex-direction:column; }
+  .ord-lista{ list-style:none; margin:12px 0 0; padding:0; display:flex; flex-direction:column; gap:6px; overflow:auto; }
+  .ord-lista li{ display:flex; align-items:center; gap:6px; border:1px solid var(--linea); border-radius:9px; padding:5px 8px; background:var(--superficie-2); cursor:grab; color:var(--texto); }
+  .ord-lista li.drag{ opacity:.4; }
+  .ord-lista li.off .on, .ord-lista li.off .oi{ opacity:.45; text-decoration:line-through; }
+  .ord-lista .on{ flex:1; font-weight:600; font-size:14px; }
+  .ord-lista .oi{ display:flex; color:var(--azul-texto); } .ord-lista .oi svg{ width:18px; height:18px; }
+  .ord-lista .grip{ color:var(--texto-3); display:flex; } .ord-lista .grip svg{ width:16px; height:16px; }
+  .ord-lista .mv{ width:34px; height:34px; display:grid; place-items:center; border:none; background:none; color:var(--texto-2); border-radius:7px; cursor:pointer; }
+  .ord-lista .mv:hover:not(:disabled){ background:var(--linea-suave); } .ord-lista .mv:disabled{ opacity:.3; cursor:default; } .ord-lista .mv svg{ width:16px; height:16px; }
+  .ord-lista label{ display:inline-flex; align-items:center; gap:6px; font-size:13px; color:var(--texto-2); margin-left:4px; }
   .dialogo{ position:fixed; inset:0; z-index:50; display:grid; place-items:center; padding:16px; background:var(--velo); animation:aparecer .15s ease; }
   .dialogo-caja{ background:var(--superficie); border:1px solid var(--linea); border-radius:14px; box-shadow:var(--sombra-alta); width:min(440px,100%); padding:22px; animation:subir .18s ease; }
   .dialogo-caja .d-icono{ width:42px; height:42px; border-radius:11px; display:grid; place-items:center; background:var(--azul-suave); color:var(--azul-texto); margin-bottom:14px; }
@@ -719,6 +741,10 @@ const iniciales = (c) => {
 /* Íconos (trazo simple) */
 const I = (d) => '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.9" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">' + d + '</svg>';
 const ICO = {
+  editar:    I('<path d="M4 20h4L19 9l-4-4L4 16z"/><path d="M13.5 6.5l4 4"/>'),
+  agarre:    I('<circle cx="9" cy="6" r="1.4" fill="currentColor"/><circle cx="15" cy="6" r="1.4" fill="currentColor"/><circle cx="9" cy="12" r="1.4" fill="currentColor"/><circle cx="15" cy="12" r="1.4" fill="currentColor"/><circle cx="9" cy="18" r="1.4" fill="currentColor"/><circle cx="15" cy="18" r="1.4" fill="currentColor"/>'),
+  arriba:    I('<path d="M6 15l6-6 6 6"/>'),
+  abajo:     I('<path d="M6 9l6 6 6-6"/>'),
   resumen:   I('<rect x="3" y="3" width="7" height="9" rx="1.5"/><rect x="14" y="3" width="7" height="5" rx="1.5"/><rect x="14" y="12" width="7" height="9" rx="1.5"/><rect x="3" y="16" width="7" height="5" rx="1.5"/>'),
   pedidos:   I('<path d="M6 2h9l5 5v13a2 2 0 0 1-2 2H6a2 2 0 0 1-2-2V4a2 2 0 0 1 2-2z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h5"/>'),
   clientes:  I('<circle cx="9" cy="8" r="3.5"/><path d="M2.5 20c.8-3.5 3.4-5.5 6.5-5.5s5.7 2 6.5 5.5"/><path d="M16 4.5a3.5 3.5 0 0 1 0 7M18.5 14.8c1.7.8 2.7 2.5 3 5.2"/>'),
@@ -787,14 +813,64 @@ const VISTAS = [
   ['productos', 'Productos', ICO.caja, 'Tienda'],
   ['envivo', 'En vivo', ICO.vivo, 'Análisis'],
   ['estadisticas', 'Estadísticas', ICO.grafica, 'Análisis'],
-  ['visitantes', 'Visitantes', ICO.globo, 'Análisis'],
-  ['enlaces', 'Enlaces', ICO.enlace, 'Análisis'],
+  // Visitantes y Enlaces viven dentro de Estadísticas (pestañas); siguen teniendo su propio link
+  ['visitantes', 'Visitantes', ICO.globo, 'Análisis', 'sub'],
+  ['enlaces', 'Enlaces', ICO.enlace, 'Análisis', 'sub'],
   ['scraping', 'Scraping', ICO.sync, 'Análisis'],
   ['existencias', 'Existencias', ICO.existencias, 'Ajustes'],
   ['tipos', 'Tipos de cliente', ICO.tipos, 'Ajustes'],
 ];
 
 let yo = null, tab = 'resumen';
+const ANALISIS = [['estadisticas', 'Búsquedas y clientes', ICO.grafica], ['visitantes', 'Visitantes', ICO.globo], ['enlaces', 'Página de enlaces', ICO.enlace]];
+const grupoTab = (t) => ANALISIS.some(a => a[0] === t) ? 'estadisticas' : t;
+// Cabecera común de las tres pestañas de Estadísticas
+let diasAna = (() => { try { const n = Number(localStorage.getItem('suin_admin_dias')); return [1, 7, 30, 90].includes(n) ? n : 30; } catch (e) { return 30; } })();
+function chipsAna(){ return '<div class="chips">' + DIAS_VIS.map(([d, t]) => '<button class="chip' + (diasAna === d ? ' activo' : '') + '" data-dias-ana="' + d + '">' + t + '</button>').join('') + '</div>'; }
+function cabAnalisis(titulo, sub){
+  return '<nav class="subtabs" aria-label="Estadísticas">' + ANALISIS.map(([id, nom, ic]) => '<a href="' + urlDe(id) + '" data-sub="' + id + '" class="' + (tab === id ? 'activa' : '') + '"' + (tab === id ? ' aria-current="page"' : '') + '>' + ic + nom + '</a>').join('') + '</nav>' + cabecera(titulo, sub, chipsAna());
+}
+function activarAnalisis(fn){
+  document.querySelectorAll('[data-dias-ana]').forEach(b => b.onclick = () => { diasAna = Number(b.dataset.diasAna); try { localStorage.setItem('suin_admin_dias', diasAna); } catch (e) {} fn(); });
+  document.querySelectorAll('[data-sub]').forEach(a => a.onclick = (e) => { if (e.ctrlKey || e.metaKey || e.shiftKey || e.button === 1) return; e.preventDefault(); irA(a.dataset.sub); });
+}
+/* Orden del menú elegido por cada administrador (se guarda en este navegador) */
+const claveMenu = () => 'suin_admin_menu_' + String((yo && yo.email) || '').toLowerCase();
+function prefsMenu(){ try { return Object.assign({ orden: null, ocultas: [] }, JSON.parse(localStorage.getItem(claveMenu()) || '{}')); } catch (e) { return { orden: null, ocultas: [] }; } }
+function ordenMenu(){
+  const base = VISTAS.filter(v => !v[4]).map(v => v[0]); const P = prefsMenu();
+  if (!Array.isArray(P.orden) || !P.orden.length) return base;
+  const out = P.orden.filter(x => base.includes(x)); base.forEach((x, i) => { if (!out.includes(x)) out.splice(Math.min(i, out.length), 0, x); });
+  return out;
+}
+function editarMenu(){
+  let orden = ordenMenu(); const oc = new Set(prefsMenu().ocultas.filter(x => x !== 'resumen'));
+  const d = document.createElement('div'); d.className = 'dialogo'; d.setAttribute('role', 'dialog'); d.setAttribute('aria-modal', 'true');
+  d.innerHTML = '<div class="dialogo-caja ord-caja"><h2>Organizar el menú</h2><p>Arrastra las secciones (o usa las flechas) para ponerlas en el orden que quieras. Desmarca "Ver" para esconder las que no usas. Resumen siempre queda visible.</p>' +
+    '<ul class="ord-lista"></ul><div class="dialogo-pie"><button type="button" class="btn fantasma" data-reset>Restablecer</button><button type="button" class="btn" data-no>Cancelar</button><button type="button" class="btn prim" data-ok>Guardar</button></div></div>';
+  document.body.appendChild(d);
+  const ul = d.querySelector('ul'); let arr = null;
+  const v = (id) => VISTAS.find(x => x[0] === id);
+  const pintar = () => { ul.innerHTML = orden.map((id, i) => '<li draggable="true" data-id="' + id + '" class="' + (oc.has(id) ? 'off' : '') + '"><span class="grip">' + ICO.agarre + '</span><span class="oi">' + v(id)[2] + '</span><span class="on">' + esc(v(id)[1]) + '</span>' +
+    '<button type="button" class="mv" data-mv="-1"' + (i === 0 ? ' disabled' : '') + ' aria-label="Subir ' + esc(v(id)[1]) + '">' + ICO.arriba + '</button><button type="button" class="mv" data-mv="1"' + (i === orden.length - 1 ? ' disabled' : '') + ' aria-label="Bajar ' + esc(v(id)[1]) + '">' + ICO.abajo + '</button>' +
+    (id === 'resumen' ? '<label style="visibility:hidden"><input type="checkbox" checked disabled>Ver</label>' : '<label><input type="checkbox" data-ver' + (oc.has(id) ? '' : ' checked') + '>Ver</label>') + '</li>').join(''); };
+  pintar();
+  const fin = () => { document.removeEventListener('keydown', tecla, true); d.remove(); };
+  const tecla = (e) => { if (e.key === 'Escape'){ e.stopPropagation(); fin(); } };
+  document.addEventListener('keydown', tecla, true);
+  d.onclick = (e) => { if (e.target === d) fin(); };
+  d.querySelector('[data-no]').onclick = fin;
+  const guardar = (o) => { try { if (o) localStorage.setItem(claveMenu(), JSON.stringify(o)); else localStorage.removeItem(claveMenu()); } catch (e) {} fin(); armarApp(); mostrar(); pintarBadges(); };
+  d.querySelector('[data-ok]').onclick = () => { guardar({ orden, ocultas: [...oc] }); toast('Menú guardado'); };
+  d.querySelector('[data-reset]').onclick = () => { guardar(null); toast('Menú como al principio'); };
+  ul.addEventListener('click', (e) => { const b = e.target.closest('[data-mv]'); if (!b) return; const id = b.closest('li').dataset.id, i = orden.indexOf(id), j = i + Number(b.dataset.mv); if (j < 0 || j >= orden.length) return; orden.splice(i, 1); orden.splice(j, 0, id); pintar(); const nb = ul.querySelector('li[data-id="' + id + '"] [data-mv="' + b.dataset.mv + '"]'); if (nb && !nb.disabled) nb.focus(); });
+  ul.addEventListener('change', (e) => { const c = e.target.closest('[data-ver]'); if (!c) return; const id = c.closest('li').dataset.id; if (c.checked) oc.delete(id); else oc.add(id); c.closest('li').classList.toggle('off', !c.checked); });
+  ul.addEventListener('dragstart', (e) => { const li = e.target.closest('li'); if (!li) return; arr = li.dataset.id; li.classList.add('drag'); e.dataTransfer.effectAllowed = 'move'; try { e.dataTransfer.setData('text/plain', arr); } catch (_) {} });
+  ul.addEventListener('dragend', () => { arr = null; pintar(); });
+  ul.addEventListener('dragover', (e) => { if (!arr) return; e.preventDefault(); const li = e.target.closest('li'); if (!li || li.dataset.id === arr) return; const r = li.getBoundingClientRect(), antes = e.clientY < r.top + r.height / 2; orden.splice(orden.indexOf(arr), 1); orden.splice(orden.indexOf(li.dataset.id) + (antes ? 0 : 1), 0, arr); const dl = ul.querySelector('li[data-id="' + arr + '"]'); if (antes) li.before(dl); else li.after(dl); });
+  ul.addEventListener('drop', (e) => e.preventDefault());
+  setTimeout(() => { const f = ul.querySelector('button:not(:disabled)'); if (f) f.focus(); }, 30);
+}
 
 /* ---------- Links propios por sección ----------
    /admin                     → Resumen
@@ -944,14 +1020,15 @@ function cambiarTema(){
 }
 function armarApp(){
   let grupo = '';
-  const nav = VISTAS.map(v => (v[3] !== grupo ? '<div class="nav-grupo">' + (grupo = v[3]) + '</div>' : '') +
+  const personal = !!prefsMenu().orden, ocultas = prefsMenu().ocultas;
+  const nav = ordenMenu().filter(id => id === 'resumen' || id === tab || !ocultas.includes(id)).map(id => VISTAS.find(v => v[0] === id)).map(v => (!personal && v[3] !== grupo ? '<div class="nav-grupo">' + (grupo = v[3]) + '</div>' : '') +
     '<a data-tab="' + v[0] + '" href="' + urlDe(v[0]) + '">' + v[2] + '<span>' + v[1] + '</span><span class="badge" data-badge="' + v[0] + '" hidden></span></a>').join('');
   const temaTxt = (TEMAS.find(x => x[0] === temaActual()) || TEMAS[0])[1];
   $('raiz').innerHTML = '<div class="app" id="app">' +
     '<header class="topbar"><button class="menu-btn" id="menu-btn" aria-label="Abrir menú">' + ICO.menu + '<span class="punto-aviso" id="menu-aviso" hidden></span></button>' +
       '<img class="marca-img" style="width:30px;height:30px" src="/imagenes/logo-suinelectric.png" alt=""><strong id="top-titulo">Panel web</strong><a href="/tienda" target="_blank" rel="noopener" aria-label="Ver tienda">' + ICO.tienda + '</a></header>' +
     '<aside class="side" id="side">' + marcaHTML() + appsHTML() +
-    '<nav class="nav" id="nav">' + nav + '</nav>' +
+    '<nav class="nav" id="nav">' + nav + '<button type="button" class="nav-editar" id="nav-editar" title="Mover u ocultar secciones del menú">' + ICO.editar + 'Organizar menú</button></nav>' +
     '<div class="side-pie"><div class="yo"><div class="avatar">' + esc(iniciales(yo)) + '</div><div><strong>' + esc(yo.nombre || 'Administrador') + '</strong><span>' + esc(yo.email) + '</span></div></div>' +
       '<div class="acciones"><button id="salir" style="grid-column:1/3">' + ICO.salir + 'Salir</button>' +
       '<button id="tema" title="Tema: ' + temaTxt + '" aria-label="Cambiar tema">' + botonTema() + '</button></div></div>' +
@@ -960,6 +1037,7 @@ function armarApp(){
     if (e.ctrlKey || e.metaKey || e.shiftKey || e.button === 1) return;   // abrir en otra pestaña
     e.preventDefault(); irA(b.dataset.tab);
   });
+  $('nav-editar').onclick = () => { cerrarMenu(); editarMenu(); };
   $('salir').onclick = async () => { await sb.auth.signOut({ scope: 'local' }); location.reload(); };
   $('tema').onclick = cambiarTema;
   $('menu-btn').onclick = () => $('app').classList.add('menu-abierto');
@@ -968,7 +1046,7 @@ function armarApp(){
 const cerrarMenu = () => { const a = $('app'); if (a) a.classList.remove('menu-abierto'); };
 function irA(t){ tab = t; ponerUrl(urlDe(t), true); cerrarMenu(); mostrar(); window.scrollTo(0, 0); }
 function mostrar(){
-  document.querySelectorAll('#nav a').forEach(x => { const on = x.dataset.tab === tab; x.classList.toggle('activa', on); if (on) x.setAttribute('aria-current', 'page'); else x.removeAttribute('aria-current'); });
+  document.querySelectorAll('#nav a').forEach(x => { const on = x.dataset.tab === grupoTab(tab); x.classList.toggle('activa', on); if (on) x.setAttribute('aria-current', 'page'); else x.removeAttribute('aria-current'); });
   ponerUrl(urlDe(tab));
   document.title = (VISTAS.find(x => x[0] === tab) || [, 'Panel web'])[1] + ' · Panel web | Suinelectric' + (BASE.includes('beta') ? ' [BETA]' : '');
   const v = VISTAS.find(x => x[0] === tab); if ($('top-titulo')) $('top-titulo').textContent = v ? v[1] : 'Panel web';
@@ -1646,15 +1724,13 @@ function vistaDescuentos(){
 }
 
 /* ---------- Estadísticas ---------- */
-let diasEst = 30;
 const slugDe = (x) => String(x).normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]+/g, '-').replace(/^-+|-+$/g, '') || 'x';
 async function vistaEstadisticas(){
-  const chips = '<div class="chips">' + [[7, '7 días'], [30, '30 días'], [90, '90 días']].map(([d, t]) => '<button class="chip' + (diasEst === d ? ' activo' : '') + '" data-dias="' + d + '">' + t + '</button>').join('') + '</div>';
-  $('main').innerHTML = cabecera('Estadísticas', 'Qué buscan, qué miran y qué cotizan tus clientes. Abajo, cada cliente con cuenta por separado. No se cuenta lo que haces tú como administrador.', chips) + '<div class="cargando">Cargando…</div>';
-  document.querySelectorAll('[data-dias]').forEach(b => b.onclick = () => { diasEst = Number(b.dataset.dias); vistaEstadisticas(); });
+  $('main').innerHTML = cabAnalisis('Búsquedas y clientes', 'Qué buscan, qué miran y qué cotizan tus clientes. Abajo, cada cliente con cuenta por separado. No se cuenta lo que haces tú como administrador.') + '<div class="cargando">Cargando…</div>';
+  activarAnalisis(vistaEstadisticas);
   const [{ data, error }, resCli] = await Promise.all([
-    sb.rpc('resumen_estadisticas', { dias: diasEst }),
-    sb.rpc('clientes_activos', { dias: diasEst }).then(r => r, e => ({ error: e })),
+    sb.rpc('resumen_estadisticas', { dias: diasAna }),
+    sb.rpc('clientes_activos', { dias: diasAna }).then(r => r, e => ({ error: e })),
   ]);
   if (tab !== 'estadisticas') return;
   const cont = document.querySelector('#main .cargando');
@@ -1675,13 +1751,13 @@ async function vistaEstadisticas(){
   // Gráfico por día (completa los días sin datos)
   const porDia = {}; (data.por_dia || []).forEach(d => { porDia[d.dia] = d; });
   const dias = [];
-  for (let i = diasEst - 1; i >= 0; i--){
+  for (let i = Math.max(diasAna, 7) - 1; i >= 0; i--){
     const f = new Date(Date.now() - i * 86400000);
     const k = f.toLocaleDateString('en-CA', { timeZone: 'America/Caracas' });
     dias.push({ k, f, v: (porDia[k] || {}).vistas || 0, c: (porDia[k] || {}).cotiza || 0 });
   }
   const maxV = Math.max(1, ...dias.map(d => Math.max(d.v, d.c)));
-  const cada = diasEst <= 7 ? 1 : diasEst <= 30 ? 5 : 15;
+  const cada = diasAna <= 7 ? 1 : diasAna <= 30 ? 5 : 15;
   const grafico = '<div class="grafico">' + dias.map(d => '<div class="col" data-tip="' + d.f.toLocaleDateString('es-VE', { weekday: 'short', day: 'numeric', month: 'short' }) + ': ' + d.v + ' vistas · ' + d.c + ' cotiz.">' +
       '<div class="b1" style="height:' + (100 * d.v / maxV) + '%"></div><div class="b2" style="height:' + (100 * d.c / maxV) + '%"></div></div>').join('') + '</div>' +
     '<div class="grafico-ejes">' + dias.map((d, i) => '<span>' + ((dias.length - 1 - i) % cada === 0 ? d.f.getDate() : '') + '</span>').join('') + '</div>';
@@ -1861,7 +1937,7 @@ async function abrirActividad(email){
 }
 
 /* ---------- Visitantes sin cuenta (10_visitantes.sql) ---------- */
-let diasVis = 30, buscaVis = '', datosVis = null, cuantasVis = 25;
+let buscaVis = '', datosVis = null, cuantasVis = 25;
 const DIAS_VIS = [[1, '24 horas'], [7, '7 días'], [30, '30 días'], [90, '90 días']];
 const faltaVisitantes = (err) => '<div class="caja"><div class="tarjeta-sync"><div class="icono mal">' + ICO.alerta + '</div><div><strong>Falta instalar el registro de visitantes</strong><div class="muted">Corre <span class="mono">10_visitantes.sql</span> en Supabase → SQL Editor (después de <span class="mono">04_estadisticas.sql</span>). Desde ese momento la tienda anota cada visita: de dónde entran, con qué equipo, qué buscan y qué tarjetas de producto ven.' + (err ? '<br><small>' + esc(mensajeError(err)) + '</small>' : '') + '</div></div></div></div>';
 let nombresPais = null;
@@ -1986,10 +2062,9 @@ function activarPlegables(grupo){
 }
 
 async function vistaVisitantes(){
-  const chips = '<div class="chips">' + DIAS_VIS.map(([d, t]) => '<button class="chip' + (diasVis === d ? ' activo' : '') + '" data-dias-vis="' + d + '">' + t + '</button>').join('') + '</div>';
-  $('main').innerHTML = cabecera('Visitantes', 'Quienes entran sin iniciar sesión: cuántos son, de dónde, cuándo, qué buscan y qué productos ven. Toca una visita para ver todo lo que hizo esa persona. No se cuenta lo que haces tú como administrador.', chips) + '<div class="cargando">Cargando…</div>';
-  document.querySelectorAll('[data-dias-vis]').forEach(b => b.onclick = () => { diasVis = Number(b.dataset.diasVis); vistaVisitantes(); });
-  const { data, error } = await sb.rpc('resumen_visitantes', { dias: diasVis });
+  $('main').innerHTML = cabAnalisis('Visitantes', 'Quienes entran sin iniciar sesión: cuántos son, de dónde, cuándo, qué buscan y qué productos ven. Toca una visita para ver todo lo que hizo esa persona. No se cuenta lo que haces tú como administrador.') + '<div class="cargando">Cargando…</div>';
+  activarAnalisis(vistaVisitantes);
+  const { data, error } = await sb.rpc('resumen_visitantes', { dias: diasAna });
   if (tab !== 'visitantes') return;
   const cont = document.querySelector('#main .cargando');
   if (error || !data){ cont.outerHTML = faltaVisitantes(error); return; }
@@ -2006,7 +2081,7 @@ async function vistaVisitantes(){
   // Visitas por día (completa los días sin datos)
   const porDia = {}; (data.por_dia || []).forEach(d => { porDia[d.dia] = d; });
   const dias = [];
-  const nDias = Math.max(diasVis, 7);
+  const nDias = Math.max(diasAna, 7);
   for (let i = nDias - 1; i >= 0; i--){
     const f = new Date(Date.now() - i * 86400000);
     const k = f.toLocaleDateString('en-CA', { timeZone: 'America/Caracas' });
@@ -2358,13 +2433,12 @@ async function cargarAvisos(){
 }
 
 /* ---------- Página de enlaces /links (12_enlaces.sql) ---------- */
-let diasLnk = 30, datosLnk = null, buscaLnk = '', cuantasLnk = 25;
+let datosLnk = null, buscaLnk = '', cuantasLnk = 25;
 const faltaEnlaces = (err) => '<div class="caja"><div class="tarjeta-sync"><div class="icono mal">' + ICO.alerta + '</div><div><strong>Falta instalar el registro de la página de enlaces</strong><div class="muted">Corre <span class="mono">12_enlaces.sql</span> en Supabase → SQL Editor (después de <span class="mono">10_visitantes.sql</span>). Desde ese momento se anota quién entra a suinelectric.com/links, de dónde llega y qué botones toca.' + (err ? '<br><small>' + esc(mensajeError(err)) + '</small>' : '') + '</div></div></div></div>';
 async function vistaEnlaces(){
-  const chips = '<div class="chips">' + DIAS_VIS.map(([d, t]) => '<button class="chip' + (diasLnk === d ? ' activo' : '') + '" data-dias-lnk="' + d + '">' + t + '</button>').join('') + '</div>';
-  $('main').innerHTML = cabecera('Página de enlaces', 'Quién entra a <a href="/links" target="_blank" rel="noopener">suinelectric.com/links</a>, de dónde llega, qué botones toca y si sigue a la tienda. Toca una visita para ver todo lo que hizo esa persona.', chips) + '<div class="cargando">Cargando…</div>';
-  document.querySelectorAll('[data-dias-lnk]').forEach(b => b.onclick = () => { diasLnk = Number(b.dataset.diasLnk); vistaEnlaces(); });
-  const { data, error } = await sb.rpc('resumen_links', { dias: diasLnk });
+  $('main').innerHTML = cabAnalisis('Página de enlaces', 'Quién entra a <a href="/links" target="_blank" rel="noopener">suinelectric.com/links</a>, de dónde llega, qué botones toca y si sigue a la tienda. Toca una visita para ver todo lo que hizo esa persona.') + '<div class="cargando">Cargando…</div>';
+  activarAnalisis(vistaEnlaces);
+  const { data, error } = await sb.rpc('resumen_links', { dias: diasAna });
   if (tab !== 'enlaces') return;
   const cont = document.querySelector('#main .cargando');
   if (error || !data){ cont.outerHTML = faltaEnlaces(error); return; }
@@ -2380,7 +2454,7 @@ async function vistaEnlaces(){
 
   // Visitas y clics por día (completa los días sin datos)
   const porDia = {}; (data.por_dia || []).forEach(d => { porDia[d.dia] = d; });
-  const nDias = Math.max(diasLnk, 7), dias = [];
+  const nDias = Math.max(diasAna, 7), dias = [];
   for (let i = nDias - 1; i >= 0; i--){
     const f = new Date(Date.now() - i * 86400000);
     const k = f.toLocaleDateString('en-CA', { timeZone: 'America/Caracas' });
