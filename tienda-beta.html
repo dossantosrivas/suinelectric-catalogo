@@ -4312,7 +4312,42 @@ function claveModelo(m){ return normalizarBusqueda(m).replace(/[^a-z0-9]/g, '');
 // categoría que manda la app de ventas: "Contactores > Accesorios" → ['Contactores', 'Accesorios']
 function rutaInventario(r){ const cs = String(r.categoria || '').split(/\s*>\s*/).map(x => x.trim()).filter(Boolean); return cs.length ? cs : [r.marca || 'Inventario']; }
 function esDeInventario(p){ return !!(p && p._inv); }
-function unirInventario(lista, inventario, ocultos){
+/* Fotos para lo que solo está en tu inventario: tus modelos suelen traer texto
+   extra ("HGM100L 16-20 AMP. N° POLOS 3") o un código de barras, así que no
+   coinciden exacto con el catálogo. Se busca el modelo del catálogo (misma marca,
+   con foto) que comparta el inicio más largo del código; si el texto dice
+   "POLOS 2"/"2P", se prefiere la foto de esa cantidad de polos. */
+function fotosParecidas(salida, fuentes){
+  const conFoto = fuentes.filter(p => p && p.imagen && !esDeInventario(p)).map(p => ({ k: claveModelo(p.modelo), p, m: String(p.marca || '').toUpperCase() }));
+  if (!conFoto.length) return salida;
+  const comun = (a, b) => { let n = 0; while (n < a.length && n < b.length && a[n] === b[n]) n++; return n; };
+  return salida.map(p => {
+    if (!esDeInventario(p) || p.imagen) return p;
+    const marca = String(p.marca || '').toUpperCase();
+    const texto = String(p.modelo || '') + ' ' + String(p.nombre || '');
+    const pol = (texto.match(/POLOS?\s*(\d)/i) || texto.match(/\b(\d)\s*P\b/) || [])[1];
+    const claves = /[a-z]/i.test(p.modelo || '') ? [claveModelo(p.modelo)]
+      : (String(p.nombre || '').match(/[A-Za-z]{2,}[A-Za-z0-9]*\d[A-Za-z0-9]*/g) || []).map(claveModelo);
+    let mejor = null;
+    for (const t of claves){
+      if (t.length < 4) continue;
+      for (const c of conFoto){
+        if (marca && c.m && c.m !== marca) continue;
+        const n = comun(t, c.k);
+        if (n < 5 || !(n === t.length || n === c.k.length || n >= 7)) continue;
+        const polos = pol ? (/\dp/.test(c.k) ? (c.k.includes(pol + 'p') ? 4 : 0) : 2) : (/[124]p/.test(c.k) ? 1 : 2);   // sin dato: se prefiere 3 polos
+        const punt = polos * 1000 + n;
+        if (!mejor || punt > mejor.punt) mejor = { punt, c };
+      }
+    }
+    if (!mejor) return p;
+    const q = Object.assign({}, p, { imagen: mejor.c.p.imagen, _fotoParecida: mejor.c.p.modelo });
+    if (Array.isArray(mejor.c.p.imagenes) && mejor.c.p.imagenes.length) q.imagenes = mejor.c.p.imagenes;
+    return q;
+  });
+}
+function unirInventario(lista, inventario, ocultos){ return fotosParecidas(unirInventarioBase(lista, inventario, ocultos), lista); }
+function unirInventarioBase(lista, inventario, ocultos){
   if (!inventario.length) return lista;
   const inv = new Map(), pedido = new Map(), ocultosClave = new Set([...ocultos].map(claveModelo)), pedidoEnLista = new Map();
   const otroDe = (p) => ({ precio: p.precio, _manual: !!p._manual, fuente: p._panel ? 'Panel /admin' : 'Distribuidor' });
