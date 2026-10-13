@@ -671,7 +671,9 @@ function atributosBase(p, categoria, sub, resto, serie, aux){
     if ((m = t.match(/(\d+(?:[.,]\d+)?)\s*A\s*\(AC-?3\)/i)) || (m = t.match(/AC-?3\)?\s*(?:\(A\))?\s*:?\s*(\d+(?:[.,]\d+)?)\s*A?\b/i)) ||
         (m = String(p.modelo).match(/^HGC(\d+)(?:11|22)NS/)) || (m = t.match(/(\d+)\s*amperios/i)) || (m = rutaTxt.match(/(\d+(?:[.,]\d+)?)\s*Amp\b/i)))
       s.corriente_ac3_a = numBase(m[1]);
-    if ((m = t.match(/(\d{2,3})\s*V\s*(AC|DC)\b/i)) || (m = t.match(/\b(AC|DC)\s*(\d{2,3})\s*V\b/i))){
+    // La tensión de potencia ("55 kW/400 V AC") no es la bobina: se quita antes de buscarla
+    const tb = t.replace(/\d+(?:[.,]\d+)?\s*kW\s*\/\s*\d{2,3}\s*V\s*(?:AC|DC)?/gi, ' ');
+    if ((m = tb.match(/(\d{2,3})\s*V\s*(AC|DC)\b/i)) || (m = tb.match(/\b(AC|DC)\s*(\d{2,3})\s*V\b/i))){
       const v = /\d/.test(m[1]) ? m[1] : m[2], tipo = /\d/.test(m[1]) ? m[2] : m[1];
       s.bobina = bobinaNorm(v, tipo);
     }
