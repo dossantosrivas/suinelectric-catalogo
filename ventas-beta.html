@@ -244,6 +244,15 @@ a.kp:hover{border-color:#B9C3CF}
 .mg-pct{display:inline-block;font-size:14px;font-weight:700;border-radius:10px;padding:1px 9px;font-variant-numeric:tabular-nums;white-space:nowrap}
 .mg-pct.ok{background:#DCFCE7;color:#166534}.mg-pct.bajo{background:#FEF3C7;color:#92400E}.mg-pct.neg{background:#FEE2E2;color:#B91C1C}.mg-pct.sc{background:#F1F5F9;color:#64748b;font-weight:600}
 .mg-tabla tfoot td{border-top:2px solid var(--line);background:var(--panel-2)}.mg-tabla tr.sel td{background:#FFFBEB!important}
+.mg-tabla tr.cambia td{background:#F0FDF4!important}.mg-tabla td{vertical-align:middle}
+.mg-ctl{display:flex;flex-wrap:wrap;gap:10px 14px;align-items:center;background:var(--panel-2);border:1px solid var(--line-2);border-radius:8px;padding:12px 14px;margin-bottom:14px}
+.mg-ctl-t{font-weight:700;flex:1 0 100%}
+.mg-inp{display:inline-flex;align-items:center;gap:4px;font-weight:700;white-space:nowrap}
+.mg-in{width:84px;text-align:right;font-weight:700;padding:6px 8px}
+.mg-in.ok{color:#166534}.mg-in.bajo{color:#92400E}.mg-in.neg{color:#B91C1C}
+.mg-prev{flex:1 0 100%;font-size:14.5px;color:var(--steel-2,#475569)}.mg-prev:empty{display:none}
+.mg-nv{font-size:13.5px;color:var(--ok);white-space:nowrap}.mg-nv:empty{display:none}
+.mg-acc{display:flex;flex-wrap:wrap;gap:8px;align-items:center;justify-content:flex-end;margin-top:12px}.mg-acc > span{flex:1 1 240px}
 .acepta-b{justify-content:space-between;flex-wrap:wrap;margin-bottom:0}
 .seg.wrap{flex-wrap:wrap}
 .seg-venta{border-top:3px solid var(--steel)}
@@ -5808,6 +5817,7 @@ const Cot = (() => {
   #adm-margen .mg-aviso{font-size:13.5px;color:#92400E;background:#FFFBEB;border:1px solid #FDE68A;border-radius:7px;padding:4px 8px;margin-top:6px}
   #adm-margen .mg-list{overflow:auto;min-height:0;flex:0 1 auto;margin-top:8px;border:1px solid #E2E8F0;border-radius:8px}
   #adm-margen.cerrado .mg-list,#adm-margen.cerrado .mg-tot,#adm-margen.cerrado .mg-aviso{display:none}
+  #adm-margen.cerrado{flex:none!important;min-height:0!important}
   #adm-margen .mg-hid{display:none;font-size:14px;color:#94a3b8;margin-top:4px}
   #adm-margen.buscando .mg-hid{display:block}
   #adm-margen .mg-hd,#adm-margen .mg-ln{display:grid;grid-template-columns:24px minmax(0,1fr) 78px 112px;gap:8px;align-items:center;padding:7px 10px}
@@ -5825,7 +5835,24 @@ const Cot = (() => {
   #adm-margen .mg-ln .gg b{display:block;font-size:15px;font-variant-numeric:tabular-nums;color:#0f172a}
   .mg-pct{display:inline-block;font-size:13px;font-weight:700;border-radius:10px;padding:1px 8px;margin-top:2px;font-variant-numeric:tabular-nums}
   .mg-pct.ok{background:#DCFCE7;color:#166534}.mg-pct.bajo{background:#FEF3C7;color:#92400E}.mg-pct.neg{background:#FEE2E2;color:#B91C1C}.mg-pct.sc{background:#F1F5F9;color:#64748b;font-weight:600}
-  #items-tbody tr.item-row.adm-sel td{background:#FFFBEB}`;
+  #items-tbody tr.item-row.adm-sel td{background:#FFFBEB}
+  .mg-row .mg-det{display:none}.mg-row.abierto .mg-det,body.mg-det-on .mg-row .mg-det{display:contents}
+  .mg-row .mg-gan.bajo,.mg-row .mg-gan.bajo b{color:#B45309}
+  .mg-row .mg-mix{background:#FFF7ED;color:#C2410C;border:1px solid #FDBA74;border-radius:5px;padding:0 6px;font-size:12.5px;font-weight:700}
+  .mg-row .mg-mas{border:1px solid #CBD5E1;background:#fff;border-radius:6px;padding:0 7px;font:inherit;font-size:12.5px;font-weight:700;color:#475569;cursor:pointer;line-height:1.6}
+  .mg-row .mg-mas::after{content:' ▸'}.mg-row.abierto .mg-mas::after,body.mg-det-on .mg-row .mg-mas::after{content:' ▾'}
+  .mg-row .mg-mas:hover{border-color:#0e2a3b;color:#0e2a3b}
+  #adm-margen h4{flex-wrap:wrap!important;white-space:normal!important;cursor:default!important;row-gap:6px}
+  #adm-margen .mg-tg{display:flex;gap:6px;align-items:center;min-width:0;cursor:pointer;flex:1 1 auto;white-space:nowrap}
+  #adm-margen .mg-tg small{overflow:hidden;text-overflow:ellipsis;min-width:0}
+  #adm-margen .mg-aj.ut{border-color:#15803D;color:#15803D}#adm-margen .mg-aj.ut:hover{background:#F0FDF4}
+  #adm-margen [data-mg-ed]{cursor:pointer}#adm-margen [data-mg-ed]:hover .mg-pct{outline:2px solid #0e2a3b;outline-offset:1px}
+  #adm-mg-m{display:flex;flex-wrap:wrap;gap:8px 10px;align-items:center;justify-content:space-between;margin:10px 0 4px;padding:10px 12px;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:10px}
+  #adm-mg-m[hidden]{display:none}
+  #adm-mg-m .mm-l{display:flex;gap:8px;align-items:center;font-size:16px;font-weight:700;color:#0f172a}
+  #adm-mg-m .mm-l b{font-variant-numeric:tabular-nums;color:#15803D}#adm-mg-m .mm-l small{color:#64748b;font-weight:600}
+  #adm-mg-m .mm-b{display:flex;gap:6px;flex-wrap:wrap}
+  #adm-mg-m button{border:1.5px solid #cbd5e1;background:#fff;border-radius:8px;padding:6px 10px;font:inherit;font-size:15px;font-weight:700;color:#0e2a3b;cursor:pointer}`;
   const chip = (cls, n, label) => { const v = num(String(n).replace(',', '.')); return `<span class="stk-chip ${cls}${v <= 0 ? ' zero' : ''}"><b>${esc(fmtQty(v))}</b>${esc(label)}</span>`; };
   const decorate = (dd) => {
     dd.querySelectorAll('.catalog-result-row:not([data-adm]), .m-res:not([data-adm])').forEach(row => {
@@ -5857,46 +5884,174 @@ const Cot = (() => {
 
   /* ---------- margen de un producto en el generador ---------- */
   /* costo: lo que ya quedó guardado en la oferta/nota (no cambia), o tu inventario, o el distribuidor */
-  const margenDe = (model, precio, preferInv, guardado) => {
+  /* q = cantidad de la línea. Si pide más de lo que hay en un inventario, el costo se reparte:
+     primero Manuel, luego Papá y lo que falte sale del distribuidor (costo promedio ponderado). */
+  const margenDe = (model, precio, preferInv, guardado, q) => {
     if (!model) return null;
-    if (guardado && guardado.costo !== '' && guardado.costo != null) {
+    // lo guardado en el documento manda, salvo que Gestión lo haya puesto sola (auto): ahí se recalcula
+    if (guardado && !guardado.auto && guardado.costo !== '' && guardado.costo != null) {
       const c = num(guardado.costo), rec = num(guardado.recargo) || 0, lista = num(guardado.listPrice) || null;
       const dto = guardado.origen === 'dist' && lista ? (guardado.dtoDist != null && guardado.dtoDist !== '' ? num(guardado.dtoDist) : (1 - c / (1 + rec / 100) / lista) * 100) : null;
       return { costo: c, dto, rec, fuente: guardado.origen === 'dist' ? distNombre(guardado.dist || itDist(guardado)) : origenNombre(guardado.origen), regla: 'guardado en el documento', inv: guardado.origen === 'manuel' || guardado.origen === 'papa' };
     }
     const p = findProductoByCodigo(model);
-    if (p) { const s = Calc.st(p.id); const inv = s.manuel.cant > 0 ? 'manuel' : s.papa.cant > 0 ? 'papa' : null; if (inv && s[inv].costo) return { costo: round2(s[inv].costo), dto: null, fuente: origenNombre(inv), regla: 'costo promedio', inv: true }; }
+    const cat = catalogoByCodigo(model); const x = cat ? costoInfo(cat) : null;
+    if (p) {
+      const s = Calc.st(p.id); const inv = s.manuel.cant > 0 ? 'manuel' : s.papa.cant > 0 ? 'papa' : null;
+      if (inv && s[inv].costo) {
+        const pide = num(q) || 0;
+        if (pide > s[inv].cant) {
+          // no alcanza con un solo inventario: repartir
+          let falta = pide; const partes = [];
+          ['manuel', 'papa'].forEach(k => { const disp = Math.max(0, s[k].cant); if (falta <= 0 || disp <= 0) return; const t = Math.min(disp, falta); partes.push({ n: origenNombre(k), q: t, c: s[k].costo || null }); falta -= t; });
+          if (falta > 0) partes.push({ n: x ? x.dist.nombre : 'sin existencia', q: falta, c: x ? x.costo : null, dist: true });
+          const conC = partes.filter(t => t.c > 0), qc = conC.reduce((a, t) => a + t.q, 0);
+          const prom = qc ? conC.reduce((a, t) => a + t.q * t.c, 0) / qc : 0;
+          const tot = partes.reduce((a, t) => a + t.q * (t.c > 0 ? t.c : prom), 0);
+          if (partes.length > 1) return { costo: round2(tot / pide), dto: null, fuente: 'Repartido', regla: partes.map(t => `${fmtQty(t.q)} ${t.n}${t.c > 0 ? ' a ' + fmtUSD(t.c) : ' (sin costo: se estimó)'}`).join(' + '), inv: true, mix: partes, estimado: conC.length < partes.length, faltaDist: falta > 0 && !x ? falta : 0 };
+        }
+        return { costo: round2(s[inv].costo), dto: null, fuente: origenNombre(inv), regla: 'costo promedio', inv: true };
+      }
+    }
     if (preferInv && !p) return null;
-    const c = catalogoByCodigo(model); const x = c ? costoInfo(c) : null;
     if (x) return { costo: x.costo, dto: x.pct, rec: x.recargo, fuente: x.dist.nombre, regla: x.regla, lista: x.lista };
     return null;
   };
   const margenHtml = (m, precio) => {
     if (!m || !(m.costo > 0)) return '';
     const g = precio > 0 ? (precio - m.costo) / m.costo * 100 : null;
-    return `<span>Costo <b>${fmtUSD(m.costo)}</b></span>${m.dto != null ? `<span class="mg-dto">desc. ${fmtNum(m.dto, 1)}%</span>` : ''}${m.rec ? `<span>+${fmtNum(m.rec)}% traerlo</span>` : ''}${g != null ? `<span class="mg-gan ${g < 0 ? 'neg' : ''}">Ganancia <b>${fmtNum(g, 1)}%</b> · ${fmtUSD(precio - m.costo)}</span>` : ''}<span class="mg-src">${esc(m.fuente)}${m.regla && !m.inv ? ' · ' + esc(m.regla) : m.inv ? ' · ' + esc(m.regla) : ''}</span>`;
+    // a la vista: solo la ganancia; el detalle del costo se despliega con "costo ▸"
+    const main = g != null ? `<span class="mg-gan ${g < 0 ? 'neg' : g < MG_BAJO ? 'bajo' : ''}">Ganancia <b>${fmtNum(g, 1)}%</b> · ${fmtUSD(precio - m.costo)}</span>` : `<span>Costo <b>${fmtUSD(m.costo)}</b></span>`;
+    const det = `${g != null ? `<span>Costo <b>${fmtUSD(m.costo)}</b>${m.mix ? ' prom.' : ''}</span>` : ''}${m.dto != null ? `<span class="mg-dto">desc. ${fmtNum(m.dto, 1)}%</span>` : ''}${m.rec ? `<span>+${fmtNum(m.rec)}% traerlo</span>` : ''}<span class="mg-src">${esc(m.fuente)}${m.regla ? ' · ' + esc(m.regla) : ''}</span>`;
+    return `${main}${m.mix ? `<span class="mg-mix" title="${esc(m.regla)}">repartido</span>` : ''}<button type="button" class="mg-mas" data-mg-mas title="Ver de dónde sale el costo">costo</button><span class="mg-det">${det}</span>`;
   };
   /* % de ganancia sobre el costo, con color: rojo si pierde, ámbar si es poco (< MG_BAJO), verde si está bien */
   const MG_BAJO = 15;
   const pctMg = (precio, m) => { if (!m || !(m.costo > 0)) return '<span class="mg-pct sc">sin costo</span>'; const g = (precio - m.costo) / m.costo * 100; return `<span class="mg-pct ${g < 0 ? 'neg' : g < MG_BAJO ? 'bajo' : 'ok'}">${g < 0 ? '▼ ' : ''}${fmtNum(g, 1)}%</span>`; };
-  /* Margen del documento en grande (cuando hay muchos productos) */
-  const margenGrande = (dd) => {
-    const ls = lineasDoc(dd); const disc = num((dd.getElementById('discount-input') || {}).value) / 100;
-    let venta = 0, costo = 0, sinC = 0;
-    const filas = ls.map(l => { const pn = l.pr * (1 - disc), vn = l.q * pn; venta += vn; const tiene = l.m && l.m.costo > 0; if (tiene) costo += l.q * l.m.costo; else sinC++;
-      return `<tr class="${l.i === selIdx ? 'sel' : ''}"><td class="mono small">${l.i + 1}</td><td><b class="mono">${esc(l.model || 'Línea sin modelo')}</b></td><td class="num">${fmtQty(l.q)}</td><td class="num">${fmtUSD(pn)}</td>
-        <td class="num">${tiene ? fmtUSD(l.m.costo) : '<span class="muted">—</span>'}</td><td class="small">${tiene ? esc(l.m.fuente) + (l.m.dto != null ? ` · desc. ${fmtNum(l.m.dto, 1)}%` : '') + (l.m.rec ? ` · +${fmtNum(l.m.rec)}% traerlo` : '') : '<span class="muted">Sin costo</span>'}</td>
-        <td class="num">${tiene ? fmtUSD(pn - l.m.costo) : '—'}</td><td class="num"><b>${tiene ? fmtUSD(l.q * (pn - l.m.costo)) : '—'}</b></td><td class="r">${pctMg(pn, l.m)}</td></tr>`; }).join('');
-    const gan = venta - costo;
-    UI.modal({ title: 'Margen del documento', wide: true, foot: false, body: `
-      <div class="kpis k4" style="margin-bottom:14px"><div class="kpi"><div class="l">Venta${disc ? ' (con ' + fmtNum(disc * 100) + '% desc.)' : ''}</div><div class="v" style="font-size:23px">${fmtUSD(venta)}</div></div>
-        <div class="kpi"><div class="l">Costo</div><div class="v" style="font-size:23px">${fmtUSD(costo)}</div></div>
-        <div class="kpi"><div class="l">Ganancia${sinC ? ' (parcial)' : ''}</div><div class="v" style="font-size:23px;color:${gan < 0 ? 'var(--red)' : 'var(--ok)'}">${fmtUSD(gan)}</div></div>
-        <div class="kpi"><div class="l">% sobre el costo</div><div class="v" style="font-size:23px">${costo ? fmtNum(gan / costo * 100, 1) + '%' : '—'}</div><div class="d">${venta ? fmtNum(gan / venta * 100, 1) + '% de la venta' : ''}</div></div></div>
-      ${sinC ? `<div class="banner" style="margin-bottom:12px">${sinC} producto${sinC === 1 ? '' : 's'} sin costo: su ganancia no se cuenta (el total es parcial).</div>` : ''}
-      <div class="tbl-wrap"><table class="tbl mg-tabla"><thead><tr><th>#</th><th>Producto</th><th class="r">Cant.</th><th class="r">Precio</th><th class="r">Costo</th><th>De dónde</th><th class="r">Gana c/u</th><th class="r">Gana total</th><th class="r">%</th></tr></thead><tbody>${filas}</tbody>
-      <tfoot><tr><td></td><td><b>Total</b></td><td></td><td class="num"><b>${fmtUSD(venta)}</b></td><td class="num"><b>${fmtUSD(costo)}</b></td><td></td><td></td><td class="num"><b style="color:${gan < 0 ? 'var(--red)' : 'var(--ok)'}">${fmtUSD(gan)}</b></td><td class="r">${costo ? `<span class="mg-pct ${gan < 0 ? 'neg' : gan / costo * 100 < MG_BAJO ? 'bajo' : 'ok'}">${fmtNum(gan / costo * 100, 1)}%</span>` : ''}</td></tr></tfoot></table></div>
-      <p class="muted small" style="margin:10px 0 0">El % es la ganancia sobre el costo: <span class="mg-pct neg">rojo</span> pierdes dinero, <span class="mg-pct bajo">ámbar</span> menos de ${MG_BAJO}%, <span class="mg-pct ok">verde</span> ${MG_BAJO}% o más.</p>` });
+  /* ---------- Margen y utilidad en grande ----------
+     Tabla completa del documento y, además, cambiar la utilidad (% de ganancia sobre el costo):
+     · de todo el documento: igual en cada producto, o manteniendo las diferencias entre ellos
+     · de cada producto: se escribe el % en su fila
+     El precio nuevo se calcula para que, después del descuento del documento, quede esa utilidad.
+     Si la línea tiene "Descuento especial", se ajusta el precio de antes y el descuento se respeta. */
+  const precioParaUtilidad = (costo, u, disc, red) => {
+    const neto = costo * (1 + u / 100), bruto = neto / (1 - disc || 1);
+    return red ? Math.ceil(bruto - 1e-6) : Math.ceil(bruto * 100 - 1e-6) / 100;
+  };
+  const setPrecioLinea = (dd, tr, precio) => {
+    const w = dd.defaultView, up = tr.querySelector('.unit-price'); if (!up || !(precio > 0)) return false;
+    const A = w.SuinAjuste, d = A && A.dtoDe ? A.dtoDe(tr) : null;
+    if (d && d.pct > 0 && d.pct < 100) A.setDto(tr, d.pct, round2(precio / (1 - d.pct / 100)), d.visible);
+    else up.innerText = precio.toFixed(2);
+    return true;
+  };
+  const avisarDoc = (dd) => {
+    const w = dd.defaultView, t = dd.getElementById('items-table');
+    if (t) t.dispatchEvent(new w.Event('input', { bubbles: true }));
+    dd.dispatchEvent(new w.Event('suin:docchanged'));
+  };
+  let mgUndo = null; // { dd, html }
+  const margenGrande = (dd, foco) => {
+    const m = UI.modal({ title: 'Margen y utilidad', wide: true, foot: false, body: '<div data-mg-root></div>' });
+    const root = $('[data-mg-root]', m.body);
+    const pintar = (focoIdx) => {
+      const ls = lineasDoc(dd); const disc = num((dd.getElementById('discount-input') || {}).value) / 100;
+      if (!ls.length) { root.innerHTML = '<div class="empty">Primero agrega productos a la oferta o nota.</div>'; return; }
+      let venta = 0, costo = 0, sinC = 0, ventaC = 0;
+      ls.forEach(l => { const vn = l.q * l.pr * (1 - disc); venta += vn; if (l.m && l.m.costo > 0) { costo += l.q * l.m.costo; ventaC += vn; } else sinC++; });
+      const gan = ventaC - costo, pctT = costo ? (ventaC - costo) / costo * 100 : null;
+      const red = !!lsGet('suinadm_ut_red', false), modo = lsGet('suinadm_ut_modo', 'igual');
+      const filas = ls.map(l => {
+        const pn = l.pr * (1 - disc), tiene = l.m && l.m.costo > 0, u = tiene ? (pn - l.m.costo) / l.m.costo * 100 : null;
+        return `<tr data-r="${l.i}" class="${l.i === selIdx ? 'sel' : ''}"><td class="mono small">${l.i + 1}</td>
+          <td><b class="mono">${esc(l.model || 'Línea sin modelo')}</b>${tiene ? `<div class="small muted">${esc(l.m.fuente)}${l.m.dto != null ? ` · desc. ${fmtNum(l.m.dto, 1)}%` : ''}${l.m.rec ? ` · +${fmtNum(l.m.rec)}% traerlo` : ''}${l.m.mix ? `<br>${esc(l.m.regla)}` : ''}</div>` : '<div class="small muted">Sin costo: no se puede calcular</div>'}</td>
+          <td class="num">${fmtQty(l.q)}</td><td class="num">${tiene ? fmtUSD(l.m.costo) : '—'}</td>
+          <td class="num">${fmtUSD(pn)}<div class="mg-nv" data-nv="${l.i}"></div></td>
+          <td class="num"><b>${tiene ? fmtUSD(l.q * (pn - l.m.costo)) : '—'}</b></td>
+          <td class="r">${tiene ? `<span class="mg-inp"><input class="inp num mg-in ${u < 0 ? 'neg' : u < MG_BAJO ? 'bajo' : 'ok'}" data-ut="${l.i}" inputmode="decimal" value="${esc(fmtNum(u, 1))}" data-orig="${esc(fmtNum(u, 1))}" aria-label="Utilidad de ${esc(l.model)}">%</span>` : '<span class="mg-pct sc">sin costo</span>'}</td></tr>`;
+      }).join('');
+      root.innerHTML = `
+        <div class="kpis k4" style="margin-bottom:14px"><div class="kpi"><div class="l">Venta${disc ? ' (con ' + fmtNum(disc * 100) + '% desc.)' : ''}</div><div class="v" style="font-size:23px">${fmtUSD(venta)}</div></div>
+          <div class="kpi"><div class="l">Costo</div><div class="v" style="font-size:23px">${fmtUSD(costo)}</div></div>
+          <div class="kpi"><div class="l">Ganancia</div><div class="v" style="font-size:23px;color:${gan < 0 ? 'var(--red)' : 'var(--ok)'}">${fmtUSD(gan)}</div>${sinC ? `<div class="d">sin contar ${sinC} sin costo</div>` : ''}</div>
+          <div class="kpi"><div class="l">Utilidad sobre el costo</div><div class="v" style="font-size:23px">${pctT != null ? fmtNum(pctT, 1) + '%' : '—'}</div><div class="d">${ventaC ? fmtNum((ventaC - costo) / ventaC * 100, 1) + '% de la venta' : ''}</div></div></div>
+        ${sinC ? `<div class="banner" style="margin-bottom:12px">${sinC} producto${sinC === 1 ? '' : 's'} sin costo: no cuentan en la ganancia ni en la utilidad, y no se les cambia el precio.</div>` : ''}
+        <div class="mg-ctl">
+          <div class="mg-ctl-t">Utilidad de todo el documento</div>
+          <span class="mg-inp"><input class="inp num mg-in" data-ut-all inputmode="decimal" placeholder="${pctT != null ? esc(fmtNum(pctT, 1)) : '0'}" aria-label="Utilidad de todo el documento">%</span>
+          <div class="seg sm" role="group" aria-label="Cómo repartirla"><button type="button" data-modo="igual" class="${modo === 'igual' ? 'on' : ''}" title="Todos los productos quedan con la misma utilidad">Igual en cada producto</button><button type="button" data-modo="prop" class="${modo === 'prop' ? 'on' : ''}" title="Sube o baja todos los precios en la misma proporción hasta llegar a esa utilidad total">Mantener diferencias</button></div>
+          <label class="chk"><input type="checkbox" data-red ${red ? 'checked' : ''}> Redondear hacia arriba a dólar entero</label>
+          <button type="button" class="btn pri" data-ap-all>Aplicar a todos</button>
+          <div class="mg-prev" data-prev-all></div>
+        </div>
+        <div class="tbl-wrap"><table class="tbl mg-tabla"><thead><tr><th>#</th><th>Producto</th><th class="r">Cant.</th><th class="r">Costo</th><th class="r">Precio</th><th class="r">Gana total</th><th class="r">Utilidad</th></tr></thead><tbody>${filas}</tbody>
+          <tfoot><tr><td></td><td><b>Total</b></td><td></td><td class="num"><b>${fmtUSD(costo)}</b></td><td class="num"><b>${fmtUSD(venta)}</b></td><td class="num"><b style="color:${gan < 0 ? 'var(--red)' : 'var(--ok)'}">${fmtUSD(gan)}</b></td><td class="r">${pctT != null ? `<span class="mg-pct ${pctT < 0 ? 'neg' : pctT < MG_BAJO ? 'bajo' : 'ok'}">${fmtNum(pctT, 1)}%</span>` : ''}</td></tr></tfoot></table></div>
+        <div class="mg-acc"><span class="small muted" data-prev-rows>Escribe la utilidad que quieras en cada producto y toca <b>Aplicar cambios</b>.</span>
+          ${mgUndo && mgUndo.dd === dd ? '<button type="button" class="btn" data-undo>↶ Deshacer</button>' : ''}<button type="button" class="btn pri" data-ap-rows disabled>Aplicar cambios</button></div>
+        <p class="muted small" style="margin:10px 0 0">La utilidad es la ganancia sobre el costo: <span class="mg-pct neg">rojo</span> pierdes dinero, <span class="mg-pct bajo">ámbar</span> menos de ${MG_BAJO}%, <span class="mg-pct ok">verde</span> ${MG_BAJO}% o más.${disc ? ` El precio nuevo ya toma en cuenta el ${fmtNum(disc * 100)}% de descuento del documento.` : ''}</p>`;
+
+      const conC = ls.filter(l => l.m && l.m.costo > 0);
+      const redOn = () => $('[data-red]', root).checked;
+      const modoAct = () => { const b = $('[data-modo].on', root); return b ? b.dataset.modo : 'igual'; };
+      // nuevos precios para toda la tabla con una utilidad total
+      const planTodo = (u) => {
+        if (modoAct() === 'prop') {
+          const f = ventaC ? costo * (1 + u / 100) / ventaC : 1;
+          return conC.map(l => ({ l, p: redOn() ? Math.ceil(l.pr * f - 1e-6) : Math.ceil(l.pr * f * 100 - 1e-6) / 100 }));
+        }
+        return conC.map(l => ({ l, p: precioParaUtilidad(l.m.costo, u, disc, redOn()) }));
+      };
+      const resumen = (plan) => {
+        let v = 0; ls.forEach(l => { const x = plan.find(y => y.l === l); v += l.q * (x ? x.p : l.pr) * (1 - disc); });
+        let vC = 0; ls.forEach(l => { if (l.m && l.m.costo > 0) { const x = plan.find(y => y.l === l); vC += l.q * (x ? x.p : l.pr) * (1 - disc); } });
+        return `venta ${fmtUSD(v)} · ganancia <b>${fmtUSD(vC - costo)}</b>${costo ? ` (${fmtNum((vC - costo) / costo * 100, 1)}%)` : ''}`;
+      };
+      const allIn = $('[data-ut-all]', root), prevAll = $('[data-prev-all]', root);
+      const prevTodo = () => { const s = allIn.value.trim(); if (!s) { prevAll.innerHTML = ''; return; } const u = num(s); if (u <= -100) { prevAll.textContent = 'La utilidad no puede ser -100% o menos.'; return; } prevAll.innerHTML = `Quedaría: ${resumen(planTodo(u))}`; };
+      allIn.addEventListener('input', prevTodo);
+      allIn.addEventListener('keydown', e => { if (e.key === 'Enter') $('[data-ap-all]', root).click(); });
+      $$('[data-modo]', root).forEach(b => b.onclick = () => { $$('[data-modo]', root).forEach(x => x.classList.toggle('on', x === b)); lsSet('suinadm_ut_modo', b.dataset.modo); prevTodo(); prevRows(); });
+      $('[data-red]', root).onchange = (e) => { lsSet('suinadm_ut_red', e.target.checked); prevTodo(); prevRows(); };
+      const aplicar = (plan, msg) => {
+        if (!plan.length) { UI.toast('No hay productos con costo para cambiar'); return; }
+        const tb = dd.getElementById('items-tbody'); mgUndo = { dd, html: tb ? tb.innerHTML : '' };
+        let n = 0; plan.forEach(x => { if (setPrecioLinea(dd, x.l.tr, x.p)) n++; });
+        avisarDoc(dd); UI.toast(msg(n)); setTimeout(() => { pintar(); mgRun && mgRun(); }, 60);
+      };
+      $('[data-ap-all]', root).onclick = () => {
+        const s = allIn.value.trim(); if (!s) { UI.toast('Escribe la utilidad, ej. 30'); allIn.focus(); return; }
+        const u = num(s); if (u <= -100) { UI.toast('La utilidad no puede ser -100% o menos'); return; }
+        aplicar(planTodo(u), n => `Utilidad de ${fmtNum(u, 1)}% aplicada a ${n} producto${n === 1 ? '' : 's'}`);
+      };
+      // por producto
+      const planFilas = () => $$('[data-ut]', root).filter(inp => inp.value.trim() !== inp.dataset.orig && inp.value.trim() !== '').map(inp => {
+        const l = ls.find(x => x.i === +inp.dataset.ut), u = num(inp.value);
+        return u > -100 ? { l, p: precioParaUtilidad(l.m.costo, u, disc, redOn()), inp } : null;
+      }).filter(Boolean);
+      const prevRows = () => {
+        const plan = planFilas();
+        $$('[data-nv]', root).forEach(el => { const x = plan.find(y => y.l.i === +el.dataset.nv); el.innerHTML = x ? `→ <b>${fmtUSD(x.p * (1 - disc))}</b>` : ''; el.closest('tr').classList.toggle('cambia', !!x); });
+        $('[data-ap-rows]', root).disabled = !plan.length;
+        $('[data-prev-rows]', root).innerHTML = plan.length ? `${plan.length} cambio${plan.length === 1 ? '' : 's'} · quedaría: ${resumen(plan)}` : 'Escribe la utilidad que quieras en cada producto y toca <b>Aplicar cambios</b>.';
+      };
+      $$('[data-ut]', root).forEach(inp => {
+        inp.addEventListener('input', prevRows);
+        inp.addEventListener('focus', () => inp.select());
+        inp.addEventListener('keydown', e => { if (e.key === 'Enter') { e.preventDefault(); const all = $$('[data-ut]', root); const nx = all[all.indexOf(inp) + 1]; if (nx) nx.focus(); else $('[data-ap-rows]', root).click(); } });
+      });
+      $('[data-ap-rows]', root).onclick = () => { const plan = planFilas(); aplicar(plan, n => `Utilidad cambiada en ${n} producto${n === 1 ? '' : 's'}`); };
+      const un = $('[data-undo]', root);
+      if (un) un.onclick = () => {
+        const tb = dd.getElementById('items-tbody'); if (!tb || !mgUndo) return;
+        tb.innerHTML = mgUndo.html; mgUndo = null;
+        const w = dd.defaultView; if (w.SuinApp && w.SuinApp.normalizeRows) w.SuinApp.normalizeRows();
+        avisarDoc(dd); UI.toast('Se deshizo el último cambio de utilidad'); setTimeout(() => { pintar(); mgRun && mgRun(); }, 60);
+      };
+      const f = focoIdx != null ? $(`[data-ut="${focoIdx}"]`, root) : null;
+      if (f) setTimeout(() => { f.scrollIntoView({ block: 'center' }); f.focus(); }, 40);
+      else setTimeout(() => allIn.focus(), 40);
+    };
+    pintar(foco);
   };
   /* margen de cada línea del documento abierto (panel en escritorio, debajo de cada producto en el teléfono) */
   const lineasDoc = (dd) => {
@@ -5908,7 +6063,7 @@ const Cot = (() => {
       const model = dc ? modeloDe(htmlToRich(dc.innerHTML)) : '';
       const q = num((tr.querySelector('.quantity') || {}).innerText), pr = num((tr.querySelector('.unit-price') || {}).innerText);
       let g = null; if (saved && model) { g = (saved.items || []).find(it => !usados.has(it.id) && normKey(it.codigo || modeloDe(it.desc)) === normKey(model)); if (g) usados.add(g.id); }
-      return { i, tr, model, q, pr, m: margenDe(model, pr, false, g) };
+      return { i, tr, model, q, pr, m: margenDe(model, pr, false, g, q) };
     });
   };
   const paintMargen = (dd) => {
@@ -5918,17 +6073,14 @@ const Cot = (() => {
       // escritorio: panel debajo del buscador
       const cp = dd.querySelector('body > .catalog-panel');
       if (cp) {
-        let box = dd.getElementById('adm-margen'); if (!box) { box = dd.createElement('div'); box.id = 'adm-margen'; cp.appendChild(box); box.addEventListener('click', (e) => { if (e.target.closest('[data-aj]')) return; if (e.target.closest('[data-mg-big]')) { margenGrande(dd); return; } if (e.target.closest('[data-mg-tg]')) { if (buscandoMg(dd)) mgForce = !mgForce; else { mgOpen = !mgOpen; lsSet('suinadm_mg_open', mgOpen); } estadoMg(dd); return; } const l = e.target.closest('[data-mi]'); if (!l) return; const tr = dd.querySelectorAll('#items-tbody > tr.item-row')[+l.dataset.mi]; if (tr) { selIdx = +l.dataset.mi; tr.scrollIntoView({ behavior: 'smooth', block: 'center' }); paintMargen(dd); } }); }
-        let venta = 0, costo = 0, sinC = 0;
-        ls.forEach(l => { const vn = l.q * l.pr * (1 - disc); venta += vn; if (l.m && l.m.costo > 0) costo += l.q * l.m.costo; else sinC++; });
-        const gan = venta - costo;
-        const pctT = costo ? gan / costo * 100 : null;
+        let box = dd.getElementById('adm-margen'); if (!box) { box = dd.createElement('div'); box.id = 'adm-margen'; cp.appendChild(box); box.addEventListener('click', (e) => { if (e.target.closest('[data-aj]')) return; if (e.target.closest('[data-mg-big]')) { margenGrande(dd); return; } const ed = e.target.closest('[data-mg-ed]'); if (ed) { margenGrande(dd, +ed.dataset.mgEd); return; } if (e.target.closest('[data-mg-tg]')) { if (buscandoMg(dd)) mgForce = !mgForce; else { mgOpen = !mgOpen; lsSet('suinadm_mg_open2', mgOpen); } estadoMg(dd); return; } const l = e.target.closest('[data-mi]'); if (!l) return; const tr = dd.querySelectorAll('#items-tbody > tr.item-row')[+l.dataset.mi]; if (tr) { selIdx = +l.dataset.mi; tr.scrollIntoView({ behavior: 'smooth', block: 'center' }); paintMargen(dd); } }); }
+        const T = totMg(ls, disc), { venta, costo, sinC, gan, pctT } = T;
         const negs = ls.filter(l => l.m && l.m.costo > 0 && l.pr * (1 - disc) < l.m.costo).length;
-        const html = ls.length ? `<h4 data-mg-tg title="Mostrar u ocultar la lista"><span class="mg-car">▾</span>Margen <small>${ls.length} producto${ls.length === 1 ? '' : 's'}${disc ? ` · ${fmtNum(disc * 100)}% desc.` : ''}</small>${negs ? `<span class="mg-pct neg" title="${negs} por debajo del costo">▼ ${negs}</span>` : ''}${sinC ? `<span class="mg-pct sc" title="${sinC} sin costo: no suman ganancia">${sinC} s/c</span>` : ''}<span class="mg-bts"><button type="button" class="mg-aj" data-mg-big title="Ver la tabla completa en grande">⤢ En grande</button><button type="button" class="mg-aj" data-aj title="Subir o bajar precios, o dar descuento a productos específicos">% Ajustar</button></span></h4>
-          <div class="mg-tot"><div><small>Venta</small><b>${fmtUSD(venta)}</b></div><div><small>Costo</small><b>${fmtUSD(costo)}</b></div><div class="${gan < 0 ? 'neg' : 'g'}"><small>Ganancia${sinC ? '*' : ''}</small><b>${fmtUSD(gan)}</b></div><div class="${pctT != null && pctT < 0 ? 'neg' : 'g'}"><small>Margen</small><b>${pctT != null ? fmtNum(pctT, 1) + '%' : '—'}</b></div></div>
-          <div class="mg-hid">La lista se oculta mientras buscas, para ver mejor los productos. Toca el título para verla.</div>
+        const html = ls.length ? `<h4><span class="mg-tg" data-mg-tg title="Desplegar u ocultar el detalle"><span class="mg-car">▾</span>Margen ${pctT != null ? `<span class="mg-pct ${pctT < 0 ? 'neg' : pctT < MG_BAJO ? 'bajo' : 'ok'}">${fmtNum(pctT, 1)}%</span>` : ''}<small>${costo ? fmtUSD(gan) + ' · ' : ''}${ls.length} prod.${disc ? ` · ${fmtNum(disc * 100)}% desc.` : ''}</small>${negs ? `<span class="mg-pct neg" title="${negs} por debajo del costo">▼ ${negs}</span>` : ''}${sinC ? `<span class="mg-pct sc" title="${sinC} sin costo: no suman ganancia">${sinC} s/c</span>` : ''}</span><span class="mg-bts"><button type="button" class="mg-aj" data-mg-big title="Ver la tabla completa en grande y cambiar la utilidad">⤢ En grande</button><button type="button" class="mg-aj ut" data-mg-big title="Cambiar el % de utilidad de todo el documento o de cada producto">✎ Utilidad</button><button type="button" class="mg-aj" data-aj title="Subir o bajar precios, o dar descuento a productos específicos">% Ajustar</button></span></h4>
+          <div class="mg-tot"><div><small>Venta</small><b>${fmtUSD(venta)}</b></div><div><small>Costo</small><b>${fmtUSD(costo)}</b></div><div class="${gan < 0 ? 'neg' : 'g'}"><small>Ganancia${sinC ? ' (sin s/c)' : ''}</small><b>${fmtUSD(gan)}</b></div><div class="${pctT != null && pctT < 0 ? 'neg' : 'g'}"><small>Utilidad</small><b>${pctT != null ? fmtNum(pctT, 1) + '%' : '—'}</b></div></div>
+          <div class="mg-hid">El detalle se oculta mientras buscas, para ver mejor los productos. Toca «Margen» para verlo.</div>
           <div class="mg-list"><div class="mg-hd"><span>#</span><span>Producto</span><span>Costo</span><span>Ganancia</span></div>${ls.map(l => { const pn = l.pr * (1 - disc), tiene = l.m && l.m.costo > 0;
-            return `<div class="mg-ln ${l.i === selIdx ? 'on' : ''}" data-mi="${l.i}" title="${esc(tiene ? l.m.fuente + (l.m.dto != null ? ' · desc. ' + fmtNum(l.m.dto, 1) + '%' : '') : 'Sin costo')}"><span class="n">${l.i + 1}</span><span class="p"><b>${esc(l.model || 'Línea sin modelo')}</b><small>${fmtQty(l.q)} × ${fmtUSD(pn)}${tiene ? ' · ' + esc(l.m.fuente) : ''}</small></span><span class="c">${tiene ? fmtUSD(l.m.costo) : '—'}${tiene && l.q !== 1 ? `<small>c/u</small>` : ''}</span><span class="gg"><b>${tiene ? fmtUSD(l.q * (pn - l.m.costo)) : '—'}</b>${pctMg(pn, l.m)}</span></div>`; }).join('')}</div>` : '';
+            return `<div class="mg-ln ${l.i === selIdx ? 'on' : ''}" data-mi="${l.i}" title="${esc(tiene ? l.m.fuente + (l.m.dto != null ? ' · desc. ' + fmtNum(l.m.dto, 1) + '%' : '') : 'Sin costo')}"><span class="n">${l.i + 1}</span><span class="p"><b>${esc(l.model || 'Línea sin modelo')}</b><small>${fmtQty(l.q)} × ${fmtUSD(pn)}${tiene ? ' · ' + esc(l.m.fuente) : ''}</small></span><span class="c">${tiene ? fmtUSD(l.m.costo) : '—'}${tiene && l.q !== 1 ? `<small>c/u</small>` : ''}</span><span class="gg"><b>${tiene ? fmtUSD(l.q * (pn - l.m.costo)) : '—'}</b>${tiene ? `<span data-mg-ed="${l.i}" title="Cambiar la utilidad de este producto">${pctMg(pn, l.m)}</span>` : pctMg(pn, l.m)}</span></div>`; }).join('')}</div>` : '';
         if (box.dataset.h !== html) { box.dataset.h = html; box.innerHTML = html; const on = box.querySelector('.mg-ln.on'); if (on) on.scrollIntoView({ block: 'nearest' }); }
         estadoMg(dd);
       }
@@ -5941,11 +6093,44 @@ const Cot = (() => {
         if (!el) { el = dd.createElement('div'); el.className = 'mg-row'; const foot = card.querySelector('.m-item-foot'); if (foot) foot.insertAdjacentElement('afterend', el); else card.appendChild(el); }
         if (el.innerHTML !== html) el.innerHTML = html;
       });
+      const mil = dd.getElementById('m-items-list');
+      if (mil) {
+        let mc = dd.getElementById('adm-mg-m');
+        if (!mc) {
+          mc = dd.createElement('div'); mc.id = 'adm-mg-m'; mil.insertAdjacentElement('beforebegin', mc);
+          mc.addEventListener('click', (e) => {
+            if (e.target.closest('[data-mg-big]')) { margenGrande(dd); return; }
+            if (e.target.closest('[data-mg-dtg]')) { mgDet = !mgDet; lsSet('suinadm_mg_det', mgDet); dd.body.classList.toggle('mg-det-on', mgDet); paintMargen(dd); }
+          });
+        }
+        const T = totMg(ls, disc);
+        const html = ls.length ? `<div class="mm-l"><span>Margen</span>${T.pctT != null ? `<span class="mg-pct ${T.pctT < 0 ? 'neg' : T.pctT < MG_BAJO ? 'bajo' : 'ok'}">${fmtNum(T.pctT, 1)}%</span>` : ''}<b>${T.costo ? fmtUSD(T.gan) : 'sin costo'}</b>${T.sinC ? `<small>${T.sinC} s/c</small>` : ''}</div>
+          <div class="mm-b"><button type="button" data-mg-dtg>${mgDet ? 'Ocultar costos' : 'Ver costos'}</button><button type="button" data-mg-big>⤢ En grande · utilidad</button></div>` : '';
+        if (mc.dataset.h !== html) { mc.dataset.h = html; mc.innerHTML = html; }
+        mc.hidden = !ls.length;
+      }
     } catch (e) { console.warn('margen', e); }
+  };
+  /* totales del margen: la utilidad se calcula solo con las líneas que tienen costo */
+  const totMg = (ls, disc) => {
+    let venta = 0, costo = 0, sinC = 0, ventaC = 0;
+    ls.forEach(l => { const vn = l.q * l.pr * (1 - disc); venta += vn; if (l.m && l.m.costo > 0) { costo += l.q * l.m.costo; ventaC += vn; } else sinC++; });
+    return { venta, costo, sinC, ventaC, gan: ventaC - costo, pctT: costo ? (ventaC - costo) / costo * 100 : null };
+  };
+  /* "costo ▸": despliega el detalle del costo de un producto (o de todos, con Ver costos) */
+  let mgDet = !!lsGet('suinadm_mg_det', false);
+  const wireMgMas = (doc) => {
+    if (doc.__mgMas) return; doc.__mgMas = true;
+    doc.body.classList.toggle('mg-det-on', mgDet);
+    doc.addEventListener('click', (e) => {
+      const b = e.target.closest && e.target.closest('[data-mg-mas]'); if (!b) return;
+      e.preventDefault(); e.stopPropagation();
+      const r = b.closest('.mg-row'); if (r) r.classList.toggle('abierto');
+    }, true);
   };
   let selIdx = -1;
   /* la lista del margen se pliega sola mientras buscas, para que los resultados tengan espacio */
-  let mgOpen = lsGet('suinadm_mg_open', true) !== false, mgForce = false;
+  let mgOpen = lsGet('suinadm_mg_open2', false) === true, mgForce = false;
   const buscandoMg = (dd) => ((dd.getElementById('catalog-search') || {}).value || '').trim().length >= 2;
   const estadoMg = (dd) => {
     const box = dd.getElementById('adm-margen'); if (!box) return;
@@ -5955,6 +6140,7 @@ const Cot = (() => {
   };
   const setupMargen = (w) => {
     const dd = w.document; const run = debounce(() => paintMargen(dd), 200);
+    wireMgMas(dd);
     const tb = dd.getElementById('items-tbody');
     if (tb) {
       new w.MutationObserver(run).observe(tb, { childList: true, subtree: true, characterData: true });
@@ -5982,10 +6168,17 @@ const Cot = (() => {
   .mg-row .mg-src{color:#94a3b8;font-size:13px}
   .card > .mg-row{margin:0 12px 10px;padding:7px 10px;background:#F8FAFC;border:1px solid #E2E8F0;border-radius:8px}
   .res .mg-row{grid-column:1/-1;margin-top:4px}
-  #total .mg-tot{margin-left:8px;color:#15803D;font-weight:700}`;
+  #total .mg-tot{margin-left:8px;color:#15803D;font-weight:700}
+  .mg-row .mg-det{display:none}.mg-row.abierto .mg-det,body.mg-det-on .mg-row .mg-det{display:contents}
+  .mg-row .mg-gan.bajo,.mg-row .mg-gan.bajo b{color:#B45309}
+  .mg-row .mg-mix{background:#FFF7ED;color:#C2410C;border:1px solid #FDBA74;border-radius:5px;padding:0 6px;font-size:12.5px;font-weight:700}
+  .mg-row .mg-mas{border:1px solid #CBD5E1;background:#fff;border-radius:6px;padding:0 7px;font:inherit;font-size:12.5px;font-weight:700;color:#475569;cursor:pointer;line-height:1.6}
+  .mg-row .mg-mas::after{content:' ▸'}.mg-row.abierto .mg-mas::after,body.mg-det-on .mg-row .mg-mas::after{content:' ▾'}
+  .mg-row .mg-mas:hover{border-color:#0e2a3b;color:#0e2a3b}`;
   const setupMargenRapida = (rw) => {
     const rd = rw && rw.document; if (!rd || rd.__admMg || !rd.getElementById('items')) return; rd.__admMg = true;
     const st = rd.createElement('style'); st.textContent = RAP_CSS; rd.head.appendChild(st);
+    wireMgMas(rd);
     const precioDe = (s) => num(String(s || '').replace(/[^\d.,]/g, '').replace(',', '.'));
     const paint = () => {
       try {
