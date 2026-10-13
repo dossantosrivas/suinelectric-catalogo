@@ -312,6 +312,16 @@ a.kp:hover{border-color:#B9C3CF}
 .ln .del:hover{color:var(--red)}
 .ln .meta{grid-column:2/-1;display:flex;gap:10px;flex-wrap:wrap;font-size:15px;color:var(--muted);margin-top:-2px}
 .ln .meta .warn{color:var(--red);font-weight:600}
+.ln.o-mixto{--c:#7C3AED}.own.mixto{--c:#7C3AED}
+.rp{flex:1 0 100%;background:var(--panel-2);border:1px solid var(--line-2);border-left:4px solid #7C3AED;border-radius:6px;padding:8px 10px;color:var(--ink,#0f172a)}
+.rp-t{font-size:15px;margin-bottom:6px}
+.rp-r{display:flex;flex-wrap:wrap;gap:6px 8px;align-items:center;padding:4px 0;border-top:1px dashed var(--line-2)}
+.rp-r .rp-o{width:auto;min-width:160px;padding:4px 8px;font-size:15px}
+.rp-r .rp-q{width:72px;padding:4px 8px}
+.rp-r .rp-c{display:inline-flex;gap:5px;align-items:center;font-size:14px;color:var(--muted)}.rp-r .rp-c input{width:90px;padding:4px 8px}
+.rp-r .rp-p{width:auto;padding:4px 8px;font-size:14.5px}
+.rp-d{font-size:14px;color:var(--muted)}.rp-d.warn{color:var(--red);font-weight:600}
+.rp-f{display:flex;flex-wrap:wrap;gap:8px;align-items:center;margin-top:6px}
 .ln::before{content:"";position:absolute;left:0;top:0;bottom:0;width:4px;background:var(--c,transparent)}
 .ln.o-manuel{--c:var(--man)}.ln.o-papa{--c:var(--pap)}.ln.o-dist{--c:var(--dis)}.ln.o-libre{--c:var(--lib)}
 select.orig{font-size:15.5px;padding:6px 6px}
@@ -808,8 +818,8 @@ const CONFIG_DEFAULT = {
 const deepMerge = (base, over) => { const out = Array.isArray(base) ? base.slice() : Object.assign({}, base); if (!over) return out; Object.keys(over).forEach(k => { const v = over[k]; if (v && typeof v === 'object' && !Array.isArray(v) && base && typeof base[k] === 'object' && !Array.isArray(base[k]) && base[k]) out[k] = deepMerge(base[k], v); else if (v !== undefined) out[k] = v; }); return out; };
 const ORIGENES = ['manuel', 'papa', 'dist', 'libre'];
 /* opciones del selector de origen: tu inventario, el de tu papá, cada distribuidor por nombre, libre */
-const origenOpts = (it) => { const ds = Dists(); const cur = it.origen === 'dist' ? 'dist|' + (itDist(it) || '') : it.origen; const o = [['manuel', origenNombre('manuel')], ['papa', origenNombre('papa')]].concat(ds.map(d => ['dist|' + d.id, d.nombre])); if (!ds.length || cur === 'dist|') o.push(['dist|', 'Distribuidor (sin asignar)']); o.push(['libre', 'Libre']); return o.map(([v, l]) => `<option value="${esc(v)}" ${cur === v ? 'selected' : ''}>${esc(l)}</option>`).join(''); };
-const origenNombre = (o) => o === 'manuel' || o === 'papa' ? (CFG().inventarios[o] || o) : o === 'dist' ? 'Distribuidor' : 'Libre';
+const origenOpts = (it) => { const ds = Dists(); const cur = it.origen === 'dist' ? 'dist|' + (itDist(it) || '') : it.origen; const o = [['manuel', origenNombre('manuel')], ['papa', origenNombre('papa')]].concat(ds.map(d => ['dist|' + d.id, d.nombre])); if (!ds.length || cur === 'dist|') o.push(['dist|', 'Distribuidor (sin asignar)']); o.push(['libre', 'Libre']); if (it.productoId || it.origen === 'mixto') o.push(['mixto', it.origen === 'mixto' ? 'Repartido' : 'Repartir (automático)']); return o.map(([v, l]) => `<option value="${esc(v)}" ${cur === v ? 'selected' : ''}>${esc(l)}</option>`).join(''); };
+const origenNombre = (o) => o === 'manuel' || o === 'papa' ? (CFG().inventarios[o] || o) : o === 'dist' ? 'Distribuidor' : o === 'mixto' ? 'Repartido' : 'Libre';
 const TIPOS = { oferta: 'Oferta', nota: 'Nota de entrega', venta: 'Venta', compra: 'Compra', ajuste: 'Ajuste' };
 const esVenta = (d) => d.tipo === 'nota' || d.tipo === 'venta';
 
@@ -980,7 +990,7 @@ const Calc = {
     });
     const docs = Store.all('docs').filter(d => d.estado !== 'anulada').sort((a, b) => (a.fecha || '').localeCompare(b.fecha || ''));
     docs.forEach(d => {
-      (d.items || []).forEach(it => {
+      partesDoc(d).forEach(it => {
         if (!it.productoId) return;
         const inv = (d.tipo === 'compra' || d.tipo === 'ajuste') ? (it.origen === 'manuel' || it.origen === 'papa' ? it.origen : d.inventario) : it.origen;
         if (inv !== 'manuel' && inv !== 'papa') return;
@@ -1003,8 +1013,9 @@ const Calc = {
   st(pid) { this.build(); return this.stock.get(pid) || { manuel: { cant: 0, costo: 0 }, papa: { cant: 0, costo: 0 } }; },
   totals(d) {
     let sub = 0, costo = 0, sinCosto = false; const porOrigen = {};
-    (d.items || []).forEach(it => {
-      const q = num(it.cant), p = num(it.precio), imp = q * p; sub += imp;
+    (d.items || []).forEach(it => { sub += num(it.cant) * num(it.precio); });
+    partesDoc(d).forEach(it => {
+      const q = num(it.cant), p = num(it.precio), imp = q * p;
       const c = it.costo === '' || it.costo == null ? null : num(it.costo);
       const o = it.origen || 'libre';
       const g = porOrigen[o] || (porOrigen[o] = { venta: 0, costo: 0, sinCosto: false });
@@ -1282,6 +1293,72 @@ const distDeLinea = (it) => { const c = catalogoByCodigo(it.codigo || modeloDesc
 /* distribuidor por nombre (si hay dos con el mismo nombre, gana el que surte catálogo) */
 const provPorNombre = (n) => { const k = normKey(n); if (!k) return null; const xs = Store.all('proveedores').filter(x => normKey(x.nombre) === k); return xs.find(x => x.surte) || xs[0] || null; };
 const itDist = (it) => it.dist || (distDeLinea(it) || {}).id || '';
+/* ---------- línea repartida entre inventarios ----------
+   El cliente ve una sola línea, pero por dentro puede salir de varios lados:
+   it.origen = 'mixto', it.reparto = [{ origen: 'manuel'|'papa'|'dist', dist, cant, costo, pedido, listPrice, dtoDist, recargo }]
+   e it.costo = costo promedio. Para existencias, pedidos y reportes cada parte cuenta como una línea
+   (partesDe / partesDoc); código, descripción, precio y producto los toma de la línea. */
+const esInv = (o) => o === 'manuel' || o === 'papa';
+const tieneReparto = (it) => !!(it && it.origen === 'mixto' && Array.isArray(it.reparto) && it.reparto.length);
+const partesDe = (it) => {
+  if (!tieneReparto(it)) return [it];
+  return it.reparto.map((pt, k) => {
+    const g = { id: () => it.id + '~' + k, productoId: () => esInv(pt.origen) ? (it.productoId || null) : null, codigo: () => it.codigo, desc: () => it.desc, precio: () => it.precio, marca: () => it.marca, padre: () => it };
+    Object.keys(g).forEach(key => { const ds = Object.getOwnPropertyDescriptor(pt, key); if (!ds || ds.get) Object.defineProperty(pt, key, { get: g[key], set: () => { /* lo manda la línea */ }, enumerable: false, configurable: true }); });
+    return pt;
+  });
+};
+const partesDoc = (d) => ((d && d.items) || []).flatMap(partesDe);
+/* lo que hay en un inventario para este documento (si ya descontó existencia, se le devuelve lo suyo) */
+const dispInv = (pid, inv, docId) => {
+  let n = Calc.st(pid)[inv].cant;
+  const d = docId ? Store.get('docs', docId) : null;
+  if (d && d.afectaStock && d.estado !== 'anulada' && esVenta(d)) partesDoc(d).forEach(x => { if (x.productoId === pid && x.origen === inv) n += num(x.cant); });
+  return n;
+};
+const costoProm = (parts) => { const q = parts.reduce((a, p) => a + num(p.cant), 0); if (!q || parts.some(p => p.costo === '' || p.costo == null)) return ''; return round2(parts.reduce((a, p) => a + num(p.cant) * num(p.costo), 0) / q); };
+const parteDist = (it, cant, tipo, distId) => {
+  const c = catalogoByCodigo(it.codigo || modeloDesc(it.desc));
+  const dd = distId != null ? (Store.get('proveedores', distId) || null) : (c ? distDeCat(c) : distDeLinea(it));
+  const cl = c ? costoLinea(c, dd) : {};
+  return Object.assign({ origen: 'dist', dist: dd ? dd.id : '', cant, costo: cl.costo != null ? cl.costo : '' }, cl.costo != null ? { listPrice: cl.listPrice, dtoDist: cl.dtoDist, recargo: cl.recargo } : c ? { listPrice: c.precio } : {}, esVenta({ tipo }) ? { pedido: 'por pedir' } : {});
+};
+const parteInv = (it, inv, cant) => ({ origen: inv, cant, costo: it.productoId ? (round2(Calc.st(it.productoId)[inv].costo) || '') : '' });
+/* reparto automático: primero tu inventario, luego el de tu papá y lo que falte, del distribuidor */
+const repartoAuto = (it, docId, tipo) => {
+  const q = num(it.cant), pid = it.productoId; if (!pid || !(q > 0)) return null;
+  let falta = q; const out = [];
+  ['manuel', 'papa'].forEach(inv => { if (falta <= 0) return; const disp = Math.max(0, dispInv(pid, inv, docId)); if (disp <= 0) return; const t = Math.min(disp, falta); out.push(parteInv(it, inv, t)); falta -= t; });
+  if (falta > 0) out.push(parteDist(it, falta, tipo));
+  return out;
+};
+const CAMPOS_DIST = ['dist', 'pedido', 'listPrice', 'dtoDist', 'recargo'];
+const setReparto = (it, parts) => {
+  const viejo = tieneReparto(it) ? it.reparto : it.origen === 'dist' ? [it] : [];
+  // el estado del pedido y el distribuidor elegido se conservan
+  parts.forEach(p => { if (p.origen !== 'dist') return; const o = viejo.find(x => x.origen === 'dist'); if (o) { if (o.pedido) p.pedido = o.pedido; if (o.dist && !p.dist) p.dist = o.dist; } });
+  CAMPOS_DIST.forEach(k => delete it[k]);
+  if (parts.length === 1) {
+    const p = parts[0]; delete it.reparto;
+    it.origen = p.origen; it.costo = p.costo;
+    if (p.origen === 'dist') CAMPOS_DIST.forEach(k => { if (p[k] !== undefined) it[k] = p[k]; });
+  } else {
+    it.origen = 'mixto'; it.reparto = parts; it.costo = costoProm(parts);
+  }
+};
+/* repartir solo cuando hace falta: producto de tu inventario y la cantidad no alcanza en uno solo.
+   No toca las líneas donde elegiste el origen a mano (sinReparto) ni los repartos que editaste (repartoManual). */
+const ajustarReparto = (it, docId, tipo) => {
+  if (!it || !it.productoId || it.sinReparto || it.repartoManual) return false;
+  if (!(esInv(it.origen) || it.origen === 'mixto')) return false;
+  const parts = repartoAuto(it, docId, tipo); if (!parts || !parts.length) return false;
+  if (parts.length === 1 && parts[0].origen === 'dist' && !tieneReparto(it)) return false; // sin nada en existencia: se queda como estaba y avisa "Disponible: 0"
+  const firma = () => JSON.stringify([it.origen, it.reparto || null, it.costo, it.dist || '']);
+  const antes = firma(); setReparto(it, parts);
+  return antes !== firma();
+};
+const parteNombre = (p) => p.origen === 'dist' ? distNombre(p.dist || itDist(p)) : origenNombre(p.origen);
+const repartoTxt = (it) => tieneReparto(it) ? partesDe(it).map(p => `${fmtQty(num(p.cant))} ${parteNombre(p)}`).join(' + ') : '';
 /* descuento general que te da (el de la ficha; Grupos Eléctricos hereda el viejo de Ajustes) */
 const descDist = (d) => { if (!d) return null; if (num(d.descuento) > 0) return num(d.descuento); const l = CFG().descCostoDist; return d.surte && d.surte.scraping && l != null && l !== '' ? num(l) : null; };
 const reglasDe = (d) => (d && Array.isArray(d.reglas) ? d.reglas : []).filter(r => r && r.pct !== '' && r.pct != null);
@@ -1906,7 +1983,7 @@ const PEDIDO = { 'por pedir': ['Por pedir', 'warn'], pedido: ['Pedido', 'info'],
 const ownTag = (o) => `<span class="own ${esc(o)}">${esc(origenNombre(o))}</span>`;
 const docParty = (d) => d.tipo === 'compra' ? ((d.proveedor && d.proveedor.nombre) || '—') : ((d.cliente && d.cliente.nombre) || '—');
 const docItemsTxt = (d) => { const its = d.items || []; if (!its.length) return '<span class="muted">Sin productos</span>'; const f = its[0]; const t = f.codigo || plainFirst(f.desc); return `<span class="code">${esc(t.slice(0, 40))}</span>${its.length > 1 ? ` <span class="muted">+${its.length - 1}</span>` : ''}`; };
-const docOrigins = (d) => Array.from(new Set((d.items || []).map(i => d.tipo === 'compra' || d.tipo === 'ajuste' ? d.inventario : i.origen).filter(Boolean)));
+const docOrigins = (d) => Array.from(new Set(partesDoc(d).map(i => d.tipo === 'compra' || d.tipo === 'ajuste' ? d.inventario : i.origen).filter(Boolean)));
 const estadoPill = (d) => {
   if (d.estado === 'anulada') return '<span class="pill bad">Anulada</span>';
   if (d.tipo === 'oferta') { const e = ESTADOS_OFERTA[d.estado || 'abierta'] || ESTADOS_OFERTA.abierta; return `<span class="pill ${e[1]}">${e[0]}</span>`; }
@@ -1977,7 +2054,7 @@ function docListView(v, { titulo, tipos, nuevo, sub }) {
     else if (F.est === 'cobrar') rows = rows.filter(d => d.estado !== 'anulada' && Calc.totals(d).saldo > 0.005);
     else if (['encurso', 'entregar', 'enviar', 'cerrada'].includes(F.est)) rows = rows.filter(d => { const k = etapaVenta(d)[0]; return F.est === 'encurso' ? !['cerrada', 'anulada'].includes(k) : k === F.est; });
     else if (F.est) rows = rows.filter(d => (d.estado || 'abierta') === F.est);
-    if (F.inv && F.inv.startsWith('dist|')) { const id = F.inv.slice(5); rows = rows.filter(d => (d.items || []).some(i => i.origen === 'dist' && itDist(i) === id)); }
+    if (F.inv && F.inv.startsWith('dist|')) { const id = F.inv.slice(5); rows = rows.filter(d => partesDoc(d).some(i => i.origen === 'dist' && itDist(i) === id)); }
     else if (F.inv) rows = rows.filter(d => docOrigins(d).includes(F.inv));
     if (F.vend) rows = rows.filter(d => F.vend === '-' ? !d[campo] : d[campo] === F.vend);
     if (q) rows = rows.filter(d => normTxt([d.numero, docParty(d), d.notas, d.vendedor, d.comprador].concat((d.items || []).map(i => i.codigo + ' ' + i.desc)).join(' ')).includes(q));
@@ -2241,7 +2318,8 @@ function convertirOferta(O, { entrega, pagos } = {}) {
   const cfg = CFG();
   const nd = newDoc('nota', { clienteId: O.clienteId, cliente: clone(O.cliente || {}), items: clone(O.items || []).map(it => Object.assign(it, { id: uid('i') })), descPct: O.descPct, ivaPct: O.ivaPct, tasa: O.tasa, tasaFuente: O.tasaFuente, vendedor: O.vendedor, origenDoc: O.id, notas: O.notas });
   nd.condiciones = (cfg.condiciones.nota || []).slice();
-  nd.items.forEach(it => { delete it.auto; if (it.origen === 'dist') { it.pedido = 'por pedir'; if (!it.dist) it.dist = itDist(it); } });
+  nd.items.forEach(it => { delete it.auto; ajustarReparto(it, null, 'nota'); });
+  partesDoc(nd).forEach(it => { if (it.origen === 'dist') { it.pedido = 'por pedir'; if (!it.dist) it.dist = itDist(it); } });
   nd.entrega = Object.assign({ modo: 'retira', estado: 'pendiente' }, entrega || {});
   nd.pagos = pagos || [];
   logDoc(nd, 'aceptada', { ref: O.numero });
@@ -2533,12 +2611,29 @@ function docEditor(v, D, isNew) {
   };
 
   /* ----- líneas ----- */
-  const prevQty = (pid, inv) => { if (!saved || !saved.afectaStock || saved.estado === 'anulada' || !esVenta(saved)) return 0; return (saved.items || []).filter(i => i.productoId === pid && i.origen === inv).reduce((a, i) => a + num(i.cant), 0); };
+  const prevQty = (pid, inv) => { if (!saved || !saved.afectaStock || saved.estado === 'anulada' || !esVenta(saved)) return 0; return partesDoc(saved).filter(i => i.productoId === pid && i.origen === inv).reduce((a, i) => a + num(i.cant), 0); };
+  /* reparto de la línea: de dónde sale cada parte (tu inventario, el de tu papá, un distribuidor) */
+  const rpOpts = (p) => { const cur = p.origen === 'dist' ? 'dist|' + (p.dist || '') : p.origen; const o = [['manuel', origenNombre('manuel')], ['papa', origenNombre('papa')]].concat(Dists().map(d => ['dist|' + d.id, d.nombre])); if (cur === 'dist|' || !Dists().length) o.push(['dist|', 'Distribuidor (sin asignar)']); return o.map(([v2, l]) => `<option value="${esc(v2)}" ${cur === v2 ? 'selected' : ''}>${esc(l)}</option>`).join(''); };
+  const repartoHtml = (it) => {
+    const q = num(it.cant), suma = it.reparto.reduce((a, p) => a + num(p.cant), 0);
+    const filas = partesDe(it).map((p, k) => {
+      let disp = '';
+      if (esInv(p.origen) && it.productoId) { const n = dispInv(it.productoId, p.origen, D.id); disp = `<span class="rp-d ${num(p.cant) > n ? 'warn' : ''}">hay ${fmtQty(n)}</span>`; }
+      return `<div class="rp-r" data-rp="${k}"><select class="inp rp-o" data-rk="origen" aria-label="De dónde sale">${rpOpts(p)}</select>
+        <input class="inp num rp-q" inputmode="decimal" data-rk="cant" value="${esc(fmtQty(num(p.cant)))}" aria-label="Cantidad de esta parte">${disp}
+        <span class="rp-c">costo <input class="inp num" inputmode="decimal" data-rk="costo" value="${p.costo === '' || p.costo == null ? '' : esc(round2(num(p.costo)))}" placeholder="—" aria-label="Costo unitario de esta parte"></span>
+        ${venta && p.origen === 'dist' ? `<select class="inp rp-p" data-rk="pedido" aria-label="Pedido">${Object.entries(PEDIDO).map(([k2, [l]]) => `<option value="${k2}" ${(p.pedido || 'por pedir') === k2 ? 'selected' : ''}>${l}</option>`).join('')}</select>` : ''}
+        <button type="button" class="btn ghost sm" data-rp-del title="Quitar esta parte">✕</button></div>`;
+    }).join('');
+    return `<div class="rp"><div class="rp-t">Repartido${it.repartoManual ? ' (a mano)' : ' (automático)'}: <b>${esc(repartoTxt(it))}</b></div>${filas}
+      <div class="rp-f"><button type="button" class="btn sm" data-rp-add>＋ Parte</button>${it.repartoManual ? '<button type="button" class="btn sm" data-rp-auto title="Primero tu inventario, luego el de tu papá y lo que falte, del distribuidor">↺ Repartir automático</button>' : ''}${Math.abs(suma - q) > 1e-9 ? `<span class="warn">El reparto suma ${fmtQty(suma)} de ${fmtQty(q)}</span>` : ''}</div></div>`;
+  };
   const lineMeta = (it) => {
     const parts = [];
     if (venta || oferta) {
+      if (tieneReparto(it)) parts.push(repartoHtml(it));
       if ((it.origen === 'manuel' || it.origen === 'papa')) {
-        if (it.productoId) { const s = Calc.st(it.productoId); const disp = s[it.origen].cant + prevQty(it.productoId, it.origen); const otro = it.origen === 'manuel' ? 'papa' : 'manuel'; parts.push(`<span class="${num(it.cant) > disp ? 'warn' : ''}">Disponible ${esc(origenNombre(it.origen))}: ${fmtQty(disp)}</span>`); if (s[otro].cant > 0) parts.push(`<span>${esc(origenNombre(otro))}: ${fmtQty(s[otro].cant)}</span>`); }
+        if (it.productoId) { const s = Calc.st(it.productoId); const disp = s[it.origen].cant + prevQty(it.productoId, it.origen); const otro = it.origen === 'manuel' ? 'papa' : 'manuel'; parts.push(`<span class="${num(it.cant) > disp ? 'warn' : ''}">Disponible ${esc(origenNombre(it.origen))}: ${fmtQty(disp)}</span>`); if (s[otro].cant > 0) parts.push(`<span>${esc(origenNombre(otro))}: ${fmtQty(s[otro].cant)}</span>`); if (num(it.cant) > disp) parts.push('<button type="button" class="btn sm" data-rp-on title="Lo que falte sale del otro inventario o del distribuidor">Repartir lo que falta</button>'); }
         else parts.push('<span class="warn">No está en el inventario: no descuenta existencia</span>');
       }
       const c = it.costo === '' || it.costo == null ? null : num(it.costo), p = num(it.precio);
@@ -2561,7 +2656,7 @@ function docEditor(v, D, isNew) {
         <div class="c-orig">${venta || oferta ? `<select class="inp orig" data-lk="origen" aria-label="Origen">${origenOpts(it)}</select>` : ''}</div>
         <label><span class="lbl-m">Cantidad</span><input class="inp num" inputmode="decimal" data-lk="cant" value="${esc(fmtQty(num(it.cant)))}"></label>
         <label><span class="lbl-m">${compra ? 'Costo unit.' : 'Precio unit.'}</span><input class="inp num" inputmode="decimal" data-lk="precio" value="${esc(it.precio === '' ? '' : round2(num(it.precio)))}"></label>
-        <label>${showCost ? `<span class="lbl-m">Costo unit.</span><input class="inp num" inputmode="decimal" data-lk="costo" value="${it.costo === '' || it.costo == null ? '' : esc(round2(num(it.costo)))}" placeholder="—" title="Tu costo (no sale en el PDF)">` : ''}</label>
+        <label>${showCost ? `<span class="lbl-m">Costo unit.</span><input class="inp num" inputmode="decimal" data-lk="costo" value="${it.costo === '' || it.costo == null ? '' : esc(round2(num(it.costo)))}" placeholder="—" ${tieneReparto(it) ? 'readonly title="Costo promedio del reparto: cámbialo en cada parte"' : 'title="Tu costo (no sale en el PDF)"'}>` : ''}</label>
         <div class="tot" data-ltot>${fmtUSD(num(it.cant) * num(it.precio))}</div>
         <button class="del" data-del title="Quitar línea" aria-label="Quitar línea">✕</button>
         <div class="c-desc"><textarea class="inp" data-lk="desc" rows="3">${esc(it.desc || '')}</textarea></div>
@@ -2572,7 +2667,9 @@ function docEditor(v, D, isNew) {
   $('#lines', v).addEventListener('input', (e) => {
     const row = e.target.closest('[data-li]'); const k = e.target.dataset.lk; if (!row || !k || e.target.tagName === 'SELECT') return;
     const it = D.items[+row.dataset.li];
+    if (k === 'costo' && tieneReparto(it)) return;
     it[k] = k === 'cant' || k === 'precio' ? num(e.target.value) : k === 'costo' ? (e.target.value.trim() === '' ? '' : num(e.target.value)) : e.target.value;
+    if (k === 'cant' && (venta || oferta) && ajustarReparto(it, D.id, D.tipo)) { const sel = $('select[data-lk="origen"]', row); if (sel) sel.innerHTML = origenOpts(it); row.className = 'ln o-' + (it.origen || 'libre'); const ci = $('input[data-lk="costo"]', row); if (ci) { ci.value = it.costo === '' || it.costo == null ? '' : round2(num(it.costo)); ci.readOnly = tieneReparto(it); } }
     $('[data-ltot]', row).textContent = fmtUSD(num(it.cant) * num(it.precio));
     if (k !== 'desc' && k !== 'codigo') $('[data-meta]', row).innerHTML = lineMeta(it);
     setDirty(); paintTotals();
@@ -2581,6 +2678,13 @@ function docEditor(v, D, isNew) {
     const row = e.target.closest('[data-li]'); const k = e.target.dataset.lk; if (!row || !k) return;
     const it = D.items[+row.dataset.li];
     if (k === 'origen') {
+      if (e.target.value === 'mixto') {
+        if (!it.productoId) { const p = findProductoByCodigo(it.codigo); if (p) it.productoId = p.id; }
+        delete it.sinReparto; delete it.repartoManual;
+        if (it.origen !== 'mixto') { if (!esInv(it.origen)) it.origen = 'manuel'; ajustarReparto(it, D.id, D.tipo); if (!tieneReparto(it)) UI.toast('Alcanza con un solo inventario: no hace falta repartir', 2600); }
+        setDirty(); paintLines(); return;
+      }
+      it.sinReparto = true; if (tieneReparto(it)) { delete it.reparto; delete it.repartoManual; }
       const [ov, did] = e.target.value.split('|'); it.origen = ov; if (ov === 'dist') it.dist = did || '';
       if (it.origen === 'manuel' || it.origen === 'papa') {
         if (!it.productoId) { const p = findProductoByCodigo(it.codigo); if (p) it.productoId = p.id; }
@@ -2601,6 +2705,50 @@ function docEditor(v, D, isNew) {
     else if (e.target.closest('[data-up]')) { [D.items[i - 1], D.items[i]] = [D.items[i], D.items[i - 1]]; setDirty(); paintLines(); }
     else if (e.target.closest('[data-down]')) { [D.items[i + 1], D.items[i]] = [D.items[i], D.items[i + 1]]; setDirty(); paintLines(); }
   });
+  /* ----- reparto de una línea ----- */
+  const rpRefresh = (row, it) => { $('[data-meta]', row).innerHTML = lineMeta(it); const ci = $('input[data-lk="costo"]', row); if (ci) ci.value = it.costo === '' || it.costo == null ? '' : round2(num(it.costo)); setDirty(); paintTotals(); };
+  $('#lines', v).addEventListener('input', (e) => {
+    const r = e.target.closest('[data-rp]'), rk = e.target.dataset.rk; if (!r || (rk !== 'cant' && rk !== 'costo')) return;
+    const row = e.target.closest('[data-li]'); const it = D.items[+row.dataset.li]; const p = it.reparto[+r.dataset.rp]; if (!p) return;
+    p[rk] = rk === 'cant' ? num(e.target.value) : (e.target.value.trim() === '' ? '' : num(e.target.value));
+    it.repartoManual = true; it.costo = costoProm(it.reparto);
+    const ci = $('input[data-lk="costo"]', row); if (ci) ci.value = it.costo === '' ? '' : round2(num(it.costo));
+    setDirty(); paintTotals();
+  });
+  $('#lines', v).addEventListener('change', (e) => {
+    const r = e.target.closest('[data-rp]'), rk = e.target.dataset.rk; if (!r || !rk) return;
+    const row = e.target.closest('[data-li]'); const it = D.items[+row.dataset.li]; const k = +r.dataset.rp; const p = it.reparto[k]; if (!p) return;
+    if (rk === 'pedido') { p.pedido = e.target.value; setDirty(); return; }
+    if (rk === 'origen') {
+      const [ov, did] = e.target.value.split('|');
+      const np = ov === 'dist' ? parteDist(it, num(p.cant), D.tipo, did || '') : parteInv(it, ov, num(p.cant));
+      if (ov === 'dist' && p.origen === 'dist' && p.pedido) np.pedido = p.pedido;
+      it.reparto[k] = np;
+    }
+    it.repartoManual = true; it.costo = costoProm(it.reparto);
+    rpRefresh(row, it);
+  });
+  $('#lines', v).addEventListener('click', (e) => {
+    const row = e.target.closest('[data-li]'); if (!row) return; const it = D.items[+row.dataset.li]; if (!it) return;
+    if (e.target.closest('[data-rp-on], [data-rp-auto]')) {
+      delete it.sinReparto; delete it.repartoManual;
+      if (!it.productoId) { const p = findProductoByCodigo(it.codigo); if (p) it.productoId = p.id; }
+      ajustarReparto(it, D.id, D.tipo); setDirty(); paintLines(); return;
+    }
+    if (e.target.closest('[data-rp-add]')) {
+      const suma = it.reparto.reduce((a, p) => a + num(p.cant), 0), falta = Math.max(0, num(it.cant) - suma);
+      const usados = it.reparto.map(p => p.origen);
+      const libre = ['manuel', 'papa'].find(o => !usados.includes(o) && it.productoId && dispInv(it.productoId, o, D.id) > 0);
+      it.reparto.push(libre ? parteInv(it, libre, falta) : parteDist(it, falta, D.tipo));
+      it.repartoManual = true; it.costo = costoProm(it.reparto); rpRefresh(row, it); return;
+    }
+    const del = e.target.closest('[data-rp-del]');
+    if (del) {
+      it.reparto.splice(+del.closest('[data-rp]').dataset.rp, 1);
+      if (it.reparto.length === 1) { const p = it.reparto[0]; p.cant = num(it.cant); setReparto(it, [p]); delete it.repartoManual; it.sinReparto = true; setDirty(); paintLines(); return; }
+      it.repartoManual = true; it.costo = costoProm(it.reparto); rpRefresh(row, it);
+    }
+  });
   $('[data-addline]', v).onclick = () => { D.items.push({ id: uid('i'), productoId: null, codigo: '', desc: 'Descripción del producto o servicio', cant: 1, precio: 0, costo: '', origen: compra ? null : 'libre' }); setDirty(); paintLines(); const ts = $$('#lines textarea', v); const t = ts[ts.length - 1]; t.focus(); t.select(); };
   productFinder($('#finder', v), {
     tipo: D.tipo,
@@ -2609,6 +2757,7 @@ function docEditor(v, D, isNew) {
       if (x.k === 'p') it = lineFromProducto(x.p, D.tipo, compra || ajuste ? D.inventario : null);
       else { const own = findProductoByCodigo(x.c.m); it = lineFromCatalogo(x.c, D.tipo); if (compra && own) { it.productoId = own.id; delete it.nuevoProd; } }
       if (compra) it.origen = null;
+      if (venta || oferta) ajustarReparto(it, D.id, D.tipo);
       const cli = D.clienteId && Store.get('clientes', D.clienteId);
       if (cli && num(cli.descuento) && !compra) { /* el descuento del cliente se aplica al documento */ if (!num(D.descPct)) { D.descPct = num(cli.descuento); const di = $('[data-k="descPct"]', v); if (di) di.value = D.descPct; } }
       D.items.push(it); setDirty(); paintLines();
@@ -2686,6 +2835,11 @@ function docEditor(v, D, isNew) {
   /* ----- guardar ----- */
   const save = () => {
     D.condiciones = (D.condiciones || []).filter(s => String(s).trim() !== '' || false);
+    if (venta || oferta) {
+      D.items.forEach(it => { if (!tieneReparto(it)) return; const ps = it.reparto.filter(p => num(p.cant) > 0); if (ps.length !== it.reparto.length) { if (ps.length === 1) { setReparto(it, ps); it.sinReparto = true; delete it.repartoManual; } else if (ps.length) { it.reparto = ps; it.costo = costoProm(ps); } } });
+      const mal = D.items.findIndex(it => tieneReparto(it) && Math.abs(it.reparto.reduce((a, p) => a + num(p.cant), 0) - num(it.cant)) > 1e-9);
+      if (mal >= 0) { const it = D.items[mal]; UI.toast(`Línea ${mal + 1}: el reparto suma ${fmtQty(it.reparto.reduce((a, p) => a + num(p.cant), 0))} y la cantidad es ${fmtQty(num(it.cant))}. Corrígelo o toca «Repartir automático».`, 4500); paintLines(); return false; }
+    }
     if (!D.numero) D.numero = nextNumero(D.tipo, D.fecha);
     const dupNum = Store.all('docs').find(x => x.id !== D.id && x.numero === D.numero);
     if (dupNum) { UI.toast(`Ya existe otro documento con el número ${D.numero}. Cámbialo.`, 3200); return false; }
@@ -2706,7 +2860,7 @@ function docEditor(v, D, isNew) {
       });
       D.items.forEach(it => { it.costo = num(it.precio); it.origen = D.inventario; });
     }
-    if (venta || oferta) D.items.forEach(it => { if (it.origen === 'dist') { if (venta && !it.pedido) it.pedido = 'por pedir'; if (!it.dist) it.dist = itDist(it); } });
+    if (venta || oferta) partesDoc(D).forEach(it => { if (it.origen === 'dist') { if (venta && !it.pedido) it.pedido = 'por pedir'; if (!it.dist) it.dist = itDist(it); } });
     if (!D.importado && !D.historial && D.tipo !== 'oferta') D.afectaStock = true;
     if (venta && !D.entrega) { D.entrega = clone(entregaDe(D)); if (isNew) logDoc(D, 'creada'); }
     D.items.forEach(it => delete it.auto); delete D.origenAuto;
@@ -2721,7 +2875,8 @@ function docEditor(v, D, isNew) {
     const cfg2 = CFG();
     const nd = newDoc(tipo, { clienteId: D.clienteId, cliente: clone(D.cliente || {}), items: clone(D.items).map(it => Object.assign(it, { id: uid('i') })), descPct: D.descPct, ivaPct: D.ivaPct, tasa: D.tasa, tasaFuente: D.tasaFuente, vendedor: D.vendedor, origenDoc: D.id, notas: D.notas });
     if (tipo === 'nota') nd.condiciones = (cfg2.condiciones.nota || []).slice();
-    nd.items.forEach(it => { if (it.origen === 'dist') it.pedido = 'por pedir'; });
+    nd.items.forEach(it => ajustarReparto(it, null, tipo));
+    partesDoc(nd).forEach(it => { if (it.origen === 'dist') it.pedido = 'por pedir'; });
     Store.put('docs', nd);
     const orig = Store.get('docs', D.id); if (orig) { if (orig.tipo === 'oferta') orig.estado = 'aceptada'; orig.convertidoA = nd.id; Store.put('docs', orig); }
     dirty = false; App.guard = null; Route.nav('#/doc/' + nd.id);
@@ -2752,6 +2907,7 @@ function docEditor(v, D, isNew) {
     else if (act === 'toNotaV') { D.tipo = 'nota'; D.numero = nextNumero('nota', D.fecha); D.titulo = cfg.titulos.nota; D.condiciones = (cfg.condiciones.nota || []).slice(); D.firmas = true; setDirty(); save(); App.render(); }
     else if (act === 'dup') {
       const nd = newDoc(D.tipo, { clienteId: D.clienteId, cliente: clone(D.cliente || {}), proveedor: clone(D.proveedor || {}), proveedorId: D.proveedorId, inventario: D.inventario, items: clone(D.items).map(it => Object.assign(it, { id: uid('i'), pedido: it.origen === 'dist' ? 'por pedir' : undefined })), descPct: D.descPct, ivaPct: D.ivaPct, condiciones: clone(D.condiciones || []), firmas: D.firmas, titulo: D.titulo });
+      partesDoc(nd).forEach(it => { if (it.origen === 'dist' && it.padre) it.pedido = 'por pedir'; });
       if (dirty && !(await UI.confirm('Hay cambios sin guardar. ¿Duplicar de todas formas (sin guardarlos)?'))) return;
       dirty = false; App.guard = null; App.pendingDoc = nd; Route.nav('#/nuevo/' + D.tipo); UI.toast('Copia lista: revisa y guarda');
     }
@@ -2773,7 +2929,7 @@ function docEditor(v, D, isNew) {
 const desgloseDoc = (d) => {
   const T = Calc.totals(d); const f = T.sub ? T.base / T.sub : 1;
   const gs = new Map();
-  (d.items || []).forEach(it => {
+  partesDoc(d).forEach(it => {
     const o = it.origen || 'libre'; const did = o === 'dist' ? (itDist(it) || '') : null; const key = o === 'dist' ? 'dist|' + did : o;
     let g = gs.get(key);
     if (!g) { const dp = did ? Store.get('proveedores', did) : null; g = { key, o, dist: dp, nombre: o === 'dist' ? (dp ? dp.nombre : 'Distribuidor sin asignar') : origenNombre(o), lineas: [], venta: 0, costo: 0, gan: 0, sinCosto: false }; gs.set(key, g); }
@@ -2832,14 +2988,14 @@ function pickCliente(onPick) {
 const ventasActivas = () => Store.all('docs').filter(d => esVenta(d) && d.estado !== 'anulada' && !d.historial);
 const pedidosPendientes = () => {
   const out = [];
-  ventasActivas().forEach(d => (d.items || []).forEach(it => { if (it.origen === 'dist' && (it.pedido || 'por pedir') !== 'entregado') out.push({ d, it, dist: itDist(it) }); }));
+  ventasActivas().forEach(d => partesDoc(d).forEach(it => { if (it.origen === 'dist' && (it.pedido || 'por pedir') !== 'entregado') out.push({ d, it, dist: itDist(it) }); }));
   return out.sort((a, b) => (a.d.fecha || '').localeCompare(b.d.fecha || ''));
 };
 const COLOR_O = { manuel: '#15803D', dist: '#1D4ED8', papa: '#C2410C', libre: '#64748B' };
 // Ventas de un documento por origen, con cada distribuidor por separado (claves 'manuel', 'papa', 'libre', 'dist|<id>').
 const porOrigenDet = (d) => {
   const T = Calc.totals(d), f = T.sub ? T.base / T.sub : 1, out = {};
-  (d.items || []).forEach(it => {
+  partesDoc(d).forEach(it => {
     const o = it.origen || 'libre'; const k = o === 'dist' ? 'dist|' + (itDist(it) || '') : o;
     const g = out[k] || (out[k] = { venta: 0, costo: 0, gan: 0, sinCosto: false });
     const imp = num(it.cant) * num(it.precio) * f; g.venta += imp;
@@ -4059,10 +4215,10 @@ Views.pedidos = (v, sel) => {
     $$('[data-t]', v).forEach(b => b.classList.toggle('on', b.dataset.t === F.tab));
     const box = $('#body', v);
     if (F.tab === 'ventas') {
-      const lin = []; ventasActivas().forEach(d => (d.items || []).forEach(it => { if (it.origen === 'dist') { const id = itDist(it); if (enSel(id)) lin.push({ d, it, dist: id }); } }));
+      const lin = []; ventasActivas().forEach(d => partesDoc(d).forEach(it => { if (it.origen === 'dist') { const id = itDist(it); if (enSel(id)) lin.push({ d, it, dist: id }); } }));
       lin.sort((a, b) => (b.d.fecha || '').localeCompare(a.d.fecha || ''));
       /* líneas que no se marcaron como de distribuidor, pero su producto es del catálogo de uno (y no salió de tu inventario) */
-      const pos = []; ventasActivas().forEach(d => (d.items || []).forEach(it => { if (it.origen === 'dist' || ((it.origen === 'manuel' || it.origen === 'papa') && it.productoId)) return; const dd = distDeLinea(it); if (dd && enSel(dd.id)) pos.push({ d, it, dd }); }));
+      const pos = []; ventasActivas().forEach(d => partesDoc(d).forEach(it => { if (it.origen === 'dist' || it.origen === 'mixto' || ((it.origen === 'manuel' || it.origen === 'papa') && it.productoId)) return; const dd = distDeLinea(it); if (dd && enSel(dd.id)) pos.push({ d, it, dd }); }));
       pos.sort((a, b) => (b.d.fecha || '').localeCompare(a.d.fecha || ''));
       const tv = lin.reduce((a, x) => a + num(x.it.cant) * num(x.it.precio), 0), tc = lin.reduce((a, x) => a + (x.it.costo === '' || x.it.costo == null ? 0 : num(x.it.cant) * num(x.it.costo)), 0);
       const PL = { 'por pedir': 'Por pedir', pedido: 'Pedido', entregado: 'Entregado' };
@@ -4091,8 +4247,8 @@ Views.pedidos = (v, sel) => {
             <td style="white-space:nowrap">${k === 'por pedir' ? `<button class="btn sm" data-set="pedido" data-d="${esc(d.id)}" data-i="${esc(it.id)}">Pedido</button>` : ''} <button class="btn sm" data-set="entregado" data-d="${esc(d.id)}" data-i="${esc(it.id)}">Entregado</button></td></tr>`).join('')}
           </tbody></table></div></section>`; }).join('');
       }).join('') : `<div class="panel empty">No hay pedidos pendientes${cur ? ' a ' + esc(cur.nombre) : ' a los distribuidores'}.</div>`;
-      $$('[data-set]', box).forEach(b => b.onclick = () => { const d = Store.get('docs', b.dataset.d); const it = d && d.items.find(x => x.id === b.dataset.i); if (!it) return; it.pedido = b.dataset.set; Store.put('docs', d); App.render(); App.paintCounts(); });
-      $$('[data-dd]', box).forEach(s => s.onchange = () => { const d = Store.get('docs', s.dataset.dd); const it = d && d.items.find(x => x.id === s.dataset.i); if (!it) return; it.dist = s.value; const c = catalogoByCodigo(it.codigo); if (c) { const cl = costoLinea(c, Store.get('proveedores', it.dist) || null); if (cl.costo != null) Object.assign(it, cl); } Store.put('docs', d); App.render(); });
+      $$('[data-set]', box).forEach(b => b.onclick = () => { const d = Store.get('docs', b.dataset.d); const it = d && partesDoc(d).find(x => x.id === b.dataset.i); if (!it) return; it.pedido = b.dataset.set; Store.put('docs', d); App.render(); App.paintCounts(); });
+      $$('[data-dd]', box).forEach(s => s.onchange = () => { const d = Store.get('docs', s.dataset.dd); const it = d && partesDoc(d).find(x => x.id === s.dataset.i); if (!it) return; it.dist = s.value; const c = catalogoByCodigo(it.codigo); if (c) { const cl = costoLinea(c, Store.get('proveedores', it.dist) || null); if (cl.costo != null) Object.assign(it, cl); } Store.put('docs', d); App.render(); });
       $$('[data-copy]', box).forEach(cp => cp.onclick = () => { const id = cp.dataset.copy; const xs = mine.filter(x => x.dist === id && (x.it.pedido || 'por pedir') === 'por pedir'); const m = new Map(); xs.forEach(({ it }) => m.set(it.codigo, (m.get(it.codigo) || 0) + num(it.cant))); const txt = Array.from(m.entries()).map(([c, q]) => `${fmtQty(q)} x ${c}`).join('\n'); navigator.clipboard.writeText(txt).then(() => UI.toast('Lista copiada'), () => UI.modal({ title: 'Lista para ' + distNombre(id), foot: false, body: `<textarea class="inp" rows="10">${esc(txt)}</textarea>` })); });
     } else {
       const meta = Catalog.meta;
@@ -4157,7 +4313,7 @@ const esDe = (d, nombre, campo = 'vendedor') => nombre === '-' ? !d[campo] : nor
 /* ventas de un documento repartidas por origen (con el descuento del documento) */
 const lineasPorOrigen = (d, acc) => {
   const T = Calc.totals(d); const f = T.sub ? T.base / T.sub : 1;
-  (d.items || []).forEach(it => {
+  partesDoc(d).forEach(it => {
     const o = it.origen || 'libre'; const k = o === 'dist' ? 'dist|' + (itDist(it) || '') : o;
     const x = acc[k] || (acc[k] = { k, o, venta: 0, costo: 0, n: 0, sinCosto: false });
     const v = num(it.cant) * num(it.precio) * f; x.venta += v; x.n++;
@@ -4390,7 +4546,7 @@ function fichaDistribuidor(v, id) {
   const act = cs.filter(d => d.estado !== 'anulada');
   const tot = act.reduce((a, d) => a + Calc.totals(d).total, 0), saldo = act.reduce((a, d) => a + Math.max(0, Calc.totals(d).saldo), 0);
   const prods = new Map(); act.forEach(d => (d.items || []).forEach(it => { const k = it.codigo || plainFirst(it.desc); const x = prods.get(k) || { k, cant: 0, ult: '', costo: 0 }; x.cant += num(it.cant); if ((d.fecha || '') >= x.ult) { x.ult = d.fecha; x.costo = num(it.precio); } prods.set(k, x); }));
-  const vc = []; if (!isNew) ventasActivas().forEach(d => (d.items || []).forEach(it => { if (it.origen === 'dist' && itDist(it) === p.id) vc.push({ d, it }); }));
+  const vc = []; if (!isNew) ventasActivas().forEach(d => partesDoc(d).forEach(it => { if (it.origen === 'dist' && itDist(it) === p.id) vc.push({ d, it }); }));
   vc.sort((a, b) => (b.d.fecha || '').localeCompare(a.d.fecha || ''));
   const vcCosto = vc.reduce((a, x) => a + (x.it.costo === '' || x.it.costo == null ? 0 : num(x.it.cant) * num(x.it.costo)), 0);
   const vcVenta = vc.reduce((a, x) => a + num(x.it.cant) * num(x.it.precio), 0);
@@ -5188,9 +5344,18 @@ const Cot = (() => {
     items = items.map((x, i) => {
       // conservar lo que se definió en la administración (origen, costo, pedido) si es la misma línea
       const old = prevItems.find(o => o.codigo && o.codigo === x.codigo && !o._usado) || (prevItems[i] && (!prevItems[i].codigo || prevItems[i].codigo === x.codigo) ? prevItems[i] : null);
-      if (old) { old._usado = true; return { id: old.id, productoId: old.productoId || null, codigo: x.codigo || old.codigo, desc: x.desc, cant: x.cant, precio: x.precio, costo: old.costo, origen: old.origen, dist: old.dist, pedido: old.pedido, listPrice: old.listPrice, dtoDist: old.dtoDist, recargo: old.recargo }; }
+      if (old) {
+        old._usado = true;
+        const o = { id: old.id, productoId: old.productoId || null, codigo: x.codigo || old.codigo, desc: x.desc, cant: x.cant, precio: x.precio, costo: old.costo, origen: old.origen, dist: old.dist, pedido: old.pedido, listPrice: old.listPrice, dtoDist: old.dtoDist, recargo: old.recargo };
+        if (old.reparto) o.reparto = clone(old.reparto); if (old.repartoManual) o.repartoManual = true; if (old.sinReparto) o.sinReparto = true;
+        Object.keys(o).forEach(k => o[k] === undefined && delete o[k]);
+        ajustarReparto(o, docIdFor(r.id), tipo);
+        return o;
+      }
       const a = autoOrigen(x);
-      return Object.assign({ id: uid('i'), codigo: x.codigo, desc: x.desc, cant: x.cant, precio: x.precio }, a, tipo === 'nota' && a.origen === 'dist' ? { pedido: 'por pedir' } : {}, { auto: true });
+      const nu = Object.assign({ id: uid('i'), codigo: x.codigo, desc: x.desc, cant: x.cant, precio: x.precio }, a, tipo === 'nota' && a.origen === 'dist' ? { pedido: 'por pedir' } : {}, { auto: true });
+      ajustarReparto(nu, docIdFor(r.id), tipo);
+      return nu;
     });
     prevItems.forEach(o => delete o._usado);
     const ivaRaw = num(s.iva);
@@ -5889,6 +6054,10 @@ const Cot = (() => {
   const margenDe = (model, precio, preferInv, guardado, q) => {
     if (!model) return null;
     // lo guardado en el documento manda, salvo que Gestión lo haya puesto sola (auto): ahí se recalcula
+    if (guardado && guardado.origen === 'mixto' && tieneReparto(guardado) && guardado.costo !== '' && guardado.costo != null) {
+      const ps = partesDe(guardado);
+      return { costo: num(guardado.costo), dto: null, fuente: 'Repartido', regla: ps.map(t => `${fmtQty(num(t.cant))} ${parteNombre(t)}${t.costo !== '' && t.costo != null ? ' a ' + fmtUSD(num(t.costo)) : ''}`).join(' + '), inv: true, mix: ps };
+    }
     if (guardado && !guardado.auto && guardado.costo !== '' && guardado.costo != null) {
       const c = num(guardado.costo), rec = num(guardado.recargo) || 0, lista = num(guardado.listPrice) || null;
       const dto = guardado.origen === 'dist' && lista ? (guardado.dtoDist != null && guardado.dtoDist !== '' ? num(guardado.dtoDist) : (1 - c / (1 + rec / 100) / lista) * 100) : null;
