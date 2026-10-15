@@ -3851,7 +3851,7 @@ Views.inventario = (v, invArg) => {
   Calc.build(); const vend = new Map();
   Calc.movs.forEach((ms, pid) => { let q = 0, ult = ''; ms.forEach(x => { if (esVenta(x.doc) && x.doc.estado !== 'anulada') { q += -x.delta; if ((x.doc.fecha || '') > ult) ult = x.doc.fecha; } }); vend.set(pid, { q, ult, mov: ms.reduce((a, x) => (x.doc.fecha || '') > a ? x.doc.fecha : a, '') }); });
   const FILTROS = [['1', 'Con existencia'], ['0', 'Todos'], ['pocas', 'Pocas unidades'], ['sin', 'Agotados'], ['neg', 'Negativos'], ['sinprecio', 'Sin precio'], ['sincosto', 'Sin costo']];
-  v.innerHTML = `<div class="vh"><h1>Inventario</h1><div class="act"><button class="btn" data-cats>Ordenar categorías</button><button class="btn" data-desc>Mejorar descripciones</button><button class="btn" data-exp>${ico('pdf')} Exportar</button><button class="btn pri" data-np>${ico('plus')} Producto</button></div><div class="sub">Las existencias se calculan con las compras, ventas y ajustes. Toca un producto para ver su ficha o corregirlo.</div></div>
+  v.innerHTML = `<div class="vh"><h1>Inventario</h1><div class="act"><button class="btn" data-cats>Ordenar categorías</button><button class="btn" data-grupos title="Cambia el grupo de cada producto por su categoría de la tienda">Grupos → categorías</button><button class="btn" data-desc>Mejorar descripciones</button><button class="btn" data-exp>${ico('pdf')} Exportar</button><button class="btn pri" data-np>${ico('plus')} Producto</button></div><div class="sub">Las existencias se calculan con las compras, ventas y ajustes. Toca un producto para ver su ficha o corregirlo.</div></div>
     <div class="inv-kpis" id="inv-kpis"></div>
     <div class="panel inv-filtros">
       <div class="inv-buscar">
@@ -4050,6 +4050,7 @@ Views.inventario = (v, invArg) => {
   $('[data-np]', v).onclick = () => productoModal(null);
   $('[data-desc]', v).onclick = () => descripcionesModal();
   $('[data-cats]', v).onclick = () => categoriasModal();
+  $('[data-grupos]', v).onclick = () => gruposACategoriasModal();
   WebProd.cargar();
   { const kpisEl = $('#inv-kpis', v); invRepintar = () => { if (kpisEl.isConnected) paint(); }; }
   if (!InvFotos.listo()) { const kpisEl = $('#inv-kpis', v); InvFotos.cargar().then(() => { if (kpisEl.isConnected) paint(); }); }
@@ -5194,6 +5195,49 @@ function categoriasModal() {
   $('[data-q]', m.body).addEventListener('input', debounce(e => { F.q = e.target.value; paint(); }, 200));
   $('[data-all]', m.body).onclick = () => { const q = normTxt(F.q).trim(); filas.filter(x => (F.ver === 'todas' || x.grupo === F.ver) && (!q || normTxt(x.p.codigo + ' ' + x.p.nombre + ' ' + x.p.descripcion).includes(q)) && x.elegida.webCat).forEach(x => sel.add(x.p.id)); paint(); };
   $('[data-none]', m.body).onclick = () => { sel.clear(); paint(); };
+  paint();
+}
+
+/* Grupos del inventario → categorías de la tienda.
+   El "Grupo" de cada producto pasa a ser su categoría de la tienda (Contactores, Variadores de Frecuencia…).
+   Primero muestra qué cambia; los que no tienen categoría de la tienda se quedan igual
+   (se les pone en "Ordenar categorías" y luego se vuelve a correr esto). */
+function gruposACategoriasModal() {
+  const prods = Store.all('productos');
+  const filas = prods.map(p => {
+    const nuevo = CatAuto.grupoDe(p.webCat, p.webSubs, p);
+    const ruta = CatAuto.rutaP(p);
+    return { p, antes: String(p.categoria || '').trim(), nuevo, ruta };
+  });
+  const cambian = filas.filter(x => x.nuevo && x.nuevo !== x.antes);
+  const iguales = filas.filter(x => x.nuevo && x.nuevo === x.antes);
+  const sinCat = filas.filter(x => !x.nuevo);
+  // resumen: cada grupo viejo → a qué categorías se reparte
+  const mapa = new Map();
+  cambian.forEach(x => { const k = x.antes || '(sin grupo)'; if (!mapa.has(k)) mapa.set(k, new Map()); const m = mapa.get(k); m.set(x.nuevo, (m.get(x.nuevo) || 0) + 1); });
+  const resumen = Array.from(mapa.entries()).sort((a, b) => a[0].localeCompare(b[0], 'es')).map(([g, m]) => `<tr><td>${esc(g)}</td><td>${Array.from(m.entries()).sort((a, b) => b[1] - a[1]).map(([c, n]) => `<span class="pill">${esc(c)} · ${n}</span>`).join(' ')}</td></tr>`).join('');
+  const F = { ver: 'cambian', q: '' };
+  const m = UI.modal({ title: 'Grupos del inventario → categorías de la tienda', wide: true, body: `<p class="small" style="margin-top:0">El <b>grupo</b> de cada producto pasa a ser su <b>categoría de la tienda</b>. Así el filtro “Grupo”, el agrupado y lo exportado usan los mismos nombres que suinelectric.com. Revisa abajo y aplica.</p>
+      <div class="row" style="margin-bottom:10px"><div class="seg" data-ver>${[['cambian', `Cambian (${cambian.length})`], ['resumen', 'Resumen por grupo'], ['sin', `Sin categoría de la tienda (${sinCat.length})`], ['iguales', `Ya coinciden (${iguales.length})`]].map(([k, l]) => `<button type="button" data-v="${k}" class="${F.ver === k ? 'on' : ''}">${l}</button>`).join('')}</div>
+      <input class="inp" style="flex:1 1 180px" type="search" placeholder="Filtrar por código, nombre o grupo" data-q></div>
+      <div data-l style="max-height:56vh;overflow:auto"></div>`,
+    foot: [['Cancelar', '', c => c()], [`Cambiar ${cambian.length} grupos`, 'pri', (close) => {
+      if (!cambian.length) { close(); UI.toast('No hay grupos por cambiar'); return; }
+      let n = 0;
+      cambian.forEach(x => { const p = Store.get('productos', x.p.id); if (!p) return; p.categoria = x.nuevo; Store.put('productos', p, { quiet: true }); n++; });
+      Bus.emit('data', 'productos'); close(); App.render();
+      UI.toast(`Grupo cambiado en ${n} productos${sinCat.length ? ` · ${sinCat.length} sin categoría de la tienda quedaron igual` : ''}`, 5000);
+    }]] });
+  const paint = () => {
+    const q = normTxt(F.q).trim();
+    const pasa = (x) => !q || normTxt([x.p.codigo, x.p.nombre, x.p.descripcion, x.antes, x.nuevo].join(' ')).includes(q);
+    const box = $('[data-l]', m.body);
+    if (F.ver === 'resumen') { box.innerHTML = resumen ? `<table class="tbl no-apilar"><thead><tr><th>Grupo de ahora</th><th>Pasa a (productos)</th></tr></thead><tbody>${resumen}</tbody></table>` : '<div class="empty">Nada cambia.</div>'; return; }
+    const lista = (F.ver === 'cambian' ? cambian : F.ver === 'sin' ? sinCat : iguales).filter(pasa).slice(0, 800);
+    box.innerHTML = lista.length ? `<table class="tbl no-apilar"><thead><tr><th>Código</th><th>Producto</th><th>Grupo de ahora</th><th>${F.ver === 'sin' ? 'Categoría de la tienda' : 'Grupo nuevo'}</th></tr></thead><tbody>${lista.map(x => `<tr><td><span class="code">${esc(x.p.codigo)}</span></td><td class="small clip" style="max-width:280px">${esc(x.p.nombre || x.p.descripcion || '')}</td><td class="small">${x.antes ? esc(x.antes) : '<span class="muted">—</span>'}</td><td class="small">${x.nuevo ? `<b>${esc(x.nuevo)}</b>${x.ruta.length > 2 ? `<div class="muted">${esc(x.ruta[0])} › … › ${esc(x.ruta.slice(2).join(' › '))}</div>` : `<div class="muted">${esc(x.ruta[0] || '')}</div>`}` : '<span style="color:var(--red)">sin categoría — ponla en “Ordenar categorías”</span>'}</td></tr>`).join('')}</tbody></table>` : '<div class="empty">Nada en esta lista.</div>';
+  };
+  $('[data-ver]', m.body).addEventListener('click', e => { const b = e.target.closest('[data-v]'); if (!b) return; F.ver = b.dataset.v; $$('[data-ver] [data-v]', m.body).forEach(x => x.classList.toggle('on', x === b)); paint(); });
+  $('[data-q]', m.body).addEventListener('input', debounce(e => { F.q = e.target.value; paint(); }, 200));
   paint();
 }
 
@@ -6912,8 +6956,9 @@ const InvWeb = {
     Calc.build();
     return Store.all('productos').filter(p => p.activo !== false && String(p.codigo || '').trim() && WebProd.publicado(p) && (Object.keys(p.inv || {}).length || (Calc.movs.get(p.id) || []).length)).map(p => {
       const s = Calc.st(p.id);
-      const cant = Math.max(0, num(s.manuel.cant)) + Math.max(0, num(s.papa.cant));
-      return { modelo: String(p.codigo).trim(), marca: p.marca || '', nombre: p.nombre && p.nombre !== p.codigo ? p.nombre : '', descripcion: p.descripcion || '', categoria: [p.webCat].concat(p.webCat ? p.webSubs || [] : []).filter(Boolean).join(' > ') || p.categoria || '', precio: num(p.precio) > 0 ? num(p.precio) : null, cantidad: Math.floor(cant) };
+      const cm = Math.max(0, num(s.manuel.cant)), cp = Math.max(0, num(s.papa.cant)), cant = cm + cp;
+      // manuel y papa: lo de cada uno, solo lo ven los administradores en la ficha de la tienda (22_existencias_admin.sql)
+      return { modelo: String(p.codigo).trim(), marca: p.marca || '', nombre: p.nombre && p.nombre !== p.codigo ? p.nombre : '', descripcion: p.descripcion || '', categoria: [p.webCat].concat(p.webCat ? p.webSubs || [] : []).filter(Boolean).join(' > ') || p.categoria || '', precio: num(p.precio) > 0 ? num(p.precio) : null, cantidad: Math.floor(cant), manuel: Math.floor(cm), papa: Math.floor(cp) };
     }).filter(x => x.cantidad >= 0).sort((a, b) => a.modelo.localeCompare(b.modelo));
   },
   async publicar() {

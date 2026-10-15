@@ -314,6 +314,15 @@
   .precio-original{ font-size:13px; color:var(--texto-3); text-decoration:line-through; }
   .precio-linea{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
   .adm-precios{ margin-top:6px; padding:6px 8px; border:1px dashed #b8860b; border-radius:6px; background:#fff8e1; font-size:12.5px; line-height:1.45; color:#4a3b00; text-align:left; }
+  .adm-ex{ margin-top:8px; padding:8px 10px; border:1px dashed #b8860b; border-radius:6px; background:#fff8e1; font-size:13px; line-height:1.5; color:#4a3b00; text-align:left; }
+  .adm-ex-tit{ font-size:11px; font-weight:700; text-transform:uppercase; letter-spacing:.5px; opacity:.75; margin-bottom:4px; }
+  .adm-ex-fila{ display:flex; justify-content:space-between; gap:10px; border-bottom:1px dotted rgba(184,134,11,.35); padding:2px 0; }
+  .adm-ex-fila:last-of-type{ border-bottom:0; }
+  .adm-ex b.ok, .adm-ex span.ok{ color:#1b6b2f; } .adm-ex b.cero, .adm-ex span.cero{ color:#a33; font-weight:600; }
+  .adm-ex-link{ display:inline-flex; align-items:center; gap:4px; margin-top:6px; font-weight:700; font-size:12.5px; color:#7a5200; text-decoration:underline; }
+  .adm-ex-link svg{ width:13px; height:13px; }
+  .adm-ex.chico{ margin:6px 0 4px; padding:5px 7px; font-size:11.5px; line-height:1.4; }
+  .adm-ex.chico .adm-ex-link{ margin-top:2px; font-size:11.5px; }
   .adm-precios .usa{ font-weight:600; } .adm-precios span{ opacity:.75; } .adm-precios .adm-nota{ font-size:11px; opacity:.7; margin-top:2px; }
   .dto-badge{ display:inline-block; font-size:12.5px; font-weight:700; line-height:1; padding:4px 7px; border-radius:4px;
     background:var(--ok-suave); color:var(--ok); white-space:nowrap; font-variant-numeric:tabular-nums; }
@@ -1184,6 +1193,52 @@
   #chat-burbuja[hidden], #chat-datos[hidden]{ display:none; }
   body.chat-abierto{ overflow:hidden; }
   @media (min-width: 641px){ body.chat-abierto{ overflow:auto; } }
+  /* ===== Guía de subcategorías: línea del tiempo a la derecha (oct. 2026) =====
+     Pantalla ancha: riel a la derecha. Más angosta: tira deslizable arriba de los productos. */
+  #guia-sub{ display:none; }
+  #guia-tira{ display:none; }
+  @media (min-width: 1180px){
+    #guia-sub:not([hidden]){ display:block; flex:none; width:236px; position:sticky; top:calc(var(--header-h) + 16px);
+      max-height:calc(100vh - var(--header-h) - 32px); overflow-y:auto; background:var(--superficie); border:1px solid var(--linea);
+      border-radius:var(--radio, 8px); padding:14px 12px 10px; margin-bottom:24px; }
+  }
+  @media (max-width: 1179px){
+    #guia-tira:not([hidden]){ display:block; position:sticky; top:var(--header-h); z-index:20; background:var(--fondo);
+      margin:0 -4px 10px; padding:6px 4px; }
+  }
+  @media (max-width: 640px){ #guia-tira:not([hidden]){ top:0; } }
+  .guia-tit{ margin:0; font-family:var(--display); font-size:13px; font-weight:600; text-transform:uppercase; letter-spacing:.7px; color:var(--texto-3); }
+  .guia-cat{ margin:0 0 12px; font-family:var(--display); font-size:19px; font-weight:700; line-height:1.15; color:var(--tinta); text-wrap:balance; }
+  .guia-linea-wrap{ position:relative; }
+  .guia-linea{ position:relative; list-style:none; margin:0; padding:0 0 0 22px; }
+  .guia-linea::before{ content:""; position:absolute; left:6px; top:8px; bottom:8px; width:2px; background:var(--linea); border-radius:2px; }
+  .guia-progreso{ position:absolute; z-index:1; left:6px; top:8px; width:2px; height:0; background:var(--azul); border-radius:2px; transition:height .25s ease; pointer-events:none; }
+  .guia-parada{ position:relative; margin-bottom:2px; }
+  .guia-parada::before{ content:""; position:absolute; z-index:2; left:-20px; top:9px; width:10px; height:10px; box-sizing:border-box; border-radius:50%;
+    background:var(--superficie); border:2px solid var(--linea); transition:background .2s, border-color .2s; }
+  .guia-parada.vista::before{ border-color:var(--azul); background:var(--azul); }
+  .guia-parada.on::before{ border-color:var(--amarillo); background:var(--amarillo); box-shadow:0 0 0 3px var(--azul-suave); width:12px; height:12px; left:-21px; top:8px; }
+  .guia-btn{ display:flex; width:100%; justify-content:space-between; align-items:baseline; gap:8px; padding:5px 6px; border:0; border-radius:5px;
+    background:none; font:inherit; text-align:left; cursor:pointer; color:var(--texto-2); }
+  .guia-btn:hover{ background:var(--linea-suave); }
+  .guia-btn:focus-visible{ outline:2px solid var(--azul); outline-offset:1px; }
+  .guia-btn .gn{ font-size:13px; line-height:1.3; min-width:0; overflow-wrap:anywhere; }
+  .guia-btn .gc{ flex:none; font-size:11.5px; color:var(--texto-3); font-variant-numeric:tabular-nums; }
+  .guia-parada.on > .guia-btn .gn{ color:var(--tinta); font-weight:700; }
+  .guia-hijos{ list-style:none; margin:0 0 4px 8px; padding:0; border-left:1px dashed var(--linea); }
+  .guia-hijos .guia-btn{ padding:2px 6px 2px 10px; }
+  .guia-hijos .guia-btn .gn{ font-size:12px; color:var(--texto-3); }
+  .guia-hijos .guia-btn.on .gn{ color:var(--azul-texto); font-weight:600; }
+  .guia-pie{ border-top:1px solid var(--linea-suave); margin-top:8px; padding-top:8px; font-size:11.5px; color:var(--texto-3); }
+  .guia-tira-in{ display:flex; gap:6px; overflow-x:auto; scrollbar-width:none; padding-bottom:2px; }
+  .guia-tira-in::-webkit-scrollbar{ display:none; }
+  .guia-chip{ flex:none; display:inline-flex; gap:6px; align-items:baseline; padding:6px 12px; border:1px solid var(--linea); border-radius:999px;
+    background:var(--superficie); color:var(--texto-2); font:inherit; font-size:13px; cursor:pointer; white-space:nowrap; }
+  .guia-chip small{ color:var(--texto-3); font-size:11.5px; font-variant-numeric:tabular-nums; }
+  .guia-chip.vista{ border-color:var(--azul); }
+  .guia-chip.on{ border-color:var(--azul); background:var(--azul-suave); color:var(--azul-texto); font-weight:600; }
+  .guia-chip:focus-visible{ outline:2px solid var(--azul); outline-offset:1px; }
+  @media (prefers-reduced-motion: reduce){ .guia-progreso, .guia-parada::before{ transition:none; } }
   /* ===== Aprovechar el espacio y no cortar textos (oct. 2026) ===== */
   .layout, .footer-in{ max-width:1640px; }
   .carrusel-modelo{ white-space:normal; overflow-wrap:anywhere; text-overflow:clip; }
@@ -1336,6 +1391,7 @@
         <select id="vista-columnas" aria-label="Productos por fila" title="Productos por fila"></select>
       </div>
     </div>
+    <nav id="guia-tira" aria-label="Subcategorías" hidden><div class="guia-tira-in"></div></nav>
     <div id="contenido">
       <div class="skeleton-grid">
         <div class="skeleton-card"></div><div class="skeleton-card"></div><div class="skeleton-card"></div>
@@ -1344,6 +1400,12 @@
     </div>
     <div id="empty" style="display:none;">No encontramos productos con ese criterio. Prueba con otro modelo o escríbenos por WhatsApp y te lo buscamos.</div>
   </main>
+  <aside id="guia-sub" aria-label="Subcategorías de esta categoría" hidden>
+    <p class="guia-tit" id="guia-tit">En esta categoría</p>
+    <p class="guia-cat" id="guia-cat"></p>
+    <div class="guia-linea-wrap"><span class="guia-progreso" id="guia-progreso"></span><ol class="guia-linea" id="guia-linea"></ol></div>
+    <div class="guia-pie">Toca una parada para ir directo.</div>
+  </aside>
 </div>
 
 <footer>
@@ -1613,6 +1675,57 @@ function bloqueAdminPrecios(p){
     '<div class="' + (!usaInv ? 'usa' : '') + '">' + (!usaInv ? '✓ ' : '') + a.otro.fuente + ': <b>' + f(web) + '</b>' + (lista != null && !a.otro._manual && Math.ceil(web) < Math.ceil(lista) ? ' <span>(lista ' + f(lista) + ')</span>' : '') + '</div>' +
     '<div class="adm-nota">Solo administradores · ✓ = el que ve el cliente</div></div>';
 }
+/* Solo administradores: cuántos hay en tu inventario, en el de tu papá y en el distribuidor,
+   con el link para editar el producto: a Gestión si es tuyo, al Panel web si no lo tienes. */
+const ES_BETA = /-beta(\/|$)/.test(location.pathname);
+const URL_GESTION = ES_BETA ? '/ventas-beta' : '/ventas';
+const URL_PANEL = ES_BETA ? '/admin-beta' : '/admin';
+// Listas de precios cargadas a mano: de quién son (para saber a quién pedirle)
+const DIST_DE_LISTA = { INVT: 'SAER', SCHNEIDER: 'EMI', 'SCHNEIDER ELECTRIC': 'EMI' };
+function existenciasAdmin(p){
+  const k = p._invClave || claveModelo(p.modelo);
+  const det = detalleInventario && detalleInventario.get(k);
+  const total = cantidadesInventario && cantidadesInventario.has(k) ? cantidadesInventario.get(k) : (det ? det.t : null);
+  const tuyo = !!p._inv || !!det || total != null;
+  const enDist = existenciasReales && typeof existenciasReales[p.modelo] === 'number' ? existenciasReales[p.modelo] : null;
+  const origen = origenLista.get(p.modelo);
+  let dist;
+  if (enDist != null) dist = { nombre: 'Grupos Eléctricos', txt: enDist > 0 ? enDist + ' disp.' : 'agotado', ok: enDist > 0 };
+  else if (origen === 'lista' || (p._manual && !p._inv)){
+    const m = String(p.marca || '').toUpperCase();
+    dist = { nombre: DIST_DE_LISTA[m] ? DIST_DE_LISTA[m] + ' (lista ' + (p.marca || '') + ')' : 'Lista de precios ' + (p.marca || ''), txt: p.disponible ? 'en lista, sin cantidad' : 'no disponible', ok: !!p.disponible };
+  }
+  else if (origen === 'panel') dist = { nombre: 'Agregado en el Panel web', txt: p.disponible ? 'disponible' : 'no disponible', ok: !!p.disponible };
+  else dist = null;
+  return { tuyo, total, m: det && det.m != null ? det.m : null, pa: det && det.p != null ? det.p : null, dist,
+    link: tuyo ? { url: URL_GESTION + '/producto-web/' + encodeURIComponent(p.modelo), txt: 'Ver en el inventario (Gestión)' }
+               : { url: URL_PANEL + '/productos/' + encodeURIComponent(p.modelo), txt: 'Editar en el Panel web' } };
+}
+function bloqueAdminExistencias(p, compacto){
+  if (typeof sesion === 'undefined' || !sesion.admin || !p) return '';
+  const e = existenciasAdmin(p);
+  const n = (x) => x == null ? '—' : String(x);
+  const cls = (x) => x == null ? '' : x > 0 ? 'ok' : 'cero';
+  const flecha = '<svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M7 17L17 7M8 7h9v9"/></svg>';
+  const link = '<a class="adm-ex-link" href="' + e.link.url + '" target="_blank" rel="noopener" onclick="event.stopPropagation()">' + e.link.txt + flecha + '</a>';
+  const distTxt = e.dist ? '<span class="' + (e.dist.ok ? 'ok' : 'cero') + '">' + e.dist.txt + '</span>' : '<span class="cero">no lo trae</span>';
+  if (compacto){
+    const inv = !e.tuyo ? 'Inventario: <b class="cero">no lo tienes</b>'
+      : e.m != null || e.pa != null ? 'Tú <b class="' + cls(e.m) + '">' + n(e.m) + '</b> · Papá <b class="' + cls(e.pa) + '">' + n(e.pa) + '</b>'
+      : 'Inventario <b class="' + cls(e.total) + '">' + n(e.total) + '</b>';
+    return '<div class="adm-ex chico" title="Solo administradores">' +
+      '<div>' + inv + '</div><div>' + (e.dist ? e.dist.nombre.replace(/ \(.*\)$/, '') : 'Distribuidor') + ': ' + distTxt + '</div>' + link + '</div>';
+  }
+  const fila = (nombre, valor) => '<div class="adm-ex-fila"><span>' + nombre + '</span>' + valor + '</div>';
+  const inv = !e.tuyo ? fila('Tu inventario', '<b class="cero">No lo tienes</b>')
+    : (e.m != null || e.pa != null)
+      ? fila('Tu inventario (Manuel)', '<b class="' + cls(e.m) + '">' + n(e.m) + '</b>') + fila('Inventario de tu papá', '<b class="' + cls(e.pa) + '">' + n(e.pa) + '</b>')
+      : fila('Tu inventario (ambos)', '<b class="' + cls(e.total) + '">' + n(e.total) + '</b>');
+  return '<div class="adm-ex" title="Esto solo lo ven los administradores">' +
+    '<div class="adm-ex-tit">Existencias · solo administradores</div>' + inv +
+    fila(e.dist ? e.dist.nombre : 'Distribuidor', '<b>' + distTxt + '</b>') +
+    link + '</div>';
+}
 function bloquePrecioRegistro(p, grande){
   const pr = precioRegistro(p);
   if (pr == null) return '';
@@ -1635,6 +1748,8 @@ function registroDesdePrecio(ev){
    clientes con permiso (existenciasReales = { MODELO: cantidad }). */
 let existenciasReales = null;
 let cantidadesInventario = null;   // Map(clave de modelo -> cantidad) de tu inventario (mismo permiso)
+let detalleInventario = null;      // Map(clave de modelo -> {t, m, p}): total, tuyo y de tu papá (solo administradores)
+let origenLista = new Map();       // modelo -> 'lista' (productos_manuales.json) o 'panel' (agregado en /admin)
 function cantidadReal(p){
   if (p && p._inv && cantidadesInventario && cantidadesInventario.has(p._invClave)) return cantidadesInventario.get(p._invClave);
   if (!existenciasReales || !p || !p.modelo) return null;
@@ -2297,6 +2412,7 @@ function actualizarControles(){
 }
 const ICONO_WA = '<svg class="ico-wa" viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.1l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.2-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2 5.2 5.2 0 0 0 1.1 2.8 11.9 11.9 0 0 0 4.6 4c1.7.7 2.3.8 3.2.7.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.2-1.2-.1-.1-.3-.2-.5-.3z"/></svg>';
 function mostrarVista(){
+  if (vista !== 'catalogo') ocultarGuia();
   if (vista === 'inicio') renderInicio();
   else if (vista === 'catalogos') renderCatalogos();
   else aplicarFiltros();
@@ -2558,6 +2674,7 @@ function tarjetaHTML(p){
             ${bloqueAdminPrecios(p)}
           </div>
         </div>
+        ${bloqueAdminExistencias(p, true)}
         <div class="actions">
           <div class="qty-selector" data-modelo-qty="${p.modelo}">
             <button class="qty-btn qty-menos" data-qm="${p.modelo}" ${!p.disponible ? 'disabled' : ''}>−</button>
@@ -2718,7 +2835,7 @@ function render(lista){
     if (pf.firstChild){ cont.appendChild(pf.firstChild); conectarPanelFac(); }
   }
 
-  if (lista.length === 0){ empty.style.display = "block"; return; }
+  if (lista.length === 0){ empty.style.display = "block"; ocultarGuia(); return; }
   empty.style.display = "none";
 
   // Agrupar por la RUTA COMPLETA de categorías, en el orden de la tienda
@@ -2746,6 +2863,7 @@ function render(lista){
   estadoRender = { id: ++idRender, cola, gi: 0, pi: 0, grid: null, cont, sentinela };
   sentinela.querySelector('button').addEventListener('click', () => pintarTanda(TANDA_TARJETAS));
   pintarTanda(TANDA_TARJETAS);
+  armarGuia(cola, textoBusqueda ? [] : seleccion.slice(0, MAX_NIVELES), textoBusqueda);
   if (observadorTandas) observadorTandas.disconnect();
   if ('IntersectionObserver' in window){
     observadorTandas = new IntersectionObserver((ents) => {
@@ -2771,6 +2889,7 @@ function pintarTanda(n){
       const ultimo = rutaG[rutaG.length - 1];
       const seccion = document.createElement('div');
       seccion.className = 'grupo-categoria';
+      seccion.dataset.gi = st.gi;
       seccion.innerHTML = '<h2>' + (partes.length ? '<span class="ruta-prev">' + migasHTML(partes) + '</span>' : '') +
                           (rutaG.length <= MAX_NIVELES ? enlaceCat(rutaG, ultimo, 'grupo-titulo') : '<span>' + escHtml(ultimo) + '</span>') +
                           '<span class="conteo-badge">' + g.productos.length + (g.productos.length === 1 ? ' producto' : ' productos') + '</span></h2>' +
@@ -2804,6 +2923,113 @@ function cargarHastaAltura(y){
     pintarTanda(TANDA_TARJETAS);
   }
 }
+
+/* =====================================================================
+   GUÍA DE SUBCATEGORÍAS (línea del tiempo a la derecha)
+   Muestra las subcategorías de la categoría abierta como paradas de una
+   línea. Al bajar se marca dónde estás (amarillo) y lo que ya pasaste
+   (azul); al tocar una parada salta a esa sección. Debajo de cada parada
+   salen sus series (el nivel siguiente). En pantallas angostas es una
+   tira deslizable arriba de los productos.
+   Se arma con los mismos grupos que pinta render(), así sigue los filtros.
+   ===================================================================== */
+let guiaEstado = null;   // { paradas:[{nombre, n, gi, hijos:[{nombre, n, gi}]}], giAParada:[], giAHijo:[] }
+function ocultarGuia(){
+  guiaEstado = null;
+  const a = document.getElementById('guia-sub'), t = document.getElementById('guia-tira');
+  if (a) a.hidden = true;
+  if (t) t.hidden = true;
+}
+function armarGuia(cola, base, buscando){
+  const L = base.length;
+  const paradas = [], porNombre = new Map(), giAParada = [], giAHijo = [];
+  cola.forEach((g, gi) => {
+    const nombre = g.ruta.length > L ? g.ruta[L] : (base[L - 1] ? base[L - 1] + ' (general)' : 'General');
+    let p = porNombre.get(nombre);
+    if (!p){ p = { nombre, n: 0, gi, hijos: [], hijosMap: new Map() }; porNombre.set(nombre, p); paradas.push(p); }
+    p.n += g.productos.length;
+    giAParada[gi] = paradas.indexOf(p);
+    if (g.ruta.length > L + 1){
+      const hn = g.ruta[L + 1];
+      let h = p.hijosMap.get(hn);
+      if (!h){ h = { nombre: hn, n: 0, gi }; p.hijosMap.set(hn, h); p.hijos.push(h); }
+      h.n += g.productos.length;
+      giAHijo[gi] = p.hijos.indexOf(h);
+    }
+  });
+  if (paradas.length < 2){ ocultarGuia(); return; }
+  guiaEstado = { paradas, giAParada, giAHijo, actual: -1, hijoActual: -1 };
+  const n = (x) => x.toLocaleString('es-VE');
+  document.getElementById('guia-tit').textContent = buscando ? 'Resultados por familia' : 'En esta categoría';
+  document.getElementById('guia-cat').textContent = buscando ? 'Tu búsqueda' : (base[L - 1] || (filtroMarca ? 'Productos ' + nombreMarca(filtroMarca) : 'Todo el catálogo'));
+  document.getElementById('guia-linea').innerHTML = paradas.map((p, i) =>
+    '<li class="guia-parada" data-i="' + i + '"><button type="button" class="guia-btn" data-gi="' + p.gi + '"><span class="gn">' + escHtml(p.nombre) + '</span><span class="gc">' + n(p.n) + '</span></button>' +
+    (p.hijos.length > 1 ? '<ul class="guia-hijos">' + p.hijos.map((h, j) => '<li><button type="button" class="guia-btn" data-gi="' + h.gi + '" data-h="' + j + '"><span class="gn">' + escHtml(h.nombre) + '</span><span class="gc">' + n(h.n) + '</span></button></li>').join('') + '</ul>' : '') +
+    '</li>').join('');
+  document.querySelector('#guia-tira .guia-tira-in').innerHTML = paradas.map((p, i) =>
+    '<button type="button" class="guia-chip" data-i="' + i + '" data-gi="' + p.gi + '">' + escHtml(p.nombre) + ' <small>' + n(p.n) + '</small></button>').join('');
+  document.getElementById('guia-sub').hidden = false;
+  document.getElementById('guia-tira').hidden = false;
+  marcarGuia();
+}
+// Cuánto tapa arriba la cabecera fija (y la tira, cuando se ve)
+function alturaTapada(){
+  let y = 12;
+  const h = document.querySelector('header');
+  if (h && getComputedStyle(h).position === 'sticky') y += h.offsetHeight;
+  const t = document.getElementById('guia-tira');
+  if (t && !t.hidden && t.offsetParent) y += t.offsetHeight;
+  return y;
+}
+function irAGrupo(gi){
+  // pinta hasta esa sección si todavía no se cargó
+  let guard = 0;
+  while (estadoRender && estadoRender.sentinela.isConnected && estadoRender.gi <= gi && guard++ < 400) pintarTanda(TANDA_TARJETAS);
+  const el = document.querySelector('#contenido .grupo-categoria[data-gi="' + gi + '"]');
+  if (!el) return;
+  const suave = !window.matchMedia('(prefers-reduced-motion: reduce)').matches;
+  window.scrollTo({ top: el.getBoundingClientRect().top + window.scrollY - alturaTapada() + 2, behavior: suave ? 'smooth' : 'auto' });
+}
+function marcarGuia(){
+  if (!guiaEstado) return;
+  const secs = document.querySelectorAll('#contenido .grupo-categoria[data-gi]');
+  if (!secs.length) return;
+  const limite = alturaTapada() + 40;
+  let gi = Number(secs[0].dataset.gi);
+  for (const s of secs){ if (s.getBoundingClientRect().top <= limite) gi = Number(s.dataset.gi); else break; }
+  const i = guiaEstado.giAParada[gi], j = guiaEstado.giAHijo[gi] != null ? guiaEstado.giAHijo[gi] : -1;
+  if (i === guiaEstado.actual && j === guiaEstado.hijoActual) return;
+  guiaEstado.actual = i; guiaEstado.hijoActual = j;
+  const paradas = document.querySelectorAll('#guia-linea .guia-parada');
+  paradas.forEach((p, k) => {
+    p.classList.toggle('on', k === i); p.classList.toggle('vista', k < i);
+    p.querySelectorAll('.guia-hijos .guia-btn').forEach((b, m) => b.classList.toggle('on', k === i && m === j));
+  });
+  const on = paradas[i];
+  const prog = document.getElementById('guia-progreso');
+  if (on && prog) prog.style.height = Math.max(0, on.offsetTop + 6) + 'px';
+  // en el riel, que la parada actual quede a la vista
+  const riel = document.getElementById('guia-sub');
+  if (on && riel && riel.scrollHeight > riel.clientHeight){
+    const r = on.getBoundingClientRect(), rr = riel.getBoundingClientRect();
+    if (r.top < rr.top + 40 || r.top > rr.bottom - 60) riel.scrollTop += r.top - rr.top - 80;
+  }
+  const chips = document.querySelectorAll('#guia-tira .guia-chip');
+  chips.forEach((c, k) => { c.classList.toggle('on', k === i); c.classList.toggle('vista', k < i); });
+  const chip = chips[i], tira = document.querySelector('#guia-tira .guia-tira-in');
+  if (chip && tira && tira.offsetParent){
+    if (chip.offsetLeft < tira.scrollLeft || chip.offsetLeft + chip.offsetWidth > tira.scrollLeft + tira.clientWidth) tira.scrollLeft = chip.offsetLeft - 16;
+  }
+}
+(function(){
+  const clic = (e) => { const b = e.target.closest('[data-gi]'); if (b) irAGrupo(Number(b.dataset.gi)); };
+  document.getElementById('guia-linea').addEventListener('click', clic);
+  document.getElementById('guia-tira').addEventListener('click', clic);
+  let pend = false;
+  const alMover = () => { if (pend || !guiaEstado) return; pend = true; requestAnimationFrame(() => { pend = false; marcarGuia(); }); };
+  window.addEventListener('scroll', alMover, { passive: true });
+  window.addEventListener('resize', () => { if (guiaEstado){ guiaEstado.actual = -1; alMover(); } });
+})();
 
 // Los botones de las tarjetas se manejan con un solo "escuchador" en el
 // contenedor (sirve también para las tarjetas que se pintan después).
@@ -4076,6 +4302,7 @@ function abrirDetalle(modelo){
           (esManual(p) && precioFinal != null ? '<span class="precio-nota">precio de catálogo</span>' : '') +
           bloquePrecioRegistro(p, true) +
           bloqueAdminPrecios(p) +
+          bloqueAdminExistencias(p) +
           '<div><span class="estado ' + (p.disponible ? 'ok' : 'off') + '">' + (p.disponible ? estadoTexto : 'Agotado') + '</span></div>' +
         '</div>' +
         '<span class="det-desc-label">Descripción</span>' +
@@ -4437,6 +4664,7 @@ async function cargar(silencioso){
     const delPanel = panel.web.filter(r => !r.correccion).map(formaTiendaDePanel);
     const setPanel = new Set(delPanel.map(p => p.modelo));
     const manuales = delPanel.concat(manualesJson.filter(p => !setPanel.has(p.modelo))).filter(p => !ocultos.has(p.modelo));
+    origenLista = new Map(manuales.map(p => [p.modelo, setPanel.has(p.modelo) ? 'panel' : 'lista']));
     data.productos = (data.productos || []).filter(p => !ocultos.has(p.modelo))
       .map(p => correcciones.has(p.modelo) ? aplicarCorreccion(p, correcciones.get(p.modelo)) : p);
 
@@ -4696,6 +4924,14 @@ async function cargarSesionYReglas(){
         const { data: ci, error: errCi } = await sb.rpc('inventario_cantidades');
         if (!errCi && ci && typeof ci === 'object') cantidadesInventario = new Map(Object.keys(ci).map(m => [claveModelo(m), Number(ci[m])]));
       } catch (e) { /* sin permiso o 15_inventario_web.sql sin correr */ }
+      // Solo administradores: lo de cada inventario (tuyo y de tu papá) para la ficha
+      detalleInventario = null;
+      if (sesion.admin){
+        try {
+          const { data: di, error: errDi } = await sb.rpc('inventario_detalle_admin');
+          if (!errDi && di && typeof di === 'object') detalleInventario = new Map(Object.keys(di).map(m => [claveModelo(m), di[m]]));
+        } catch (e) { /* 22_existencias_admin.sql sin correr: se muestra el total */ }
+      }
     }
     const [{ data: reglas, error: errR }, { data: tipos }] = await Promise.all([
       sb.from('reglas_descuento').select('*').eq('activo', true),

@@ -893,6 +893,11 @@ function abrirDetalle(t, det){
   if (!det) return;
   if (t === 'pedidos'){ if (pedidoPorId(det)) abrirPedido(det); else toast('No encontré el pedido #' + det); }
   else if (t === 'clientes'){ const c = clientes.find(x => x.email === det.toLowerCase()); if (c) abrirCliente(c); else toast('No encontré a ' + det + ' entre los clientes de la tienda'); }
+  else if (t === 'productos'){   // desde la ficha de la tienda: /admin/productos/<modelo>
+    const k = (m) => String(m || '').toUpperCase().replace(/[^A-Z0-9]/g, '');
+    const x = directorio().find(y => y.p.modelo === det) || directorio().find(y => k(y.p.modelo) === k(det));
+    if (x) abrirProducto(x.p.modelo); else toast('No encontré ' + det + ' entre los productos de la web');
+  }
 }
 window.addEventListener('popstate', () => {
   if (!yo || !$('main')) return;
