@@ -2150,6 +2150,7 @@ function hashDeNav(n, det){
   else if (n.vista === 'catalogos') base = '#/catalogos';
   else if (q){ base = '#/buscar'; params.push('q=' + encodeURIComponent(q)); }
   else if (n.seleccion && n.seleccion.length) base = hashDeRuta(n.seleccion);
+  else if (n.destacado) base = '#/destacado/' + n.destacado;
   else if (n.filtroMarca) base = '#/marca/' + slugDe(n.filtroMarca);
   else base = '#/todo';
   if (n.filtroMarca && n.vista === 'catalogo' && base.indexOf('#/marca/') !== 0) params.push('marca=' + slugDe(n.filtroMarca));
@@ -2172,11 +2173,12 @@ function navDeHash(hash){
   const [camino, qs] = h.split('?');
   const params = new URLSearchParams(qs || '');
   const partes = (camino || '').split('/').filter(Boolean).map(x => { try { return decodeURIComponent(x); } catch(e){ return x; } });
-  const n = { vista: 'inicio', seleccion: [], filtroMarca: null, q: '' };
+  const n = { vista: 'inicio', seleccion: [], filtroMarca: null, q: '', destacado: null };
   if (partes[0] === 'catalogos') n.vista = 'catalogos';
   else if (partes[0] === 'todo') n.vista = 'catalogo';
   else if (partes[0] === 'buscar'){ n.vista = 'catalogo'; n.q = params.get('q') || ''; }
   else if (partes[0] === 'marca'){ n.vista = 'catalogo'; n.filtroMarca = marcaDeSlug(partes[1] || ''); }
+  else if (partes[0] === 'destacado' && destacadoPorClave(partes[1] || '')){ n.vista = 'catalogo'; n.destacado = partes[1]; }
   else if (partes[0] === 'c'){
     n.vista = 'catalogo';
     let nodo = construirArbol();
@@ -2197,6 +2199,7 @@ function aplicarHash(hash){
   vista = n.vista;
   seleccion = n.seleccion;
   filtroMarca = n.filtroMarca;
+  destacado = destacadoPorClave(n.destacado);
   filtrosFac = facDeSerial(n.fac); facClaveRuta = seleccion.slice(0, 2).join('|||');
   document.getElementById('buscador').value = n.q;
   for (let i = 1; i <= seleccion.length; i++) expandidos.add(seleccion.slice(0, i).join('|||'));
@@ -2209,7 +2212,7 @@ function irARuta(ruta){
   ['modal-detalle', 'modal-imagen'].forEach(id => document.getElementById(id).classList.remove('abierto'));
   document.getElementById('sugerencias').style.display = 'none';
   document.getElementById('buscador').value = '';
-  filtroMarca = null;
+  filtroMarca = null; destacado = null;
   vista = 'catalogo';
   seleccion = ruta.slice(0, MAX_NIVELES);
   for (let i = 1; i <= seleccion.length; i++) expandidos.add(seleccion.slice(0, i).join('|||'));
@@ -2225,18 +2228,27 @@ document.addEventListener('click', (e) => {
   e.preventDefault();
   if (a.getAttribute('data-vista-ir') === 'inicio'){
     ['modal-detalle', 'modal-imagen'].forEach(id => document.getElementById(id).classList.remove('abierto'));
-    vista = 'inicio'; filtroMarca = null; seleccion = [];
+    vista = 'inicio'; filtroMarca = null; seleccion = []; destacado = null;
     document.getElementById('buscador').value = '';
     renderSidebar(); mostrarVista();
     window.scrollTo({ top: 0, behavior: 'smooth' });
     return;
   }
+  const dk = a.getAttribute('data-destacado');
+  if (dk && destacadoPorClave(dk)){ irADestacado(destacadoPorClave(dk)); return; }
   const clave = decodeURIComponent(a.getAttribute('data-ruta') || '');
   irARuta(clave ? clave.split('|||') : []);
 });
 
 /* ---------- Cabecera de la categoría actual ---------- */
 function cabeceraCategoriaHTML(lista){
+  if (destacado && !seleccion.length){
+    ponerTitulo(destacado.titulo);
+    const subs = rutasDe(destacado).map(r => enlaceCat(r, r[r.length - 1], 'chip', '<span class="chip-cnt">' + lista.filter(p => { const x = rutaNavDe(p); return r.every((seg, i) => x[i] === seg); }).length + '</span>')).join('');
+    return '<div class="cab-cat"><nav class="migas" aria-label="Ruta"><a class="enlace-cat" href="#/" data-vista-ir="inicio">Inicio</a><span class="miga-sep">›</span><span class="miga-txt">Lo más pedido</span></nav>' +
+      '<div class="cab-cat-fila"><h1 class="cab-cat-titulo">' + escHtml(destacado.titulo) + '</h1><span class="cab-cat-conteo">' + lista.length + (lista.length === 1 ? ' producto' : ' productos') + '</span>' +
+      '<button type="button" class="btn-enlace" id="btn-copiar-enlace" title="Compartir">🔗 Compartir</button></div><div class="subcat-chips">' + subs + '</div></div>';
+  }
   const ruta = seleccion.slice(0, MAX_NIVELES);
   // Subcategorías del nivel actual (con cuántos productos hay en cada una, según los filtros)
   const hijos = {};
@@ -2430,7 +2442,7 @@ function renderSidebar(){
       const clave = decodeURIComponent(el.getAttribute('data-clave') || '');
       const tieneHijos = el.getAttribute('data-tiene-hijos') === '1';
       if (clave === ''){
-        seleccion = [];
+        seleccion = []; destacado = null;
         cerrarSidebar(); // "Todas las categorías" es una elección final
       } else {
         const ruta = clave.split('|||');
@@ -2480,7 +2492,8 @@ const IMAGENES_FAMILIA = {
 // Subcategorías destacadas en Inicio ("Lo más pedido"), con todas sus marcas.
 // Se eligieron por ventas, búsquedas en la tienda y cantidad de modelos. Cambia el orden aquí.
 const DESTACADOS = [
-  { titulo: 'LOGO! y relés programables', ruta: ['Automatización y PLC', 'PLC Básicos', 'LOGO!'], foto: '6ED1052-1FB08-0BA2' },
+  // "rutas" (varias) arma una sección propia con todas: aquí LOGO! junto a las pantallas HMI de Kinco
+  { titulo: 'LOGO!, relés programables y HMI Kinco', clave: 'logo-y-hmi-kinco', rutas: [['Automatización y PLC', 'PLC Básicos', 'LOGO!'], ['Automatización y PLC', 'Paneles HMI', 'Kinco']], foto: '6ED1052-1FB08-0BA2' },
   { titulo: 'Variadores de frecuencia',   ruta: ['Variadores y Arrancadores', 'Variadores de Frecuencia'], foto: 'GD20-7R5G-4' },
   { titulo: 'Contactores',                ruta: ['Control de Motores', 'Contactores'], foto: '3RT1025-1AN20' },
   { titulo: 'Breakers automáticos',       ruta: ['Protección Eléctrica', 'Breakers Automáticos'], foto: '5SL6206-7MB' },
@@ -2489,9 +2502,23 @@ const DESTACADOS = [
   { titulo: 'Guardamotores',              ruta: ['Control de Motores', 'Guardamotores'], foto: '3RV2021-4BA10' },
   { titulo: 'Arrancadores suaves',        ruta: ['Variadores y Arrancadores', 'Arrancadores Suaves'], foto: '3RW4038-1BB14' },
 ];
+// Sección destacada activa (la de una tarjeta con varias rutas), o null
+let destacado = null;
+const rutasDe = (d) => d.rutas || [d.ruta];
+const enDestacado = (p, d) => { const r = rutaNavDe(p); return rutasDe(d).some(ru => ru.every((seg, i) => r[i] === seg)); };
+const destacadoPorClave = (k) => DESTACADOS.find(d => d.clave && d.clave === k) || null;
+function prefijoComun(rutas){ const out = []; for (let i = 0; ; i++){ const s0 = rutas[0][i]; if (s0 == null || !rutas.every(r => r[i] === s0)) return out; out.push(s0); } }
+function irADestacado(d){
+  ['modal-detalle', 'modal-imagen'].forEach(id => document.getElementById(id).classList.remove('abierto'));
+  document.getElementById('sugerencias').style.display = 'none';
+  document.getElementById('buscador').value = '';
+  filtroMarca = null; vista = 'catalogo'; seleccion = []; destacado = d;
+  cerrarSidebar(); renderSidebar(); aplicarFiltros();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
 function destacadosHtml(){
   const tarjetas = DESTACADOS.map(d => {
-    const lista = productos.filter(p => { const r = rutaNavDe(p); return d.ruta.every((seg, i) => r[i] === seg); });
+    const lista = productos.filter(p => enDestacado(p, d));
     if (!lista.length) return '';
     const porMarca = {};
     lista.forEach(p => { const m = (p.marca || '').toUpperCase().trim(); if (m && !/^(SIN MARCA|GEN[EÉ]RIC[OA]|OTRA?S?|N\/?A|-)$/.test(m)) porMarca[m] = (porMarca[m] || 0) + 1; });
@@ -2508,8 +2535,9 @@ function destacadosHtml(){
       .concat(sinLogo.slice(0, Math.max(0, 4 - conLogo.length)).map(m => '<span>' + escHtml(m.length > 12 ? m.slice(0, 11) + '…' : m) + '</span>'));
     const resto = marcas.length - chips.length;
     if (resto > 0) chips.push('<span title="' + escHtml(marcas.slice(chips.length).join(', ')) + '">+' + resto + '</span>');
-    const r = d.ruta.slice(0, MAX_NIVELES);
-    return '<a class="enlace-cat dest-card" href="' + hashDeRuta(r) + '" data-ruta="' + encodeURIComponent(claveDe(r)) + '">' +
+    const r = rutasDe(d)[0].slice(0, MAX_NIVELES);
+    const destino = d.rutas ? 'href="#/destacado/' + d.clave + '" data-destacado="' + d.clave + '"' : 'href="' + hashDeRuta(r) + '" data-ruta="' + encodeURIComponent(claveDe(r)) + '"';
+    return '<a class="enlace-cat dest-card" ' + destino + '>' +
              '<div class="dest-img">' + (foto ? '<img src="' + foto + '" alt="" loading="lazy"' + (reserva ? ' onerror="this.onerror=null;this.src=\'' + reserva + '\'"' : '') + '>' : '<span class="cat-card-noimg">⚡</span>') +
                '<span class="dest-n">' + lista.length.toLocaleString('es-VE') + ' modelos</span></div>' +
              '<div class="dest-cuerpo"><div class="dest-tit">' + escHtml(d.titulo) + '<span class="cat-card-flecha">→</span></div>' +
@@ -2668,7 +2696,7 @@ function renderInicio(){
 
   const verTodo = document.getElementById('hero-ver-todo');
   if (verTodo) verTodo.addEventListener('click', () => {
-    vista = 'catalogo'; filtroMarca = null; seleccion = [];
+    vista = 'catalogo'; filtroMarca = null; seleccion = []; destacado = null;
     renderSidebar(); aplicarFiltros();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   });
@@ -2682,7 +2710,7 @@ function renderInicio(){
       if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
       e.preventDefault();
       filtroMarca = el.getAttribute('data-marca');
-      seleccion = [];
+      seleccion = []; destacado = null;
       vista = 'catalogo';
       renderSidebar();
       aplicarFiltros();
@@ -2956,7 +2984,7 @@ function render(lista){
   estadoRender = { id: ++idRender, cola, gi: 0, pi: 0, grid: null, cont, sentinela };
   sentinela.querySelector('button').addEventListener('click', () => pintarTanda(TANDA_TARJETAS));
   pintarTanda(TANDA_TARJETAS);
-  armarGuia(cola, textoBusqueda ? [] : seleccion.slice(0, MAX_NIVELES), textoBusqueda);
+  armarGuia(cola, textoBusqueda ? [] : (destacado && !seleccion.length ? prefijoComun(rutasDe(destacado)) : seleccion.slice(0, MAX_NIVELES)), textoBusqueda);
   if (observadorTandas) observadorTandas.disconnect();
   if ('IntersectionObserver' in window){
     observadorTandas = new IntersectionObserver((ents) => {
@@ -3036,14 +3064,18 @@ function ocultarGuia(){
 function armarGuia(cola, base, buscando){
   const L = base.length;
   const paradas = [], porNombre = new Map(), giAParada = [], giAHijo = [];
+  // sección destacada con varias rutas: una parada por ruta (LOGO!, Kinco…) y sus series debajo
+  const rutasD = !buscando && destacado && !seleccion.length ? rutasDe(destacado) : null;
   cola.forEach((g, gi) => {
-    const nombre = g.ruta.length > L ? g.ruta[L] : (base[L - 1] ? base[L - 1] + ' (general)' : 'General');
+    const rd = rutasD && rutasD.find(r => r.every((seg, i) => g.ruta[i] === seg));
+    const nivel = rd ? rd.length - 1 : L;
+    const nombre = g.ruta.length > nivel ? g.ruta[nivel] : (base[L - 1] ? base[L - 1] + ' (general)' : 'General');
     let p = porNombre.get(nombre);
     if (!p){ p = { nombre, n: 0, gi, hijos: [], hijosMap: new Map() }; porNombre.set(nombre, p); paradas.push(p); }
     p.n += g.productos.length;
     giAParada[gi] = paradas.indexOf(p);
-    if (g.ruta.length > L + 1){
-      const hn = g.ruta[L + 1];
+    if (g.ruta.length > nivel + 1){
+      const hn = g.ruta[nivel + 1];
       let h = p.hijosMap.get(hn);
       if (!h){ h = { nombre: hn, n: 0, gi }; p.hijosMap.set(hn, h); p.hijos.push(h); }
       h.n += g.productos.length;
@@ -3054,7 +3086,7 @@ function armarGuia(cola, base, buscando){
   guiaEstado = { paradas, giAParada, giAHijo, actual: -1, hijoActual: -1 };
   const n = (x) => x.toLocaleString('es-VE');
   document.getElementById('guia-tit').textContent = buscando ? 'Resultados por familia' : 'En esta categoría';
-  document.getElementById('guia-cat').textContent = buscando ? 'Tu búsqueda' : (base[L - 1] || (filtroMarca ? 'Productos ' + nombreMarca(filtroMarca) : 'Todo el catálogo'));
+  document.getElementById('guia-cat').textContent = buscando ? 'Tu búsqueda' : (destacado && !seleccion.length ? destacado.titulo : base[L - 1] || (filtroMarca ? 'Productos ' + nombreMarca(filtroMarca) : 'Todo el catálogo'));
   document.getElementById('guia-linea').innerHTML = paradas.map((p, i) =>
     '<li class="guia-parada" data-i="' + i + '"><button type="button" class="guia-btn" data-gi="' + p.gi + '"><span class="gn">' + escHtml(p.nombre) + '</span><span class="gc">' + n(p.n) + '</span></button>' +
     (p.hijos.length > 1 ? '<ul class="guia-hijos">' + p.hijos.map((h, j) => '<li><button type="button" class="guia-btn" data-gi="' + h.gi + '" data-h="' + j + '"><span class="gn">' + escHtml(h.nombre) + '</span><span class="gc">' + n(h.n) + '</span></button></li>').join('') + '</ul>' : '') +
@@ -4130,7 +4162,7 @@ function aplicarFiltros(){
     if (!hayBusqueda && seleccion.length > 0){
       const ruta = rutaDe(p);
       coincideCategoria = seleccion.every((seg, i) => ruta[i] === seg);
-    }
+    } else if (!hayBusqueda && destacado) coincideCategoria = enDestacado(p, destacado);
     const coincideMarca = !filtroMarca || (p.marca || '').toUpperCase() === filtroMarca;
 
     const coincideTexto = coincideBusqueda(p, palabras);
@@ -4937,7 +4969,7 @@ document.getElementById('btn-cerrar-cart').addEventListener('click', () => docum
 document.getElementById('btn-menu').addEventListener('click', toggleSidebar);
 
 document.getElementById('brand-inicio').addEventListener('click', () => {
-  vista = 'inicio'; filtroMarca = null;
+  vista = 'inicio'; filtroMarca = null; destacado = null;
   document.getElementById('buscador').value = '';
   renderSidebar(); mostrarVista();
   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -5738,6 +5770,7 @@ cargar();
       vista: vista,
       seleccion: seleccion.slice(),
       filtroMarca: filtroMarca,
+      destacado: destacado && !seleccion.length ? destacado.clave : null,
       q: $('buscador').value,
       disp: $('filtro-disponibilidad').value,
       orden: $('filtro-orden') ? $('filtro-orden').value : '',
@@ -5767,7 +5800,7 @@ cargar();
   // para no crear una entrada por cada letra que se escribe)
   function mismaPantalla(a, b){
     return a.vista === b.vista &&
-           a.filtroMarca === b.filtroMarca &&
+           a.filtroMarca === b.filtroMarca && (a.destacado || null) === (b.destacado || null) &&
            a.seleccion.join('|||') === b.seleccion.join('|||') &&
            (a.q.trim() !== '') === (b.q.trim() !== '');
   }
@@ -5883,6 +5916,7 @@ cargar();
         vista = n.vista;
         seleccion = n.seleccion.slice();
         filtroMarca = n.filtroMarca;
+        destacado = destacadoPorClave(n.destacado);
         filtrosFac = facDeSerial(n.fac); facClaveRuta = seleccion.slice(0, 2).join('|||');
         $('buscador').value = n.q;
         $('filtro-disponibilidad').value = n.disp;
