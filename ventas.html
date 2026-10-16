@@ -2261,6 +2261,16 @@ Views['desde-tienda'] = (v, tipo) => {
   if (!datos || !Array.isArray(datos.items) || !datos.items.length || Date.now() - (datos.creado || 0) > 6 * 3600 * 1000) {
     v.innerHTML = '<div class="panel empty">No encontré productos enviados desde la tienda.<br>Arma el carrito en la tienda y toca <b>Crear oferta</b> o <b>Crear nota de entrega</b>.<br><br><a class="btn" href="#/ofertas">Ir a ofertas</a></div>'; return;
   }
+  // Oferta rápida (WhatsApp / MercadoLibre): se abre el generador en la pestaña ⚡ con estos productos
+  if (tipo === 'rapida' || datos.tipo === 'rapida') {
+    try { localStorage.removeItem('suin_carrito_gestion'); } catch (e) {}
+    const gid = datos.cliente && datos.cliente.id, cf = gid ? Store.get('clientes', gid) : null;
+    const filas = datos.items.map(it => ({ modelo: it.modelo || '', marca: it.marca || '', nombre: it.nombre || '', desc: it.descripcion || '', cant: num(it.cantidad) || 1, precio: num(it.precio_unit) }));
+    const info = datos.cliente ? { nombre: (cf && cf.nombre) || datos.cliente.nombre || datos.cliente.empresa || '', tel: (cf && cf.telefono) || datos.cliente.telefono || '', fmt: datos.fmt } : { fmt: datos.fmt };
+    Cot._pending = { rapida: filas, rapidaInfo: info };
+    Route.nav('#/ofertas/generador', { replace: true });
+    return;
+  }
   tipo = tipo === 'nota' ? 'nota' : tipo === 'oferta' ? 'oferta' : (datos.tipo === 'nota' ? 'nota' : 'oferta');
   const armar = () => {
     try { localStorage.removeItem('suin_carrito_gestion'); } catch (e) {}
@@ -6771,10 +6781,11 @@ const Cot = (() => {
     });
   };
   /* acciones dentro del generador */
-  const act = ({ tipo, cliente, abrir }) => {
+  const act = ({ tipo, cliente, abrir, rapida, rapidaInfo }) => {
     const w = frame && frame.contentWindow; if (!w) return;
     const dd = w.document;
     try {
+      if (rapida) { if (w.SuinConRapida) w.SuinConRapida(R => R.cargarDeOferta(rapida, rapidaInfo || null)); else UI.toast('Actualiza la página: el generador no tiene la oferta rápida'); return; }
       if (abrir) {
         dd.getElementById('act-registro').click();
         setTimeout(() => {
