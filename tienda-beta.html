@@ -842,8 +842,10 @@
     .topbar-texto, .meta-bar{ display:none; }
     header{ position:static; }
     .header-in{ padding:10px 14px 12px; gap:10px 12px; }
-    .brand img.logo{ height:40px; width:40px; }
-    .brand .logo-wrap{ width:40px; height:40px; }
+    .brand img.logo{ height:58px; width:58px; }
+    .brand .logo-wrap{ width:58px; height:58px; }
+    .brand{ gap:10px; min-width:0; }
+    .brand .logo-anim{ width:107%; height:107%; }
     .brand .marca-texto strong{ font-size:21px; }
     .brand .marca-texto span{ font-size:11.5px; }
     .descuento-box{ height:38px; font-size:12px; padding:0 8px; }
@@ -1288,6 +1290,7 @@
   .carrusel-modelo{ white-space:normal; overflow-wrap:anywhere; text-overflow:clip; }
   .marca-logo-card{ min-width:0; overflow:hidden; }
   .marca-logo-card img{ width:auto; height:auto; max-width:100%; min-width:0; }
+  @media (max-width:380px){ .brand img.logo, .brand .logo-wrap{ width:50px; height:50px; } .brand .marca-texto strong{ font-size:18px !important; } .brand .marca-texto span{ font-size:11px !important; } }
   @media (max-width:520px){ .marca-logo-card{ padding-left:10px; padding-right:10px; } .marca-logo-card img{ max-height:32px; } }
 
   /* ================= CATÁLOGO ÚNICO (beta): mega menú, filtros, variantes ================= */
