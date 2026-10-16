@@ -732,6 +732,8 @@
   .ca-btns{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px; }
   .ca-btn{ background:var(--tinta); color:#fff; border:0; padding:10px 8px; font-size:13.5px; font-weight:600; border-radius:6px; cursor:pointer; }
   .ca-btn:hover{ background:var(--tinta-2); }
+  .ca-btn.ca-rap{ grid-column:1 / -1; background:var(--wa); }
+  .ca-btn.ca-rap:hover{ background:var(--wa-hover); }
   .ca-ayuda{ font-size:11.5px; opacity:.75; margin-top:6px; line-height:1.4; }
   #cart-footer{ padding:16px 20px; border-top:1px solid var(--linea); background:var(--fondo); flex-shrink:0; }
   #cart-resumen{ margin-bottom:14px; }
@@ -1534,8 +1536,9 @@
       <div class="ca-btns">
         <button type="button" class="btn ca-btn" id="ca-oferta">Crear oferta</button>
         <button type="button" class="btn ca-btn" id="ca-nota">Crear nota de entrega</button>
+        <button type="button" class="btn ca-btn ca-rap" id="ca-rapida">⚡ Oferta rápida · WhatsApp o M. Libre</button>
       </div>
-      <div class="ca-ayuda">Se abre en Gestión con estos productos, cantidades y precios. Ahí lo revisas y lo guardas.</div>
+      <div class="ca-ayuda">Se abre en Gestión con estos productos, cantidades y precios. La oferta rápida queda lista para copiar a MercadoLibre o enviar por WhatsApp al cliente.</div>
     </div>
     <a class="btn btn-wa" style="display:block;margin-bottom:8px;" id="btn-wa-carrito" href="#" target="_blank" rel="noopener">Enviar pedido por WhatsApp (0412)</a>
     <a class="btn btn-wa btn-wa-2" style="display:block;" id="btn-wa-carrito-2" href="#" target="_blank" rel="noopener">Enviar al 0424</a>
@@ -5177,7 +5180,7 @@ function carritoAGestion(tipo){
   const url = (typeof URL_GESTION !== 'undefined' ? URL_GESTION : '/ventas') + '/desde-tienda/' + tipo;
   const w = window.open(url, '_blank');
   if (!w) location.href = url;
-  mostrarToast(tipo === 'nota' ? 'Abriendo la nota de entrega en Gestión…' : 'Abriendo la oferta en Gestión…');
+  mostrarToast(tipo === 'nota' ? 'Abriendo la nota de entrega en Gestión…' : tipo === 'rapida' ? 'Abriendo la oferta rápida en Gestión…' : 'Abriendo la oferta en Gestión…');
 }
 (function(){
   const inp = document.getElementById('ca-cliente');
@@ -5185,6 +5188,8 @@ function carritoAGestion(tipo){
   const bo = document.getElementById('ca-oferta'), bn = document.getElementById('ca-nota');
   if (bo) bo.addEventListener('click', () => carritoAGestion('oferta'));
   if (bn) bn.addEventListener('click', () => carritoAGestion('nota'));
+  const br = document.getElementById('ca-rapida');
+  if (br) br.addEventListener('click', () => carritoAGestion('rapida'));
 })();
 function refrescarPrecios(){
   if (!productos.length) return;
