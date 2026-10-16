@@ -848,7 +848,7 @@ const CONFIG_DEFAULT = {
 const deepMerge = (base, over) => { const out = Array.isArray(base) ? base.slice() : Object.assign({}, base); if (!over) return out; Object.keys(over).forEach(k => { const v = over[k]; if (v && typeof v === 'object' && !Array.isArray(v) && base && typeof base[k] === 'object' && !Array.isArray(base[k]) && base[k]) out[k] = deepMerge(base[k], v); else if (v !== undefined) out[k] = v; }); return out; };
 const ORIGENES = ['manuel', 'papa', 'dist', 'libre'];
 /* opciones del selector de origen: tu inventario, el de tu papá, cada distribuidor por nombre, libre */
-const origenOpts = (it) => { const ds = Dists(); const cur = it.origen === 'dist' ? 'dist|' + (itDist(it) || '') : it.origen; const o = [['manuel', origenNombre('manuel')], ['papa', origenNombre('papa')]].concat(ds.map(d => ['dist|' + d.id, d.nombre])); if (!ds.length || cur === 'dist|') o.push(['dist|', 'Distribuidor (sin asignar)']); o.push(['libre', 'Libre']); if (it.productoId || it.origen === 'mixto') o.push(['mixto', it.origen === 'mixto' ? 'Repartido' : 'Repartir (automático)']); return o.map(([v, l]) => `<option value="${esc(v)}" ${cur === v ? 'selected' : ''}>${esc(l)}</option>`).join(''); };
+const origenOpts = (it) => { const ds = Dists(); const cur = it.origen === 'dist' ? 'dist|' + (itDist(it) || '') : it.origen; const o = [['manuel', origenNombre('manuel')], ['papa', origenNombre('papa')]].concat(ds.map(d => ['dist|' + d.id, d.nombre])); if (!ds.length || cur === 'dist|') o.push(['dist|', 'Distribuidor (sin asignar)']); o.push(['__nuevo', '＋ Otro distribuidor…']); o.push(['libre', 'Libre']); if (it.productoId || it.origen === 'mixto') o.push(['mixto', it.origen === 'mixto' ? 'Repartido' : 'Repartir (automático)']); return o.map(([v, l]) => `<option value="${esc(v)}" ${cur === v ? 'selected' : ''}>${esc(l)}</option>`).join(''); };
 const origenNombre = (o) => o === 'manuel' || o === 'papa' ? (CFG().inventarios[o] || o) : o === 'dist' ? 'Distribuidor' : o === 'mixto' ? 'Repartido' : 'Libre';
 const TIPOS = { oferta: 'Oferta', nota: 'Nota de entrega', venta: 'Venta', compra: 'Compra', ajuste: 'Ajuste' };
 const esVenta = (d) => d.tipo === 'nota' || d.tipo === 'venta';
@@ -1391,7 +1391,7 @@ const parteNombre = (p) => p.origen === 'dist' ? distNombre(p.dist || itDist(p))
 const repartoTxt = (it) => tieneReparto(it) ? partesDe(it).map(p => `${fmtQty(num(p.cant))} ${parteNombre(p)}`).join(' + ') : '';
 /* descuento general que te da (el de la ficha; Grupos Eléctricos hereda el viejo de Ajustes) */
 const descDist = (d) => { if (!d) return null; if (num(d.descuento) > 0) return num(d.descuento); const l = CFG().descCostoDist; return d.surte && d.surte.scraping && l != null && l !== '' ? num(l) : null; };
-const reglasDe = (d) => (d && Array.isArray(d.reglas) ? d.reglas : []).filter(r => r && r.pct !== '' && r.pct != null);
+const reglasDe = (d) => (d && Array.isArray(d.reglas) ? d.reglas : []).filter(r => r && ((r.pct !== '' && r.pct != null) || num(r.costo) > 0));
 const tieneDesc = (d) => !!d && (descDist(d) != null || reglasDe(d).length > 0);
 const rutaTxt = (r) => (r || []).join(' › ');
 const empiezaCon = (ruta, pref) => pref.length && pref.length <= ruta.length && pref.every((x, i) => normKey(x) === normKey(ruta[i]));
@@ -1400,7 +1400,8 @@ const descPara = (d, c) => {
   if (!d) return null;
   const rs = reglasDe(d); const mk = normKey(c && c.m);
   if (mk) {
-    const p = rs.find(r => r.tipo === 'prod' && normKey(r.modelo) === mk); if (p) return { pct: num(p.pct), regla: 'Producto ' + p.modelo, tipo: 'prod' };
+    const p = rs.find(r => r.tipo === 'prod' && normKey(r.modelo) === mk);
+    if (p) { const cf = p.costo !== '' && p.costo != null && num(p.costo) > 0 ? num(p.costo) : null; return { pct: cf && c && c.precio > 0 ? (1 - cf / c.precio) * 100 : num(p.pct), costoFijo: cf, regla: 'Producto ' + p.modelo + (cf ? ' (costo fijo)' : ''), tipo: 'prod' }; }
     const g = rs.find(r => r.tipo === 'grupo' && (r.modelos || []).some(x => normKey(x) === mk)); if (g) return { pct: num(g.pct), regla: 'Grupo ' + (g.nombre || ''), tipo: 'grupo' };
   }
   const ruta = c ? CatTienda.ruta(c) : [];
@@ -1413,13 +1414,67 @@ const recargoInter = (d) => { if (!esInter(d)) return 0; const l = d.logistica |
 /* detalle del costo de un producto del catálogo con un distribuidor */
 const costoInfo = (c, d) => {
   if (d === undefined) d = distDeCat(c);
-  if (!c || !(c.precio > 0) || !d) return null;
+  if (!c || !d) return null;
   const dp = descPara(d, c); const rec = recargoInter(d);
+  if (dp && dp.costoFijo > 0) { const base = dp.costoFijo; return { lista: c.precio > 0 ? c.precio : null, pct: c.precio > 0 ? round2(dp.pct) : null, regla: dp.regla, base: round2(base), recargo: rec, costo: round2(base * (1 + rec / 100)), dist: d }; }
+  if (!(c.precio > 0)) return null;
   if (!dp && !rec) return null;
   const pct = dp ? dp.pct : 0, base = c.precio * (1 - pct / 100);
   return { lista: c.precio, pct, regla: dp ? dp.regla : 'Sin descuento', base: round2(base), recargo: rec, costo: round2(base * (1 + rec / 100)), dist: d };
 };
 const costoDist = (c, d) => { const x = costoInfo(c, d); return x ? x.costo : null; };
+/* costo fijo puesto a mano para un modelo (aunque no esté en el catálogo): { costo, dist } o null */
+const costoFijoModelo = (model) => {
+  const mk = normKey(model); if (!mk) return null;
+  for (const d of Dists()) { const r = reglasDe(d).find(x => x.tipo === 'prod' && normKey(x.modelo) === mk && num(x.costo) > 0); if (r) { const rec = recargoInter(d); return { costo: round2(num(r.costo) * (1 + rec / 100)), base: num(r.costo), rec, dist: d }; } }
+  return null;
+};
+/* ---------- Producto de un distribuidor que no tienes registrado ----------
+   Elegir (o crear) el distribuidor, marcar que te surte la marca y poner el costo del producto.
+   El costo queda como regla "Producto" con costo fijo en ese distribuidor, así sale solo la próxima vez. */
+function distCostoModal(model, marca, alHecho) {
+  model = String(model || '').trim(); marca = String(marca || '').trim().toUpperCase();
+  const cat = model ? catalogoByCodigo(model) : null;
+  if (!marca && cat && cat.marca) marca = String(cat.marca).toUpperCase();
+  const ds = Dists();
+  const actual = cat ? distDeCat(cat) : null;
+  const m = UI.modal({ title: 'Distribuidor y costo' + (model ? ' · ' + model : ''), body: `
+    <p class="small" style="margin-top:0">${actual ? `Lo trae <b>${esc(actual.nombre)}</b>, pero sin costo para este producto.` : marca ? `Ningún distribuidor registrado te surte <b>${esc(marca)}</b>.` : 'Este producto no tiene distribuidor.'} Elige quién te lo vende (o agrégalo) y pon tu costo.</p>
+    <div class="seg" data-modo style="margin-bottom:10px"><button type="button" data-v="nuevo" class="${actual || !ds.length ? '' : 'on'}">Nuevo distribuidor</button><button type="button" data-v="existe" class="${actual || !ds.length ? 'on' : ''}" ${ds.length ? '' : 'disabled'}>Uno que ya tengo</button></div>
+    <div data-nuevo class="grid g2"><label class="fld"><span>Nombre del distribuidor</span><input class="inp" data-n placeholder="Ej. Danfoss Venezuela"></label>
+      <label class="fld"><span>Tipo</span><select class="inp" data-alc><option value="nacional">Nacional</option><option value="internacional">Internacional</option></select></label></div>
+    <div data-existe class="grid g2"><label class="fld" style="grid-column:1/-1"><span>Distribuidor</span><select class="inp" data-d>${ds.map(d => `<option value="${esc(d.id)}" ${actual && actual.id === d.id ? 'selected' : ''}>${esc(d.nombre)}</option>`).join('')}</select></label></div>
+    <div class="grid g2" style="margin-top:10px">
+      <label class="fld"><span>Tu costo unitario (USD)</span><input class="inp num" inputmode="decimal" data-c placeholder="0.00"></label>
+      ${marca ? `<label class="chk" style="align-self:end"><input type="checkbox" data-mk ${actual ? '' : 'checked'}> Me surte toda la marca ${esc(marca)}</label>` : '<span></span>'}
+    </div>
+    <p class="small muted" style="margin:8px 0 0">El costo se guarda en la ficha del distribuidor (Descuentos → Producto) y se usa en las próximas ofertas y notas.</p>`,
+    foot: [['Cancelar', '', c => c()], ['Guardar', 'pri', (close) => {
+      const modo = ($('[data-modo] .on', m.body) || {}).dataset.v || 'nuevo';
+      const costo = num($('[data-c]', m.body).value);
+      let d;
+      if (modo === 'nuevo') {
+        const n = $('[data-n]', m.body).value.trim(); if (!n) { UI.toast('Escribe el nombre del distribuidor'); $('[data-n]', m.body).focus(); return; }
+        d = ds.find(x => normKey(x.nombre) === normKey(n)) || Object.assign(nuevoDist($('[data-alc]', m.body).value), { nombre: n });
+        d = clone(d);
+      } else { d = clone(Store.get('proveedores', $('[data-d]', m.body).value)); if (!d) { UI.toast('Elige un distribuidor'); return; } }
+      if (!d.surte) d.surte = { scraping: false, marcas: '' };
+      const mk = $('[data-mk]', m.body);
+      if (marca && mk && mk.checked && !marcasDe(d.surte.marcas).includes(normKey(marca))) d.surte.marcas = [String(d.surte.marcas || '').trim(), marca].filter(Boolean).join(', ');
+      if (model && costo > 0) {
+        d.reglas = (d.reglas || []).filter(r => !(r.tipo === 'prod' && normKey(r.modelo) === normKey(model)));
+        d.reglas.push({ id: uid('r'), tipo: 'prod', modelo: model, pct: '', costo: round2(costo) });
+      }
+      Store.put('proveedores', d); Bus.emit('data', 'proveedores');
+      close();
+      UI.toast(`${d.nombre}${costo > 0 ? ': costo de ' + model + ' ' + fmtUSD(costo) : ' guardado'}`, 3500);
+      if (alHecho) alHecho({ dist: d, costo: costo > 0 ? round2(costo * (1 + recargoInter(d) / 100)) : null });
+    }]] });
+  const modo = (v) => { $$('[data-modo] [data-v]', m.body).forEach(b => b.classList.toggle('on', b.dataset.v === v)); $('[data-nuevo]', m.body).style.display = v === 'nuevo' ? '' : 'none'; $('[data-existe]', m.body).style.display = v === 'existe' ? '' : 'none'; };
+  $('[data-modo]', m.body).addEventListener('click', e => { const b = e.target.closest('[data-v]'); if (b && !b.disabled) modo(b.dataset.v); });
+  modo(($('[data-modo] .on', m.body) || {}).dataset ? $('[data-modo] .on', m.body).dataset.v : 'nuevo');
+  setTimeout(() => { const f = $('[data-modo] .on', m.body) && $('[data-modo] .on', m.body).dataset.v === 'existe' ? $('[data-c]', m.body) : $('[data-n]', m.body); if (f) f.focus(); }, 50);
+}
 /* lo que se guarda en la línea al agregarla (queda fijo aunque cambien los descuentos) */
 const costoLinea = (c, d) => { const x = costoInfo(c, d); return x ? { costo: x.costo, listPrice: c.precio, dtoDist: x.pct, recargo: x.recargo || 0 } : { listPrice: c && c.precio }; };
 /* crea (una sola vez) Grupos Eléctricos, SAER y EMI, o completa los que ya tengas con ese nombre */
@@ -2014,6 +2069,8 @@ const ownTag = (o) => `<span class="own ${esc(o)}">${esc(origenNombre(o))}</span
 const docParty = (d) => d.tipo === 'compra' ? ((d.proveedor && d.proveedor.nombre) || '—') : ((d.cliente && d.cliente.nombre) || '—');
 const docItemsTxt = (d) => { const its = d.items || []; if (!its.length) return '<span class="muted">Sin productos</span>'; const f = its[0]; const t = f.codigo || plainFirst(f.desc); return `<span class="code">${esc(t.slice(0, 40))}</span>${its.length > 1 ? ` <span class="muted">+${its.length - 1}</span>` : ''}`; };
 const docOrigins = (d) => Array.from(new Set(partesDoc(d).map(i => d.tipo === 'compra' || d.tipo === 'ajuste' ? d.inventario : i.origen).filter(Boolean)));
+/* igual, pero con el distribuidor exacto de cada línea (dist|id) en vez de "Distribuidor" */
+const docOrigenesDet = (d) => Array.from(new Set(partesDoc(d).map(i => d.tipo === 'compra' || d.tipo === 'ajuste' ? d.inventario : i.origen === 'dist' ? (itDist(i) ? 'dist|' + itDist(i) : 'dist') : i.origen).filter(Boolean)));
 const estadoPill = (d) => {
   if (d.estado === 'anulada') return '<span class="pill bad">Anulada</span>';
   if (d.tipo === 'oferta') { const e = ESTADOS_OFERTA[d.estado || 'abierta'] || ESTADOS_OFERTA.abierta; return `<span class="pill ${e[1]}">${e[0]}</span>`; }
@@ -2071,7 +2128,7 @@ function docListView(v, { titulo, tipos, nuevo, sub }) {
     { h: 'Número', get: d => d.numero || null },
     { h: party, get: d => docParty(d) },
     { h: 'Productos', cls: 'hm', get: d => { const f = (d.items || [])[0]; return f ? (f.codigo || plainFirst(f.desc)) : null; } },
-    { h: 'Origen', cls: 'hm', get: d => docOrigins(d).map(origenNombre).join(' ') || null },
+    { h: 'Origen', cls: 'hm', get: d => docOrigenesDet(d).map(nombreOrigen).join(' ') || null },
     { h: compra ? 'Comprado por' : 'Vendedor', cls: 'hm', get: d => d[campo] || null },
     { h: 'Total', cls: 'r', get: d => Calc.totals(d).total },
     { h: 'Estado', get: estadoKey }
@@ -2108,7 +2165,7 @@ function docListView(v, { titulo, tipos, nuevo, sub }) {
         <td class="mono small" style="white-space:nowrap">${esc(d.numero || '')}</td>
         <td>${esc(docParty(d))}${d.tipo === 'venta' && tipos.includes('nota') ? ' <span class="pill" title="Venta sin nota de entrega">sin nota</span>' : ''}</td>
         <td class="hm">${docItemsTxt(d)}</td>
-        <td class="hm">${docOrigins(d).map(ownTag).join(' ')}</td><td class="hm small">${esc(d[campo] || '—')}</td>
+        <td class="hm">${docOrigenesDet(d).map(tagOrigen).join(' ')}</td><td class="hm small">${esc(d[campo] || '—')}</td>
         <td class="num">${fmtUSD(T.total)}</td>
         <td>${conEstado ? estSel(d) : estadoPill(d)}</td></tr>`; }).join('')}
       </tbody></table></div>
@@ -2717,7 +2774,7 @@ function docEditor(v, D, isNew) {
       const c = it.costo === '' || it.costo == null ? null : num(it.costo), p = num(it.precio);
       if (it.origen === 'dist' && it.listPrice) { const rec = num(it.recargo) || 0; const dto = it.dtoDist != null && it.dtoDist !== '' ? num(it.dtoDist) : c != null ? (1 - c / (1 + rec / 100) / num(it.listPrice)) * 100 : null; parts.push(`<span>Lista ${fmtUSD(it.listPrice)}${dto != null ? ` · desc. ${fmtNum(dto, 1)}%` : ''}${rec ? ` · +${fmtNum(rec)}% traerlo` : ''}</span>`); }
       if (c != null && p > 0) parts.push(`<span>Ganancia ${fmtUSD((p - c) * num(it.cant))}${c > 0 ? ` (${fmtNum((p - c) / c * 100, 1)}% sobre costo)` : ''}</span>`);
-      else if (it.origen !== 'libre') parts.push('<span>Sin costo: no calcula ganancia</span>');
+      else if (it.origen !== 'libre') parts.push(`<span>Sin costo: no calcula ganancia</span>${it.origen === 'dist' ? '<button type="button" class="btn sm" data-distc style="padding:1px 8px;font-size:14px">＋ Distribuidor y costo</button>' : ''}`);
       if (venta && it.origen === 'dist') parts.push(`<label>Pedido: <select class="inp" style="width:auto;padding:2px 6px;font-size:15px" data-lk="pedido">${Object.entries(PEDIDO).map(([k, [l]]) => `<option value="${k}" ${(it.pedido || 'por pedir') === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>`);
     }
     if (compra) { if (!it.productoId) parts.push(`<span class="warn">Producto nuevo: se agrega al inventario de ${esc(origenNombre(D.inventario))} al guardar</span>`); else { const s = Calc.st(it.productoId); parts.push(`<span>Existencia actual ${esc(origenNombre(D.inventario))}: ${fmtQty(s[D.inventario].cant)} · costo prom. ${fmtUSD(s[D.inventario].costo)}</span>`); } }
@@ -2756,6 +2813,11 @@ function docEditor(v, D, isNew) {
     const row = e.target.closest('[data-li]'); const k = e.target.dataset.lk; if (!row || !k) return;
     const it = D.items[+row.dataset.li];
     if (k === 'origen') {
+      if (e.target.value === '__nuevo') {
+        paintLines();
+        distCostoModal(it.codigo, marcaLinea(it), ({ dist, costo }) => { it.sinReparto = true; if (tieneReparto(it)) { delete it.reparto; delete it.repartoManual; } it.origen = 'dist'; it.dist = dist.id; if (costo != null) it.costo = costo; if (venta && !it.pedido) it.pedido = 'por pedir'; setDirty(); paintLines(); });
+        return;
+      }
       if (e.target.value === 'mixto') {
         if (!it.productoId) { const p = findProductoByCodigo(it.codigo); if (p) it.productoId = p.id; }
         delete it.sinReparto; delete it.repartoManual;
@@ -2779,6 +2841,7 @@ function docEditor(v, D, isNew) {
   });
   $('#lines', v).addEventListener('click', (e) => {
     const row = e.target.closest('[data-li]'); if (!row) return; const i = +row.dataset.li;
+    if (e.target.closest('[data-distc]')) { const it = D.items[i]; distCostoModal(it.codigo, marcaLinea(it), ({ dist, costo }) => { it.dist = dist.id; if (costo != null) it.costo = costo; setDirty(); paintLines(); }); return; }
     if (e.target.closest('[data-del]')) { D.items.splice(i, 1); setDirty(); paintLines(); }
     else if (e.target.closest('[data-up]')) { [D.items[i - 1], D.items[i]] = [D.items[i], D.items[i - 1]]; setDirty(); paintLines(); }
     else if (e.target.closest('[data-down]')) { [D.items[i + 1], D.items[i]] = [D.items[i], D.items[i + 1]]; setDirty(); paintLines(); }
@@ -4825,9 +4888,9 @@ function fichaDistribuidor(v, id) {
     const box = $('#reglas', v);
     const rs = p.reglas.slice().sort((a, b) => ORD_R[a.tipo] - ORD_R[b.tipo] || String(a.tipo === 'cat' ? rutaTxt(a.ruta) : a.nombre || a.modelo).localeCompare(String(b.tipo === 'cat' ? rutaTxt(b.ruta) : b.nombre || b.modelo)));
     box.innerHTML = rs.length ? `<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Tipo</th><th>Aplica a</th><th class="r">Productos</th><th class="r">% desc.</th><th></th></tr></thead><tbody>
-      ${rs.map(r => `<tr data-rid="${esc(r.id)}"><td class="small">${TIPO_R[r.tipo]}</td><td>${r.tipo === 'cat' ? esc(rutaTxt(r.ruta)) : r.tipo === 'prod' ? `<span class="code">${esc(r.modelo)}</span>` : `<b style="font-weight:500">${esc(r.nombre || 'Grupo')}</b><div class="muted small clip">${esc((r.modelos || []).join(', '))}</div>`}</td><td class="num">${fmtQty(cuenta(r))}</td><td class="num" data-s="${num(r.pct)}"><input class="inp num" style="width:76px;padding:4px 6px" inputmode="decimal" data-rpct value="${esc(r.pct)}"></td><td style="white-space:nowrap">${r.tipo === 'grupo' ? '<button class="btn sm ghost" data-redit title="Editar grupo">✎</button>' : ''}<button class="btn sm ghost" data-rdel title="Quitar">✕</button></td></tr>`).join('')}
+      ${rs.map(r => `<tr data-rid="${esc(r.id)}"><td class="small">${TIPO_R[r.tipo]}</td><td>${r.tipo === 'cat' ? esc(rutaTxt(r.ruta)) : r.tipo === 'prod' ? `<span class="code">${esc(r.modelo)}</span>${num(r.costo) > 0 ? ` <span class="pill info" title="Costo puesto a mano: manda sobre el %">costo ${fmtUSD(num(r.costo))}</span>` : ''}` : `<b style="font-weight:500">${esc(r.nombre || 'Grupo')}</b><div class="muted small clip">${esc((r.modelos || []).join(', '))}</div>`}</td><td class="num">${fmtQty(cuenta(r))}</td><td class="num" data-s="${num(r.pct)}"><input class="inp num" style="width:76px;padding:4px 6px" inputmode="decimal" data-rpct value="${esc(r.pct)}"></td><td style="white-space:nowrap">${r.tipo === 'grupo' ? '<button class="btn sm ghost" data-redit title="Editar grupo">✎</button>' : ''}<button class="btn sm ghost" data-rdel title="Quitar">✕</button></td></tr>`).join('')}
       </tbody></table></div>` : `<div class="empty small" style="border:1px dashed var(--line);border-radius:6px;padding:16px">Sin reglas: se usa el descuento general${descDist(p) != null ? ` (${fmtNum(descDist(p))}%)` : ''} para todo.</div>`;
-    $$('[data-rpct]', box).forEach(i => i.addEventListener('input', () => { const r = p.reglas.find(x => x.id === i.closest('[data-rid]').dataset.rid); r.pct = i.value.trim() === '' ? '' : num(i.value); setDirty(); probar(); }));
+    $$('[data-rpct]', box).forEach(i => i.addEventListener('input', () => { const r = p.reglas.find(x => x.id === i.closest('[data-rid]').dataset.rid); r.pct = i.value.trim() === '' ? '' : num(i.value); if (r.pct !== '') delete r.costo; setDirty(); probar(); }));
     $$('[data-rdel]', box).forEach(b => b.onclick = () => { p.reglas = p.reglas.filter(x => x.id !== b.closest('[data-rid]').dataset.rid); setDirty(); paintReglas(); probar(); });
     $$('[data-redit]', box).forEach(b => b.onclick = () => grupoModal(p.reglas.find(x => x.id === b.closest('[data-rid]').dataset.rid)));
   };
@@ -6230,6 +6293,8 @@ const Cot = (() => {
   .mg-row .mg-gan.bajo,.mg-row .mg-gan.bajo b{color:#B45309}
   .mg-row .mg-mix{background:#FFF7ED;color:#C2410C;border:1px solid #FDBA74;border-radius:5px;padding:0 6px;font-size:12.5px;font-weight:700}
   .mg-row .mg-mas{border:1px solid #CBD5E1;background:#fff;border-radius:6px;padding:0 7px;font:inherit;font-size:12.5px;font-weight:700;color:#475569;cursor:pointer;line-height:1.6}
+  .mg-dist{border:1px dashed #b8860b;background:#fff8e1;color:#7a5200;border-radius:6px;padding:1px 7px;font:inherit;font-size:12px;font-weight:700;cursor:pointer;line-height:1.5;white-space:nowrap;margin-left:4px}
+  .mg-dist:hover{background:#ffefb3}
   .mg-row .mg-mas::after{content:' ▸'}.mg-row.abierto .mg-mas::after,body.mg-det-on .mg-row .mg-mas::after{content:' ▾'}
   .mg-row .mg-mas:hover{border-color:#0e2a3b;color:#0e2a3b}
   #adm-margen h4{flex-wrap:wrap!important;white-space:normal!important;cursor:default!important;row-gap:6px}
@@ -6309,8 +6374,14 @@ const Cot = (() => {
     }
     if (preferInv && !p) return null;
     if (x) return { costo: x.costo, dto: x.pct, rec: x.recargo, fuente: x.dist.nombre, regla: x.regla, lista: x.lista };
+    const cf = costoFijoModelo(model);
+    if (cf) return { costo: cf.costo, dto: null, rec: cf.rec, fuente: cf.dist.nombre, regla: 'costo fijo' };
     return null;
   };
+  /* botón para agregar distribuidor y costo cuando un producto no tiene costo */
+  const btnDistCosto = (model, txt) => model && !findProductoByCodigo(model) ? `<button type="button" class="mg-dist" data-mg-dist="${esc(model)}" title="Agregar el distribuidor que te lo vende y tu costo">${txt || '＋ distribuidor y costo'}</button>` : '';
+  const marcaDeTexto = (t) => ((String(t || '').match(/Ref\s*\/\s*Modelo:[^\n—–]*[—–]\s*([^\n<]+)/i) || [])[1] || '').trim();
+  const abrirDistCosto = (model, marca, repintar) => distCostoModal(model, marca, () => { try { repintar && repintar(); } catch (e) {} });
   const margenHtml = (m, precio) => {
     if (!m || !(m.costo > 0)) return '';
     const g = precio > 0 ? (precio - m.costo) / m.costo * 100 : null;
@@ -6530,21 +6601,21 @@ const Cot = (() => {
       // escritorio: panel debajo del buscador
       const cp = dd.querySelector('body > .catalog-panel');
       if (cp) {
-        let box = dd.getElementById('adm-margen'); if (!box) { box = dd.createElement('div'); box.id = 'adm-margen'; cp.appendChild(box); box.addEventListener('click', (e) => { if (e.target.closest('[data-mg-aj]')) { margenGrande(dd, null, 'aj'); return; } if (e.target.closest('[data-mg-big]')) { margenGrande(dd, null, 'ut'); return; } const ed = e.target.closest('[data-mg-ed]'); if (ed) { margenGrande(dd, +ed.dataset.mgEd, 'ut'); return; } if (e.target.closest('[data-mg-tg]')) { if (buscandoMg(dd)) mgForce = !mgForce; else { mgOpen = !mgOpen; lsSet('suinadm_mg_open2', mgOpen); } estadoMg(dd); return; } const l = e.target.closest('[data-mi]'); if (!l) return; const tr = dd.querySelectorAll('#items-tbody > tr.item-row')[+l.dataset.mi]; if (tr) { selIdx = +l.dataset.mi; tr.scrollIntoView({ behavior: 'smooth', block: 'center' }); paintMargen(dd); } }); }
+        let box = dd.getElementById('adm-margen'); if (!box) { box = dd.createElement('div'); box.id = 'adm-margen'; cp.appendChild(box); box.addEventListener('click', (e) => { const bd = e.target.closest('[data-mg-dist]'); if (bd) { e.stopPropagation(); const tr = dd.querySelectorAll('#items-tbody > tr.item-row')[+(bd.closest('[data-mi]') || {}).dataset.mi]; const dc = tr && tr.querySelector('.item-desc'); abrirDistCosto(bd.dataset.mgDist, marcaDeTexto(dc ? dc.innerText : ''), () => paintMargen(dd)); return; } if (e.target.closest('[data-mg-aj]')) { margenGrande(dd, null, 'aj'); return; } if (e.target.closest('[data-mg-big]')) { margenGrande(dd, null, 'ut'); return; } const ed = e.target.closest('[data-mg-ed]'); if (ed) { margenGrande(dd, +ed.dataset.mgEd, 'ut'); return; } if (e.target.closest('[data-mg-tg]')) { if (buscandoMg(dd)) mgForce = !mgForce; else { mgOpen = !mgOpen; lsSet('suinadm_mg_open2', mgOpen); } estadoMg(dd); return; } const l = e.target.closest('[data-mi]'); if (!l) return; const tr = dd.querySelectorAll('#items-tbody > tr.item-row')[+l.dataset.mi]; if (tr) { selIdx = +l.dataset.mi; tr.scrollIntoView({ behavior: 'smooth', block: 'center' }); paintMargen(dd); } }); }
         const T = totMg(ls, disc), { venta, costo, sinC, gan, pctT } = T;
         const negs = ls.filter(l => l.m && l.m.costo > 0 && l.pr * (1 - disc) < l.m.costo).length;
         const html = ls.length ? `<h4><span class="mg-tg" data-mg-tg title="Desplegar u ocultar el detalle"><span class="mg-car">▾</span>Margen ${pctT != null ? `<span class="mg-pct ${pctT < 0 ? 'neg' : pctT < MG_BAJO ? 'bajo' : 'ok'}">${fmtNum(pctT, 1)}%</span>` : ''}<small>${costo ? fmtUSD(gan) + ' · ' : ''}${ls.length} prod.${disc ? ` · ${fmtNum(disc * 100)}% desc.` : ''}</small>${negs ? `<span class="mg-pct neg" title="${negs} por debajo del costo">▼ ${negs}</span>` : ''}${sinC ? `<span class="mg-pct sc" title="${sinC} sin costo: no suman ganancia">${sinC} s/c</span>` : ''}</span><span class="mg-bts"><button type="button" class="mg-aj" data-mg-big title="Ver la tabla completa en grande y cambiar la utilidad">⤢ En grande</button><button type="button" class="mg-aj ut" data-mg-big title="Cambiar el % de utilidad de todo el documento o de cada producto">✎ Utilidad</button><button type="button" class="mg-aj" data-mg-aj title="Subir o bajar precios, o dar descuento a productos específicos">% Ajustar</button></span></h4>
           <div class="mg-tot"><div><small>Venta</small><b>${fmtUSD(venta)}</b></div><div><small>Costo</small><b>${fmtUSD(costo)}</b></div><div class="${gan < 0 ? 'neg' : 'g'}"><small>Ganancia${sinC ? ' (sin s/c)' : ''}</small><b>${fmtUSD(gan)}</b></div><div class="${pctT != null && pctT < 0 ? 'neg' : 'g'}"><small>Utilidad</small><b>${pctT != null ? fmtNum(pctT, 1) + '%' : '—'}</b></div></div>
           <div class="mg-hid">El detalle se oculta mientras buscas, para ver mejor los productos. Toca «Margen» para verlo.</div>
           <div class="mg-list"><div class="mg-hd"><span>#</span><span>Producto</span><span>Costo</span><span>Ganancia</span></div>${ls.map(l => { const pn = l.pr * (1 - disc), tiene = l.m && l.m.costo > 0;
-            return `<div class="mg-ln ${l.i === selIdx ? 'on' : ''}" data-mi="${l.i}" title="${esc(tiene ? l.m.fuente + (l.m.dto != null ? ' · desc. ' + fmtNum(l.m.dto, 1) + '%' : '') : 'Sin costo')}"><span class="n">${l.i + 1}</span><span class="p"><b>${esc(l.model || 'Línea sin modelo')}</b><small>${fmtQty(l.q)} × ${fmtUSD(pn)}${tiene ? ' · ' + esc(l.m.fuente) : ''}</small></span><span class="c">${tiene ? fmtUSD(l.m.costo) : '—'}${tiene && l.q !== 1 ? `<small>c/u</small>` : ''}</span><span class="gg"><b>${tiene ? fmtUSD(l.q * (pn - l.m.costo)) : '—'}</b>${tiene ? `<span data-mg-ed="${l.i}" title="Cambiar la utilidad de este producto">${pctMg(pn, l.m)}</span>` : pctMg(pn, l.m)}</span></div>`; }).join('')}</div>` : '';
+            return `<div class="mg-ln ${l.i === selIdx ? 'on' : ''}" data-mi="${l.i}" title="${esc(tiene ? l.m.fuente + (l.m.dto != null ? ' · desc. ' + fmtNum(l.m.dto, 1) + '%' : '') : 'Sin costo')}"><span class="n">${l.i + 1}</span><span class="p"><b>${esc(l.model || 'Línea sin modelo')}</b><small>${fmtQty(l.q)} × ${fmtUSD(pn)}${tiene ? ' · ' + esc(l.m.fuente) : ''}</small></span><span class="c">${tiene ? fmtUSD(l.m.costo) : (btnDistCosto(l.model, '＋ costo') || '—')}${tiene && l.q !== 1 ? `<small>c/u</small>` : ''}</span><span class="gg"><b>${tiene ? fmtUSD(l.q * (pn - l.m.costo)) : '—'}</b>${tiene ? `<span data-mg-ed="${l.i}" title="Cambiar la utilidad de este producto">${pctMg(pn, l.m)}</span>` : pctMg(pn, l.m)}</span></div>`; }).join('')}</div>` : '';
         if (box.dataset.h !== html) { box.dataset.h = html; box.innerHTML = html; const on = box.querySelector('.mg-ln.on'); if (on) on.scrollIntoView({ block: 'nearest' }); }
         estadoMg(dd);
       }
       dd.querySelectorAll('#items-tbody > tr.item-row').forEach((tr, i) => tr.classList.toggle('adm-sel', i === selIdx));
       // teléfono: debajo de cada producto
       dd.querySelectorAll('#m-items-list .m-item').forEach((card, i) => {
-        const l = ls[i]; const html = l ? margenHtml(l.m, l.pr * (1 - disc)) : '';
+        const l = ls[i]; const html = l ? (margenHtml(l.m, l.pr * (1 - disc)) || (l.model ? `<span class="mg-src">Sin costo</span>${btnDistCosto(l.model)}` : '')) : '';
         let el = card.querySelector(':scope > .mg-row');
         if (!html) { if (el) el.remove(); return; }
         if (!el) { el = dd.createElement('div'); el.className = 'mg-row'; const foot = card.querySelector('.m-item-foot'); if (foot) foot.insertAdjacentElement('afterend', el); else card.appendChild(el); }
@@ -6579,6 +6650,14 @@ const Cot = (() => {
   const wireMgMas = (doc) => {
     if (doc.__mgMas) return; doc.__mgMas = true;
     doc.body.classList.toggle('mg-det-on', mgDet);
+    // "＋ distribuidor y costo" debajo de un producto (teléfono y oferta rápida)
+    doc.addEventListener('click', (e) => {
+      const b = e.target.closest && e.target.closest('[data-mg-dist]'); if (!b) return;
+      e.preventDefault(); e.stopPropagation();
+      const card = b.closest('.m-item, .card');
+      const marca = card ? (marcaDeTexto(card.innerText) || ((Array.from(card.querySelectorAll('input')).find(i => /marca/i.test((i.closest('label, .f, .field') || {}).textContent || '')) || {}).value || '')) : '';
+      abrirDistCosto(b.dataset.mgDist, marca, () => { if (mgRun) mgRun(); if (rapRun) rapRun(); });
+    }, true);
     doc.addEventListener('click', (e) => {
       const b = e.target.closest && e.target.closest('[data-mg-mas]'); if (!b) return;
       e.preventDefault(); e.stopPropagation();
@@ -6636,6 +6715,8 @@ const Cot = (() => {
   .mg-row .mg-gan.bajo,.mg-row .mg-gan.bajo b{color:#B45309}
   .mg-row .mg-mix{background:#FFF7ED;color:#C2410C;border:1px solid #FDBA74;border-radius:5px;padding:0 6px;font-size:12.5px;font-weight:700}
   .mg-row .mg-mas{border:1px solid #CBD5E1;background:#fff;border-radius:6px;padding:0 7px;font:inherit;font-size:12.5px;font-weight:700;color:#475569;cursor:pointer;line-height:1.6}
+  .mg-dist{border:1px dashed #b8860b;background:#fff8e1;color:#7a5200;border-radius:6px;padding:1px 7px;font:inherit;font-size:12px;font-weight:700;cursor:pointer;line-height:1.5;white-space:nowrap;margin-left:4px}
+  .mg-dist:hover{background:#ffefb3}
   .mg-row .mg-mas::after{content:' ▸'}.mg-row.abierto .mg-mas::after,body.mg-det-on .mg-row .mg-mas::after{content:' ▾'}
   .mg-row .mg-mas:hover{border-color:#0e2a3b;color:#0e2a3b}`;
   const setupMargenRapida = (rw) => {
@@ -6650,7 +6731,7 @@ const Cot = (() => {
           const hm = card.querySelector('[data-hm]'); const model = hm && !hm.classList.contains('empty') ? hm.textContent.trim() : '';
           const inp = card.querySelector('[data-f="precio"]'); const pr = precioDe(inp ? inp.value : (card.querySelector('[data-hp]') || {}).textContent);
           const m = model ? margenDe(model, pr, false) : null;
-          const html = !model ? '' : (margenHtml(m, pr) || '<span class="mg-src">Sin costo: no se puede calcular la ganancia</span>');
+          const html = !model ? '' : (margenHtml(m, pr) || '<span class="mg-src">Sin costo: no se puede calcular la ganancia</span>' + btnDistCosto(model));
           let el = card.querySelector(':scope > .mg-row');
           if (!html) { if (el) el.remove(); return; }
           if (!el) { el = rd.createElement('div'); el.className = 'mg-row'; const h = card.querySelector('.card-h'); if (h) h.insertAdjacentElement('afterend', el); else card.appendChild(el); }
