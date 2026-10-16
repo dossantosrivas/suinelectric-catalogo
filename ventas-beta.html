@@ -6013,14 +6013,14 @@ const Cot = (() => {
       if (st.vista === 'tabla') {
         body.innerHTML = `<table class="rg-t"><thead><tr><th></th>${th(st.orden, 'tipo', 'Tipo')}${th(st.orden, 'control', 'N° control')}${th(st.orden, 'fecha', 'Fecha')}${th(st.orden, 'cliente', 'Cliente')}${th(st.orden, 'items', 'Productos')}${th(st.orden, 'total', 'Total', 'n')}${th(st.orden, 'guardado', 'Guardado')}<th></th></tr></thead><tbody>${list.map(d => {
           const id = d.r.id; const on = open1.has(id);
-          return `<tr class="row click ${R.isCurrent(id) ? 'cur' : ''}" data-tg="${esc(id)}"><td><button type="button" class="rg-tg" data-tg="${esc(id)}" aria-label="Ver productos">${on ? '▼' : '▶'}</button></td><td>${badge(d)}</td><td class="b">${esc(d.control)}</td><td>${esc(d.r.fecha || '')}</td><td class="b cut" title="${esc(d.cliente)}">${esc(d.cliente || 'Sin cliente')}</td><td class="cut"><b>${d.n}</b> <span class="mut">${esc(d.its.slice(0, 3).map(x => x.modelo).join(', '))}${d.its.length > 3 ? '…' : ''}</span></td><td class="n b">${fmtUSD(d.total)}</td><td class="mut">${esc(fechaH(d.guardado))}</td><td class="acts"><button type="button" class="rg-b pri" data-open="${esc(id)}">Abrir</button> <button type="button" class="rg-b" data-dup="${esc(id)}">Duplicar</button> <button type="button" class="rg-b del" data-del="${esc(id)}" aria-label="Eliminar">🗑</button></td></tr>${on ? `<tr class="sub"><td colspan="9">${itemsTable(d.its, 0, id)}</td></tr>` : ''}`;
+          return `<tr class="row click ${R.isCurrent(id) ? 'cur' : ''}" data-tg="${esc(id)}"><td><button type="button" class="rg-tg" data-tg="${esc(id)}" aria-label="Ver productos">${on ? '▼' : '▶'}</button></td><td>${badge(d)}</td><td class="b">${esc(d.control)}</td><td>${esc(d.r.fecha || '')}</td><td class="b cut" title="${esc(d.cliente)}">${esc(d.cliente || 'Sin cliente')}</td><td class="cut"><b>${d.n}</b> <span class="mut">${esc(d.its.slice(0, 3).map(x => x.modelo).join(', '))}${d.its.length > 3 ? '…' : ''}</span></td><td class="n b">${fmtUSD(d.total)}</td><td class="mut">${esc(fechaH(d.guardado))}</td><td class="acts"><button type="button" class="rg-b pri" data-open="${esc(id)}">Abrir</button> <button type="button" class="rg-b" data-dup="${esc(id)}">Duplicar</button> <button type="button" class="rg-b" data-rap="${esc(id)}" title="Pasar sus productos a una Oferta rápida">⚡ Rápida</button> <button type="button" class="rg-b del" data-del="${esc(id)}" aria-label="Eliminar">🗑</button></td></tr>${on ? `<tr class="sub"><td colspan="9">${itemsTable(d.its, 0, id)}</td></tr>` : ''}`;
         }).join('')}</tbody></table>`;
       } else {
         body.innerHTML = `<div class="rg-grid">${list.map(d => { const id = d.r.id; return `<article class="rg-card ${R.isCurrent(id) ? 'cur' : ''}">
           <div class="rg-ch">${badge(d)}<span class="cl" title="${esc(d.cliente)}">${esc(d.cliente || 'Sin cliente')}</span><span class="tot">${fmtUSD(d.total)}</span></div>
           <div class="rg-meta">${esc(d.control)} · ${esc(d.r.fecha || '')} · ${d.n} producto${d.n === 1 ? '' : 's'} · guardado ${esc(fechaH(d.guardado))}</div>
           ${itemsTable(d.its, 6, id)}
-          <div class="rg-act"><button type="button" class="rg-b pri" data-open="${esc(id)}">Abrir</button><button type="button" class="rg-b" data-dup="${esc(id)}">Duplicar</button><button type="button" class="rg-b del" data-del="${esc(id)}">Eliminar</button></div>
+          <div class="rg-act"><button type="button" class="rg-b pri" data-open="${esc(id)}">Abrir</button><button type="button" class="rg-b" data-dup="${esc(id)}">Duplicar</button><button type="button" class="rg-b" data-rap="${esc(id)}" title="Pasar sus productos a una Oferta rápida">⚡ A rápida</button><button type="button" class="rg-b del" data-del="${esc(id)}">Eliminar</button></div>
         </article>`; }).join('')}</div>`;
       }
     };
@@ -6096,6 +6096,7 @@ const Cot = (() => {
       if (d.a === 'savecli') { const c = R.readClient(); if (R.isPlaceholderClient(c)) { alert('El documento no tiene un cliente cargado.'); return; } R.upsertClient(c); paint(false); return; }
       if (d.open) { const r = findDoc(d.open); if (r) { R.openRecord(r, false); hide(); } return; }
       if (d.dup) { const r = findDoc(d.dup); if (r) { R.openRecord(r, true); hide(); } return; }
+      if (d.rap) { const r = findDoc(d.rap); if (r && R.aRapida) { hide(); R.aRapida(r); } return; }
       if (d.del) { const r = findDoc(d.del); if (r && confirm(`¿Eliminar ${r.control} (${(r.cliente && r.cliente.nombre) || 'sin cliente'}) del registro?`)) { R.removeRec(K_REG, r.id); paint(false); } return; }
       if (d.more) { moreOpen.add(d.more); paint(false); return; }
       if (d.use) { const c = findCli(d.use); if (c) { R.applyClient(c); hide(); } return; }
