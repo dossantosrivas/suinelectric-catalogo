@@ -699,6 +699,16 @@
   .cart-item .ci-qty span{ min-width:30px; text-align:center; font-weight:700; }
   .cart-item .ci-quitar{ background:none; border:none; color:var(--off); cursor:pointer; font-size:13px; padding:0; }
   .cart-item .ci-quitar:hover{ text-decoration:underline; }
+  #cart-admin{ margin:0 0 12px; padding:10px 12px; border:1px dashed #b8860b; border-radius:8px; background:#fff8e1; color:#4a3b00; font-size:13px; }
+  .ca-tit{ font-weight:700; margin-bottom:6px; } .ca-tit span{ font-weight:500; opacity:.7; font-size:12px; }
+  .ca-campo{ display:flex; flex-direction:column; gap:3px; font-size:12px; font-weight:600; }
+  .ca-campo input{ font:inherit; font-size:14px; font-weight:400; padding:8px 10px; border:1px solid var(--linea); border-radius:6px; background:var(--superficie); color:var(--texto); }
+  .ca-sel{ margin:6px 0 2px; font-size:12.5px; line-height:1.4; min-height:0; }
+  .ca-sel b{ color:var(--tinta); } .ca-sel button{ border:0; background:none; color:#7a5200; text-decoration:underline; cursor:pointer; font:inherit; padding:0; margin-left:6px; }
+  .ca-btns{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px; }
+  .ca-btn{ background:var(--tinta); color:#fff; border:0; padding:10px 8px; font-size:13.5px; font-weight:600; border-radius:6px; cursor:pointer; }
+  .ca-btn:hover{ background:var(--tinta-2); }
+  .ca-ayuda{ font-size:11.5px; opacity:.75; margin-top:6px; line-height:1.4; }
   #cart-footer{ padding:16px 20px; border-top:1px solid var(--linea); background:var(--fondo); flex-shrink:0; }
   #cart-resumen{ margin-bottom:14px; }
   .cart-linea{ display:flex; justify-content:space-between; font-size:14px; color:var(--texto-2); padding:3px 0; }
@@ -1193,6 +1203,27 @@
   #chat-burbuja[hidden], #chat-datos[hidden]{ display:none; }
   body.chat-abierto{ overflow:hidden; }
   @media (min-width: 641px){ body.chat-abierto{ overflow:auto; } }
+  .dest-cards{ display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:14px; }
+  a.enlace-cat.dest-card{
+    background:#fff; border:1px solid var(--linea); border-radius:var(--radio); overflow:hidden; color:var(--texto);
+    display:flex; flex-direction:column; text-decoration:none; transition:border-color .15s, box-shadow .15s, transform .15s;
+  }
+  a.enlace-cat.dest-card:hover{ border-color:var(--azul); box-shadow:0 8px 22px rgba(14,42,59,0.10); transform:translateY(-2px); text-decoration:none; }
+  .dest-img{ height:150px; display:flex; align-items:center; justify-content:center; padding:14px; background:#fff; position:relative; }
+  .dest-img img{ max-width:100%; max-height:100%; object-fit:contain; }
+  .dest-img .cat-card-noimg{ font-size:42px; }
+  .dest-n{ position:absolute; top:10px; left:10px; background:var(--tinta); color:#fff; font:700 12px var(--sans); border-radius:12px; padding:3px 9px; }
+  .dest-cuerpo{ border-top:1px solid var(--linea-suave); padding:12px 14px 14px; display:flex; flex-direction:column; gap:8px; flex:1; }
+  .dest-tit{ font-family:var(--display); font-weight:700; font-size:20px; line-height:1.15; color:var(--tinta); display:flex; justify-content:space-between; gap:8px; align-items:flex-start; }
+  a.enlace-cat.dest-card:hover .dest-tit{ color:var(--azul-texto); }
+  a.enlace-cat.dest-card:hover .cat-card-flecha{ transform:translateX(3px); }
+  .dest-meta{ font-size:13px; color:var(--texto-3); }
+  .dest-meta b{ color:var(--ok); font-weight:600; }
+  .dest-marcas{ display:flex; flex-wrap:wrap; gap:6px; align-items:center; margin-top:auto; }
+  .dest-marcas span{ height:30px; min-width:30px; padding:4px 8px; border:1px solid var(--linea-suave); border-radius:5px; background:#fff; display:inline-flex; align-items:center; justify-content:center; font:600 11.5px var(--sans); color:var(--texto-2); }
+  .dest-marcas img{ max-height:20px; max-width:62px; object-fit:contain; }
+  @media (max-width:1100px){ .dest-cards{ grid-template-columns:repeat(2, minmax(0,1fr)); } }
+  @media (max-width:520px){ .dest-cards{ gap:10px; } .dest-img{ height:110px; padding:10px; } .dest-tit{ font-size:17px; } .dest-cuerpo{ padding:10px 10px 12px; } .dest-marcas span{ height:26px; padding:3px 6px; } .dest-marcas img{ max-height:16px; max-width:48px; } }
   /* ===== Guía de subcategorías: línea del tiempo a la derecha (oct. 2026) =====
      Pantalla ancha: riel a la derecha. Más angosta: tira deslizable arriba de los productos. */
   #guia-sub{ display:none; }
@@ -1489,6 +1520,19 @@
       <div class="cart-linea"><span>Subtotal (precio lista)</span><span id="cart-subtotal-lista">$0.00</span></div>
       <div class="cart-linea cart-descuento"><span>Descuento<span id="cart-descuento-pct" hidden>0</span></span><span id="cart-descuento-monto">-$0.00</span></div>
       <div class="cart-linea cart-total-linea"><span>Total</span><strong id="cart-total">$0.00</strong></div>
+    </div>
+    <div id="cart-admin" hidden>
+      <div class="ca-tit">Armar para un cliente <span>· solo administradores</span></div>
+      <label class="ca-campo" for="ca-cliente">Cliente
+        <input id="ca-cliente" list="ca-clientes" placeholder="Busca por nombre, RIF o correo" autocomplete="off">
+      </label>
+      <datalist id="ca-clientes"></datalist>
+      <div class="ca-sel" id="ca-sel"></div>
+      <div class="ca-btns">
+        <button type="button" class="btn ca-btn" id="ca-oferta">Crear oferta</button>
+        <button type="button" class="btn ca-btn" id="ca-nota">Crear nota de entrega</button>
+      </div>
+      <div class="ca-ayuda">Se abre en Gestión con estos productos, cantidades y precios. Ahí lo revisas y lo guardas.</div>
     </div>
     <a class="btn btn-wa" style="display:block;margin-bottom:8px;" id="btn-wa-carrito" href="#" target="_blank" rel="noopener">Enviar pedido por WhatsApp (0412)</a>
     <a class="btn btn-wa btn-wa-2" style="display:block;" id="btn-wa-carrito-2" href="#" target="_blank" rel="noopener">Enviar al 0424</a>
@@ -2102,6 +2146,7 @@ function hashDeNav(n, det){
   else if (n.vista === 'catalogos') base = '#/catalogos';
   else if (q){ base = '#/buscar'; params.push('q=' + encodeURIComponent(q)); }
   else if (n.seleccion && n.seleccion.length) base = hashDeRuta(n.seleccion);
+  else if (n.destacado) base = '#/destacado/' + n.destacado;
   else if (n.filtroMarca) base = '#/marca/' + slugDe(n.filtroMarca);
   else base = '#/todo';
   if (n.filtroMarca && n.vista === 'catalogo' && base.indexOf('#/marca/') !== 0) params.push('marca=' + slugDe(n.filtroMarca));
@@ -2124,11 +2169,12 @@ function navDeHash(hash){
   const [camino, qs] = h.split('?');
   const params = new URLSearchParams(qs || '');
   const partes = (camino || '').split('/').filter(Boolean).map(x => { try { return decodeURIComponent(x); } catch(e){ return x; } });
-  const n = { vista: 'inicio', seleccion: [], filtroMarca: null, q: '' };
+  const n = { vista: 'inicio', seleccion: [], filtroMarca: null, q: '', destacado: null };
   if (partes[0] === 'catalogos') n.vista = 'catalogos';
   else if (partes[0] === 'todo') n.vista = 'catalogo';
   else if (partes[0] === 'buscar'){ n.vista = 'catalogo'; n.q = params.get('q') || ''; }
   else if (partes[0] === 'marca'){ n.vista = 'catalogo'; n.filtroMarca = marcaDeSlug(partes[1] || ''); }
+  else if (partes[0] === 'destacado' && destacadoPorClave(partes[1] || '')){ n.vista = 'catalogo'; n.destacado = partes[1]; }
   else if (partes[0] === 'c'){
     n.vista = 'catalogo';
     let nodo = construirArbol();
@@ -2149,6 +2195,7 @@ function aplicarHash(hash){
   vista = n.vista;
   seleccion = n.seleccion;
   filtroMarca = n.filtroMarca;
+  destacado = destacadoPorClave(n.destacado);
   filtrosFac = facDeSerial(n.fac); facClaveRuta = seleccion.slice(0, 2).join('|||');
   document.getElementById('buscador').value = n.q;
   for (let i = 1; i <= seleccion.length; i++) expandidos.add(seleccion.slice(0, i).join('|||'));
@@ -2161,7 +2208,7 @@ function irARuta(ruta){
   ['modal-detalle', 'modal-imagen'].forEach(id => document.getElementById(id).classList.remove('abierto'));
   document.getElementById('sugerencias').style.display = 'none';
   document.getElementById('buscador').value = '';
-  filtroMarca = null;
+  filtroMarca = null; destacado = null;
   vista = 'catalogo';
   seleccion = ruta.slice(0, MAX_NIVELES);
   for (let i = 1; i <= seleccion.length; i++) expandidos.add(seleccion.slice(0, i).join('|||'));
@@ -2177,18 +2224,27 @@ document.addEventListener('click', (e) => {
   e.preventDefault();
   if (a.getAttribute('data-vista-ir') === 'inicio'){
     ['modal-detalle', 'modal-imagen'].forEach(id => document.getElementById(id).classList.remove('abierto'));
-    vista = 'inicio'; filtroMarca = null; seleccion = [];
+    vista = 'inicio'; filtroMarca = null; seleccion = []; destacado = null;
     document.getElementById('buscador').value = '';
     renderSidebar(); mostrarVista();
     window.scrollTo({ top: 0, behavior: 'smooth' });
     return;
   }
+  const dk = a.getAttribute('data-destacado');
+  if (dk && destacadoPorClave(dk)){ irADestacado(destacadoPorClave(dk)); return; }
   const clave = decodeURIComponent(a.getAttribute('data-ruta') || '');
   irARuta(clave ? clave.split('|||') : []);
 });
 
 /* ---------- Cabecera de la categoría actual ---------- */
 function cabeceraCategoriaHTML(lista){
+  if (destacado && !seleccion.length){
+    ponerTitulo(destacado.titulo);
+    const subs = rutasDe(destacado).map(r => enlaceCat(r, r[r.length - 1], 'chip', '<span class="chip-cnt">' + lista.filter(p => { const x = rutaNavDe(p); return r.every((seg, i) => x[i] === seg); }).length + '</span>')).join('');
+    return '<div class="cab-cat"><nav class="migas" aria-label="Ruta"><a class="enlace-cat" href="#/" data-vista-ir="inicio">Inicio</a><span class="miga-sep">›</span><span class="miga-txt">Lo más pedido</span></nav>' +
+      '<div class="cab-cat-fila"><h1 class="cab-cat-titulo">' + escHtml(destacado.titulo) + '</h1><span class="cab-cat-conteo">' + lista.length + (lista.length === 1 ? ' producto' : ' productos') + '</span>' +
+      '<button type="button" class="btn-enlace" id="btn-copiar-enlace" title="Compartir">🔗 Compartir</button></div><div class="subcat-chips">' + subs + '</div></div>';
+  }
   const ruta = seleccion.slice(0, MAX_NIVELES);
   // Subcategorías del nivel actual (con cuántos productos hay en cada una, según los filtros)
   const hijos = {};
@@ -2382,7 +2438,7 @@ function renderSidebar(){
       const clave = decodeURIComponent(el.getAttribute('data-clave') || '');
       const tieneHijos = el.getAttribute('data-tiene-hijos') === '1';
       if (clave === ''){
-        seleccion = [];
+        seleccion = []; destacado = null;
         cerrarSidebar(); // "Todas las categorías" es una elección final
       } else {
         const ruta = clave.split('|||');
@@ -2428,6 +2484,65 @@ const IMAGENES_FAMILIA = {
   'Sensores e Instrumentación': 'imagenes/familias/sensores-e-instrumentacion.jpg',
   'Mando y Señalización': 'imagenes/familias/mando-y-senalizacion.jpg',
 };
+
+// Subcategorías destacadas en Inicio ("Lo más pedido"), con todas sus marcas.
+// Se eligieron por ventas, búsquedas en la tienda y cantidad de modelos. Cambia el orden aquí.
+const DESTACADOS = [
+  // "rutas" (varias) arma una sección propia con todas: aquí LOGO! junto a las pantallas HMI de Kinco
+  { titulo: 'LOGO!, relés programables y HMI Kinco', clave: 'logo-y-hmi-kinco', rutas: [['Automatización y PLC', 'PLC Básicos', 'LOGO!'], ['Automatización y PLC', 'Paneles HMI', 'Kinco']], foto: '6ED1052-1FB08-0BA2' },
+  { titulo: 'Variadores de frecuencia',   ruta: ['Variadores y Arrancadores', 'Variadores de Frecuencia'], foto: 'GD20-7R5G-4' },
+  { titulo: 'Contactores',                ruta: ['Control de Motores', 'Contactores'], foto: '3RT1025-1AN20' },
+  { titulo: 'Breakers automáticos',       ruta: ['Protección Eléctrica', 'Breakers Automáticos'], foto: '5SL6206-7MB' },
+  { titulo: 'Breakers en caja moldeada',  ruta: ['Protección Eléctrica', 'Breakers en Caja Moldeada'], foto: '3VT2725-2AA36-0250' },
+  { titulo: 'Pulsadores y pilotos',       ruta: ['Mando y Señalización', 'Pulsadores y Pilotos'], foto: '3SB3602-2KA11' },
+  { titulo: 'Guardamotores',              ruta: ['Control de Motores', 'Guardamotores'], foto: '3RV2021-4BA10' },
+  { titulo: 'Arrancadores suaves',        ruta: ['Variadores y Arrancadores', 'Arrancadores Suaves'], foto: '3RW4038-1BB14' },
+];
+// Sección destacada activa (la de una tarjeta con varias rutas), o null
+let destacado = null;
+const rutasDe = (d) => d.rutas || [d.ruta];
+const enDestacado = (p, d) => { const r = rutaNavDe(p); return rutasDe(d).some(ru => ru.every((seg, i) => r[i] === seg)); };
+const destacadoPorClave = (k) => DESTACADOS.find(d => d.clave && d.clave === k) || null;
+function prefijoComun(rutas){ const out = []; for (let i = 0; ; i++){ const s0 = rutas[0][i]; if (s0 == null || !rutas.every(r => r[i] === s0)) return out; out.push(s0); } }
+function irADestacado(d){
+  ['modal-detalle', 'modal-imagen'].forEach(id => document.getElementById(id).classList.remove('abierto'));
+  document.getElementById('sugerencias').style.display = 'none';
+  document.getElementById('buscador').value = '';
+  filtroMarca = null; vista = 'catalogo'; seleccion = []; destacado = d;
+  cerrarSidebar(); renderSidebar(); aplicarFiltros();
+  window.scrollTo({ top: 0, behavior: 'smooth' });
+}
+function destacadosHtml(){
+  const tarjetas = DESTACADOS.map(d => {
+    const lista = productos.filter(p => enDestacado(p, d));
+    if (!lista.length) return '';
+    const porMarca = {};
+    lista.forEach(p => { const m = (p.marca || '').toUpperCase().trim(); if (m && !/^(SIN MARCA|GEN[EÉ]RIC[OA]|OTRA?S?|N\/?A|-)$/.test(m)) porMarca[m] = (porMarca[m] || 0) + 1; });
+    const marcas = Object.keys(porMarca).sort((a, b) => porMarca[b] - porMarca[a]);
+    const disp = lista.filter(p => p.disponible).length;
+    // foto: el modelo elegido para la tarjeta; si no está, un producto principal (no accesorio) con foto propia
+    const esPrincipal = (p) => p.imagen && !/accesorio/i.test(rutaNavDe(p).join(' ') + ' ' + String(p.descripcion || '').slice(0, 30));
+    const elegido = d.foto && productos.find(p => p.modelo === d.foto && p.imagen);
+    const candidatos = lista.filter(esPrincipal).sort((a, b) => (!/^https?:/.test(b.imagen)) - (!/^https?:/.test(a.imagen)) || (b.disponible ? 1 : 0) - (a.disponible ? 1 : 0));
+    const foto = (elegido || candidatos.find(p => (p.marca || '').toUpperCase() === marcas[0]) || candidatos[0] || lista.find(p => p.imagen) || {}).imagen;
+    const reserva = (candidatos.find(p => p.imagen !== foto) || {}).imagen;
+    const conLogo = marcas.filter(m => LOGOS_MARCAS[m]), sinLogo = marcas.filter(m => !LOGOS_MARCAS[m]);
+    const chips = conLogo.slice(0, 4).map(m => '<span title="' + escHtml(m) + '"><img src="' + LOGOS_MARCAS[m] + '" alt="' + escHtml(m) + '" loading="lazy"></span>')
+      .concat(sinLogo.slice(0, Math.max(0, 4 - conLogo.length)).map(m => '<span>' + escHtml(m.length > 12 ? m.slice(0, 11) + '…' : m) + '</span>'));
+    const resto = marcas.length - chips.length;
+    if (resto > 0) chips.push('<span title="' + escHtml(marcas.slice(chips.length).join(', ')) + '">+' + resto + '</span>');
+    const r = rutasDe(d)[0].slice(0, MAX_NIVELES);
+    const destino = d.rutas ? 'href="#/destacado/' + d.clave + '" data-destacado="' + d.clave + '"' : 'href="' + hashDeRuta(r) + '" data-ruta="' + encodeURIComponent(claveDe(r)) + '"';
+    return '<a class="enlace-cat dest-card" ' + destino + '>' +
+             '<div class="dest-img">' + (foto ? '<img src="' + foto + '" alt="" loading="lazy"' + (reserva ? ' onerror="this.onerror=null;this.src=\'' + reserva + '\'"' : '') + '>' : '<span class="cat-card-noimg">⚡</span>') +
+               '<span class="dest-n">' + lista.length.toLocaleString('es-VE') + ' modelos</span></div>' +
+             '<div class="dest-cuerpo"><div class="dest-tit">' + escHtml(d.titulo) + '<span class="cat-card-flecha">→</span></div>' +
+               '<div class="dest-meta"><b>' + disp.toLocaleString('es-VE') + ' disponibles</b> · ' + marcas.length + (marcas.length === 1 ? ' marca' : ' marcas') + '</div>' +
+               '<div class="dest-marcas">' + chips.join('') + '</div></div>' +
+           '</a>';
+  }).filter(Boolean);
+  return tarjetas.length ? '<h2 class="inicio-h2">Lo más pedido</h2><div class="dest-cards">' + tarjetas.join('') + '</div>' : '';
+}
 
 // Imagen representativa de una categoría (ruta): la primera imagen de un
 // producto que esté dentro de esa ruta (si existe).
@@ -2526,6 +2641,8 @@ function renderInicio(){
   }
   html += '</section>';
 
+  html += destacadosHtml();
+
   // Carrusel de productos al azar, para mostrar la variedad del catálogo.
   const muestra = productosAleatorios(16);
   if (muestra.length){
@@ -2575,7 +2692,7 @@ function renderInicio(){
 
   const verTodo = document.getElementById('hero-ver-todo');
   if (verTodo) verTodo.addEventListener('click', () => {
-    vista = 'catalogo'; filtroMarca = null; seleccion = [];
+    vista = 'catalogo'; filtroMarca = null; seleccion = []; destacado = null;
     renderSidebar(); aplicarFiltros();
     window.scrollTo({ top: 0, behavior: 'smooth' });
   });
@@ -2589,7 +2706,7 @@ function renderInicio(){
       if (e.ctrlKey || e.metaKey || e.shiftKey || e.altKey) return;
       e.preventDefault();
       filtroMarca = el.getAttribute('data-marca');
-      seleccion = [];
+      seleccion = []; destacado = null;
       vista = 'catalogo';
       renderSidebar();
       aplicarFiltros();
@@ -2863,7 +2980,7 @@ function render(lista){
   estadoRender = { id: ++idRender, cola, gi: 0, pi: 0, grid: null, cont, sentinela };
   sentinela.querySelector('button').addEventListener('click', () => pintarTanda(TANDA_TARJETAS));
   pintarTanda(TANDA_TARJETAS);
-  armarGuia(cola, textoBusqueda ? [] : seleccion.slice(0, MAX_NIVELES), textoBusqueda);
+  armarGuia(cola, textoBusqueda ? [] : (destacado && !seleccion.length ? prefijoComun(rutasDe(destacado)) : seleccion.slice(0, MAX_NIVELES)), textoBusqueda);
   if (observadorTandas) observadorTandas.disconnect();
   if ('IntersectionObserver' in window){
     observadorTandas = new IntersectionObserver((ents) => {
@@ -2943,14 +3060,18 @@ function ocultarGuia(){
 function armarGuia(cola, base, buscando){
   const L = base.length;
   const paradas = [], porNombre = new Map(), giAParada = [], giAHijo = [];
+  // sección destacada con varias rutas: una parada por ruta (LOGO!, Kinco…) y sus series debajo
+  const rutasD = !buscando && destacado && !seleccion.length ? rutasDe(destacado) : null;
   cola.forEach((g, gi) => {
-    const nombre = g.ruta.length > L ? g.ruta[L] : (base[L - 1] ? base[L - 1] + ' (general)' : 'General');
+    const rd = rutasD && rutasD.find(r => r.every((seg, i) => g.ruta[i] === seg));
+    const nivel = rd ? rd.length - 1 : L;
+    const nombre = g.ruta.length > nivel ? g.ruta[nivel] : (base[L - 1] ? base[L - 1] + ' (general)' : 'General');
     let p = porNombre.get(nombre);
     if (!p){ p = { nombre, n: 0, gi, hijos: [], hijosMap: new Map() }; porNombre.set(nombre, p); paradas.push(p); }
     p.n += g.productos.length;
     giAParada[gi] = paradas.indexOf(p);
-    if (g.ruta.length > L + 1){
-      const hn = g.ruta[L + 1];
+    if (g.ruta.length > nivel + 1){
+      const hn = g.ruta[nivel + 1];
       let h = p.hijosMap.get(hn);
       if (!h){ h = { nombre: hn, n: 0, gi }; p.hijosMap.set(hn, h); p.hijos.push(h); }
       h.n += g.productos.length;
@@ -2961,7 +3082,7 @@ function armarGuia(cola, base, buscando){
   guiaEstado = { paradas, giAParada, giAHijo, actual: -1, hijoActual: -1 };
   const n = (x) => x.toLocaleString('es-VE');
   document.getElementById('guia-tit').textContent = buscando ? 'Resultados por familia' : 'En esta categoría';
-  document.getElementById('guia-cat').textContent = buscando ? 'Tu búsqueda' : (base[L - 1] || (filtroMarca ? 'Productos ' + nombreMarca(filtroMarca) : 'Todo el catálogo'));
+  document.getElementById('guia-cat').textContent = buscando ? 'Tu búsqueda' : (destacado && !seleccion.length ? destacado.titulo : base[L - 1] || (filtroMarca ? 'Productos ' + nombreMarca(filtroMarca) : 'Todo el catálogo'));
   document.getElementById('guia-linea').innerHTML = paradas.map((p, i) =>
     '<li class="guia-parada" data-i="' + i + '"><button type="button" class="guia-btn" data-gi="' + p.gi + '"><span class="gn">' + escHtml(p.nombre) + '</span><span class="gc">' + n(p.n) + '</span></button>' +
     (p.hijos.length > 1 ? '<ul class="guia-hijos">' + p.hijos.map((h, j) => '<li><button type="button" class="guia-btn" data-gi="' + h.gi + '" data-h="' + j + '"><span class="gn">' + escHtml(h.nombre) + '</span><span class="gc">' + n(h.n) + '</span></button></li>').join('') + '</ul>' : '') +
@@ -4037,7 +4158,7 @@ function aplicarFiltros(){
     if (!hayBusqueda && seleccion.length > 0){
       const ruta = rutaDe(p);
       coincideCategoria = seleccion.every((seg, i) => ruta[i] === seg);
-    }
+    } else if (!hayBusqueda && destacado) coincideCategoria = enDestacado(p, destacado);
     const coincideMarca = !filtroMarca || (p.marca || '').toUpperCase() === filtroMarca;
 
     const coincideTexto = coincideBusqueda(p, palabras);
@@ -4373,6 +4494,7 @@ function cambiarCantidad(modelo, delta){
 function quitarDelCarrito(modelo){ delete carrito[modelo]; renderCarrito(); }
 
 function renderCarrito(){
+  pintarCarritoAdmin();
   const itemsEl = document.getElementById('cart-items');
   const items = Object.values(carrito);
   const totalItemsCarrito = items.reduce((s, i) => s + i.cantidad, 0);
@@ -4824,7 +4946,7 @@ document.getElementById('btn-cerrar-cart').addEventListener('click', () => docum
 document.getElementById('btn-menu').addEventListener('click', toggleSidebar);
 
 document.getElementById('brand-inicio').addEventListener('click', () => {
-  vista = 'inicio'; filtroMarca = null;
+  vista = 'inicio'; filtroMarca = null; destacado = null;
   document.getElementById('buscador').value = '';
   renderSidebar(); mostrarVista();
   window.scrollTo({ top: 0, behavior: 'smooth' });
@@ -4954,6 +5076,93 @@ async function cargarSesionYReglas(){
   refrescarPrecios();
   if (faltanDatos()) abrirCuenta();
 }
+/* =====================================================================
+   CARRITO → OFERTA O NOTA DE ENTREGA (solo administradores)
+   El administrador elige un cliente (los precios del carrito pasan a ser
+   los de ese cliente) y abre Gestión con los productos ya cargados.
+   Se pasan por localStorage (mismo dominio) con la clave suin_carrito_gestion.
+   ===================================================================== */
+let clienteParaAdmin = null;      // {email, nombre, empresa, tipo_id} o null
+let clientesTienda = null;        // lista para el buscador (se trae una vez)
+/* Todos los clientes: la base única de Gestión (fichas de ofertas, notas, ventas y los registrados
+   en la tienda, ya emparejados). Si una ficha tiene cuenta en la tienda, se usan sus precios de cliente. */
+async function traerClientesTienda(){
+  if (clientesTienda || !sb || !sesion.admin) return;
+  clientesTienda = [];
+  try {
+    const [g, w] = await Promise.all([
+      sb.from('adm_registros').select('id,data').eq('coleccion', 'clientes').eq('borrado', false),
+      sb.from('clientes').select('email,nombre,empresa,rif,telefono,tipo_id,activo,es_admin'),
+    ]);
+    const web = new Map((w.data || []).map(c => [String(c.email || '').toLowerCase(), c]));
+    const usados = new Set();
+    (g.data || []).forEach(r => {
+      const d = r.data || {}; if (!d.nombre) return;
+      const em = String(d.tiendaEmail || '').toLowerCase(), cw = em ? web.get(em) : null;
+      if (cw && (cw.es_admin || cw.activo === false)) return;
+      if (em) usados.add(em);
+      clientesTienda.push({ gid: r.id, nombre: d.nombre, empresa: '', rif: d.rif || '', telefono: d.telefono || (cw && cw.telefono) || '',
+        email: em || String(d.correo || '').toLowerCase(), web: !!cw, tipo_id: cw ? cw.tipo_id : null });
+    });
+    // registrados en la tienda que Gestión todavía no trajo (aparecen al abrir Gestión)
+    web.forEach((c, em) => { if (!usados.has(em) && !c.es_admin && c.activo !== false)
+      clientesTienda.push({ gid: null, nombre: c.empresa || c.nombre || em, empresa: c.empresa && c.nombre ? c.nombre : '', rif: c.rif || '', telefono: c.telefono || '', email: em, web: true, tipo_id: c.tipo_id }); });
+    clientesTienda.sort((a, b) => a.nombre.localeCompare(b.nombre, 'es'));
+    clientesTienda.forEach((c, i) => { c.k = 'C' + (i + 1); });
+  } catch (e) { clientesTienda = []; }
+  const dl = document.getElementById('ca-clientes');
+  if (dl) dl.innerHTML = clientesTienda.map(c => '<option value="' + escHtml(etiquetaCliente(c)) + '"></option>').join('');
+  const inp = document.getElementById('ca-cliente');
+  if (inp) inp.placeholder = 'Busca entre tus ' + clientesTienda.length + ' clientes (nombre, RIF o correo)';
+}
+function etiquetaCliente(c){ return [c.nombre, c.rif, c.email, c.web ? 'tienda' : ''].filter(Boolean).join(' · ') + ' [' + c.k + ']'; }
+function pintarCarritoAdmin(){
+  const box = document.getElementById('cart-admin');
+  if (!box) return;
+  const ver = typeof sesion !== 'undefined' && sesion.admin && Object.keys(carrito).length > 0;
+  box.hidden = !ver;
+  if (!ver) return;
+  traerClientesTienda();
+  const sel = document.getElementById('ca-sel');
+  const c = clienteParaAdmin;
+  sel.innerHTML = c ? (c.web ? 'Precios de <b>' + escHtml(c.nombre) + '</b>' + (c.tipo_id && tiposCliente[c.tipo_id] ? ' (' + escHtml(tiposCliente[c.tipo_id]) + ')' : '')
+                             : '<b>' + escHtml(c.nombre) + '</b> · no tiene cuenta en la tienda: precios de la tienda') + '<button type="button" id="ca-quitar">quitar</button>'
+                    : 'Sin cliente: precios de la tienda. También puedes elegirlo después en Gestión.';
+  const q = document.getElementById('ca-quitar');
+  if (q) q.onclick = () => { clienteParaAdmin = null; document.getElementById('ca-cliente').value = ''; refrescarPrecios(); };
+}
+function elegirClienteAdmin(texto){
+  const t = String(texto || '').trim().toLowerCase();
+  if (!t || !clientesTienda) return;
+  const m = t.match(/\[(c\d+)\]\s*$/);
+  const c = clientesTienda.find(x => m ? x.k.toLowerCase() === m[1] : (x.email && x.email === t));
+  if (!c) return;
+  clienteParaAdmin = c;
+  refrescarPrecios();
+}
+function carritoAGestion(tipo){
+  const items = Object.values(carrito).map(({ producto: p, cantidad }) => ({
+    modelo: p.modelo, marca: p.marca || '', nombre: p.nombre && p.nombre !== p.modelo ? p.nombre : '',
+    descripcion: String(p.descripcion || '').slice(0, 1500), cantidad, precio_unit: Math.ceil(precioMostrado(p) || 0)
+  }));
+  if (!items.length){ mostrarToast('El carrito está vacío'); return; }
+  const c = clienteParaAdmin;
+  const datos = { tipo, creado: Date.now(), items,
+    cliente: c ? { id: c.gid, email: c.email, nombre: c.nombre || '', empresa: c.empresa || '', rif: c.rif || '', telefono: c.telefono || '' } : null };
+  try { localStorage.setItem('suin_carrito_gestion', JSON.stringify(datos)); }
+  catch (e){ mostrarToast('No se pudo pasar el carrito a Gestión (el navegador no deja guardar datos)'); return; }
+  const url = (typeof URL_GESTION !== 'undefined' ? URL_GESTION : '/ventas') + '/desde-tienda/' + tipo;
+  const w = window.open(url, '_blank');
+  if (!w) location.href = url;
+  mostrarToast(tipo === 'nota' ? 'Abriendo la nota de entrega en Gestión…' : 'Abriendo la oferta en Gestión…');
+}
+(function(){
+  const inp = document.getElementById('ca-cliente');
+  if (inp){ inp.addEventListener('change', () => elegirClienteAdmin(inp.value)); inp.addEventListener('input', () => { if (/\[C\d+\]\s*$/i.test(inp.value)) elegirClienteAdmin(inp.value); }); }
+  const bo = document.getElementById('ca-oferta'), bn = document.getElementById('ca-nota');
+  if (bo) bo.addEventListener('click', () => carritoAGestion('oferta'));
+  if (bn) bn.addEventListener('click', () => carritoAGestion('nota'));
+})();
 function refrescarPrecios(){
   if (!productos.length) return;
   mostrarVista();
@@ -4971,11 +5180,14 @@ function reglaPara(p, tipoSimulado){
   const modelo = String(p.modelo || '').toUpperCase().trim();
   // tipoSimulado: calcula el precio "como si" fuera un cliente de ese tipo (sin reglas por cuenta).
   const simulando = tipoSimulado !== undefined;
-  const tipo = simulando ? tipoSimulado : (sesion.cliente ? sesion.cliente.tipo_id : null);
+  // Administrador armando un pedido para un cliente: precios de ese cliente
+  const otro = !simulando && sesion.admin && clienteParaAdmin && clienteParaAdmin.web ? clienteParaAdmin : null;
+  const tipo = simulando ? tipoSimulado : otro ? otro.tipo_id : (sesion.cliente ? sesion.cliente.tipo_id : null);
+  const emailRegla = otro ? otro.email : sesion.email;
   let mejor = null, mejorRango = 99;
   for (const r of reglasDescuento){
     let quien, que;
-    if (r.cliente_email){ if (simulando || !sesion.email || r.cliente_email !== sesion.email) continue; quien = 0; }
+    if (r.cliente_email){ if (simulando || !emailRegla || r.cliente_email !== emailRegla) continue; quien = 0; }
     else if (r.tipo_id){ if (!tipo || r.tipo_id !== tipo) continue; quien = 1; }
     else quien = 2;
     if (r.modelo){ if (String(r.modelo).toUpperCase().trim() !== modelo) continue; que = 0; }
@@ -5535,6 +5747,7 @@ cargar();
       vista: vista,
       seleccion: seleccion.slice(),
       filtroMarca: filtroMarca,
+      destacado: destacado && !seleccion.length ? destacado.clave : null,
       q: $('buscador').value,
       disp: $('filtro-disponibilidad').value,
       orden: $('filtro-orden') ? $('filtro-orden').value : '',
@@ -5564,7 +5777,7 @@ cargar();
   // para no crear una entrada por cada letra que se escribe)
   function mismaPantalla(a, b){
     return a.vista === b.vista &&
-           a.filtroMarca === b.filtroMarca &&
+           a.filtroMarca === b.filtroMarca && (a.destacado || null) === (b.destacado || null) &&
            a.seleccion.join('|||') === b.seleccion.join('|||') &&
            (a.q.trim() !== '') === (b.q.trim() !== '');
   }
@@ -5680,6 +5893,7 @@ cargar();
         vista = n.vista;
         seleccion = n.seleccion.slice();
         filtroMarca = n.filtroMarca;
+        destacado = destacadoPorClave(n.destacado);
         filtrosFac = facDeSerial(n.fac); facClaveRuta = seleccion.slice(0, 2).join('|||');
         $('buscador').value = n.q;
         $('filtro-disponibilidad').value = n.disp;
