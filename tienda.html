@@ -104,12 +104,15 @@
   .brand img.logo{ height:52px; width:52px; border-radius:50%; }
   /* Logo animado en la cabecera: mismo tamaño que el logo fijo, recortado en círculo.
      El logo fijo se ve hasta que el video está listo; con "reducir movimiento" no se anima. */
-  .brand .logo-wrap{ position:relative; display:block; width:52px; height:52px; flex:none; border-radius:50%; overflow:hidden; }
-  .brand .logo-wrap img.logo{ display:block; }
-  /* el video trae fondo negro alrededor del anillo: se amplía y centra en el disco del logo para que el negro quede fuera del círculo */
-  .brand .logo-anim{ position:absolute; left:50%; top:50%; width:134%; height:134%; transform:translate(-49.8%,-51.6%); object-fit:cover;
-    opacity:0; transition:opacity .35s ease; pointer-events:none; background:#000; }
-  .brand .logo-wrap.anim-on .logo-anim{ opacity:1; }
+  .brand .logo-wrap{ position:relative; display:block; width:52px; height:52px; flex:none; }
+  .brand .logo-wrap img.logo{ display:block; transition:opacity .35s ease; }
+  /* El video trae fondo negro: se dibuja en un canvas quitando el negro de afuera del disco,
+     así el anillo eléctrico se ve completo sobre la cabecera blanca. El disco ocupa el tamaño del logo. */
+  .brand .logo-anim{ position:absolute; width:1px; height:1px; opacity:0; pointer-events:none; }
+  .brand .logo-cv{ position:absolute; left:50%; top:50%; width:116.3%; height:116.3%; transform:translate(-49.75%,-51.75%);
+    opacity:0; transition:opacity .35s ease; pointer-events:none; }
+  .brand .logo-wrap.anim-on .logo-cv{ opacity:1; }
+  .brand .logo-wrap.anim-on img.logo{ opacity:0; }
   .brand .marca-texto{ display:flex; flex-direction:column; }
   .brand .marca-texto strong{
     font-family:var(--display); font-weight:700; font-size:26px; letter-spacing:0.5px;
@@ -1482,10 +1485,37 @@
   if (window.matchMedia && window.matchMedia('(prefers-reduced-motion: reduce)').matches) return;
   v.muted = true; v.defaultMuted = true; v.playsInline = true;
   const reproducir = () => { const p = v.play(); if (p && p.catch) p.catch(() => {}); };
+  /* canvas: dentro del disco se copia tal cual; afuera, lo oscuro se vuelve transparente (queda el anillo de luz) */
+  const N = 168, K = N / 400, CX = 199 * K, CY = 207 * K, R_IN = 166 * K, R_OUT = 172 * K;
+  const cv = document.createElement('canvas'); cv.width = N; cv.height = N; cv.className = 'logo-cv'; cv.setAttribute('aria-hidden', 'true');
+  const ctx = cv.getContext('2d', { willReadFrequently: true });
+  let peso = null;   // por píxel: 1 = copiar tal cual (disco), 0 = quitar el negro (afuera)
+  const prepPeso = () => { peso = new Float32Array(N * N); for (let y = 0; y < N; y++) for (let x = 0; x < N; x++) { const r = Math.hypot(x + 0.5 - CX, y + 0.5 - CY); peso[y * N + x] = r <= R_IN ? 1 : r >= R_OUT ? 0 : (R_OUT - r) / (R_OUT - R_IN); } };
+  let dibujando = false, falla = false;
+  const cuadro = () => {
+    if (!dibujando) return;
+    try {
+      ctx.drawImage(v, 0, 0, N, N);
+      const im = ctx.getImageData(0, 0, N, N), d = im.data;
+      for (let i = 0, j = 0; i < d.length; i += 4, j++) {
+        const w = peso[j]; if (w >= 1) continue;
+        const r = d[i], g = d[i + 1], b = d[i + 2], m = Math.max(r, g, b);
+        let a = (m - 22) / 85; a = a < 0 ? 0 : a > 1 ? 1 : a;
+        if (a > 0 && a < 1) { const k = 1 / a; d[i] = Math.min(255, r * k); d[i + 1] = Math.min(255, g * k); d[i + 2] = Math.min(255, b * k); }
+        d[i + 3] = Math.round(255 * (w + (1 - w) * a));
+      }
+      ctx.putImageData(im, 0, 0);
+      if (!wrap.classList.contains('anim-on')) wrap.classList.add('anim-on');
+    } catch (e) { falla = true; dibujando = false; return; }   // si el navegador no deja leer el video, queda el logo fijo
+    (v.requestVideoFrameCallback ? v.requestVideoFrameCallback(cuadro) : requestAnimationFrame(cuadro));
+  };
+  const arrancar = () => { if (dibujando || falla) return; dibujando = true; cuadro(); };
+  v.addEventListener('playing', arrancar);
+  v.addEventListener('pause', () => { dibujando = false; });
   const iniciar = () => {
+    prepPeso(); wrap.appendChild(cv);
     v.querySelectorAll('source[data-src]').forEach(s => { s.src = s.dataset.src; });
     v.load();
-    v.addEventListener('playing', () => wrap.classList.add('anim-on'), { once: true });
     v.addEventListener('canplay', reproducir, { once: true });
   };
   v.addEventListener('ended', () => { v.currentTime = BUCLE_DESDE; reproducir(); });
