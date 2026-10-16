@@ -614,6 +614,36 @@ body.gen .letra button{width:100%;min-width:0}
 .mbar .letra{border:0;padding:0;margin-left:4px;gap:4px}
 .mbar .letra button{color:#fff;min-width:34px;padding:4px 0}
 .mbar .letra button[data-letra-val]{display:none}
+
+  /* ===== Inicio de sesión: igual al Panel web ===== */
+  .ov.lg-entrada{ position:fixed; inset:0; z-index:200; display:grid; place-items:center; overflow:auto; padding:20px max(16px, env(safe-area-inset-right, 0px)) 20px max(16px, env(safe-area-inset-left, 0px));
+    background:radial-gradient(1200px 600px at 20% -10%, #1c4760 0%, transparent 60%), linear-gradient(160deg, #0e2a3b 0%, #08161f 100%); font-family:'IBM Plex Sans','Segoe UI',Roboto,Arial,sans-serif; }
+  .lg-caja{ width:min(420px,100%); background:#fff; color:#14222c; border-radius:12px; padding:30px; box-shadow:0 16px 40px rgba(14,42,59,.22); font-size:14px; }
+  .lg-marca{ display:flex; align-items:center; gap:11px; padding:0 0 20px; color:#0e2a3b; }
+  .lg-marca img{ width:40px; height:40px; border-radius:50%; flex:none; }
+  .lg-marca strong{ display:block; font-size:15px; letter-spacing:1.4px; }
+  .lg-marca span{ display:block; font-size:11.5px; color:#6c7b87; letter-spacing:.2px; }
+  .lg-caja h2{ margin:0 0 16px; font-size:19px; color:#0e2a3b; }
+  .lg-caja form{ display:flex; flex-direction:column; gap:12px; }
+  .lg-campo{ display:flex; flex-direction:column; gap:6px; font-size:12.5px; font-weight:600; color:#475866; }
+  .lg-campo input{ font:inherit; font-size:14.5px; font-weight:400; height:40px; padding:0 12px; border:1px solid #dde3e8; border-radius:8px; background:#fff; color:#14222c; width:100%; box-sizing:border-box; }
+  .lg-campo input:focus{ outline:none; border-color:#0089af; box-shadow:0 0 0 3px rgba(0,137,175,.18); }
+  .lg-btn{ display:inline-flex; align-items:center; justify-content:center; gap:7px; font:inherit; font-weight:600; font-size:14px; height:40px; padding:0 15px; border-radius:8px; border:1px solid #dde3e8; background:#fff; color:#14222c; cursor:pointer; }
+  .lg-btn:focus-visible{ outline:2px solid #0089af; outline-offset:2px; }
+  .lg-btn.lg-prim{ background:#0e2a3b; border-color:#0e2a3b; color:#fff; }
+  .lg-btn.lg-prim:hover{ background:#1c4760; border-color:#1c4760; }
+  .lg-btn.lg-prim:disabled{ opacity:.6; cursor:default; }
+  .lg-btn.lg-chico{ height:32px; padding:0 11px; font-size:13px; }
+  .lg-btn.lg-fantasma{ border-color:transparent; background:none; }
+  .lg-btn.lg-fantasma:hover{ background:#edf0f3; }
+  .lg-muted{ margin:16px 0 0; line-height:1.6; color:#6c7b87; font-size:13px; }
+  .lg-pie{ margin:14px 0 0; }
+  .lg-aviso{ display:flex; gap:10px; align-items:flex-start; background:#e6f4f8; color:#006d8c; border-radius:8px; padding:11px 13px; font-size:13.5px; line-height:1.5; margin-bottom:14px; }
+  .lg-aviso svg{ width:18px; height:18px; flex:none; margin-top:1px; fill:none; stroke:currentColor; stroke-width:2; stroke-linecap:round; }
+  .lg-error{ color:#b3261e; font-size:13.5px; min-height:1em; margin:8px 0 0; }
+  .lg-offline{ margin:6px 0 0; padding-top:12px; border-top:1px solid #edf0f3; text-align:center; }
+  .lg-offline button{ border:0; background:none; font:inherit; font-size:12.5px; color:#6c7b87; text-decoration:underline; cursor:pointer; padding:4px; }
+  @media (max-width:480px){ .lg-caja{ padding:22px 18px; } }
 </style>
 </head>
 <body>
@@ -2236,7 +2266,8 @@ Views['desde-tienda'] = (v, tipo) => {
   const armar = () => {
     try { localStorage.removeItem('suin_carrito_gestion'); } catch (e) {}
     const k = datos.cliente ? String(datos.cliente.email || '').toLowerCase() : '';
-    const c = k ? (Store.all('clientes').find(x => (x.tiendaEmail || '').toLowerCase() === k) || Store.all('clientes').find(x => (x.correo || '').toLowerCase() === k)) : null;
+    const gid = datos.cliente && datos.cliente.id;
+    const c = (gid && Store.get('clientes', gid)) || (k ? (Store.all('clientes').find(x => (x.tiendaEmail || '').toLowerCase() === k) || Store.all('clientes').find(x => (x.correo || '').toLowerCase() === k)) : null);
     const snap = c ? docClienteSnap(c) : datos.cliente ? { nombre: datos.cliente.empresa || datos.cliente.nombre || datos.cliente.email, rif: datos.cliente.rif || '', direccion: '', extras: [datos.cliente.telefono ? { l: 'Teléfono', v: datos.cliente.telefono } : null, datos.cliente.email ? { l: 'Correo', v: datos.cliente.email } : null].filter(Boolean) } : null;
     const extra = { items: datos.items.map(it => lineaDesdeTienda(it, tipo)), notas: 'Armada desde la tienda web' };
     if (snap) { extra.cliente = snap; extra.clienteId = c ? c.id : null; }
@@ -3489,6 +3520,106 @@ Views['cliente-web'] = async (v, email) => {
   if (c) { Route.nav('cliente/' + c.id, { replace: true }); return; }
   v.innerHTML = '<div class="panel empty">No encontré una ficha para <b>' + esc(email) + '</b>.<br>' + (Sync.online() ? 'Puede que todavía no haya entrado a la tienda.' : 'Inicia sesión en Ajustes → Conexión para ver los clientes de la tienda.') + '<br><br><a class="btn" href="#/clientes">Ver clientes</a></div>';
 };
+/* =====================================================================
+   CLIENTES DUPLICADOS → una sola ficha
+   Gestión ya es la base única: aquí llegan los clientes del generador de ofertas,
+   los de las notas y ventas, y los registrados en la tienda (emparejados por correo,
+   RIF o nombre). Esto encuentra las fichas que parecen la misma persona o empresa
+   (mismo RIF, nombre, correo o teléfono) y las une: los documentos pasan a la ficha
+   que se conserva, los datos vacíos se completan con los de la otra y la otra se borra.
+   ===================================================================== */
+const Duplicados = (() => {
+  const SUF = /\b(c\s*a|s\s*a|s\s*r\s*l|srl|cia|compania|c\s*por\s*a|inversiones|grupo|corporacion)\b/g;
+  const kNombre = (n) => normTxt(n).replace(/[.,]/g, ' ').replace(SUF, ' ').replace(/[^a-z0-9]/g, '');
+  const kTel = (t) => { const d = String(t || '').replace(/\D/g, ''); return d.length >= 10 ? d.slice(-10) : ''; };
+  const kRif = (r) => { const x = normRif(r); return /\d{6}/.test(x) ? x.replace(/[^0-9A-Z]/g, '') : ''; };
+  const ignorados = () => new Set((CFG().noDuplicados || []));
+  const par = (a, b) => [a, b].sort().join('|');
+  const grupos = () => {
+    const cs = Store.all('clientes').filter(c => c && c.nombre);
+    const padre = new Map(cs.map(c => [c.id, c.id]));
+    const raiz = (x) => { while (padre.get(x) !== x) { padre.set(x, padre.get(padre.get(x))); x = padre.get(x); } return x; };
+    const motivos = new Map();   // par -> Set(motivo)
+    const ign = ignorados();
+    const indice = (fn, motivo) => {
+      const m = new Map();
+      cs.forEach(c => { const k = fn(c); if (!k) return; if (!m.has(k)) m.set(k, []); m.get(k).push(c); });
+      m.forEach(xs => { if (xs.length < 2 || xs.length > 6) return;
+        for (let i = 0; i < xs.length; i++) for (let j = i + 1; j < xs.length; j++) {
+          const a = xs[i], b = xs[j];
+          if (a.tiendaEmail && b.tiendaEmail && a.tiendaEmail !== b.tiendaEmail) continue;   // dos cuentas web distintas: no se unen
+          const p = par(a.id, b.id); if (ign.has(p)) continue;
+          if (!motivos.has(p)) motivos.set(p, new Set()); motivos.get(p).add(motivo);
+          padre.set(raiz(a.id), raiz(b.id));
+        } });
+    };
+    indice(c => kRif(c.rif), 'mismo RIF');
+    indice(c => { const k = kNombre(c.nombre); return k.length >= 5 ? k : ''; }, 'mismo nombre');
+    indice(c => { const e = String(c.correo || c.tiendaEmail || '').trim().toLowerCase(); return /@/.test(e) ? e : ''; }, 'mismo correo');
+    indice(c => kTel(c.telefono), 'mismo teléfono');
+    const gs = new Map();
+    cs.forEach(c => { if (padre.get(c.id) === c.id && ![...motivos.keys()].some(p => p.split('|').includes(c.id))) return; const r = raiz(c.id); if (!gs.has(r)) gs.set(r, []); gs.get(r).push(c); });
+    return [...gs.values()].filter(g => g.length > 1).map(g => {
+      const ids = new Set(g.map(c => c.id)); const ms = new Set();
+      motivos.forEach((set, p) => { const [a, b] = p.split('|'); if (ids.has(a) && ids.has(b)) set.forEach(x => ms.add(x)); });
+      return { fichas: g, motivos: [...ms] };
+    });
+  };
+  /* une "quitar" dentro de "queda" */
+  const unir = (quedaId, quitarIds) => {
+    const queda = Store.get('clientes', quedaId); if (!queda) return 0;
+    let nDocs = 0;
+    quitarIds.forEach(id => {
+      const x = Store.get('clientes', id); if (!x || id === quedaId) return;
+      ['rif', 'direccion', 'telefono', 'correo', 'contacto', 'tipo', 'notas'].forEach(k => { if (!String(queda[k] || '').trim() && String(x[k] || '').trim()) queda[k] = x[k]; });
+      if (!num(queda.descuento) && num(x.descuento)) queda.descuento = x.descuento;
+      if (!queda.tiendaEmail && x.tiendaEmail) ['tiendaEmail', 'tiendaModo', 'tiendaAct', 'tiendaCreado', 'tiendaActivo'].forEach(k => { if (x[k] !== undefined) queda[k] = x[k]; });
+      const extras = (queda.extras || []).slice(); (x.extras || []).forEach(e => { if (!extras.some(y => normTxt(y.l) === normTxt(e.l) && normTxt(y.v) === normTxt(e.v))) extras.push(e); }); queda.extras = extras;
+      // el cliente del generador de ofertas que tenía la otra ficha también apunta aquí (para que no se vuelva a crear)
+      queda.cotAlias = Array.from(new Set([...(queda.cotAlias || []), ...(x.cotAlias || []), x.cotId, 'adm_' + x.id].filter(Boolean)));
+      Store.all('docs').filter(d => d.clienteId === id).forEach(d => { const u = Store.get('docs', d.id); u.clienteId = quedaId; Store.put('docs', u, { quiet: true }); nDocs++; });
+      Store.del('clientes', id);
+    });
+    Store.put('clientes', queda, { quiet: true });
+    Bus.emit('data', 'clientes'); Bus.emit('data', 'docs');
+    return nDocs;
+  };
+  const noSonElMismo = (ids) => {
+    const r = clone(DB.config.get('main') || { id: 'main' }); const set = new Set(r.noDuplicados || []);
+    for (let i = 0; i < ids.length; i++) for (let j = i + 1; j < ids.length; j++) set.add(par(ids[i], ids[j]));
+    r.noDuplicados = [...set]; Store.put('config', r);
+  };
+  return { grupos, unir, noSonElMismo };
+})();
+function duplicadosModal(alTerminar) {
+  let gs = Duplicados.grupos();
+  const m = UI.modal({ title: 'Clientes que parecen el mismo', wide: true, body: `<p class="small" style="margin-top:0">Fichas con el mismo RIF, nombre, correo o teléfono. Marca la que se queda y toca <b>Unir</b>: sus ofertas, notas y ventas pasan a esa ficha y los datos que le falten se completan con los de la otra. Si no son el mismo cliente, toca <b>No son el mismo</b> y no te lo vuelvo a mostrar.</p><div data-l style="max-height:62vh;overflow:auto"></div>`,
+    foot: [['Cerrar', '', c => { c(); if (alTerminar) alTerminar(); }]] });
+  const paint = () => {
+    const box = $('[data-l]', m.body);
+    if (!gs.length) { box.innerHTML = '<div class="empty">No hay clientes duplicados. 👍</div>'; return; }
+    box.innerHTML = gs.map((g, gi) => {
+      const filas = g.fichas.map(c => ({ c, s: statsCliente(c.id), n: Store.all('docs').filter(d => d.clienteId === c.id).length }));
+      const def = (filas.find(x => x.c.tiendaEmail) || filas.slice().sort((a, b) => b.n - a.n)[0]).c.id;
+      return `<div class="panel" data-g="${gi}" style="margin-bottom:10px;padding:12px">
+        <div class="row" style="margin-bottom:8px;gap:6px">${g.motivos.map(x => `<span class="pill warn">${esc(x)}</span>`).join('')}</div>
+        <div class="tbl-wrap"><table class="tbl no-apilar"><thead><tr><th>Se queda</th><th>Nombre</th><th>RIF</th><th>Teléfono / correo</th><th class="num">Documentos</th><th class="num">Comprado</th></tr></thead><tbody>
+        ${filas.map(({ c, s, n }) => `<tr><td><input type="radio" name="dq${gi}" value="${esc(c.id)}" ${c.id === def ? 'checked' : ''}></td><td><a href="#/cliente/${esc(c.id)}" data-close>${esc(c.nombre)}</a>${c.tiendaEmail ? ' <span class="pill info">Tienda web</span>' : ''}${c.cotId ? ' <span class="pill">Generador</span>' : ''}</td><td class="mono small">${esc(c.rif || '—')}</td><td class="small">${esc([c.telefono, c.correo || c.tiendaEmail].filter(Boolean).join(' · ') || '—')}</td><td class="num">${n}</td><td class="num">${s.total ? fmtUSD(s.total) : '—'}</td></tr>`).join('')}
+        </tbody></table></div>
+        <div class="row" style="margin-top:8px;gap:8px;justify-content:flex-end"><button class="btn sm ghost" data-no="${gi}">No son el mismo</button><button class="btn sm pri" data-unir="${gi}">Unir en la marcada</button></div></div>`;
+    }).join('');
+    $$('[data-unir]', box).forEach(b => b.onclick = () => {
+      const gi = +b.dataset.unir, g = gs[gi], queda = ($(`input[name="dq${gi}"]:checked`, box) || {}).value; if (!queda) return;
+      const n = Duplicados.unir(queda, g.fichas.map(c => c.id).filter(id => id !== queda));
+      UI.toast(`Fichas unidas en “${(Store.get('clientes', queda) || {}).nombre || ''}”${n ? ` · ${n} documento${n === 1 ? '' : 's'} movidos` : ''}`, 4000);
+      // si la que se queda tiene cuenta web, sus datos se actualizan también en la tienda
+      const qc = Store.get('clientes', queda); if (qc && qc.tiendaEmail && Tienda.guardar) Tienda.guardar(qc).catch(() => {});
+      gs = Duplicados.grupos(); paint();
+    });
+    $$('[data-no]', box).forEach(b => b.onclick = () => { const g = gs[+b.dataset.no]; Duplicados.noSonElMismo(g.fichas.map(c => c.id)); gs = Duplicados.grupos(); paint(); });
+  };
+  paint();
+}
 Views.clientes = (v) => {
   const F = Object.assign({ q: '', orden: 'ultima', web: '' }, lsGet('suinadm_f_cli', {}));
   const nWeb = Store.all('clientes').filter(c => c.tiendaEmail).length;
@@ -3496,12 +3627,18 @@ Views.clientes = (v) => {
     <div class="sub">${Sync.online() ? (Tienda.error ? esc(Tienda.error) : `Los clientes que se registran en suinelectric.com aparecen aquí solos (${nWeb}).`) : 'Inicia sesión para ver los clientes registrados en la tienda.'}</div></div>
     <div class="row" style="margin-bottom:12px"><input class="inp" style="flex:1 1 240px" type="search" placeholder="Buscar por nombre, RIF, teléfono o correo" value="${esc(F.q)}" data-q>
     <div class="seg" data-web-f>${[['', 'Todos'], ['web', 'Tienda web'], ['no', 'Sin cuenta web']].map(([k, l]) => `<button type="button" data-v="${k}" class="${F.web === k ? 'on' : ''}">${l}</button>`).join('')}</div>
-    <select class="inp" style="width:auto" data-o><option value="ultima" ${F.orden === 'ultima' ? 'selected' : ''}>Compra más reciente</option><option value="total" ${F.orden === 'total' ? 'selected' : ''}>Más compras ($)</option><option value="saldo" ${F.orden === 'saldo' ? 'selected' : ''}>Mayor deuda</option><option value="nombre" ${F.orden === 'nombre' ? 'selected' : ''}>Nombre</option><option value="registro" ${F.orden === 'registro' ? 'selected' : ''}>Registro web más reciente</option></select></div><div data-malenl></div><div id="lst"></div>`;
+    <select class="inp" style="width:auto" data-o><option value="ultima" ${F.orden === 'ultima' ? 'selected' : ''}>Compra más reciente</option><option value="total" ${F.orden === 'total' ? 'selected' : ''}>Más compras ($)</option><option value="saldo" ${F.orden === 'saldo' ? 'selected' : ''}>Mayor deuda</option><option value="nombre" ${F.orden === 'nombre' ? 'selected' : ''}>Nombre</option><option value="registro" ${F.orden === 'registro' ? 'selected' : ''}>Registro web más reciente</option></select></div><div data-dup></div><div data-malenl></div><div id="lst"></div>`;
   const paintMal = () => {
     const box = $('[data-malenl]', v); if (!box) return;
     const n = docsMalEnlazados().length;
     box.innerHTML = n ? `<div class="panel" style="margin-bottom:12px;border-color:var(--red);display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span style="flex:1 1 260px">⚠ <b>${n} ${n === 1 ? 'documento está enlazado' : 'documentos están enlazados'}</b> a la ficha de un cliente con otro nombre. Pueden estar apareciendo en el cliente equivocado.</span><button class="btn pri" data-malrev>Revisar</button></div>` : '';
     const b = $('[data-malrev]', box); if (b) b.onclick = () => revisarEnlaces(() => { paintMal(); paint(); });
+  };
+  const paintDup = () => {
+    const box = $('[data-dup]', v); if (!box) return;
+    const n = Duplicados.grupos().length;
+    box.innerHTML = n ? `<div class="panel" style="margin-bottom:12px;border-color:#D9A400;display:flex;gap:10px;align-items:center;flex-wrap:wrap"><span style="flex:1 1 260px"><b>${n} ${n === 1 ? 'cliente parece estar repetido' : 'clientes parecen estar repetidos'}</b> (mismo RIF, nombre, correo o teléfono). Puedes unir sus fichas en una sola.</span><button class="btn pri" data-duprev>Revisar y unir</button></div>` : '';
+    const b = $('[data-duprev]', box); if (b) b.onclick = () => duplicadosModal(() => { paintDup(); paint(); });
   };
   const paint = () => {
     paintMal();
@@ -3523,7 +3660,7 @@ Views.clientes = (v) => {
   $('[data-web]', v).onclick = async () => { UI.toast('Leyendo la tienda…'); const ok = await Tienda.cargar({ force: true }); UI.toast(ok ? 'Clientes de la tienda al día' : (Tienda.error || 'No se pudo leer la tienda')); App.render(); };
   Tienda.cargar().then(ok => { if (ok && document.body.contains(v)) paint(); });
   $('[data-nc]', v).onclick = () => { const c = { id: uid('c_'), nombre: '', rif: '', direccion: '', telefono: '', correo: '', contacto: '', tipo: '', descuento: 0, notas: '', extras: [] }; App.pendingCliente = c; Route.nav('#/cliente/' + c.id); };
-  paint();
+  paint(); paintDup();
 };
 Views.cliente = (v, id) => {
   let c = Store.get('clientes', id); let isNew = false;
@@ -5477,7 +5614,7 @@ const Cot = (() => {
     // clientes del cotizador
     readArr(K_CLI).forEach(c => {
       if (!c || !c.id || c.deleted || !c.nombre || c.nombre === 'NOMBRE DEL CLIENTE') return;
-      const ex = Store.all('clientes').find(x => x.cotId === c.id) || findCliente(c);
+      const ex = Store.all('clientes').find(x => x.cotId === c.id || (x.cotAlias || []).includes(c.id)) || findCliente(c);
       if (ex) { if (!ex.cotId) { ex.cotId = c.id; Store.put('clientes', ex, { quiet: true }); } return; }
       const rec = { id: 'c_' + c.id, cotId: c.id, nombre: c.nombre, rif: c.rif || '', direccion: c.direccion || '', telefono: '', correo: '', contacto: '', tipo: '', descuento: 0, notas: '', extras: [] };
       (c.extras || []).forEach(e => { const l = normTxt(e.l); if (l.startsWith('tel')) rec.telefono = e.v; else if (l.startsWith('corr')) rec.correo = e.v; else if (l.startsWith('aten') || l.startsWith('cont')) rec.contacto = e.v; else rec.extras.push(e); });
@@ -5526,6 +5663,8 @@ const Cot = (() => {
       rec.mod = Date.now(); cmap.set(id, rec); cch = true;
       if (!c.cotId) { const u = Store.get('clientes', c.id); if (u) { u.cotId = id; Store.put('clientes', u, { quiet: true }); } }
     });
+    // fichas unidas (Clientes → Revisar y unir): el cliente viejo se quita de "Mis clientes" del generador
+    Store.all('clientes').forEach(c => (c.cotAlias || []).forEach(a => { const cur = cmap.get(a); if (cur && !cur.deleted && a !== c.cotId) { cmap.set(a, Object.assign({}, cur, { deleted: true, mod: Date.now() })); cch = true; } }));
     if (cch) writeArr(K_CLI, Array.from(cmap.values()));
   };
   const sync = () => { if (busy || !Store.ready) return; busy = true; try { fromCot(); toCot(); } catch (e) { console.error('Cot.sync', e); } finally { busy = false; } };
@@ -6910,45 +7049,47 @@ Views.ajustes = (v, tab = 'empresa') => {
 
 /* ---------------- inicio de sesión ---------------- */
 function showLogin() {
+  /* Misma pantalla que el Panel web (/admin): fondo azul marino, caja blanca, entrar con clave o con un código. */
   return new Promise((resolve) => {
-    const wrap = document.createElement('div'); wrap.className = 'ov'; wrap.style.background = 'var(--plate)'; wrap.style.alignItems = 'center';
+    const wrap = document.createElement('div'); wrap.className = 'ov lg-entrada';
     let modo = 'clave', emailPend = '';
     const done = () => { wrap.remove(); Sync.listen(); Sync.run(); App.render(); resolve(true); };
     App.loginDone = () => { if (document.body.contains(wrap)) done(); };
     const paint = () => {
-      const cuerpo = emailPend ? `<p class="small" style="margin:0 0 10px">Te enviamos un correo a <b>${esc(emailPend)}</b>. Escribe el código o toca el enlace del correo.</p>
-          <form class="stack" style="gap:10px" data-f="cod"><label class="fld"><span>Código</span><input class="inp mono" inputmode="numeric" autocomplete="one-time-code" required></label>
-          <div class="small" style="color:var(--red);min-height:1em" data-err></div><button class="btn pri" type="submit">Entrar</button>
-          <button class="btn ghost small" type="button" data-back>Usar otro correo</button></form>`
-        : modo === 'codigo' ? `<form class="stack" style="gap:10px" data-f="mail"><label class="fld"><span>Correo de administrador</span><input class="inp" type="email" autocomplete="email" required></label>
-          <div class="small" style="color:var(--red);min-height:1em" data-err></div><button class="btn pri" type="submit">Enviarme un código</button>
-          <button class="btn ghost small" type="button" data-modo="clave">Entrar con clave</button></form>`
-        : `<form class="stack" style="gap:10px" data-f="clave"><label class="fld"><span>Correo</span><input class="inp" type="email" autocomplete="username" required></label>
-          <label class="fld"><span>Clave</span><input class="inp" type="password" autocomplete="current-password" required></label>
-          <div class="small" style="color:var(--red);min-height:1em" data-err></div><button class="btn pri" type="submit">Entrar</button>
-          <p class="small muted" style="margin:4px 0 0;line-height:1.5">Es el mismo acceso del panel de la tienda. ¿No tienes clave o la olvidaste? <button class="btn sm" type="button" data-modo="codigo">Entrar con un código</button></p></form>`;
-      wrap.innerHTML = `<div class="md" style="width:min(380px,100%);min-height:0;border-radius:8px"><div class="md-b" style="padding:26px">
-        <img src="${DEFAULT_LOGO}" alt="" style="width:72px;display:block;margin:0 auto 10px"><h1 style="text-align:center;font-size:22px;margin:0 0 18px">Gestión Suinelectric</h1>
-        ${cuerpo}<button class="btn ghost small" type="button" data-skip style="width:100%;margin-top:6px">Seguir sin conexión en este equipo</button></div></div>`;
-      const f = $('form', wrap), ins = $$('input', f), err = $('[data-err]', wrap);
+      const cuerpo = emailPend
+        ? `<div class="lg-aviso"><svg viewBox="0 0 24 24" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M12 8h.01M11 12h1v4h1"/></svg><div>Te enviamos un correo a <strong>${esc(emailPend)}</strong>. Escribe el código o toca el enlace.</div></div>
+           <form data-f="cod"><label class="lg-campo">Código<input inputmode="numeric" autocomplete="one-time-code" required></label><button class="lg-btn lg-prim" type="submit">Entrar</button></form>
+           <p class="lg-pie"><button type="button" class="lg-btn lg-chico lg-fantasma" data-back>← Usar otro correo</button></p>`
+        : modo === 'codigo'
+        ? `<form data-f="mail"><label class="lg-campo">Correo del administrador<input type="email" required autocomplete="email"></label><button class="lg-btn lg-prim" type="submit">Enviar código</button></form>
+           <p class="lg-pie"><button type="button" class="lg-btn lg-chico lg-fantasma" data-modo="clave">← Entrar con clave</button></p>`
+        : `<form data-f="clave"><label class="lg-campo">Correo<input type="email" required autocomplete="email"></label>
+             <label class="lg-campo">Clave<input type="password" required autocomplete="current-password"></label>
+             <button class="lg-btn lg-prim" type="submit">Entrar</button></form>
+           <p class="lg-muted">¿No tienes clave o la olvidaste? <button type="button" class="lg-btn lg-chico" data-modo="codigo">Entrar con un código</button><br>Luego puedes crear tu clave en la tienda: Mi cuenta → Mis datos → Mi clave.</p>`;
+      wrap.innerHTML = `<div class="lg-caja" role="dialog" aria-label="Entrar a Gestión">
+          <div class="lg-marca"><img src="/imagenes/logo-suinelectric.png" alt="" onerror="this.src='${DEFAULT_LOGO}'"><div><strong>SUINELECTRIC</strong><span>Gestión</span></div></div>
+          <h2>Entrar a Gestión</h2>${cuerpo}<p class="lg-error" data-err></p>
+          <p class="lg-offline"><button type="button" data-skip>Seguir sin conexión en este equipo</button></p></div>`;
+      const fm = $('form', wrap), ins = $$('input', fm), err = $('[data-err]', wrap);
       setTimeout(() => ins[0].focus(), 30);
       $$('[data-modo]', wrap).forEach(b => b.onclick = () => { modo = b.dataset.modo; paint(); });
       const back = $('[data-back]', wrap); if (back) back.onclick = () => { emailPend = ''; modo = 'codigo'; paint(); };
       $('[data-skip]', wrap).onclick = () => { wrap.remove(); Sync.set('local', 'Sin sesión: solo este equipo'); resolve(false); };
-      f.onsubmit = async (e) => {
-        e.preventDefault(); err.textContent = ''; const btn = $('button[type=submit]', f); btn.disabled = true;
+      fm.onsubmit = async (e) => {
+        e.preventDefault(); err.textContent = ''; const btn = $('button[type=submit]', fm); btn.disabled = true;
         try {
-          if (f.dataset.f === 'clave') { await Sync.login(ins[0].value.trim().toLowerCase(), ins[1].value); done(); }
-          else if (f.dataset.f === 'mail') { emailPend = ins[0].value.trim().toLowerCase(); await Sync.sendCode(emailPend); paint(); }
+          if (fm.dataset.f === 'clave') { await Sync.login(ins[0].value.trim().toLowerCase(), ins[1].value); done(); }
+          else if (fm.dataset.f === 'mail') { emailPend = ins[0].value.trim().toLowerCase(); await Sync.sendCode(emailPend); paint(); }
           else { await Sync.verifyCode(emailPend, ins[0].value.trim()); done(); setTimeout(() => Yo.check(), 800); }
         } catch (er) {
           const m = String(er && er.message || er);
-          if (f.dataset.f === 'mail') emailPend = '';
+          if (fm.dataset.f === 'mail') emailPend = '';
           err.textContent = /invalid login/i.test(m) ? 'Correo o clave incorrectos. Si nunca creaste una clave, entra con un código.'
-            : /signups? not allowed|not found|user not/i.test(m) ? 'Ese correo no tiene cuenta. Usa el mismo correo con el que entras al panel de la tienda.'
-            : /expired|invalid|token/i.test(m) && f.dataset.f === 'cod' ? 'Código no válido o vencido.'
+            : /signups? not allowed|not found|user not/i.test(m) ? 'Ese correo no tiene cuenta de administrador.'
+            : /expired|invalid|token/i.test(m) && fm.dataset.f === 'cod' ? 'Código no válido o vencido.'
             : /rate|seconds/i.test(m) ? 'Espera un minuto antes de pedir otro código.'
-            : /fetch|network/i.test(m) ? 'Sin conexión con Supabase. Revisa el internet.' : m;
+            : /fetch|network/i.test(m) ? 'Sin conexión. Revisa el internet o sigue sin conexión en este equipo.' : m;
           btn.disabled = false;
         }
       };
