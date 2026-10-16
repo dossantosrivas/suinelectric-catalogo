@@ -106,7 +106,8 @@
      El logo fijo se ve hasta que el video está listo; con "reducir movimiento" no se anima. */
   .brand .logo-wrap{ position:relative; display:block; width:52px; height:52px; flex:none; border-radius:50%; overflow:hidden; }
   .brand .logo-wrap img.logo{ display:block; }
-  .brand .logo-anim{ position:absolute; left:50%; top:50%; width:118%; height:118%; transform:translate(-50%,-49%); object-fit:cover;
+  /* el video trae fondo negro alrededor del anillo: se amplía y centra en el disco del logo para que el negro quede fuera del círculo */
+  .brand .logo-anim{ position:absolute; left:50%; top:50%; width:134%; height:134%; transform:translate(-49.8%,-51.6%); object-fit:cover;
     opacity:0; transition:opacity .35s ease; pointer-events:none; background:#000; }
   .brand .logo-wrap.anim-on .logo-anim{ opacity:1; }
   .brand .marca-texto{ display:flex; flex-direction:column; }
@@ -821,7 +822,6 @@
     .brand img.logo{ height:58px; width:58px; }
     .brand .logo-wrap{ width:58px; height:58px; }
     .brand{ gap:10px; min-width:0; }
-    .brand .logo-anim{ width:107%; height:107%; }
     .brand .marca-texto strong{ font-size:21px; }
     .brand .marca-texto span{ font-size:11.5px; }
     .descuento-box{ height:38px; font-size:12px; padding:0 8px; }
