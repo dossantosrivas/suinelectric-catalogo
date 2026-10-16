@@ -723,6 +723,16 @@
   .cart-item .ci-qty span{ min-width:30px; text-align:center; font-weight:700; }
   .cart-item .ci-quitar{ background:none; border:none; color:var(--off); cursor:pointer; font-size:13px; padding:0; }
   .cart-item .ci-quitar:hover{ text-decoration:underline; }
+  #cart-admin{ margin:0 0 12px; padding:10px 12px; border:1px dashed #b8860b; border-radius:8px; background:#fff8e1; color:#4a3b00; font-size:13px; }
+  .ca-tit{ font-weight:700; margin-bottom:6px; } .ca-tit span{ font-weight:500; opacity:.7; font-size:12px; }
+  .ca-campo{ display:flex; flex-direction:column; gap:3px; font-size:12px; font-weight:600; }
+  .ca-campo input{ font:inherit; font-size:14px; font-weight:400; padding:8px 10px; border:1px solid var(--linea); border-radius:6px; background:var(--superficie); color:var(--texto); }
+  .ca-sel{ margin:6px 0 2px; font-size:12.5px; line-height:1.4; min-height:0; }
+  .ca-sel b{ color:var(--tinta); } .ca-sel button{ border:0; background:none; color:#7a5200; text-decoration:underline; cursor:pointer; font:inherit; padding:0; margin-left:6px; }
+  .ca-btns{ display:grid; grid-template-columns:1fr 1fr; gap:8px; margin-top:8px; }
+  .ca-btn{ background:var(--tinta); color:#fff; border:0; padding:10px 8px; font-size:13.5px; font-weight:600; border-radius:6px; cursor:pointer; }
+  .ca-btn:hover{ background:var(--tinta-2); }
+  .ca-ayuda{ font-size:11.5px; opacity:.75; margin-top:6px; line-height:1.4; }
   #cart-footer{ padding:16px 20px; border-top:1px solid var(--linea); background:var(--fondo); flex-shrink:0; }
   #cart-resumen{ margin-bottom:14px; }
   .cart-linea{ display:flex; justify-content:space-between; font-size:14px; color:var(--texto-2); padding:3px 0; }
@@ -1513,6 +1523,19 @@
       <div class="cart-linea"><span>Subtotal (precio lista)</span><span id="cart-subtotal-lista">$0.00</span></div>
       <div class="cart-linea cart-descuento"><span>Descuento<span id="cart-descuento-pct" hidden>0</span></span><span id="cart-descuento-monto">-$0.00</span></div>
       <div class="cart-linea cart-total-linea"><span>Total</span><strong id="cart-total">$0.00</strong></div>
+    </div>
+    <div id="cart-admin" hidden>
+      <div class="ca-tit">Armar para un cliente <span>· solo administradores</span></div>
+      <label class="ca-campo" for="ca-cliente">Cliente
+        <input id="ca-cliente" list="ca-clientes" placeholder="Busca por nombre, empresa o correo" autocomplete="off">
+      </label>
+      <datalist id="ca-clientes"></datalist>
+      <div class="ca-sel" id="ca-sel"></div>
+      <div class="ca-btns">
+        <button type="button" class="btn ca-btn" id="ca-oferta">Crear oferta</button>
+        <button type="button" class="btn ca-btn" id="ca-nota">Crear nota de entrega</button>
+      </div>
+      <div class="ca-ayuda">Se abre en Gestión con estos productos, cantidades y precios. Ahí lo revisas y lo guardas.</div>
     </div>
     <a class="btn btn-wa" style="display:block;margin-bottom:8px;" id="btn-wa-carrito" href="#" target="_blank" rel="noopener">Enviar pedido por WhatsApp (0412)</a>
     <a class="btn btn-wa btn-wa-2" style="display:block;" id="btn-wa-carrito-2" href="#" target="_blank" rel="noopener">Enviar al 0424</a>
@@ -4443,6 +4466,7 @@ function cambiarCantidad(modelo, delta){
 function quitarDelCarrito(modelo){ delete carrito[modelo]; renderCarrito(); }
 
 function renderCarrito(){
+  pintarCarritoAdmin();
   const itemsEl = document.getElementById('cart-items');
   const items = Object.values(carrito);
   const totalItemsCarrito = items.reduce((s, i) => s + i.cantidad, 0);
@@ -5043,6 +5067,71 @@ async function cargarSesionYReglas(){
   refrescarPrecios();
   if (faltanDatos()) abrirCuenta();
 }
+/* =====================================================================
+   CARRITO → OFERTA O NOTA DE ENTREGA (solo administradores)
+   El administrador elige un cliente (los precios del carrito pasan a ser
+   los de ese cliente) y abre Gestión con los productos ya cargados.
+   Se pasan por localStorage (mismo dominio) con la clave suin_carrito_gestion.
+   ===================================================================== */
+let clienteParaAdmin = null;      // {email, nombre, empresa, tipo_id} o null
+let clientesTienda = null;        // lista para el buscador (se trae una vez)
+async function traerClientesTienda(){
+  if (clientesTienda || !sb || !sesion.admin) return;
+  clientesTienda = [];
+  try {
+    const { data } = await sb.from('clientes').select('email,nombre,empresa,rif,telefono,tipo_id,activo,es_admin').order('nombre');
+    clientesTienda = (data || []).filter(c => c.activo !== false && !c.es_admin);
+  } catch (e) { clientesTienda = []; }
+  const dl = document.getElementById('ca-clientes');
+  if (dl) dl.innerHTML = clientesTienda.map(c => '<option value="' + escHtml(etiquetaCliente(c)) + '"></option>').join('');
+}
+function etiquetaCliente(c){ return [c.nombre, c.empresa].filter(Boolean).join(' · ') + ' <' + c.email + '>'; }
+function pintarCarritoAdmin(){
+  const box = document.getElementById('cart-admin');
+  if (!box) return;
+  const ver = typeof sesion !== 'undefined' && sesion.admin && Object.keys(carrito).length > 0;
+  box.hidden = !ver;
+  if (!ver) return;
+  traerClientesTienda();
+  const sel = document.getElementById('ca-sel');
+  const c = clienteParaAdmin;
+  sel.innerHTML = c ? 'Precios de <b>' + escHtml(c.nombre || c.empresa || c.email) + '</b>' + (c.tipo_id && tiposCliente[c.tipo_id] ? ' (' + escHtml(tiposCliente[c.tipo_id]) + ')' : '') + '<button type="button" id="ca-quitar">quitar</button>'
+                    : 'Sin cliente: precios de la tienda. También puedes elegirlo después en Gestión.';
+  const q = document.getElementById('ca-quitar');
+  if (q) q.onclick = () => { clienteParaAdmin = null; document.getElementById('ca-cliente').value = ''; refrescarPrecios(); };
+}
+function elegirClienteAdmin(texto){
+  const t = String(texto || '').trim().toLowerCase();
+  if (!t || !clientesTienda) return;
+  const m = t.match(/<([^>]+)>\s*$/);
+  const c = clientesTienda.find(x => m ? x.email.toLowerCase() === m[1] : (x.email.toLowerCase() === t));
+  if (!c) return;
+  clienteParaAdmin = c;
+  refrescarPrecios();
+}
+function carritoAGestion(tipo){
+  const items = Object.values(carrito).map(({ producto: p, cantidad }) => ({
+    modelo: p.modelo, marca: p.marca || '', nombre: p.nombre && p.nombre !== p.modelo ? p.nombre : '',
+    descripcion: String(p.descripcion || '').slice(0, 1500), cantidad, precio_unit: Math.ceil(precioMostrado(p) || 0)
+  }));
+  if (!items.length){ mostrarToast('El carrito está vacío'); return; }
+  const c = clienteParaAdmin;
+  const datos = { tipo, creado: Date.now(), items,
+    cliente: c ? { email: c.email, nombre: c.nombre || '', empresa: c.empresa || '', rif: c.rif || '', telefono: c.telefono || '' } : null };
+  try { localStorage.setItem('suin_carrito_gestion', JSON.stringify(datos)); }
+  catch (e){ mostrarToast('No se pudo pasar el carrito a Gestión (el navegador no deja guardar datos)'); return; }
+  const url = (typeof URL_GESTION !== 'undefined' ? URL_GESTION : '/ventas') + '/desde-tienda/' + tipo;
+  const w = window.open(url, '_blank');
+  if (!w) location.href = url;
+  mostrarToast(tipo === 'nota' ? 'Abriendo la nota de entrega en Gestión…' : 'Abriendo la oferta en Gestión…');
+}
+(function(){
+  const inp = document.getElementById('ca-cliente');
+  if (inp){ inp.addEventListener('change', () => elegirClienteAdmin(inp.value)); inp.addEventListener('input', () => { if (/<[^>]+>\s*$/.test(inp.value)) elegirClienteAdmin(inp.value); }); }
+  const bo = document.getElementById('ca-oferta'), bn = document.getElementById('ca-nota');
+  if (bo) bo.addEventListener('click', () => carritoAGestion('oferta'));
+  if (bn) bn.addEventListener('click', () => carritoAGestion('nota'));
+})();
 function refrescarPrecios(){
   if (!productos.length) return;
   mostrarVista();
@@ -5060,11 +5149,14 @@ function reglaPara(p, tipoSimulado){
   const modelo = String(p.modelo || '').toUpperCase().trim();
   // tipoSimulado: calcula el precio "como si" fuera un cliente de ese tipo (sin reglas por cuenta).
   const simulando = tipoSimulado !== undefined;
-  const tipo = simulando ? tipoSimulado : (sesion.cliente ? sesion.cliente.tipo_id : null);
+  // Administrador armando un pedido para un cliente: precios de ese cliente
+  const otro = !simulando && sesion.admin && clienteParaAdmin ? clienteParaAdmin : null;
+  const tipo = simulando ? tipoSimulado : otro ? otro.tipo_id : (sesion.cliente ? sesion.cliente.tipo_id : null);
+  const emailRegla = otro ? otro.email : sesion.email;
   let mejor = null, mejorRango = 99;
   for (const r of reglasDescuento){
     let quien, que;
-    if (r.cliente_email){ if (simulando || !sesion.email || r.cliente_email !== sesion.email) continue; quien = 0; }
+    if (r.cliente_email){ if (simulando || !emailRegla || r.cliente_email !== emailRegla) continue; quien = 0; }
     else if (r.tipo_id){ if (!tipo || r.tipo_id !== tipo) continue; quien = 1; }
     else quien = 2;
     if (r.modelo){ if (String(r.modelo).toUpperCase().trim() !== modelo) continue; que = 0; }

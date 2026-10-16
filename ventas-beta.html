@@ -1727,7 +1727,7 @@ const App = {
     if (this.guard && h !== this.lastRoute && !(await this.guard())) { Route.nav(this.lastRoute || 'resumen', { replace: true, silent: true }); return; }
     this.guard = null; this.lastRoute = h;
     this.route = { name: parts[0], args: parts.slice(1) };
-    const navId = { nuevo: parts[1] === 'oferta' ? 'ofertas' : parts[1] === 'compra' ? 'compras' : 'ventas', doc: null, cliente: 'clientes', 'cliente-web': 'clientes', 'cliente-nuevo': 'clientes', producto: 'inventario', cotizador: 'ofertas', 'producto-web': 'inventario', proveedor: 'distribuidores', proveedores: 'distribuidores', distribuidor: 'pedidos', empleado: 'empleados', rapida: 'ofertas' }[parts[0]];
+    const navId = { nuevo: parts[1] === 'oferta' ? 'ofertas' : parts[1] === 'compra' ? 'compras' : 'ventas', doc: null, cliente: 'clientes', 'cliente-web': 'clientes', 'cliente-nuevo': 'clientes', producto: 'inventario', cotizador: 'ofertas', 'producto-web': 'inventario', 'desde-tienda': parts[1] === 'nota' ? 'ventas' : 'ofertas', proveedor: 'distribuidores', proveedores: 'distribuidores', distribuidor: 'pedidos', empleado: 'empleados', rapida: 'ofertas' }[parts[0]];
     let active = navId !== undefined ? navId : parts[0];
     if (parts[0] === 'doc') { const d = Store.get('docs', parts[1]); active = d ? (d.tipo === 'oferta' ? 'ofertas' : d.tipo === 'compra' ? 'compras' : 'ventas') : ''; }
     $$('[data-nav]').forEach(a => a.classList.toggle('on', a.dataset.nav === active));
@@ -2214,6 +2214,43 @@ const lineFromCatalogo = (c, tipo) => {
 };
 const findProductoByCodigo = (cod) => { const k = normKey(cod); if (!k) return null; return Store.all('productos').find(p => normKey(p.codigo) === k) || null; };
 const catalogoByCodigo = (cod) => { const k = normKey(cod); return k ? Catalog.items.find(c => normKey(c.m) === k) : null; };
+
+/* línea de oferta/nota a partir de un producto que viene de la tienda (pedido web o carrito del administrador):
+   si lo tienes en tu inventario sale de ahí (tuyo primero, luego de tu papá); si no, del distribuidor */
+const lineaDesdeTienda = (it, tipo) => {
+  const cod = it.modelo || it.sku || '';
+  const desc = [`*Ref / Modelo: ${cod}*${it.marca ? ' — ' + it.marca : ''}`, it.nombre && it.nombre !== cod && it.nombre !== it.descripcion ? it.nombre : '', it.descripcion || ''].filter(Boolean).join('\n');
+  const base = { id: uid('i'), codigo: cod, desc, cant: num(it.cantidad) || 1, precio: num(it.precio_unit ?? it.precio) };
+  const a = (() => { const pr = cod ? findProductoByCodigo(cod) : null; if (pr) { const s = Calc.st(pr.id); const inv = s.manuel.cant > 0 ? 'manuel' : s.papa.cant > 0 ? 'papa' : null; if (inv) return { origen: inv, productoId: pr.id, costo: round2(s[inv].costo) || '' }; } const cc = cod ? catalogoByCodigo(cod) : null; if (cc) { const dd = distDeCat(cc); return Object.assign({ origen: 'dist', dist: dd ? dd.id : '', productoId: null, costo: '' }, costoLinea(cc, dd)); } return { origen: 'libre', productoId: null, costo: '' }; })();
+  return Object.assign(base, a, tipo === 'nota' && a.origen === 'dist' ? { pedido: 'por pedir' } : {});
+};
+/* Llega desde el carrito de la tienda (administrador): /ventas/desde-tienda/oferta o /nota.
+   La tienda deja los productos en localStorage (suin_carrito_gestion) y aquí se arma el documento. */
+Views['desde-tienda'] = (v, tipo) => {
+  let datos = null;
+  try { datos = JSON.parse(localStorage.getItem('suin_carrito_gestion') || 'null'); } catch (e) {}
+  if (!datos || !Array.isArray(datos.items) || !datos.items.length || Date.now() - (datos.creado || 0) > 6 * 3600 * 1000) {
+    v.innerHTML = '<div class="panel empty">No encontré productos enviados desde la tienda.<br>Arma el carrito en la tienda y toca <b>Crear oferta</b> o <b>Crear nota de entrega</b>.<br><br><a class="btn" href="#/ofertas">Ir a ofertas</a></div>'; return;
+  }
+  tipo = tipo === 'nota' ? 'nota' : tipo === 'oferta' ? 'oferta' : (datos.tipo === 'nota' ? 'nota' : 'oferta');
+  const armar = () => {
+    try { localStorage.removeItem('suin_carrito_gestion'); } catch (e) {}
+    const k = datos.cliente ? String(datos.cliente.email || '').toLowerCase() : '';
+    const c = k ? (Store.all('clientes').find(x => (x.tiendaEmail || '').toLowerCase() === k) || Store.all('clientes').find(x => (x.correo || '').toLowerCase() === k)) : null;
+    const snap = c ? docClienteSnap(c) : datos.cliente ? { nombre: datos.cliente.empresa || datos.cliente.nombre || datos.cliente.email, rif: datos.cliente.rif || '', direccion: '', extras: [datos.cliente.telefono ? { l: 'Teléfono', v: datos.cliente.telefono } : null, datos.cliente.email ? { l: 'Correo', v: datos.cliente.email } : null].filter(Boolean) } : null;
+    const extra = { items: datos.items.map(it => lineaDesdeTienda(it, tipo)), notas: 'Armada desde la tienda web' };
+    if (snap) { extra.cliente = snap; extra.clienteId = c ? c.id : null; }
+    App.pendingDoc = newDoc(tipo, extra); App.pendingEditor = true;
+    Route.nav('#/nuevo/' + tipo, { replace: true });
+    UI.toast(`${datos.items.length} producto${datos.items.length === 1 ? '' : 's'} traídos de la tienda${c ? '' : datos.cliente ? ' · el cliente aún no tiene ficha en Gestión' : ' · elige el cliente'}`, 4500);
+  };
+  // espera a que cargue el catálogo del distribuidor (para costos y distribuidor de cada línea)
+  if (Catalog.items.length) { armar(); return; }
+  v.innerHTML = '<div class="panel empty">Cargando los productos de la tienda…</div>';
+  let hecho = false; const listo = () => { if (hecho) return; hecho = true; armar(); };
+  Bus.on('catalog', () => { if (Catalog.items.length) listo(); });
+  setTimeout(listo, 8000);
+};
 
 /* ---------------- buscador unificado de productos ---------------- */
 function productFinder(host, { tipo, onPick, placeholder }) {
@@ -4836,13 +4873,7 @@ const Tienda = (() => {
   /* pedido web → oferta o nota en el panel */
   const aDocumento = (p, tipo) => {
     const c = Store.all('clientes').find(x => x.tiendaEmail === p.cliente_email);
-    const items = (p.items || []).map(it => {
-      const cod = it.modelo || it.sku || '';
-      const desc = [`*Ref / Modelo: ${cod}*${it.marca ? ' — ' + it.marca : ''}`, it.descripcion || it.nombre || ''].filter(Boolean).join('\n');
-      const base = { id: uid('i'), codigo: cod, desc, cant: num(it.cantidad) || 1, precio: num(it.precio_unit ?? it.precio) };
-      const a = (() => { const pr = cod ? findProductoByCodigo(cod) : null; if (pr) { const s = Calc.st(pr.id); const inv = s.manuel.cant > 0 ? 'manuel' : s.papa.cant > 0 ? 'papa' : null; if (inv) return { origen: inv, productoId: pr.id, costo: round2(s[inv].costo) || '' }; } const cc = cod ? catalogoByCodigo(cod) : null; if (cc) { const dd = distDeCat(cc); return Object.assign({ origen: 'dist', dist: dd ? dd.id : '', productoId: null, costo: '' }, costoLinea(cc, dd)); } return { origen: 'libre', productoId: null, costo: '' }; })();
-      return Object.assign(base, a, tipo === 'nota' && a.origen === 'dist' ? { pedido: 'por pedir' } : {});
-    });
+    const items = (p.items || []).map(it => lineaDesdeTienda(it, tipo));
     const d = newDoc(tipo, { clienteId: c ? c.id : null, cliente: c ? docClienteSnap(c) : { nombre: p.cliente_email, rif: '', direccion: '', extras: [] }, items, pedidoWeb: p.id, notas: [p.nota_cliente ? 'Nota del cliente: ' + p.nota_cliente : '', `Pedido web #${p.id}`].filter(Boolean).join('\n') });
     App.pendingDoc = d; App.pendingEditor = true; Route.nav('#/nuevo/' + tipo);
   };
