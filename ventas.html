@@ -643,6 +643,19 @@ body.gen .letra button{width:100%;min-width:0}
   .lg-offline{ margin:6px 0 0; padding-top:12px; border-top:1px solid #edf0f3; text-align:center; }
   .lg-offline button{ border:0; background:none; font:inherit; font-size:12.5px; color:#6c7b87; text-decoration:underline; cursor:pointer; padding:4px; }
   @media (max-width:480px){ .lg-caja{ padding:22px 18px; } }
+
+/* envío de compras internacionales */
+.env-pasos{display:grid;grid-template-columns:repeat(5,minmax(0,1fr));gap:6px}
+.env-paso{display:flex;flex-direction:column;align-items:center;gap:3px;padding:8px 4px;border:1px solid var(--line);border-radius:10px;background:var(--panel);font:inherit;color:var(--muted);cursor:pointer;min-width:0}
+.env-paso:hover{border-color:var(--steel)}
+.env-dot{width:26px;height:26px;border-radius:50%;display:grid;place-items:center;font-weight:700;font-size:13px;background:var(--line-2);color:var(--muted)}
+.env-l{font-size:13.5px;font-weight:600;text-align:center;line-height:1.2}
+.env-paso small{font-size:11.5px;color:var(--muted);min-height:1em}
+.env-paso.hecho .env-dot{background:var(--ok-soft);color:var(--ok)}
+.env-paso.on{border-color:var(--steel);background:var(--steel-soft);color:var(--ink)}
+.env-paso.on .env-dot{background:var(--steel);color:#fff}
+.inv-camino{display:inline-block;margin-top:4px;padding:1px 7px;border-radius:999px;background:var(--amber-soft);color:#8A5A00;font-size:12.5px;font-weight:600;white-space:nowrap}
+@media (max-width:640px){.env-pasos{grid-template-columns:repeat(3,minmax(0,1fr))}}
 </style>
 </head>
 <body>
@@ -1012,7 +1025,7 @@ const Calc = {
   invalidate() { this.dirty = true; },
   build() {
     if (!this.dirty) return;
-    const stock = new Map(), movs = new Map();
+    const stock = new Map(), movs = new Map(), camino = new Map();
     Store.all('productos').forEach(p => {
       const s = {};
       ['manuel', 'papa'].forEach(inv => { const b = (p.inv || {})[inv]; s[inv] = { cant: b ? num(b.cant) : 0, costo: b ? num(b.costo) : 0, desde: b && b.desde || '', tiene: !!b }; });
@@ -1020,6 +1033,7 @@ const Calc = {
     });
     const docs = Store.all('docs').filter(d => d.estado !== 'anulada').sort((a, b) => (a.fecha || '').localeCompare(b.fecha || ''));
     docs.forEach(d => {
+      const viaje = enCamino(d);
       partesDoc(d).forEach(it => {
         if (!it.productoId) return;
         const inv = (d.tipo === 'compra' || d.tipo === 'ajuste') ? (it.origen === 'manuel' || it.origen === 'papa' ? it.origen : d.inventario) : it.origen;
@@ -1027,7 +1041,9 @@ const Calc = {
         const q = num(it.cant);
         let delta = 0;
         if (esVenta(d)) delta = -q; else if (d.tipo === 'compra') delta = q; else if (d.tipo === 'ajuste') delta = q; else return;
-        const ml = movs.get(it.productoId) || []; ml.push({ doc: d, item: it, inv, delta, aplicado: !!d.afectaStock }); movs.set(it.productoId, ml);
+        const ml = movs.get(it.productoId) || []; ml.push({ doc: d, item: it, inv, delta, aplicado: !!d.afectaStock && !viaje, enCamino: viaje }); movs.set(it.productoId, ml);
+        // compra internacional que todavía no llega: se anota como "en camino" y no suma a la existencia
+        if (viaje) { const c = camino.get(it.productoId) || { cant: 0, docs: [] }; c.cant += q; if (!c.docs.includes(d)) c.docs.push(d); c[inv] = (c[inv] || 0) + q; camino.set(it.productoId, c); return; }
         if (!d.afectaStock) return;
         const s = stock.get(it.productoId); if (!s) return;
         const slot = s[inv]; slot.tiene = true;
@@ -1038,8 +1054,10 @@ const Calc = {
         slot.cant += delta;
       });
     });
-    this.stock = stock; this.movs = movs; this.dirty = false;
+    this.stock = stock; this.movs = movs; this.camino = camino; this.dirty = false;
   },
+  /* lo que viene en camino de compras internacionales: { cant, manuel, papa, docs } o null */
+  enCamino(pid) { this.build(); return (this.camino && this.camino.get(pid)) || null; },
   st(pid) { this.build(); return this.stock.get(pid) || { manuel: { cant: 0, costo: 0 }, papa: { cant: 0, costo: 0 } }; },
   totals(d) {
     let sub = 0, costo = 0, sinCosto = false; const porOrigen = {};
@@ -2064,6 +2082,13 @@ const PDF = (() => {
    Documentos: listas (ofertas, ventas/notas, compras) y editor
    ===================================================================== */
 const ESTADOS_OFERTA = { abierta: ['Abierta', 'info'], aceptada: ['Aceptada', 'ok'], rechazada: ['Rechazada', 'bad'] };
+/* Compras a distribuidores internacionales: etapas del envío. Hasta "Recibido" los productos
+   no suman a la existencia: se ven en el inventario como "en camino". */
+const ETAPAS_ENVIO = [['pedido', 'Pedido hecho', 'info'], ['pagado', 'Pagado', 'info'], ['camino', 'En camino', 'warn'], ['aduana', 'En aduana', 'warn'], ['recibido', 'Recibido', 'ok']];
+const etapaEnvio = (d) => (d && d.tipo === 'compra' && d.envio && d.envio.etapa) || null;
+const enCamino = (d) => { const e = etapaEnvio(d); return !!e && e !== 'recibido' && d.estado !== 'anulada'; };
+const etapaEnvioInfo = (e) => ETAPAS_ENVIO.find(x => x[0] === e) || ETAPAS_ENVIO[0];
+const diasEnvio = (f) => { const t = Date.parse(String(f || '').slice(0, 10)); return isNaN(t) ? null : Math.floor((Date.now() - t) / 864e5); };   // negativo = fecha futura
 const PEDIDO = { 'por pedir': ['Por pedir', 'warn'], pedido: ['Pedido', 'info'], entregado: ['Entregado', 'ok'] };
 const ownTag = (o) => `<span class="own ${esc(o)}">${esc(origenNombre(o))}</span>`;
 const docParty = (d) => d.tipo === 'compra' ? ((d.proveedor && d.proveedor.nombre) || '—') : ((d.cliente && d.cliente.nombre) || '—');
@@ -2076,6 +2101,7 @@ const estadoPill = (d) => {
   if (d.tipo === 'oferta') { const e = ESTADOS_OFERTA[d.estado || 'abierta'] || ESTADOS_OFERTA.abierta; return `<span class="pill ${e[1]}">${e[0]}</span>`; }
   if (d.tipo === 'ajuste') return '<span class="pill">Ajuste</span>';
   if (esVenta(d)) { const [, t, c] = etapaVenta(d); return `<span class="pill ${c}">${esc(t)}</span>`; }
+  if (enCamino(d)) { const [, t, c] = etapaEnvioInfo(etapaEnvio(d)); const dd = diasEnvio(d.fecha); const est = d.envio.estimada && diasEnvio(d.envio.estimada) > 0; return `<span class="pill ${est ? 'bad' : c}" title="${est ? 'Pasó la fecha estimada de llegada' : 'Compra internacional: todavía no suma al inventario'}">✈ ${esc(t)}${dd != null && dd > 0 ? ` · ${dd} d` : ''}</span>`; }
   const T = Calc.totals(d);
   if (T.total <= 0.005) return '';
   if (T.saldo <= 0.005) return '<span class="pill ok">Pagada</span>';
@@ -2116,7 +2142,7 @@ function docListView(v, { titulo, tipos, nuevo, sub }) {
     <div class="row" style="margin-bottom:12px">
       <input class="inp" style="flex:1 1 240px" type="search" placeholder="Buscar por número, ${party.toLowerCase()} o producto" data-f="q" value="${esc(F.q)}">
       <select class="inp" style="width:auto" data-f="per">${periodoOpts().map(([k, l]) => `<option value="${k}" ${F.per === k ? 'selected' : ''}>${l}</option>`).join('')}</select>
-      <select class="inp" style="width:auto" data-f="est">${(tipos.includes('oferta') ? [['', 'Todos los estados'], ['abierta', 'Abiertas'], ['aceptada', 'Aceptadas'], ['rechazada', 'Rechazadas']] : (compra ? [['', 'Todos'], ['cobrar', 'Por pagar'], ['anulada', 'Anuladas']] : [['', 'Todas'], ['encurso', 'En curso (sin cerrar)'], ['entregar', 'Por entregar'], ['enviar', 'Por enviar'], ['cobrar', 'Por cobrar'], ['cerrada', 'Cerradas'], ['anulada', 'Anuladas']])).map(([k, l]) => `<option value="${k}" ${F.est === k ? 'selected' : ''}>${l}</option>`).join('')}</select>
+      <select class="inp" style="width:auto" data-f="est">${(tipos.includes('oferta') ? [['', 'Todos los estados'], ['abierta', 'Abiertas'], ['aceptada', 'Aceptadas'], ['rechazada', 'Rechazadas']] : (compra ? [['', 'Todos'], ['camino', '✈ En camino (sin recibir)'], ['cobrar', 'Por pagar'], ['anulada', 'Anuladas']] : [['', 'Todas'], ['encurso', 'En curso (sin cerrar)'], ['entregar', 'Por entregar'], ['enviar', 'Por enviar'], ['cobrar', 'Por cobrar'], ['cerrada', 'Cerradas'], ['anulada', 'Anuladas']])).map(([k, l]) => `<option value="${k}" ${F.est === k ? 'selected' : ''}>${l}</option>`).join('')}</select>
       <select class="inp" style="width:auto" data-f="vend"><option value="">${compra ? 'Todos los compradores' : 'Todos los vendedores'}</option>${Array.from(new Set(vendedoresActivos().concat(Store.all('docs').filter(x => tipos.includes(x.tipo)).map(x => x[campo]).filter(Boolean)))).sort().map(n => `<option ${F.vend === n ? 'selected' : ''}>${esc(n)}</option>`).join('')}<option value="-" ${F.vend === '-' ? 'selected' : ''}>${compra ? 'Sin comprador' : 'Sin vendedor'}</option></select>
       <select class="inp" style="width:auto" data-f="inv"><option value="">Todos los orígenes</option>${(compra ? ['manuel', 'papa'] : ORIGENES).map(o => `<option value="${o}" ${F.inv === o ? 'selected' : ''}>${esc(o === 'dist' ? 'Cualquier distribuidor' : origenNombre(o))}</option>`).join('')}${compra ? '' : Dists().map(d => `<option value="dist|${esc(d.id)}" ${F.inv === 'dist|' + d.id ? 'selected' : ''}>— ${esc(d.nombre)}</option>`).join('')}</select>
     </div>
@@ -2140,6 +2166,7 @@ function docListView(v, { titulo, tipos, nuevo, sub }) {
     if (F.est === 'anulada') rows = rows.filter(d => d.estado === 'anulada');
     else if (F.est === 'cobrar') rows = rows.filter(d => d.estado !== 'anulada' && Calc.totals(d).saldo > 0.005);
     else if (['encurso', 'entregar', 'enviar', 'cerrada'].includes(F.est)) rows = rows.filter(d => { const k = etapaVenta(d)[0]; return F.est === 'encurso' ? !['cerrada', 'anulada'].includes(k) : k === F.est; });
+    else if (F.est === 'camino') rows = rows.filter(d => enCamino(d));
     else if (F.est) rows = rows.filter(d => (d.estado || 'abierta') === F.est);
     if (F.inv && F.inv.startsWith('dist|')) { const id = F.inv.slice(5); rows = rows.filter(d => partesDoc(d).some(i => i.origen === 'dist' && itDist(i) === id)); }
     else if (F.inv) rows = rows.filter(d => docOrigins(d).includes(F.inv));
@@ -2654,6 +2681,7 @@ function docEditor(v, D, isNew) {
         </div>
       </section>
       ${!compra && !ajuste ? `<section class="panel" id="sec-cli"></section>` : ''}
+      ${compra ? `<section class="panel envio" id="sec-envio" hidden></section>` : ''}
       <section class="panel">
         <div class="ph"><h2>Productos</h2><div class="act"><button class="btn sm" data-addline>${ico('plus')} Línea manual</button></div></div>
         <div id="finder" style="margin-bottom:12px"></div>
@@ -2693,6 +2721,43 @@ function docEditor(v, D, isNew) {
       </section>
     </aside>
   </div>`;
+
+  /* ----- envío de una compra internacional ----- */
+  const paintEnvio = () => {
+    const box = $('#sec-envio', v); if (!box) return;
+    const prov = D.proveedorId ? Store.get('proveedores', D.proveedorId) : null, inter = !!(prov && esInter(prov));
+    if (!D.envio && inter && isNew) D.envio = { etapa: 'pedido', hist: [{ etapa: 'pedido', fecha: nowISO() }], auto: true };
+    // compra nueva a la que se le cambió el distribuidor por uno nacional: se quita el envío puesto solo
+    if (D.envio && D.envio.auto && !inter && isNew && !D.envio.guia && !D.envio.empresa && !D.envio.estimada && (D.envio.hist || []).length <= 1) delete D.envio;
+    if (!D.envio && !inter) { box.hidden = true; box.innerHTML = ''; return; }
+    box.hidden = false;
+    if (!D.envio) {
+      box.innerHTML = `<div class="ph"><h2>✈ Envío internacional</h2></div><p class="small" style="margin:0 0 10px">${esc(prov.nombre)} es internacional. Si esta mercancía todavía no ha llegado, sigue su envío: no sumará a tu inventario hasta que la marques como recibida.</p><button class="btn sm" data-env-on>Seguir el envío de esta compra</button>`;
+      $('[data-env-on]', box).onclick = () => { D.envio = { etapa: 'camino', hist: [{ etapa: 'camino', fecha: nowISO() }] }; setDirty(); paintEnvio(); };
+      return;
+    }
+    const E = D.envio, idx = ETAPAS_ENVIO.findIndex(x => x[0] === E.etapa);
+    const T = Calc.totals(D), atrasado = E.etapa !== 'recibido' && E.estimada && diasEnvio(E.estimada) > 0;
+    const cuando = (k) => { const h = (E.hist || []).filter(x => x.etapa === k).pop(); return h ? fmtFechaCorta(h.fecha) : ''; };
+    box.innerHTML = `<div class="ph"><h2>✈ Envío internacional</h2><div class="act"><button class="btn sm ghost" data-env-off title="La compra vuelve a sumar al inventario de una vez">Quitar seguimiento</button></div></div>
+      <div class="env-pasos">${ETAPAS_ENVIO.map(([k, l], i) => `<button type="button" class="env-paso ${i < idx ? 'hecho' : i === idx ? 'on' : ''}" data-env="${k}"><span class="env-dot">${i < idx || E.etapa === 'recibido' && i === idx ? '✓' : i + 1}</span><span class="env-l">${l}</span><small>${esc(cuando(k))}</small></button>`).join('')}</div>
+      ${E.etapa === 'recibido' ? `<div class="banner" style="margin:10px 0 0;background:var(--ok-soft,#e5f4ea);border-color:#b4dcc1;color:#1b6b2f">Recibida${E.recibido ? ' el ' + esc(fmtFecha(E.recibido)) : ''}: los productos ya están en el inventario de ${esc(origenNombre(D.inventario))}.</div>`
+        : `<div class="banner" style="margin:10px 0 0">${atrasado ? `<b style="color:var(--red)">Pasó la fecha estimada (${esc(fmtFecha(E.estimada))}).</b> ` : ''}Mientras no esté <b>Recibido</b>, estos productos se ven en el inventario como <b>“en camino”</b> y no suman a tu existencia.${E.etapa === 'pagado' && T.pagado <= 0.005 ? ' Registra el pago abajo, en Pagos.' : ''}</div>`}
+      <div class="grid g3" style="margin-top:10px">
+        <label class="fld"><span>Empresa de envío</span><input class="inp" data-env-k="empresa" value="${esc(E.empresa || '')}" placeholder="Ej. DHL, Zoom, MRW, courier"></label>
+        <label class="fld"><span>N° de guía / tracking</span><input class="inp mono" data-env-k="guia" value="${esc(E.guia || '')}"></label>
+        <label class="fld"><span>Llegada estimada</span><input class="inp" type="date" data-env-k="estimada" value="${esc(E.estimada || '')}"></label>
+      </div>`;
+    $$('[data-env]', box).forEach(b => b.onclick = () => {
+      const k = b.dataset.env; if (k === E.etapa) return; delete E.auto;
+      E.etapa = k; E.hist = (E.hist || []).concat([{ etapa: k, fecha: nowISO() }]);
+      if (k === 'recibido') E.recibido = localStamp().slice(0, 10); else delete E.recibido;
+      Calc.invalidate(); setDirty(); paintEnvio(); paintLines();
+      UI.toast(k === 'recibido' ? `Recibida: los productos entran al inventario de ${origenNombre(D.inventario)} al guardar` : `Envío: ${etapaEnvioInfo(k)[1]}`, 3000);
+    });
+    $$('[data-env-k]', box).forEach(i => i.addEventListener(i.type === 'date' ? 'change' : 'input', () => { E[i.dataset.envK] = i.value.trim(); setDirty(); if (i.type === 'date') paintEnvio(); }));
+    $('[data-env-off]', box).onclick = async () => { if (!(await UI.confirm('¿Quitar el seguimiento del envío? Los productos de esta compra pasan al inventario de una vez.', { ok: 'Quitar seguimiento' }))) return; delete D.envio; Calc.invalidate(); setDirty(); paintEnvio(); paintLines(); };
+  };
 
   /* ----- cliente ----- */
   const paintCliente = () => {
@@ -2956,7 +3021,7 @@ function docEditor(v, D, isNew) {
     el.addEventListener(ev, () => {
       const k = el.dataset.k;
       if (k === 'fechaD') { D.fecha = el.value + ' ' + ((D.fecha || '').slice(11, 16) || '12:00'); }
-      else if (k === 'proveedorNombre') { D.proveedor = { nombre: el.value }; const p = provPorNombre(el.value); D.proveedorId = p ? p.id : null; }
+      else if (k === 'proveedorNombre') { D.proveedor = { nombre: el.value }; const p = provPorNombre(el.value); D.proveedorId = p ? p.id : null; paintEnvio(); }
       else if (k === 'condTxt') D.condiciones = el.value.split('\n');
       else if (k === 'firmas') D.firmas = el.checked;
       else if (k === 'descPct' || k === 'ivaPct') D[k] = num(el.value);
@@ -3061,7 +3126,7 @@ function docEditor(v, D, isNew) {
   v.addEventListener('keydown', (e) => { if ((e.ctrlKey || e.metaKey) && e.key.toLowerCase() === 's') { e.preventDefault(); save(); } });
 
   if (venta && !isNew && $('#sec-seg', v)) segCtl = seguimientoVenta($('#sec-seg', v), D, { guardar: save, repintar: (sucio) => { if (sucio) setDirty(); else { paintPagos(); paintTotals(); } } });
-  paintCliente(); paintLines(); paintPagos(); paintRates(); paintTotals();
+  paintCliente(); paintEnvio(); paintLines(); paintPagos(); paintRates(); paintTotals();
   if (!Object.keys(Rates.data).length) Rates.fetch();
 }
 
@@ -3386,7 +3451,7 @@ Views.resumen = (v) => {
   B.ofertas = () => {
     const tot = ofN.aceptada + ofN.rechazada + ofN.abierta;
     const seg = (k, cls, label) => ofN[k] ? `<span class="${cls}" style="flex:${ofN[k]}" title="${label}: ${ofN[k]} (${fmtUSD0(ofV[k])})"></span>` : '';
-    const edad = (d) => { const n = diasDesde(d.fecha); return `<span class="pill ${n >= 5 ? 'bad' : n >= 3 ? 'warn' : 'info'}">${n === 0 ? 'hoy' : n + ' d'}</span>`; };
+    const edad = (d) => { const n = diasEnvio(d.fecha); return `<span class="pill ${n >= 5 ? 'bad' : n >= 3 ? 'warn' : 'info'}">${n === 0 ? 'hoy' : n + ' d'}</span>`; };
     return `<div class="ph"><h2>Ofertas · ${esc(perLabel)}</h2><div class="act"><a class="btn sm" href="#/nuevo/oferta">${ico('plus')} Oferta</a></div></div>
       ${tot ? `<div class="of-res"><div><div class="kv">${tasa == null ? '—' : fmtNum(tasa, 0) + '%'}</div><div class="muted small">de cierre</div></div>
         <div style="flex:1;min-width:0"><div class="stk" role="img" aria-label="${ofN.aceptada} aceptadas, ${ofN.rechazada} rechazadas, ${ofN.abierta} abiertas">${seg('aceptada', 'ok', 'Aceptadas')}${seg('rechazada', 'bad', 'Rechazadas')}${seg('abierta', 'op', 'Abiertas')}</div>
@@ -3400,7 +3465,7 @@ Views.resumen = (v) => {
     const tramos = [['0–7 días', 0, 7, 'info'], ['8–15 días', 8, 15, 'warn'], ['Más de 15', 16, 1e9, 'bad']].map(([l, a, b, c]) => ({ l, c, v: cobrar.filter(x => { const n = diasDesde(x.d.fecha); return n >= a && n <= b; }).reduce((s, x) => s + x.T.saldo, 0) }));
     return `<div class="ph"><h2>Por cobrar</h2><div class="act"><b class="num">${fmtUSD0(totCobrar)}</b></div></div>
       <div class="tramos">${tramos.map(t => `<div class="tr-${t.c}"><small>${t.l}</small><b>${fmtUSD0(t.v)}</b></div>`).join('')}</div>
-      <div class="lst">${cobrar.slice(0, 7).map(({ d, T }) => { const n = diasDesde(d.fecha); return `<a class="lst-r" href="#/doc/${esc(d.id)}"><span class="pill ${n > 15 ? 'bad' : n > 7 ? 'warn' : 'info'}">${n === 0 ? 'hoy' : n + ' d'}</span><span class="tx"><b>${esc((d.cliente && d.cliente.nombre) || '—')}</b><small class="mono">${esc(d.numero || '')}</small></span><span class="num">${fmtUSD0(T.saldo)}</span></a>`; }).join('')}</div>
+      <div class="lst">${cobrar.slice(0, 7).map(({ d, T }) => { const n = diasEnvio(d.fecha); return `<a class="lst-r" href="#/doc/${esc(d.id)}"><span class="pill ${n > 15 ? 'bad' : n > 7 ? 'warn' : 'info'}">${n === 0 ? 'hoy' : n + ' d'}</span><span class="tx"><b>${esc((d.cliente && d.cliente.nombre) || '—')}</b><small class="mono">${esc(d.numero || '')}</small></span><span class="num">${fmtUSD0(T.saldo)}</span></a>`; }).join('')}</div>
       ${cobrar.length > 7 ? `<a class="small" href="#/ventas" data-cobrar>Ver los ${cobrar.length} documentos</a>` : ''}`;
   };
   B.empleados = () => resumenEmpleadosHtml(F.per).replace(/^<section class="panel" style="margin-top:14px">/, '').replace(/<\/section>$/, '') || '<h2>Empleados</h2><div class="empty">Sin empleados activos.</div>';
@@ -3431,6 +3496,7 @@ Views.resumen = (v) => {
   ${editando ? '<div class="banner info-b">Modo edición: arrastra los bloques o usa las flechas para cambiarlos de lugar, cambia su ancho u ocúltalos. Toca <b>Listo</b> al terminar.</div>' : ''}
   ${!Sync.online() ? `<div class="banner">${Sync.configured() ? 'No has iniciado sesión: los cambios se guardan solo en este equipo.' : 'Los datos se guardan solo en este equipo. Conecta Supabase para verlos en el teléfono y compartirlos con tu papá.'} <a class="btn sm" href="#/ajustes/conexion">Conectar</a></div>` : ''}
   ${!Store.all('productos').length && !Store.all('docs').length ? `<div class="banner">Aún no hay datos. Importa tu inventario y ventas de Mi Negocio desde Ajustes → Datos. <a class="btn sm" href="#/ajustes/datos">Importar</a></div>` : ''}
+  ${(() => { const xs = Store.all('docs').filter(enCamino); if (!xs.length || editando) return ''; const atr = xs.filter(d => d.envio.estimada && diasEnvio(d.envio.estimada) > 0).length; return `<a class="banner hoy" href="#/compras" onclick="try{const k='suinadm_f_compraajuste',o=JSON.parse(localStorage.getItem(k)||'{}');o.est='camino';o.per='todo';localStorage.setItem(k,JSON.stringify(o));}catch(e){}" title="Ver las compras en camino"><b>✈ ${xs.length} compra${xs.length === 1 ? '' : 's'} internacional${xs.length === 1 ? '' : 'es'} en camino</b><span>${esc(xs.slice(0, 3).map(d => (d.proveedor && d.proveedor.nombre || 'Sin distribuidor') + ' · ' + etapaEnvioInfo(d.envio.etapa)[1] + (diasEnvio(d.fecha) > 0 ? ' · ' + diasEnvio(d.fecha) + ' d' : '')).join('  ·  '))}${atr ? ` · <b>${atr} pasó la fecha estimada</b>` : ''}</span><span class="ir">Ver compras →</span></a>`; })()}
   ${webNuevos && webNuevos.length && !editando ? `<a class="banner hoy" href="/admin/pedidos" title="Abrir en el Panel web"><b>${webNuevos.length} pedido${webNuevos.length === 1 ? '' : 's'} web por atender</b><span>${esc(webNuevos.slice(0, 3).map(p => '#' + p.id + ' ' + (p.cliente || '')).join(' · '))}</span><span class="ir">Ver en el Panel web →</span></a>` : ''}
   <div class="rgrid${editando ? ' editando' : ''}">${visibles.map(caja).join('')}</div>`;
 
@@ -4097,7 +4163,8 @@ Views.inventario = (v, invArg) => {
   // ventas por producto (cantidad y última fecha)
   Calc.build(); const vend = new Map();
   Calc.movs.forEach((ms, pid) => { let q = 0, ult = ''; ms.forEach(x => { if (esVenta(x.doc) && x.doc.estado !== 'anulada') { q += -x.delta; if ((x.doc.fecha || '') > ult) ult = x.doc.fecha; } }); vend.set(pid, { q, ult, mov: ms.reduce((a, x) => (x.doc.fecha || '') > a ? x.doc.fecha : a, '') }); });
-  const FILTROS = [['1', 'Con existencia'], ['0', 'Todos'], ['pocas', 'Pocas unidades'], ['sin', 'Agotados'], ['neg', 'Negativos'], ['sinprecio', 'Sin precio'], ['sincosto', 'Sin costo']];
+  const caminoTag = (p) => { const c = Calc.enCamino(p.id); return c ? `<span class="inv-camino" title="Compra internacional que todavía no llega: ${esc(c.docs.map(d => d.numero).join(', '))}">✈ ${fmtQty(c.cant)} en camino</span>` : ''; };
+  const FILTROS = [['1', 'Con existencia'], ['camino', '✈ En camino'], ['0', 'Todos'], ['pocas', 'Pocas unidades'], ['sin', 'Agotados'], ['neg', 'Negativos'], ['sinprecio', 'Sin precio'], ['sincosto', 'Sin costo']];
   v.innerHTML = `<div class="vh"><h1>Inventario</h1><div class="act"><button class="btn" data-cats>Ordenar categorías</button><button class="btn" data-grupos title="Cambia el grupo de cada producto por su categoría de la tienda">Grupos → categorías</button><button class="btn" data-desc>Mejorar descripciones</button><button class="btn" data-exp>${ico('pdf')} Exportar</button><button class="btn pri" data-np>${ico('plus')} Producto</button></div><div class="sub">Las existencias se calculan con las compras, ventas y ajustes. Toca un producto para ver su ficha o corregirlo.</div></div>
     <div class="inv-kpis" id="inv-kpis"></div>
     <div class="panel inv-filtros">
@@ -4150,7 +4217,7 @@ Views.inventario = (v, invArg) => {
       const qq = normKey(F.q); base.forEach(r => { const c = normKey(r.p.codigo), n = normTxt(r.p.nombre); r.score = (c === qq ? 100 : 0) + (c.startsWith(qq) ? 50 : 0) + (c.includes(qq) ? 20 : 0) + words.filter(w => n.includes(w)).length * 5 + (r.cant > 0 ? 3 : 0); });
     }
     const pasa = {
-      '1': r => invs.some(i => r.s[i].cant > 0), '0': () => true, pocas: r => r.cant > 0 && r.cant <= 2,
+      '1': r => invs.some(i => r.s[i].cant > 0), camino: r => !!Calc.enCamino(r.p.id), '0': () => true, pocas: r => r.cant > 0 && r.cant <= 2,
       sin: r => invs.every(i => r.s[i].cant <= 0), neg: r => invs.some(i => r.s[i].cant < 0),
       sinprecio: r => !num(r.p.precio), sincosto: r => r.cant > 0 && invs.some(i => r.s[i].cant > 0 && !r.s[i].costo)
     };
@@ -4203,7 +4270,7 @@ Views.inventario = (v, invArg) => {
           <div class="inv-meta">${[p.marca ? `<b>${esc(p.marca)}</b>` : '', catTxt ? esc(catTxt) : ''].filter(Boolean).join(' · ')}</div>
           <div class="inv-nom" title="${esc([nombre, desc].filter(Boolean).join(' — '))}">${esc(nombre) || '<span class="muted">Sin nombre</span>'}${desc && !fichas ? `<span class="inv-desc"> — ${esc(desc)}</span>` : ''}</div>
         </div>
-        <div class="inv-ex"><div class="inv-num mono">${fmtQty(cant)}</div><span class="pill ${est}">${estL}</span>${invs.length > 1 ? `<div class="inv-owns">${porInv}</div>` : ''}</div>
+        <div class="inv-ex"><div class="inv-num mono">${fmtQty(cant)}</div><span class="pill ${est}">${estL}</span>${invs.length > 1 ? `<div class="inv-owns">${porInv}</div>` : ''}${caminoTag(p)}</div>
         <div class="inv-pre"><span class="t">Precio</span><b class="mono">${precio ? fmtUSD(precio) : '<span class="inv-sinp">Sin precio</span>'}</b><span class="muted">${costo ? 'costo ' + fmtUSD(costo) + (margen != null ? ` · <span class="${margen < 15 ? 'bad' : margen < 25 ? 'warnt' : 'okt'}">${margen}%</span>` : '') : (cant > 0 ? '<span class="bad">sin costo</span>' : '')}</span></div>
         ${dist}${ventas}
       </article>`;
@@ -4231,7 +4298,7 @@ Views.inventario = (v, invArg) => {
           <td class="t-cod"><span class="code">${esc(p.codigo)}</span><button type="button" class="inv-copiar" data-copiar="${esc(p.codigo)}" title="Copiar código" aria-label="Copiar código">${ico('copy')}</button></td>
           <td class="t-nom"><div>${esc(p.nombre || p.descripcion || '') || '<span class="muted">Sin nombre</span>'}</div>${p.marca ? `<div class="muted small">${esc(p.marca)}</div>` : ''}</td>
           ${invs.length > 1 ? invs.map(i => `<td class="num hm ${s[i].cant > 0 ? '' : 'muted'}">${fmtQty(s[i].cant)}</td>`).join('') : ''}
-          <td class="num t-ex"><span class="t-dot"></span><b>${fmtQty(cant)}</b></td>
+          <td class="num t-ex"><span class="t-dot"></span><b>${fmtQty(cant)}</b>${caminoTag(p)}</td>
           <td class="num">${precio ? fmtUSD(precio) : '<span class="bad">sin precio</span>'}</td>
           <td class="num hm">${costo ? fmtUSD(costo) : (cant > 0 ? '<span class="bad">sin costo</span>' : '<span class="muted">—</span>')}</td>
           <td class="num">${margen != null ? `<span class="${margen < 15 ? 'bad' : margen < 25 ? 'warnt' : 'okt'}">${Math.round(margen)}%</span>` : '<span class="muted">—</span>'}</td>
