@@ -21,6 +21,8 @@
      abre  https://suinelectric.com/api/telegram?configurar=TU_WEBHOOK_SECRET
    ===================================================================== */
 
+import { chatPermitido, chatAvisos } from '../../lib/chat-comun.js';
+
 const tg = (env, metodo, datos) =>
   fetch('https://api.telegram.org/bot' + env.TELEGRAM_TOKEN + '/' + metodo, {
     method: 'POST',
@@ -67,7 +69,7 @@ export async function onRequestGet({ request, env }){
     drop_pending_updates: true,
   });
   if (res.ok){
-    await tg(env, 'sendMessage', { chat_id: env.TELEGRAM_CHAT_ID, text: '✅ SuinBot conectado al chat de la tienda. Responde a los avisos "💬 Chat #…" para contestar a tus clientes. Escribe /chats para ver los últimos.' });
+    await tg(env, 'sendMessage', { chat_id: chatAvisos(env), text: '✅ SuinBot conectado al chat de la tienda. Responde a los avisos "💬 Chat #…" para contestar a tus clientes. Escribe /chats para ver los últimos.' });
   }
   return new Response((res.ok ? '✅ Listo: SuinBot conectado a ' : '✗ Error: ') + (res.ok ? u.origin + '/api/telegram' : res.description),
     { status: res.ok ? 200 : 500, headers: { 'Content-Type': 'text/plain; charset=utf-8' } });
@@ -85,7 +87,7 @@ export async function onRequestPost({ request, env }){
   const msg = upd && upd.message;
   if (!msg || !msg.chat) return ok;
   // Solo tú (o tu grupo) puede responder a los clientes.
-  if (String(msg.chat.id) !== String(env.TELEGRAM_CHAT_ID)) return ok;
+  if (!chatPermitido(env, msg.chat.id)) return ok;
 
   const decir = (texto) => tg(env, 'sendMessage', {
     chat_id: msg.chat.id, text: texto, parse_mode: 'HTML',

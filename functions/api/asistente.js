@@ -15,7 +15,7 @@
      GEMINI_API_KEY   clave de aistudio.google.com (gratis)
      GEMINI_MODEL     opcional; por defecto prueba varios modelos Flash
    ===================================================================== */
-import { tg, rpc, esc, waDe } from '../../lib/chat-comun.js';
+import { tg, rpc, esc, waDe, chatAvisos } from '../../lib/chat-comun.js';
 
 const MODELOS = ['gemini-3.5-flash-lite', 'gemini-3.1-flash-lite', 'gemini-flash-lite-latest', 'gemini-3.5-flash', 'gemini-flash-latest'];
 
@@ -174,7 +174,7 @@ async function avisar(env, turno, respuesta, { pasar, motivo, fallo }){
   if (wa && (turno.primero || pasar || fallo)) t += '\n<a href="' + wa + '">Escribirle por WhatsApp</a>';
   if (t.length > 4000) t = t.slice(0, 3990) + '…';
   await tg(env, 'sendMessage', {
-    chat_id: env.TELEGRAM_CHAT_ID, text: t, parse_mode: 'HTML', disable_web_page_preview: true,
+    chat_id: chatAvisos(env), text: t, parse_mode: 'HTML', disable_web_page_preview: true,
     disable_notification: !(turno.primero || pasar || fallo),   // lo rutinario llega en silencio
   });
 }
