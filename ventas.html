@@ -929,7 +929,7 @@ const Store = {
 
 /* ---------------- sincronización con Supabase ---------------- */
 const Sync = {
-  sb: null, user: null, state: 'local', msg: 'Solo en este equipo', lastSync: lsGet('suinadm_lastsync', null), channel: null, busy: false,
+  sb: null, user: null, state: 'local', msg: 'Solo en este equipo', lastSync: lsGet('suinadm_lastsync', null), channel: null, busy: false, pulledOnce: false,
   conf() {
     const c = lsGet('suinadm_sb', {});
     return { url: (SUPABASE_URL_FIJA || c.url || '').trim(), key: (SUPABASE_KEY_FIJA || c.key || '').trim() };
@@ -971,6 +971,7 @@ const Sync = {
     try {
       await this.push();
       await this.pull();
+      this.pulledOnce = true;   // ya están todos los productos de la nube en este equipo
       ensureDistribuidores();
       this.set('ok', 'Sincronizado ' + new Date().toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' }));
     } catch (e) {
@@ -5172,13 +5173,17 @@ const WebProd = (() => {
   const faltan = (p) => [!String(p.marca || '').trim() && 'marca', !p.webCat && 'categoría de la tienda'].filter(Boolean);
   const cargar = async ({ force } = {}) => {
     const s = sb(); if (!s || loading) return false;
+    // Esperar a que este equipo tenga TODOS los productos de la nube: si se compara antes
+    // (equipo nuevo, caché borrada, internet lento), cada producto de la tienda parece nuevo y se duplica.
+    if (!Sync.pulledOnce) return false;
     if (!force && Date.now() - last < 120000) return true;
     loading = true; error = '';
     try {
       const [rw, ro] = await Promise.all([s.from('productos_web').select('*'), s.from('productos_ocultos').select('modelo')]);
       if (rw.error) throw rw.error;
       ocultos = new Set((ro.data || []).map(x => normKey(x.modelo)));
-      const porClave = new Map(Store.all('productos').map(p => [normKey(p.codigo), p]));
+      const porClave = new Map();
+      Store.all('productos').forEach(p => { const k = normKey(p.codigo); const o = porClave.get(k); if (!o || (o.deWeb && !p.deWeb)) porClave.set(k, p); }); // si hubiera dos, preferir la ficha propia
       let n = 0;
       (rw.data || []).forEach(r => {
         const k = normKey(r.modelo); if (!k) return;
@@ -7329,7 +7334,7 @@ Bus.on('sync', () => { if (Sync.state === 'ok') InvWeb.programar(); });
   setTimeout(() => { if (!document.querySelector('.ov')) Yo.check(); }, 1200);
   if (CFG().nubeCotizador && !localStorage.getItem('suin_nube_v1')) localStorage.setItem('suin_nube_v1', CFG().nubeCotizador);
   Cot.sync(); Cot.pullDrive();
-  setTimeout(() => Tienda.cargar(), 1500); setTimeout(() => WebProd.cargar(), 2500);
+  setTimeout(() => Tienda.cargar(), 1500); setTimeout(() => WebProd.cargar(), 2500); Bus.on('sync', () => { if (Sync.state === 'ok' && Sync.pulledOnce && !WebProd._primera) { WebProd._primera = true; WebProd.cargar({ force: true }); } });
   Bus.on('sync', () => autoCategorias.programar()); Bus.on('catalog', () => autoCategorias.programar());
   setInterval(() => { if (document.visibilityState === 'visible') WebProd.cargar(); }, 300000); setInterval(() => { if (document.visibilityState === 'visible') Tienda.cargar(); }, 180000);
   Bus.on('remote', () => setTimeout(() => Cot.sync(), 200));
