@@ -1360,6 +1360,58 @@
   .vfd-chip.var-stock::before{ content:'●'; color:var(--ok); margin-right:5px; font-size:10px; vertical-align:2px; }
   .vfd-chip.var-agotado{ text-decoration:line-through; color:var(--texto-3); }
   .det-especs{ margin-bottom:14px; }
+
+  /* ================= Celular más cómodo (beta) ================= */
+  .det-barra{ display:none; }
+  @media (max-width: 640px){
+    /* Cabecera más baja: el WhatsApp pasa a la barra de abajo */
+    .topbar{ display:none; }
+    .header-in{ padding:8px 12px 10px; gap:8px 10px; }
+    .buscador-wrap input[type=search]{ height:46px; }
+    #barra-movil a{ flex:1; display:flex; flex-direction:column; align-items:center; justify-content:center; gap:2px; padding:6px 4px;
+      color:#128c4a; text-decoration:none; border-radius:var(--radio); line-height:1.1; }
+    #barra-movil a svg{ width:21px; height:21px; }
+    #barra-movil a span{ font-size:11.5px; font-weight:600; }
+
+    /* Filtros de la categoría en una sola barra (las categorías se abren desde la barra de abajo) */
+    #btn-menu{ display:none; }
+    .controls{ display:grid; grid-template-columns:minmax(0,1fr) minmax(0,1fr); gap:6px; padding:6px; margin-bottom:10px; }
+    .controls select{ height:40px; font-size:13.5px; }
+    .vista-ctrl{ grid-column:1 / -1; }
+    .vista-toggle{ height:36px; }
+    .vista-toggle button{ font-size:12px; }
+    .controls select#vista-columnas{ height:36px; }
+    /* si está la tira de subcategorías arriba, no se repite la lista debajo del título */
+    #guia-tira:not([hidden]) ~ #contenido .cab-cat .subcat-chips{ display:none; }
+    .cab-cat{ margin-bottom:14px; }
+    .cab-cat-fila{ margin:2px 0 6px; gap:6px 10px; }
+    .cab-cat-titulo{ font-size:24px; }
+    .cab-cat .btn-enlace{ height:32px; padding:0 10px; font-size:12.5px; }
+
+    /* Tarjetas: cantidad, Agregar y los dos WhatsApp en una sola fila */
+    #contenido.vista-ficha .desc{ -webkit-line-clamp:2; margin:2px 0 4px; }
+    #contenido.vista-ficha .card-body > .actions{ flex:1 1 150px; margin-top:8px; }
+    #contenido.vista-ficha .card-body > .wa-doble{ flex:0 0 auto; margin-top:8px; gap:4px; }
+    #contenido.vista-ficha .qty-btn{ width:26px; }
+    #contenido.vista-ficha .qty-input{ width:28px; }
+    #contenido.vista-ficha .btn-cart-add{ min-width:72px; }
+    .wa-doble .btn.btn-wa, #contenido.vista-ficha .wa-doble .btn.btn-wa{ flex:0 0 44px; width:44px; height:36px; padding:2px 0 1px; flex-direction:column; gap:0;
+      font-size:10.5px; font-weight:700; line-height:1.05; border-width:1px; }
+    .wa-doble .btn.btn-wa .ico-wa{ width:15px; height:15px; }
+    .wa-doble{ flex-wrap:nowrap; gap:4px; }
+
+    /* Ficha del producto: sin el «Volver» repetido (queda la ✕) y con barra fija abajo */
+    .btn-volver{ display:none; }
+    #modal-detalle .det-agregar{ display:none; }
+    .det-barra{ display:flex; align-items:center; gap:12px; position:sticky; bottom:0; z-index:3; background:#fff;
+      margin:14px 0 0; padding:10px 0; border-top:1px solid var(--linea);
+      box-shadow:0 -6px 18px rgba(9,24,34,.08); }
+    .det-barra-precio{ display:flex; flex-direction:column; min-width:0; }
+    .det-barra-precio b{ font-size:20px; color:var(--tinta); line-height:1.15; font-variant-numeric:tabular-nums; }
+    .det-barra-precio span{ font-size:12px; color:var(--texto-3); }
+    .det-barra .btn{ flex:1; margin:0; padding:13px 10px; font-size:15px; }
+    .det-barra .btn-wa-lleno{ display:flex; align-items:center; justify-content:center; gap:6px; background:var(--wa); color:#fff; font-weight:700; text-decoration:none; border-radius:var(--radio); }
+  }
 </style>
 
 </head>
@@ -1664,6 +1716,7 @@
   <button id="barra-menu">☰<span>Categorías</span></button>
   <button id="barra-buscar">🔍&#xFE0E;<span>Buscar</span></button>
   <button id="barra-cuenta" style="display:none">👤&#xFE0E;<span>Ingresar</span></button>
+  <a id="barra-wa" href="https://wa.me/584124111319" target="_blank" rel="noopener" aria-label="Escribir por WhatsApp al 0412-411 1319"><svg viewBox="0 0 24 24" aria-hidden="true"><path fill="currentColor" d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.3-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2c0 1.3.9 2.5 1.1 2.7.1.2 1.8 2.8 4.4 3.9 1.6.7 2.3.8 3.1.6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.2-1.2-.1-.1-.3-.2-.5-.3z"/></svg><span>WhatsApp</span></a>
   <button id="barra-cart">🛒<span>Pedido</span><span class="barra-cart-count" id="barra-cart-count">0</span></button>
 </div>
 
@@ -4509,6 +4562,11 @@ function abrirDetalle(modelo){
         '<div class="det-wa"><a class="btn btn-wa" href="' + l.prioritario + '" target="_blank" rel="noopener">' + ICONO_WA + ' WhatsApp 0412</a>' +
           '<a class="btn btn-wa btn-wa-2" href="' + l.secundario + '" target="_blank" rel="noopener">' + ICONO_WA + ' WhatsApp 0424</a></div>' +
         '<button class="btn btn-copiar btn-chat-prod" onclick="window.abrirChat && abrirChat(\'Hola, tengo una consulta sobre ' + modeloJs + '\')">💬 Preguntar a un asesor</button>' +
+        '<div class="det-barra">' +
+          '<div class="det-barra-precio"><b>' + formatoMoneda(precioFinal) + '</b><span>' + (p.disponible ? estadoTexto : 'Agotado') + '</span></div>' +
+          (p.disponible ? '<button class="btn btn-cart-add" onclick="agregarAlCarrito(\'' + modeloJs + '\', 1)">Agregar al pedido</button>'
+                        : '<a class="btn btn-wa-lleno" href="' + l.prioritario + '" target="_blank" rel="noopener">' + ICONO_WA + ' Consultar</a>') +
+        '</div>' +
         '<div class="det-compartir">' +
           '<button class="btn btn-copiar" id="btn-compartir-prod" onclick="compartir(urlProducto(\'' + modeloJs + '\'), \'' + modeloJs + ' | Suinelectric\')">🔗 Compartir producto</button>' +
           '<button class="btn btn-copiar" id="btn-copiar-datos" onclick="copiarDatosProducto(\'' + modeloJs + '\')">Copiar datos del producto</button>' +
