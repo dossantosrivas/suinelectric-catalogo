@@ -719,6 +719,26 @@ body.gen .letra button{width:100%;min-width:0}
   .kp .kv{font-size:22px}.kp.hero .kv{font-size:28px}
   .kp{padding:12px 14px}.kp .kl{font-size:14px}.kp .kf{font-size:13px}
 }
+/* Precios: nacional vs internacional */
+.prec-buscar{display:flex;gap:10px;align-items:center;flex-wrap:wrap;padding:14px;margin-bottom:8px}
+.prec-buscar .seg button{padding:9px 13px}
+.prec-kg{display:flex;align-items:center;gap:6px;font-size:15px;color:var(--ink-2);font-weight:600}
+.prec-kg .inp{width:70px;text-align:right}
+.prec-meta{margin:0 2px 10px}
+.prec-hist{margin-bottom:12px}
+.prec-cmp{display:grid;grid-template-columns:repeat(2,minmax(0,1fr));gap:16px;margin-bottom:16px}
+.prec-h{font-weight:600;font-size:15px;color:var(--ink-2);margin-bottom:10px;text-transform:uppercase;letter-spacing:.03em}
+.prec-li{padding:8px 0;border-top:1px solid var(--line)}.prec-li:first-of-type{border-top:none;padding-top:0}
+.prec-li .row{gap:14px;margin-top:2px}
+.prec-big{font-size:30px;font-weight:700;letter-spacing:-.01em;margin-bottom:4px}
+.prec-cmp .d{margin-top:12px;padding:10px 12px;border-radius:7px;background:var(--steel-soft);color:var(--steel-2);font-size:15.5px}
+.prec-cmp .d.ok{background:var(--ok-soft);color:var(--ok)}.prec-cmp .d.bad{background:var(--red-soft);color:var(--red)}
+.prec-filtros{justify-content:space-between;margin:6px 0 10px}
+.prec-tbl td{vertical-align:top}
+.prec-img{width:64px}.prec-img img{width:56px;height:56px;object-fit:contain;border-radius:6px;background:#fff;border:1px solid var(--line)}
+.prec-tit{color:var(--ink);font-weight:500;text-decoration:none;display:-webkit-box;-webkit-line-clamp:2;-webkit-box-orient:vertical;overflow:hidden}.prec-tit:hover{text-decoration:underline}
+.prec-ok{color:var(--ok)}.prec-bad{color:var(--red)}
+@media (max-width:760px){.prec-cmp{grid-template-columns:minmax(0,1fr)}.prec-img{width:48px}.prec-img img{width:44px;height:44px}.prec-big{font-size:26px}}
 </style>
 </head>
 <body>
@@ -1799,12 +1819,13 @@ const ICON = {
   list: '<path d="M9 6h11M9 12h11M9 18h11"/><circle cx="4.5" cy="6" r="1"/><circle cx="4.5" cy="12" r="1"/><circle cx="4.5" cy="18" r="1"/>',
   sync: '<path d="M20 11a8 8 0 0 0-14.3-4.9L4 8"/><path d="M4 4v4h4"/><path d="M4 13a8 8 0 0 0 14.3 4.9L20 16"/><path d="M20 20v-4h-4"/>'
 };
+ICON.search = '<circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/>';
 const ico = (n) => `<svg viewBox="0 0 24 24">${ICON[n] || ''}</svg>`;
 
 const NAV = [
   ['resumen', 'Resumen', 'home'], ['ofertas', 'Ofertas', 'offer'], ['ventas', 'Ventas', 'sale'], ['compras', 'Compras', 'buy'],
   ['empleados', 'Empleados', 'badge'], ['clientes', 'Clientes', 'users'], ['distribuidores', 'Distribuidores', 'truck'],
-  ['inventario', 'Inventario', 'box'], ['pedidos', 'Pedidos a distribuidores', 'bolt'], ['ajustes', 'Ajustes', 'gear']
+  ['inventario', 'Inventario', 'box'], ['pedidos', 'Pedidos a distribuidores', 'bolt'], ['precios', 'Precios', 'search'], ['ajustes', 'Ajustes', 'gear']
 ];
 
 const UI = {
@@ -4893,6 +4914,196 @@ const nuevoDist = (alcance) => ({ id: uid('pv_'), nombre: '', empresa: '', tipo:
 Views.proveedores = () => Route.nav('#/distribuidores', { replace: true });
 Views.proveedor = (v, id) => Route.nav('#/distribuidores/' + (id || ''), { replace: true });
 Views.distribuidores = (v, id) => { if (id) return fichaDistribuidor(v, id); return listaDistribuidores(v); };
+
+/* =====================================================================
+   PRECIOS: comparar nacional vs internacional
+   Busca un modelo en eBay e IAInventory (vía /api/precios), calcula el
+   costo puesto en Venezuela (envío en EE. UU. + courier por kg + % extra)
+   y lo pone al lado de tu inventario y del catálogo del distribuidor.
+   ===================================================================== */
+const PRECIOS_DEF = {
+  zip: '33166',          // código postal del courier en Miami (envío de eBay hasta ahí)
+  tarifaKg: 12,          // courier Miami → Venezuela, USD por kg
+  minKg: 1,              // el courier cobra al menos esto
+  fijo: 0,               // cargo fijo por paquete (seguro, manejo, retiro…)
+  pctExtra: 5,           // % sobre el precio + envío (comisión de pago, impuestos…)
+  envioUsa: 10,          // envío en EE. UU. que se supone cuando la tienda no lo dice
+  tiendas: [
+    { nombre: 'MercadoLibre VE', url: 'https://listado.mercadolibre.com.ve/{q}' },
+    { nombre: 'eBay', url: 'https://www.ebay.com/sch/i.html?_nkw={q}&LH_BIN=1' },
+    { nombre: 'IAInventory', url: 'https://iainventory.com/search?type=product&q={q}' },
+    { nombre: 'Amazon', url: 'https://www.amazon.com/s?k={q}' },
+    { nombre: 'AliExpress', url: 'https://www.aliexpress.com/wholesale?SearchText={q}' },
+    { nombre: 'Google Shopping', url: 'https://www.google.com/search?tbm=shop&q={q}' }
+  ]
+};
+const PrecCfg = {
+  get() { const c = CFG().precios || {}; const o = Object.assign({}, PRECIOS_DEF, c); if (!Array.isArray(o.tiendas) || !o.tiendas.length) o.tiendas = PRECIOS_DEF.tiendas.slice(); return o; },
+  set(mut) { const r = clone(DB.config.get('main') || { id: 'main' }); r.id = 'main'; const p = Object.assign({}, PrecCfg.get()); mut(p); r.precios = p; Store.put('config', r); }
+};
+const PrecCache = new Map(); // q|cond|zip -> respuesta (mientras la página esté abierta)
+const precUrlTienda = (t, q) => String(t.url || '').replace(/\{q\}/g, encodeURIComponent(q).replace(/%20/g, '+'));
+/* costo puesto en Venezuela de un resultado internacional */
+const precPuesto = (it, kg, P) => {
+  const envSupuesto = it.envio == null;
+  const envio = envSupuesto ? num(P.envioUsa) : num(it.envio);
+  const base = num(it.precio) + envio;
+  const courier = Math.max(num(kg) || 0, num(P.minKg) || 0) * num(P.tarifaKg) + num(P.fijo);
+  const extra = base * num(P.pctExtra) / 100;
+  return { total: base + courier + extra, envio, envSupuesto, courier, extra };
+};
+
+Views.precios = (v, qArg) => {
+  const P = PrecCfg.get();
+  const F = Object.assign({ q: '', cond: 'todas', kg: 1, exacto: true, fuente: 'todas' }, lsGet('suinadm_f_prec', {}));
+  if (qArg) F.q = qArg;
+  const hist = lsGet('suinadm_prec_hist', []);
+  v.innerHTML = `<div class="vh"><h1>Precios</h1><div class="act"><button class="btn" data-aj>${ico('gear')} Costos de importación</button></div>
+    <div class="sub">Busca un modelo en eBay e IAInventory y compáralo con tu inventario y tu distribuidor. El <b>puesto en Venezuela</b> suma el envío en EE. UU. hasta tu courier, el courier por kg y el % extra.</div></div>
+    <form class="panel prec-buscar" data-form>
+      <div class="inv-q"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input class="inp" type="search" name="q" placeholder="Modelo exacto, ej. GD20-2R2G-4 o 6ES7214-1AG40-0XB0" value="${esc(F.q)}" autocomplete="off" spellcheck="false" enterkeyhint="search"></div>
+      <div class="seg" data-cond>${[['todas', 'Todo'], ['nuevo', 'Nuevo'], ['usado', 'Usado']].map(([k, l]) => `<button type="button" data-v="${k}" class="${F.cond === k ? 'on' : ''}">${l}</button>`).join('')}</div>
+      <label class="prec-kg" title="Peso con caja para calcular el courier"><span>Peso</span><input class="inp" name="kg" inputmode="decimal" value="${esc(String(F.kg))}"><span>kg</span></label>
+      <button class="btn pri" type="submit">Buscar</button>
+    </form>
+    <div class="prec-meta muted small">Courier ${fmtUSD(num(P.tarifaKg))}/kg (mín. ${fmtNum(num(P.minKg))} kg)${num(P.fijo) ? ' + ' + fmtUSD(num(P.fijo)) + ' fijo' : ''} · +${fmtNum(num(P.pctExtra))}% · envío de eBay hasta ${esc(P.zip || 'EE. UU.')} · si no se sabe el envío se suponen ${fmtUSD(num(P.envioUsa))}</div>
+    ${hist.length ? `<div class="row prec-hist">${hist.map(h => `<button type="button" class="btn sm ghost" data-h="${esc(h)}">${esc(h)}</button>`).join('')}</div>` : ''}
+    <div data-res>${F.q ? '' : '<div class="panel empty">Escribe un modelo y toca <b>Buscar</b>. Funciona mejor con el código exacto del fabricante.</div>'}</div>`;
+  const form = $('[data-form]', v), res = $('[data-res]', v);
+  const guardarF = () => lsSet('suinadm_f_prec', F);
+  $$('[data-cond] button', v).forEach(b => b.onclick = () => { F.cond = b.dataset.v; $$('[data-cond] button', v).forEach(x => x.classList.toggle('on', x === b)); guardarF(); if (F.q) buscar(); });
+  $('[name=kg]', form).addEventListener('input', debounce(() => { F.kg = num($('[name=kg]', form).value) || 0; guardarF(); pintar(); }, 300));
+  $$('[data-h]', v).forEach(b => b.onclick = () => { $('[name=q]', form).value = b.dataset.h; buscar(); });
+  $('[data-aj]', v).onclick = () => precAjustes(() => App.render());
+  form.onsubmit = (e) => { e.preventDefault(); buscar(); };
+
+  let datos = null, cargando = false;
+  async function buscar() {
+    const q = $('[name=q]', form).value.trim();
+    if (q.length < 2) { UI.toast('Escribe al menos 2 letras'); return; }
+    F.q = q; F.kg = num($('[name=kg]', form).value) || 0; guardarF();
+    lsSet('suinadm_prec_hist', [q].concat(hist.filter(h => normKey(h) !== normKey(q))).slice(0, 8));
+    if (Route.cur() !== 'precios/' + q) Route.nav('#/precios/' + encodeURIComponent(q), { replace: true, silent: true });
+    const key = [q, F.cond, P.zip].join('|');
+    if (PrecCache.has(key)) { datos = PrecCache.get(key); pintar(); return; }
+    cargando = true; datos = null; pintar();
+    try {
+      if (!Sync.sb) throw new Error('Gestión no está conectada a Supabase.');
+      const { data } = await Sync.sb.auth.getSession();
+      const tok = data && data.session && data.session.access_token;
+      if (!tok) throw new Error('Inicia sesión en Gestión para buscar precios.');
+      const u = `/api/precios?q=${encodeURIComponent(q)}&cond=${F.cond}&zip=${encodeURIComponent(P.zip || '')}&fuentes=ebay,iai`;
+      const r = await fetch(u, { headers: { Authorization: 'Bearer ' + tok, apikey: Sync.conf().key } });
+      const j = await r.json().catch(() => null);
+      if (!r.ok || !j) throw new Error((j && j.error) || (r.status === 404 ? 'El buscador aún no está publicado (falta functions/api/precios.js en Cloudflare).' : 'Error ' + r.status));
+      datos = j; PrecCache.set(key, j);
+    } catch (e) { datos = { errorGeneral: e.message }; }
+    cargando = false; pintar();
+  }
+
+  function nacional(q) {
+    const k = normKey(q); if (!k) return { inv: [], cat: [] };
+    const inv = Store.all('productos').filter(p => { const c = normKey(p.codigo); return c && (c === k || (k.length >= 4 && c.includes(k))); }).slice(0, 6);
+    const cat = (Catalog.items.length ? Catalog.search(q, 30) : []).filter(c => { const m = normKey(c.m); return m && (m === k || (k.length >= 4 && m.includes(k))); }).slice(0, 6);
+    return { inv, cat };
+  }
+
+  function pintar() {
+    if (!F.q) return;
+    if (cargando) { res.innerHTML = '<div class="panel empty">Buscando en eBay e IAInventory…</div>'; return; }
+    if (!datos) return;
+    const q = F.q, k = normKey(q), kg = F.kg;
+    const N = nacional(q);
+    const filtrar = (xs) => F.exacto && k.length >= 4 ? xs.filter(it => normKey(it.titulo).includes(k)) : xs;
+    const prep = (src) => { const blk = datos[src]; if (!blk) return null; const todos = blk.items || []; const xs = filtrar(todos).map(it => Object.assign({}, it, { p: precPuesto(it, kg, P) })).sort((a, b) => a.p.total - b.p.total); return { blk, xs, ocultos: todos.length - xs.length }; };
+    const E = prep('ebay'), I = prep('iai');
+    const inter = [].concat(E ? E.xs : [], I ? I.xs : []).sort((a, b) => a.p.total - b.p.total);
+    const mejor = inter[0];
+    // referencia nacional: tu costo (inventario) o tu costo con el distribuidor
+    const refs = [];
+    N.inv.forEach(p => { if (num(p.costo) > 0) refs.push({ l: 'Tu costo · ' + p.codigo, v: num(p.costo) }); });
+    N.cat.forEach(c => { const cd = costoDist(c, distDeCat(c)); if (cd != null) refs.push({ l: 'Costo distribuidor · ' + c.m, v: cd }); });
+    const ref = refs.sort((a, b) => a.v - b.v)[0];
+    const ventaRef = (() => { const p = N.inv.find(x => num(x.precio) > 0); if (p) return { l: 'Tu precio de venta', v: num(p.precio) }; const c = N.cat.find(x => precioWeb(x) != null); return c ? { l: 'Venta web (tienda)', v: precioWeb(c) } : null; })();
+    const dif = (a, b) => b ? Math.round((a - b) / b * 100) : null;
+    const verdict = () => {
+      if (!mejor) return '<div class="d">Sin resultados internacionales que coincidan.</div>';
+      if (!ref) return `<div class="d">No hay costo nacional para comparar${ventaRef ? `; tu venta es ${fmtUSD(ventaRef.v)} (${pctMargen(ventaRef.v, mejor.p.total)})` : ''}.</div>`;
+      const d = dif(mejor.p.total, ref.v);
+      return `<div class="d ${d < 0 ? 'ok' : 'bad'}">${d < 0 ? 'Importar sale ' + Math.abs(d) + '% más barato' : d === 0 ? 'Cuesta lo mismo' : 'Importar sale ' + d + '% más caro'} que ${esc(ref.l.toLowerCase())} (${fmtUSD(ref.v)})${ventaRef ? `<br>Vendiendo a ${fmtUSD(ventaRef.v)}: ${pctMargen(ventaRef.v, mejor.p.total)} importado vs ${pctMargen(ventaRef.v, ref.v)} nacional` : ''}</div>`;
+    };
+    const fuenteNom = { ebay: 'eBay', iai: 'IAInventory' };
+    const errBlk = (src) => {
+      const b = datos[src]; if (!b || !b.error) return '';
+      if (b.error === 'sin_clave') return `<div class="banner">eBay aún no tiene clave. Crea una app gratis en <a href="https://developer.ebay.com/my/keys" target="_blank" rel="noopener">developer.ebay.com</a> (keyset de <b>Production</b>) y guarda en Cloudflare → tu proyecto → Settings → Variables and Secrets: <code>EBAY_CLIENT_ID</code> (App ID) y <code>EBAY_CLIENT_SECRET</code> (Cert ID). Mientras tanto: <a href="${esc(precUrlTienda(P.tiendas.find(t => /ebay/i.test(t.nombre)) || PRECIOS_DEF.tiendas[1], q))}" target="_blank" rel="noopener">buscar en eBay ↗</a></div>`;
+      return `<div class="banner">${fuenteNom[src]}: ${esc(b.error)}</div>`;
+    };
+    const fila = (it) => `<tr><td class="prec-img">${it.img ? `<img src="${esc(it.img)}" alt="" loading="lazy" referrerpolicy="no-referrer">` : ''}</td>
+      <td><a href="${esc(it.url)}" target="_blank" rel="noopener" class="prec-tit">${esc(it.titulo)}</a>
+        <div class="muted small">${[`<span class="pill ${it.fuente === 'ebay' ? 'info' : 'warn'}">${fuenteNom[it.fuente]}</span>`, it.condicion ? esc(it.condicion) : '', it.vendedor ? esc(it.vendedor) : '', it.ubicacion ? esc(it.ubicacion) : '', it.oferta ? 'acepta ofertas' : '', it.disponible === false ? '<span class="pill bad">agotado</span>' : ''].filter(Boolean).join(' · ')}</div>
+        ${it.variantes && it.variantes.length > 1 ? `<div class="small">${it.variantes.map(x => `${esc(x.nombre || '—')}: <b>${fmtUSD(x.precio)}</b>${x.disponible ? '' : ' <span class="muted">(agotado)</span>'}`).join(' · ')}</div>` : ''}</td>
+      <td class="num">${fmtUSD(it.precio)}</td>
+      <td class="num hm" title="${it.p.envSupuesto ? 'La tienda no indica el envío: se suponen ' + fmtUSD(it.p.envio) : 'Envío hasta ' + esc(P.zip || 'EE. UU.')}">${it.p.envSupuesto ? `<span class="muted">${fmtUSD(it.p.envio)}*</span>` : it.p.envio ? fmtUSD(it.p.envio) : '<span class="pill ok">gratis</span>'}</td>
+      <td class="num hm" title="Courier ${fmtUSD(it.p.courier)} + extra ${fmtUSD(it.p.extra)}">${fmtUSD(it.p.courier + it.p.extra)}</td>
+      <td class="num"><b>${fmtUSD(it.p.total)}</b>${ref ? `<div class="small ${it.p.total <= ref.v ? 'prec-ok' : 'prec-bad'}">${dif(it.p.total, ref.v) > 0 ? '+' : ''}${dif(it.p.total, ref.v)}%</div>` : ''}</td></tr>`;
+    const tabla = (xs) => xs.length ? `<div class="tbl-wrap"><table class="tbl prec-tbl"><thead><tr><th></th><th>Producto</th><th class="r">Precio</th><th class="r hm">Envío EE. UU.</th><th class="r hm">Courier + extra</th><th class="r">Puesto en Vzla</th></tr></thead><tbody>${xs.map(fila).join('')}</tbody></table></div>` : '';
+    const lista = F.fuente === 'ebay' ? (E ? E.xs : []) : F.fuente === 'iai' ? (I ? I.xs : []) : inter;
+    const ocultos = (E ? E.ocultos : 0) + (I ? I.ocultos : 0);
+
+    res.innerHTML = datos.errorGeneral ? `<div class="banner">${esc(datos.errorGeneral)}</div>` : `
+      <div class="prec-cmp">
+        <div class="panel"><div class="prec-h">🇻🇪 Nacional</div>
+          ${N.inv.length ? N.inv.map(p => `<div class="prec-li"><a href="#/producto/${esc(p.id)}"><span class="code">${esc(p.codigo)}</span></a> <span class="muted small">tu inventario</span><div class="row small"><span>Costo <b>${num(p.costo) ? fmtUSD(num(p.costo)) : '—'}</b></span><span>Venta <b>${num(p.precio) ? fmtUSD(num(p.precio)) : '—'}</b></span></div></div>`).join('') : ''}
+          ${N.cat.length ? N.cat.map(c => { const dd = distDeCat(c), cd = costoDist(c, dd), pw = precioWeb(c); return `<div class="prec-li"><span class="code">${esc(c.m)}</span> <span class="muted small">${esc(dd ? dd.nombre : 'distribuidor')}${c.disp === false ? ' · sin stock' : c.exist != null ? ' · ' + esc(c.exist) : ''}</span><div class="row small"><span>Lista <b>${c.precio ? fmtUSD(c.precio) : '—'}</b></span><span>Tu costo <b>${cd != null ? fmtUSD(cd) : '—'}</b></span><span>Venta web <b>${pw != null ? fmtUSD(pw) : '—'}</b></span></div></div>`; }).join('') : ''}
+          ${!N.inv.length && !N.cat.length ? `<div class="muted small">${Catalog.loading ? 'Cargando el catálogo del distribuidor…' : 'No está en tu inventario ni en el catálogo del distribuidor.'}</div>` : ''}
+        </div>
+        <div class="panel"><div class="prec-h">🌎 Internacional · mejor puesto en Vzla</div>
+          ${mejor ? `<div class="prec-big">${fmtUSD(mejor.p.total)}</div><div class="small"><a href="${esc(mejor.url)}" target="_blank" rel="noopener">${esc(mejor.titulo.slice(0, 90))}</a></div><div class="muted small">${fuenteNom[mejor.fuente]} · precio ${fmtUSD(mejor.precio)} + envío ${fmtUSD(mejor.p.envio)}${mejor.p.envSupuesto ? '*' : ''} + courier ${fmtUSD(mejor.p.courier)} + extra ${fmtUSD(mejor.p.extra)}</div>` : '<div class="muted small">—</div>'}
+          ${verdict()}
+        </div>
+      </div>
+      ${errBlk('ebay')}${errBlk('iai')}
+      <div class="row prec-filtros">
+        <div class="seg" data-src>${[['todas', 'Todas (' + inter.length + ')'], ['ebay', 'eBay (' + (E ? E.xs.length : 0) + ')'], ['iai', 'IAInventory (' + (I ? I.xs.length : 0) + ')']].map(([kk, l]) => `<button type="button" data-v="${kk}" class="${F.fuente === kk ? 'on' : ''}">${l}</button>`).join('')}</div>
+        <label class="row small"><input type="checkbox" data-exacto ${F.exacto ? 'checked' : ''}> Solo títulos con “${esc(q)}”${F.exacto && ocultos ? ` <span class="muted">(${ocultos} ocultos)</span>` : ''}</label>
+      </div>
+      ${tabla(lista) || '<div class="panel empty">Sin resultados con este filtro.</div>'}
+      <p class="muted small">* Envío no indicado por la tienda: se suponen ${fmtUSD(num(P.envioUsa))}. Precios de eBay en USD para entrega en ${esc(P.zip || 'EE. UU.')}.</p>
+      <div class="panel"><div class="prec-h">Buscar “${esc(q)}” en otras tiendas</div><div class="row">${P.tiendas.map(t => `<a class="btn sm" href="${esc(precUrlTienda(t, q))}" target="_blank" rel="noopener">${esc(t.nombre)} ↗</a>`).join('')}<button class="btn sm ghost" data-tiendas>Editar tiendas</button></div></div>`;
+    $$('[data-src] button', res).forEach(b => b.onclick = () => { F.fuente = b.dataset.v; guardarF(); pintar(); });
+    const ex = $('[data-exacto]', res); if (ex) ex.onchange = () => { F.exacto = ex.checked; guardarF(); pintar(); };
+    const ed = $('[data-tiendas]', res); if (ed) ed.onclick = () => precAjustes(() => App.render());
+  }
+  const pctMargen = (venta, costo) => venta > 0 ? `margen ${Math.round((venta - costo) / venta * 100)}%` : '';
+  if (F.q && (qArg || PrecCache.has([F.q, F.cond, P.zip].join('|')))) buscar(); else if (F.q) res.innerHTML = '<div class="panel empty">Toca <b>Buscar</b> para traer los precios de “' + esc(F.q) + '”.</div>';
+  if (!Catalog.items.length && !Catalog.loading) Catalog.load();
+};
+
+/* costos de importación y tiendas para buscar */
+function precAjustes(done) {
+  const P = PrecCfg.get();
+  const f = (label, key, help) => `<label class="fld"><span>${label}</span><input class="inp" data-k="${key}" value="${esc(String(P[key] == null ? '' : P[key]))}" inputmode="decimal">${help ? `<small class="muted">${help}</small>` : ''}</label>`;
+  const m = UI.modal({
+    title: 'Costos de importación', wide: true,
+    body: `<div class="grid g2">
+      ${f('Courier (USD por kg)', 'tarifaKg', 'Miami → Venezuela')}
+      ${f('Peso mínimo que cobra el courier (kg)', 'minKg')}
+      ${f('Cargo fijo por paquete (USD)', 'fijo', 'Seguro, manejo, retiro en oficina…')}
+      ${f('% extra sobre precio + envío', 'pctExtra', 'Comisión de pago (PayPal, tarjeta), impuestos, margen de seguridad')}
+      ${f('Código postal del courier en EE. UU.', 'zip', 'eBay calcula el envío hasta aquí')}
+      ${f('Envío en EE. UU. cuando no se sabe (USD)', 'envioUsa')}
+    </div>
+    <div class="fld" style="margin-top:14px"><span>Tiendas para buscar (una por línea: <code>Nombre | dirección con {q}</code>)</span><textarea class="inp" rows="7" data-tiendas>${esc(P.tiendas.map(t => t.nombre + ' | ' + t.url).join('\n'))}</textarea><small class="muted">{q} se cambia por lo que buscas. Ej.: <code>Radwell | https://www.radwell.com/en-US/Search/?q={q}</code></small></div>`,
+    foot: [['Restablecer', 'ghost', (c) => { PrecCfg.set(p => Object.assign(p, clone(PRECIOS_DEF))); c(); UI.toast('Valores por defecto'); done && done(); }], ['Cancelar', '', (c) => c()], ['Guardar', 'pri', (c) => {
+      const tiendas = $('[data-tiendas]', m.body).value.split('\n').map(l => { const i = l.indexOf('|'); return i > 0 ? { nombre: l.slice(0, i).trim(), url: l.slice(i + 1).trim() } : null; }).filter(t => t && t.nombre && /^https?:\/\//i.test(t.url));
+      PrecCfg.set(p => {
+        $$('[data-k]', m.body).forEach(inp => { const k = inp.dataset.k; p[k] = k === 'zip' ? inp.value.replace(/\D/g, '').slice(0, 5) : num(inp.value); });
+        if (tiendas.length) p.tiendas = tiendas;
+      });
+      PrecCache.clear(); c(); UI.toast('Guardado'); done && done();
+    }]]
+  });
+}
 function listaDistribuidores(v) {
   const F = Object.assign({ q: '', alc: '' }, lsGet('suinadm_f_dist2', {}));
   const compras = Store.all('docs').filter(d => d.tipo === 'compra' && d.estado !== 'anulada');
