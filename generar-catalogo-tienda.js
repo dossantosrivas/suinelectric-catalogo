@@ -68,9 +68,29 @@ function rangoStock(p){
   if (p.existencias == null || isNaN(n) || p.disponible === false || n <= 0) return null;
   return n > LIMITE_POCAS ? '+10' : 'pocas';
 }
+/* ---------- Ficha técnica del fabricante ----------
+   El distribuidor pone al final de la descripción "MAS INFORMACION TECNICA EN:"
+   con el enlace del fabricante (el scraper lo guarda en info_tecnica_url), pero
+   solo en ~la mitad de los productos. Para Siemens el enlace siempre es el mismo
+   buscador con el código, así que lo armamos cuando falta.
+   Nunca se publica un enlace al proveedor (grupo-electricos.com). */
+const urlSiemens = (modelo) => 'https://mall.industry.siemens.com/mall/es/ve/Catalog/Search?searchTerm=' +
+  encodeURIComponent(String(modelo).trim()) + '&tab=Product';
+function fichaTecnica(p){
+  let u = String(p.ficha_tecnica || p.info_tecnica_url || '').trim()
+    .replace(/&amp;/gi, '&').replace(/&;+/g, '&').replace(/[.,;)]+$/, '');
+  if (u && (!/^https?:\/\//i.test(u) || /grupo-electricos\.com/i.test(u))) u = '';
+  const esSiemens = /SIEMENS/i.test(p.marca || '');
+  const codigo = String(p.modelo || '').trim();
+  if (!u && esSiemens && /^[0-9][A-Z0-9]{2,}([- ][A-Z0-9]+)*$/i.test(codigo)) u = urlSiemens(codigo);
+  return u || null;
+}
+
 function reducir(p){
   const r = {};
   for (const k of CAMPOS) if (!vacio(p[k])) r[k] = p[k];
+  const ficha = fichaTecnica(p);
+  if (ficha) r.ficha_tecnica = ficha;
   const stock = rangoStock(p);
   if (stock) r.stock = stock;
   return r;

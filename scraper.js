@@ -330,6 +330,15 @@ function construirRutas(cats) {
 // ---------------------------------------------------------------------------
 const esVideo = (u) => /(youtube\.com|youtu\.be|vimeo\.com)/i.test(u);
 
+/** Arregla los enlaces que el proveedor pega a mano: "&amp;", "&;tab=", puntuación final. */
+function limpiarUrlTecnica(u) {
+  if (!u) return null;
+  return String(u).trim()
+    .replace(/&amp;/gi, "&")
+    .replace(/&;+/g, "&")
+    .replace(/[.,;)]+$/, "") || null;
+}
+
 function descartarSiEsMarca(texto, marca, modelo) {
   const t = norm(texto);
   if (!t) return null;
@@ -432,9 +441,13 @@ function extraerDescripcion($, resumen, lineas, modelo, marca, cuerpoLineas) {
   const videos = todas.filter(esVideo);
   $("iframe[src*='youtube'], iframe[src*='youtu.be'], iframe[src*='vimeo']").each((_, f) => videos.push($(f).attr("src")));
 
+  // El enlace de "MAS INFORMACION TECNICA EN:" es del fabricante (Siemens, etc.).
+  // Los enlaces a otras fichas del mismo proveedor (reemplazos, equivalentes) no cuentan.
+  const esDelProveedor = (u) => /grupo-electricos\.com/i.test(u);
   const mTec = bruto.match(/informaci[oó]n\s*t[eé]cnica\s*en\s*:?\s*(https?:\/\/[^\s<>"']+)/i);
-  let infoTecnica = mTec ? mTec[1].replace(/[.,;)]+$/, "") : null;
-  if (!infoTecnica) infoTecnica = todas.find((u) => !esVideo(u)) || null;
+  let infoTecnica = mTec ? limpiarUrlTecnica(mTec[1]) : null;
+  if (infoTecnica && esDelProveedor(infoTecnica)) infoTecnica = null;
+  if (!infoTecnica) infoTecnica = todas.map(limpiarUrlTecnica).find((u) => u && !esVideo(u) && !esDelProveedor(u)) || null;
 
   const desc = elegido ? limpiarDescripcion(bruto, marca, modelo) : null;
 
