@@ -57,7 +57,7 @@
             border-radius: 12px;
             backdrop-filter: blur(5px);
         }
-        #doc-type-selector, #iva-selector, #signature-selector, #discount-input, #filename-input {
+        #doc-type-selector, #iva-selector, #moneda-selector, #signature-selector, #discount-input, #filename-input {
             padding: 12px 16px;
             font-size: 14px;
             font-weight: 600;
@@ -877,7 +877,7 @@
         .hd-field { display: flex; flex-direction: column; gap: 2px; }
         .hd-field > span { font-size: 11px; font-weight: 600; color: #64748b; }
         .hd-sign:has(#signature-selector[style*="none"]) { display: none; }
-        .hd #doc-type-selector, .hd #iva-selector, .hd #signature-selector, .hd #discount-input, .hd #filename-input { padding: 7px 10px; font-size: 13px; }
+        .hd #doc-type-selector, .hd #iva-selector, .hd #moneda-selector, .hd #signature-selector, .hd #discount-input, .hd #filename-input { padding: 7px 10px; font-size: 13px; }
         .hd #discount-input { width: 80px; }
         .hd .rate-box { margin: 0; }
         .hd .act-btn { padding: 8px 12px; }
@@ -903,6 +903,12 @@
         body.is-mobile .m-top { top: var(--tabs-h,40px); padding-top:10px; }
         body.is-mobile .m-main { padding-top: calc(var(--tabs-h,40px) + 72px); }
         @media print { .mode-tabs, #rapida-wrap { display:none !important; } }
+        /* Documento en bolívares: la celda guarda el precio en dólares y muestra el monto en Bs.
+           Al tocar el precio se edita en dólares (la tasa lo vuelve a pasar a Bs). */
+        #items-tbody td.unit-price[data-bs], #items-tbody td.item-total[data-bs] { font-size: 0 !important; white-space: nowrap; }
+        #items-tbody td.unit-price[data-bs]::after, #items-tbody td.item-total[data-bs]::after { content: attr(data-bs); font-size: 11px; }
+        #items-tbody td.unit-price[data-bs]:focus { font-size: 11px !important; background: #fffbeb; }
+        #items-tbody td.unit-price[data-bs]:focus::after { content: ' $'; color: #94a3b8; }
     </style>
 <style id="suin-tema">
 /* Diseño común del ecosistema Suinelectric (tienda · panel web · gestión):
@@ -910,7 +916,7 @@
    Solo cambia los controles del generador: la hoja de la oferta/nota (PDF) queda igual. */
 body{background-color:#f2f4f6}
 .actions-container{background-color:rgba(242,244,246,.94);border-radius:12px}
-#doc-type-selector,#iva-selector,#signature-selector,#discount-input,#filename-input{border-color:#dde3e8;color:#14222c}
+#doc-type-selector,#iva-selector,#moneda-selector,#signature-selector,#discount-input,#filename-input{border-color:#dde3e8;color:#14222c}
 select:hover,select:focus,input[type="number"]:hover,input[type="number"]:focus,input[type="text"]:hover,input[type="text"]:focus{border-color:#006d8c}
 #save-pdf-btn{background-color:#0e2a3b;box-shadow:0 4px 12px rgba(14,42,59,.25)}
 #save-pdf-btn:hover{background-color:#1c4760}
@@ -979,6 +985,8 @@ select:hover,select:focus,input[type="number"]:hover,input[type="number"]:focus,
                 <div class="hd-fields">
                     <label class="hd-field"><span>I.V.A.</span>
                         <select id="iva-selector"><option value="0" selected="">Sin I.V.A.</option><option value="0.16">Con I.V.A. (16%)</option></select></label>
+                    <label class="hd-field"><span>Moneda</span>
+                        <select id="moneda-selector" title="Moneda en la que se muestran los precios del documento y del PDF"><option value="usd" selected="">Dólares ($)</option><option value="bs">Bolívares (Bs)</option></select></label>
                     <label class="hd-field"><span>Descuento %</span>
                         <input type="number" id="discount-input" placeholder="0" min="0" max="100" title="Porcentaje de descuento general"></label>
                     <div class="hd-field"><span>Tasa de cambio</span>
@@ -1219,6 +1227,8 @@ select:hover,select:focus,input[type="number"]:hover,input[type="number"]:focus,
                 <div class="m-card">
                     <div class="m-switch"><span>Aplicar I.V.A. 16%</span>
                         <label class="m-toggle"><input type="checkbox" id="m-iva"><i></i></label></div>
+                    <div class="m-switch"><span>Mostrar precios en bolívares (Bs)</span>
+                        <label class="m-toggle"><input type="checkbox" id="m-bs"><i></i></label></div>
                     <div class="m-divider"></div>
                     <div class="m-row2">
                         <label class="m-field"><span>Descuento (%)</span>
@@ -1242,7 +1252,7 @@ select:hover,select:focus,input[type="number"]:hover,input[type="number"]:focus,
                     <div class="m-sum-row neg" id="m-s-disc-row" style="display:none;"><span id="m-s-disc-lbl">Descuento</span><span id="m-s-disc">-$0.00</span></div>
                     <div class="m-sum-row"><span id="m-s-iva-lbl">I.V.A. (Exento)</span><span id="m-s-iva">$0.00</span></div>
                     <div class="m-sum-row big"><span>Total neto</span><span id="m-s-total">$0.00</span></div>
-                    <div class="m-sum-row bs"><span>Total en bolívares</span><span id="m-s-bs">Bs.S 0,00</span></div>
+                    <div class="m-sum-row bs"><span id="m-s-bs-lbl">Total en bolívares</span><span id="m-s-bs">Bs.S 0,00</span></div>
                 </div>
 
                 <div class="m-card">
@@ -1897,7 +1907,7 @@ select:hover,select:focus,input[type="number"]:hover,input[type="number"]:focus,
             const formatBS = (val) => {
                 let formattedStr = new Intl.NumberFormat('es-VE', { style: 'currency', currency: 'VES' }).format(val);
                 // Aseguramos el símbolo Bs.S en lugar de VES
-                return formattedStr.replace(/VES|Bs\./g, 'Bs.S');
+                return formattedStr.replace(/VES|Bs\.S?/g, 'Bs.S');   // el navegador ya puede traer «Bs.S»: no duplicar la S
             };
 
             // Parsear texto a número
@@ -1906,16 +1916,36 @@ select:hover,select:focus,input[type="number"]:hover,input[type="number"]:focus,
                 return parseFloat(clean) || 0;
             };
 
+            // Moneda del documento: 'usd' (normal) o 'bs' (montos × tasa). Los precios siempre se guardan en dólares.
+            const monedaSelector = document.getElementById('moneda-selector');
+            const enBs = () => !!monedaSelector && monedaSelector.value === 'bs';
+            const numBS = (val) => new Intl.NumberFormat('es-VE', { minimumFractionDigits: 2, maximumFractionDigits: 2 }).format(val);
+            const cambiaEtiqueta = (span, usdTxt, bsTxt) => {
+                if (!span) return;
+                const t = span.innerText.trim();
+                if (enBs() && t === usdTxt) span.innerText = bsTxt;
+                else if (!enBs() && t === bsTxt) span.innerText = usdTxt;
+            };
+
             // Calcular montos totales
             const calculate = () => {
                 let subtotalUsd = 0;
                 const rows = table.querySelectorAll('tbody .item-row');
                 
+                const tasaDoc = parseVal(exchangeRateEl.innerText);
+                const bs = enBs() && tasaDoc > 0;
                 rows.forEach(row => {
                     const qty = parseVal(row.querySelector('.quantity').innerText);
-                    const price = parseVal(row.querySelector('.unit-price').innerText);
+                    const upCell = row.querySelector('.unit-price'), totCell = row.querySelector('.item-total');
+                    const price = parseVal(upCell.innerText);
                     const total = qty * price;
-                    row.querySelector('.item-total').innerText = total.toFixed(2);
+                    totCell.innerText = total.toFixed(2);
+                    if (bs) {
+                        upCell.dataset.bs = numBS(price * tasaDoc); totCell.dataset.bs = numBS(total * tasaDoc);
+                        upCell.title = 'Precio en dólares: $' + price.toFixed(2) + ' · toca para cambiarlo';
+                    } else if (upCell.dataset.bs != null || totCell.dataset.bs != null) {
+                        delete upCell.dataset.bs; delete totCell.dataset.bs; upCell.removeAttribute('title');
+                    }
                     subtotalUsd += total;
                 });
                 
@@ -1931,23 +1961,36 @@ select:hover,select:focus,input[type="number"]:hover,input[type="number"]:focus,
                 const exchangeRate = parseVal(exchangeRateEl.innerText);
                 const totalBs = totalFinal * exchangeRate;
 
-                subtotalUsdEl.innerText = formatUSD(subtotalUsd);
+                const fmt = (v) => bs ? formatBS(v * tasaDoc) : formatUSD(v);
+                subtotalUsdEl.innerText = fmt(subtotalUsd);
                 
                 if (discountPercent > 0) {
                     discountRow.style.display = 'flex';
                     discountLabel.innerText = `Descuento (${discountPercent}%)`;
-                    discountUsdEl.innerText = `-${formatUSD(discountAmount)}`;
+                    discountUsdEl.innerText = `-${fmt(discountAmount)}`;
                 } else {
                     discountRow.style.display = 'none';
                 }
 
-                ivaUsdEl.innerText = formatUSD(iva);
-                totalUsdEl.innerText = formatUSD(totalFinal);
-                totalBsEl.innerText = formatBS(totalBs);
+                ivaUsdEl.innerText = fmt(iva);
+                totalUsdEl.innerText = fmt(totalFinal);
+                // en bolívares, la última línea dice cuánto es en dólares
+                totalBsEl.innerText = bs ? formatUSD(totalFinal) : formatBS(totalBs);
+                cambiaEtiqueta(totalUsdEl.previousElementSibling, 'TOTAL NETO (USD)', 'TOTAL NETO (Bs)');
+                cambiaEtiqueta(totalBsEl.previousElementSibling, 'TOTAL (Bs)', 'TOTAL (USD)');
+                const ths = table.querySelectorAll('thead th');
+                if (ths[4]) ths[4].innerText = bs ? 'Unit. (Bs)' : 'Unit. ($)';
+                if (ths[5]) ths[5].innerText = bs ? 'Total (Bs)' : 'Total ($)';
+                window.SuinTotalUsd = formatUSD(totalFinal);
             };
 
             table.addEventListener('input', calculate);
             exchangeRateEl.addEventListener('input', calculate);
+            if (monedaSelector) monedaSelector.addEventListener('change', () => {
+                if (enBs() && !(parseVal(exchangeRateEl.innerText) > 0)) alert('Para mostrar el documento en bolívares, primero pon la tasa de cambio.');
+                calculate();
+                document.dispatchEvent(new Event('suin:docchanged'));
+            });
             discountInput.addEventListener('input', calculate);
 
             // Exportar e imprimir a PDF
@@ -2195,8 +2238,8 @@ select:hover,select:focus,input[type="number"]:hover,input[type="number"]:focus,
                     { key: 'num', title: pdfSafe('ÍTEM'), w: 32, align: 'center' },
                     { key: 'qty', title: 'CANT.', w: 40, align: 'center' },
                     { key: 'desc', title: pdfSafe('DESCRIPCIÓN TÉCNICA'), w: CW - 32 - 40 - 78 - 84, align: 'left' },
-                    { key: 'unit', title: 'UNIT. ($)', w: 78, align: 'right' },
-                    { key: 'total', title: 'TOTAL ($)', w: 84, align: 'right' },
+                    { key: 'unit', title: enBs() ? 'UNIT. (Bs)' : 'UNIT. ($)', w: 78, align: 'right' },
+                    { key: 'total', title: enBs() ? 'TOTAL (Bs)' : 'TOTAL ($)', w: 84, align: 'right' },
                 ];
                 const PAD = 7.5, FS = 8.25, LH = 12;
                 const drawHead = () => {
@@ -2222,8 +2265,8 @@ select:hover,select:focus,input[type="number"]:hover,input[type="number"]:focus,
                     const vals = {
                         num: String(rowIdx + 1),
                         qty: pdfSafe(row.querySelector('.quantity').innerText.trim()),
-                        unit: pdfSafe(row.querySelector('.unit-price').innerText.trim()),
-                        total: pdfSafe(row.querySelector('.item-total').innerText.trim()),
+                        unit: pdfSafe(row.querySelector('.unit-price').dataset.bs || row.querySelector('.unit-price').innerText.trim()),
+                        total: pdfSafe(row.querySelector('.item-total').dataset.bs || row.querySelector('.item-total').innerText.trim()),
                     };
                     // Un producto con descripción muy larga se reparte entre páginas
                     let rest = descLines.length ? descLines : [[]];
@@ -2447,7 +2490,7 @@ select:hover,select:focus,input[type="number"]:hover,input[type="number"]:focus,
                 tipo: $('doc-type-selector'), iva: $('iva-selector'), disc: $('discount-input'), sign: $('signature-selector'),
                 file: $('filename-input'), control: $('doc-control-span'), fecha: $('doc-date-span'),
                 nombre: $('client-name'), rif: $('client-rif'), dir: $('client-address'),
-                rate: $('exchange-rate'), tbody: $('items-tbody'), notes: $('notes-area'), total: $('total-usd'), table: $('items-table')
+                rate: $('exchange-rate'), moneda: $('moneda-selector'), tbody: $('items-tbody'), notes: $('notes-area'), total: $('total-usd'), table: $('items-table')
             };
 
             // Cada registro lleva 'mod' (última modificación). Los borrados quedan marcados
@@ -2699,7 +2742,7 @@ select:hover,select:focus,input[type="number"]:hover,input[type="number"]:focus,
                 tipo: el.tipo.value, iva: el.iva.value, disc: el.disc.value, sign: el.sign.value,
                 file: el.file.value, fileCustom: el.file.dataset.customized || 'false',
                 control: el.control.innerText.trim(), fecha: el.fecha.innerText.trim(),
-                cliente: readClient(), rate: el.rate.innerText.trim(),
+                cliente: readClient(), rate: el.rate.innerText.trim(), moneda: el.moneda ? el.moneda.value : 'usd',
                 itemsHtml: el.tbody.innerHTML, notesHtml: el.notes.innerHTML
             });
             const restore = (s) => {
@@ -2710,6 +2753,7 @@ select:hover,select:focus,input[type="number"]:hover,input[type="number"]:focus,
                 el.disc.value = s.disc || ''; fire(el.disc, 'input');
                 el.control.innerText = s.control; el.fecha.innerText = s.fecha;
                 el.rate.innerText = s.rate; fire(el.rate, 'input');
+                if (el.moneda) { el.moneda.value = s.moneda === 'bs' ? 'bs' : 'usd'; fire(el.moneda, 'change'); }
                 el.tbody.innerHTML = s.itemsHtml || '';
                 if (App.normalizeRows) App.normalizeRows();
                 if (s.notesHtml) el.notes.innerHTML = s.notesHtml;
@@ -2732,7 +2776,7 @@ select:hover,select:focus,input[type="number"]:hover,input[type="number"]:focus,
                 const rec = {
                     id: i >= 0 ? reg[i].id : uid(),
                     tipo: s.tipo, control: s.control, fecha: s.fecha, cliente: s.cliente,
-                    total: el.total.innerText.trim(), items: count,
+                    total: window.SuinTotalUsd || el.total.innerText.trim(), items: count,
                     buscar: (s.cliente.nombre + ' ' + s.cliente.rif + ' ' + s.control + ' ' + el.tbody.innerText).toLowerCase().slice(0, 4000),
                     creado: i >= 0 ? reg[i].creado : Date.now(), guardado: Date.now(), mod: Date.now(), estado: s
                 };
@@ -3890,6 +3934,7 @@ function doPost(e) {
 
             const refreshTotalsControls = () => {
                 mIva.checked = parseFloat(ivaSelector.value) > 0;
+                const mBs = $('m-bs'), mon = $('moneda-selector'); if (mBs && mon) mBs.checked = mon.value === 'bs';
                 if (document.activeElement !== mDiscount) mDiscount.value = discountInput.value;
                 if (document.activeElement !== mRate) mRate.value = exchangeRateEl.innerText.trim();
                 mSign.checked = signatureSelector.value === 'show';
@@ -3897,6 +3942,11 @@ function doPost(e) {
                 buildNotes();
             };
 
+            if ($('m-bs')) $('m-bs').addEventListener('change', () => {
+                const mon = $('moneda-selector'); if (!mon) return;
+                mon.value = $('m-bs').checked ? 'bs' : 'usd';
+                mon.dispatchEvent(new Event('change', { bubbles: true }));
+            });
             mIva.addEventListener('change', () => {
                 ivaSelector.value = mIva.checked ? '0.16' : '0';
                 ivaSelector.dispatchEvent(new Event('change', { bubbles: true }));
@@ -3932,6 +3982,8 @@ function doPost(e) {
                 $('m-s-iva').textContent = $('iva-usd').innerText;
                 $('m-s-total').textContent = $('total-usd').innerText;
                 $('m-s-bs').textContent = $('total-bs').innerText;
+                const monBs = $('moneda-selector') && $('moneda-selector').value === 'bs';
+                if ($('m-s-bs-lbl')) $('m-s-bs-lbl').textContent = monBs ? 'Equivale en dólares' : 'Total en bolívares';
                 $('m-dock-usd').textContent = $('total-usd').innerText;
                 $('m-dock-bs').textContent = $('total-bs').innerText;
                 updateBadge();
