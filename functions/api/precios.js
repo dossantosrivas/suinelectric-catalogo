@@ -65,7 +65,9 @@ async function buscarEbay(q, { zip, cond }, env){
   if (cond === 'usado') filtros.push('conditionIds:{2000|2500|3000}');
   const u = new URL('https://api.ebay.com/buy/browse/v1/item_summary/search');
   u.searchParams.set('q', q);
-  u.searchParams.set('limit', '40');
+  u.searchParams.set('limit', '60');
+  // más baratos primero; con el código postal (contextualLocation) eBay ordena por precio + envío
+  u.searchParams.set('sort', 'price');
   u.searchParams.set('filter', filtros.join(','));
   const headers = { Authorization: 'Bearer ' + token, 'X-EBAY-C-MARKETPLACE-ID': 'EBAY_US', 'Accept-Language': 'en-US' };
   if (zip) headers['X-EBAY-C-ENDUSERCTX'] = 'contextualLocation=' + encodeURIComponent('country=US,zip=' + zip);
@@ -85,7 +87,13 @@ async function buscarEbay(q, { zip, cond }, env){
       envio,
       envioTipo: env0 ? env0.shippingCostType || '' : '',
       condicion: it.condition || '',
-      vendedor: it.seller ? it.seller.username + (it.seller.feedbackPercentage ? ' (' + it.seller.feedbackPercentage + '%)' : '') : '',
+      condicionId: it.conditionId || '',
+      // 1000 = New, 1500 = New other (caja abierta), 1750 = New with defects
+      nuevo: ['1000', '1500'].includes(String(it.conditionId || '')) || /^new\b/i.test(it.condition || '') && !/defect/i.test(it.condition || ''),
+      vendedor: it.seller ? it.seller.username || '' : '',
+      // eBay no publica las ventas del vendedor; la puntuación de feedback (calificaciones recibidas) es lo más cercano
+      ventas: it.seller && it.seller.feedbackScore != null ? Number(it.seller.feedbackScore) : null,
+      positivo: it.seller && it.seller.feedbackPercentage != null ? Number(it.seller.feedbackPercentage) : null,
       ubicacion: it.itemLocation ? [it.itemLocation.city, it.itemLocation.stateOrProvince, it.itemLocation.country].filter(Boolean).join(', ') : '',
       pais: it.itemLocation ? it.itemLocation.country || '' : '',
       oferta: (it.buyingOptions || []).includes('BEST_OFFER'),
