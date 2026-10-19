@@ -656,6 +656,68 @@ body.gen .letra button{width:100%;min-width:0}
 .env-paso.on .env-dot{background:var(--steel);color:#fff}
 .inv-camino{display:inline-block;margin-top:4px;padding:1px 7px;border-radius:999px;background:var(--amber-soft);color:#8A5A00;font-size:12.5px;font-weight:600;white-space:nowrap}
 @media (max-width:640px){.env-pasos{grid-template-columns:repeat(3,minmax(0,1fr))}}
+
+/* ===== Diseño más liviano (beta): menos bordes, más aire ===== */
+:root{ --line:#e2e7eb; --sh:0 1px 2px rgba(14,42,59,.05),0 1px 1px rgba(14,42,59,.03) }
+.panel,.kp,.inv-kpi,.inv-item,.tbl-wrap{box-shadow:var(--sh)}
+.panel>h2,.panel>.ph h2{font-size:17px;letter-spacing:-.005em}
+/* Accesos del Resumen: una fila de botones + lo pendiente */
+.acc-bar{display:flex;flex-wrap:wrap;align-items:center;gap:10px 18px}
+.acc-new{display:flex;gap:8px;flex-wrap:wrap}
+.acc-b{display:inline-flex;align-items:center;gap:8px;height:44px;padding:0 16px;border-radius:999px;background:var(--panel);border:1px solid var(--line);box-shadow:var(--sh);color:var(--ink);text-decoration:none;font-weight:600;font-size:16px;white-space:nowrap}
+.acc-b svg{width:19px;height:19px;stroke:currentColor;fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round;color:var(--steel)}
+.acc-b:hover{border-color:var(--steel)}
+.acc-b.pri{background:var(--amber);border-color:var(--amber);color:var(--plate)}.acc-b.pri svg{color:var(--plate)}
+.acc-b.pri:hover{background:#ffb000;border-color:#ffb000}
+.acc-pend{display:flex;gap:6px 16px;flex-wrap:wrap;margin-left:auto}
+.acc-p{display:inline-flex;align-items:center;gap:6px;color:var(--ink-2);text-decoration:none;font-size:15px;padding:6px 2px}
+.acc-p svg{width:18px;height:18px;stroke:var(--steel);fill:none;stroke-width:1.9;stroke-linecap:round;stroke-linejoin:round}
+.acc-p b{font-variant-numeric:tabular-nums}
+.acc-p:hover span{text-decoration:underline}
+.acc-ok{color:var(--ok);font-size:15px;font-weight:600}
+/* Indicadores secundarios: una sola franja en vez de tres tarjetas */
+.kp-strip{display:grid;grid-template-columns:repeat(3,minmax(0,1fr));margin-top:14px;background:var(--panel);border:1px solid var(--line);border-radius:var(--r);box-shadow:var(--sh);overflow:hidden}
+.kp-strip .kp{border:none;border-radius:0;box-shadow:none;background:none;padding:12px 18px}
+.kp-strip .kp+.kp{border-left:1px solid var(--line-2)}
+.kp-strip .kp:hover{background:var(--panel-2)}
+.kp-strip .kp .kv{font-size:20px}.kp-strip .kp .kf{padding-top:0}
+/* Inventario: herramientas y filtros extra plegados */
+.menu-mas{position:relative}
+.menu-mas>summary{list-style:none}.menu-mas>summary::-webkit-details-marker{display:none}
+.menu-mas>summary::after{content:'▾';margin-left:2px;font-size:13px}
+.menu-pop{position:absolute;right:0;top:calc(100% + 6px);z-index:30;background:#fff;border:1px solid var(--line);border-radius:10px;box-shadow:0 12px 32px rgba(14,34,51,.16);padding:6px;display:flex;flex-direction:column;min-width:240px}
+.menu-pop .btn{justify-content:flex-start;width:100%}
+.menu-pop .btn:hover{background:var(--panel-2);border-color:transparent}
+.inv-mas{margin-top:12px;border-top:1px solid var(--line-2);padding-top:10px}
+.inv-mas>summary{cursor:pointer;font-size:15px;font-weight:600;color:var(--steel);width:max-content;max-width:100%}
+.inv-mas .inv-sel{margin-top:10px}
+.inv-kpis{gap:12px}.inv-kpi{padding:12px 16px}.inv-kpi .v{font-size:23px}
+@media (max-width:860px){
+  .vh [data-new]{display:none}
+  .menu-pop{right:auto;left:0}
+  .vh .act{width:100%;flex-wrap:nowrap}.vh .act [data-per]{flex:1 1 auto;min-width:0}
+  .acc-bar{flex-direction:column;align-items:stretch;gap:10px}
+  .acc-new{display:grid;grid-template-columns:repeat(2,minmax(0,1fr))}
+  .acc-b{justify-content:center;padding:0 10px;font-size:15px}
+  .acc-pend{margin-left:0;flex-direction:column;gap:2px}
+  .vh .sub{display:none}
+  .kp-strip{grid-template-columns:repeat(3,minmax(0,1fr))}
+  .kp-strip .kp{padding:10px 12px}.kp-strip .kp .kv{font-size:17px}.kp-strip .kp .kl{font-size:13px}.kp-strip .kp .kf{font-size:12.5px}
+  .inv-chips{flex-wrap:nowrap;overflow-x:auto;padding-bottom:4px;margin-right:-4px}
+  .inv-mas>summary{font-size:14.5px}
+}
+@media (max-width:640px){
+  /* tarjeta del inventario: la existencia y el precio en filas propias (antes se encimaban) */
+  .inv-list:not(.fichas) .inv-ex{grid-column:2/4}
+  .inv-list:not(.fichas) .inv-pre{grid-column:2/4;text-align:left;align-items:baseline;flex-direction:row;flex-wrap:wrap;gap:2px 10px}
+}
+@media (max-width:600px){
+  .kp-g:not(.k3){grid-template-columns:repeat(2,minmax(0,1fr));gap:10px}
+  .kp-g:not(.k3)>.kp:last-child{grid-column:auto}
+  .kp-g .spark{display:none}
+  .kp .kv{font-size:22px}.kp.hero .kv{font-size:28px}
+  .kp{padding:12px 14px}.kp .kl{font-size:14px}.kp .kf{font-size:13px}
+}
 </style>
 </head>
 <body>
@@ -3383,16 +3445,23 @@ Views.resumen = (v) => {
   const enCurso = R.docs.filter(d => !['cerrada', 'anulada'].includes(etapaVenta(d)[0])).length;
   const tile = (href, ic, label, sub, corto) => `<a class="acc-t" href="${href}" title="${esc(label)}"><span class="ai">${ico(ic)}</span><b><span class="lg">${esc(label)}</span><span class="ct">${esc(corto || label)}</span></b>${sub ? `<small>${esc(sub)}</small>` : ''}</a>`;
   const B = {};
-  B.accesos = () => `<div class="acc-g">
-    ${tile('#/nuevo/oferta', 'offer', 'Nueva oferta', 'Generador', 'Oferta')}
-    ${tile('#/nuevo/nota', 'note', 'Nueva venta', 'Con su nota', 'Venta')}
-    ${tile('#/ventas/encurso', 'cash', 'Ventas en curso', enCurso ? `${enCurso} por entregar o cobrar` : 'Todo al día', 'En curso')}
-    ${tile('#/nuevo/compra', 'buy', 'Compra', 'Entra al inventario', 'Compra')}
-    ${tile('#/cliente-nuevo', 'users', 'Cliente nuevo', '', 'Cliente')}
-    ${tile('#/inventario', 'box', 'Inventario', `${nInv.manuel + nInv.papa} con existencia`)}
-    ${tile('#/pedidos', 'truck', 'Pedir a distribuidor', porPedir.length ? `${porPedir.length} por pedir` : 'Nada pendiente', 'Pedidos')}
-    ${tile('#/ofertas/lista', 'list', 'Mis ofertas', `${abiertas.length} abiertas`, 'Ofertas')}
+  // Accesos: crear algo nuevo + lo pendiente (solo lo que tiene algo que hacer)
+  B.accesos = () => {
+    const pend = [
+      [enCurso, '#/ventas/encurso', 'cash', enCurso === 1 ? 'venta por entregar o cobrar' : 'ventas por entregar o cobrar'],
+      [porPedir.length, '#/pedidos', 'truck', 'por pedir a distribuidores'],
+      [abiertas.length, '#/ofertas/lista', 'list', abiertas.length === 1 ? 'oferta esperando respuesta' : 'ofertas esperando respuesta']
+    ].filter(x => x[0] > 0);
+    return `<div class="acc-bar">
+    <div class="acc-new" role="group" aria-label="Crear">
+      <a class="acc-b pri" href="#/nuevo/oferta">${ico('offer')}<span>Nueva oferta</span></a>
+      <a class="acc-b" href="#/nuevo/nota">${ico('note')}<span>Nueva venta</span></a>
+      <a class="acc-b" href="#/nuevo/compra">${ico('buy')}<span>Compra</span></a>
+      <a class="acc-b" href="#/cliente-nuevo">${ico('users')}<span>Cliente</span></a>
+    </div>
+    <div class="acc-pend">${pend.length ? pend.map(([n, href, ic, txt]) => `<a class="acc-p" href="${href}">${ico(ic)}<b>${n.toLocaleString('es-VE')}</b> <span>${esc(txt)}</span></a>`).join('') : '<span class="acc-ok">✓ Todo al día: nada por entregar, cobrar ni pedir</span>'}</div>
   </div>`;
+  };
 
   B.kpis = () => {
     const sv = R.meses.map(x => x.venta), sg = R.meses.map(x => x.gan);
@@ -3405,7 +3474,7 @@ Views.resumen = (v) => {
       <div class="kd">${vencido > 0 ? `<span class="dl dn">▲ ${fmtUSD0(vencido)}</span><span class="dlt">con más de 15 días</span>` : '<span class="dlt">Nada atrasado</span>'}</div><div class="kf"><span>${cobrar.length} documento${cobrar.length === 1 ? '' : 's'}</span></div></a>
     <a class="kp" href="#/ofertas/lista"><div class="kl">Tasa de cierre · ${esc(perLabel)}</div><div class="kv">${tasa == null ? '—' : fmtNum(tasa, 0) + '%'}</div>
       <div class="kd"><span class="dlt">${ofN.aceptada} aceptada${ofN.aceptada === 1 ? '' : 's'} de ${decididas} respondida${decididas === 1 ? '' : 's'}</span></div><div class="kf"><span>${abiertas.length} oferta${abiertas.length === 1 ? '' : 's'} esperando respuesta</span></div></a>
-  </div><div class="kp-g k3">
+  </div><div class="kp-strip">
     <a class="kp sm" href="#/inventario/manuel"><div class="kl">Inventario ${esc(origenNombre('manuel'))}</div><div class="kv">${fmtUSD0(valInv.manuel)}</div><div class="kf"><span>${nInv.manuel} productos · al costo</span></div></a>
     <a class="kp sm" href="#/inventario/papa"><div class="kl">Inventario ${esc(origenNombre('papa'))}</div><div class="kv">${fmtUSD0(valInv.papa)}</div><div class="kf"><span>${nInv.papa} productos · al costo</span></div></a>
     <a class="kp sm" href="#/pedidos"><div class="kl">Pedidos a distribuidores</div><div class="kv">${porPedir.length}</div><div class="kf"><span>por pedir · ${ped.length - porPedir.length} sin entregar</span></div></a>
@@ -4166,7 +4235,7 @@ Views.inventario = (v, invArg) => {
   Calc.movs.forEach((ms, pid) => { let q = 0, ult = ''; ms.forEach(x => { if (esVenta(x.doc) && x.doc.estado !== 'anulada') { q += -x.delta; if ((x.doc.fecha || '') > ult) ult = x.doc.fecha; } }); vend.set(pid, { q, ult, mov: ms.reduce((a, x) => (x.doc.fecha || '') > a ? x.doc.fecha : a, '') }); });
   const caminoTag = (p) => { const c = Calc.enCamino(p.id); return c ? `<span class="inv-camino" title="Compra internacional que todavía no llega: ${esc(c.docs.map(d => d.numero).join(', '))}">✈ ${fmtQty(c.cant)} en camino</span>` : ''; };
   const FILTROS = [['1', 'Con existencia'], ['camino', '✈ En camino'], ['0', 'Todos'], ['pocas', 'Pocas unidades'], ['sin', 'Agotados'], ['neg', 'Negativos'], ['sinprecio', 'Sin precio'], ['sincosto', 'Sin costo']];
-  v.innerHTML = `<div class="vh"><h1>Inventario</h1><div class="act"><button class="btn" data-cats>Ordenar categorías</button><button class="btn" data-grupos title="Cambia el grupo de cada producto por su categoría de la tienda">Grupos → categorías</button><button class="btn" data-desc>Mejorar descripciones</button><button class="btn" data-exp>${ico('pdf')} Exportar</button><button class="btn pri" data-np>${ico('plus')} Producto</button></div><div class="sub">Las existencias se calculan con las compras, ventas y ajustes. Toca un producto para ver su ficha o corregirlo.</div></div>
+  v.innerHTML = `<div class="vh"><h1>Inventario</h1><div class="act"><details class="menu-mas"><summary class="btn">Más herramientas</summary><div class="menu-pop"><button class="btn ghost" data-cats>Ordenar categorías</button><button class="btn ghost" data-grupos title="Cambia el grupo de cada producto por su categoría de la tienda">Grupos → categorías</button><button class="btn ghost" data-desc>Mejorar descripciones</button><button class="btn ghost" data-exp>${ico('pdf')} Exportar</button></div></details><button class="btn pri" data-np>${ico('plus')} Producto</button></div><div class="sub">Las existencias se calculan con las compras, ventas y ajustes. Toca un producto para ver su ficha o corregirlo.</div></div>
     <div class="inv-kpis" id="inv-kpis"></div>
     <div class="panel inv-filtros">
       <div class="inv-buscar">
@@ -4175,6 +4244,7 @@ Views.inventario = (v, invArg) => {
         <div class="seg inv-vista" data-vista role="group" aria-label="Forma de ver los productos">${INV_VISTAS.map(([k, l, t, svg]) => `<button type="button" data-v="${k}" class="${F.vista === k ? 'on' : ''}" title="${t}"><svg viewBox="0 0 24 24">${svg}</svg><span>${l}</span></button>`).join('')}</div>
       </div>
       <div class="inv-chips" data-chips></div>
+      <details class="inv-mas"${F.orden !== 'codigo' || F.grupo || F.tcat || F.cat || F.marca ? ' open' : ''}><summary>Ordenar, agrupar y filtrar por categoría o marca</summary>
       <div class="inv-sel">
         <label>Ordenar <select class="inp" data-f="orden">${ORDENES_INV.map(([k, l]) => `<option value="${k}" ${F.orden === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
         <label>Agrupar <select class="inp" data-f="grupo"><option value="">Sin grupos</option><option value="tienda" ${F.grupo === 'tienda' ? 'selected' : ''}>Categorías y subcategorías (como la tienda)</option><option value="categoria" ${F.grupo === 'categoria' ? 'selected' : ''}>Grupo</option><option value="marca" ${F.grupo === 'marca' ? 'selected' : ''}>Marca</option><option value="origen" ${F.grupo === 'origen' ? 'selected' : ''}>Dónde está</option></select></label>
@@ -4183,6 +4253,7 @@ Views.inventario = (v, invArg) => {
         <label>Grupo <select class="inp" data-f="cat"><option value="">Todos</option>${cats.map(c => `<option ${F.cat === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></label>
         ${marcas.length ? `<label>Marca <select class="inp" data-f="marca"><option value="">Todas</option>${marcas.map(c => `<option ${F.marca === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></label>` : ''}
       </div>
+      </details>
     </div>
     <div id="lst"></div>`;
   let rowsCache = [], invsCache = ['manuel', 'papa'];
@@ -4223,7 +4294,7 @@ Views.inventario = (v, invArg) => {
       sinprecio: r => !num(r.p.precio), sincosto: r => r.cant > 0 && invs.some(i => r.s[i].cant > 0 && !r.s[i].costo)
     };
     // chips con la cantidad de cada filtro (sobre la búsqueda actual)
-    $('[data-chips]', v).innerHTML = FILTROS.map(([k, l]) => { const n = base.filter(pasa[k]).length; return `<button type="button" class="inv-chip ${F.stock === k ? 'on' : ''} ${(k === 'neg' || k === 'sincosto') && n ? 'alerta' : ''}" data-stock="${k}">${l} <b>${n.toLocaleString('es-VE')}</b></button>`; }).join('');
+    $('[data-chips]', v).innerHTML = FILTROS.map(([k, l]) => { const n = base.filter(pasa[k]).length; if (!n && F.stock !== k && k !== '1' && k !== '0') return ''; return `<button type="button" class="inv-chip ${F.stock === k ? 'on' : ''} ${(k === 'neg' || k === 'sincosto') && n ? 'alerta' : ''}" data-stock="${k}">${l} <b>${n.toLocaleString('es-VE')}</b></button>`; }).join('');
     $$('[data-stock]', v).forEach(b => b.onclick = () => { F.stock = b.dataset.stock; F.lim = 0; paint(); });
     let rows = base.filter(pasa[F.stock] || pasa['0']);
     const cmp = {
@@ -4366,6 +4437,7 @@ Views.inventario = (v, invArg) => {
   $('[data-desc]', v).onclick = () => descripcionesModal();
   $('[data-cats]', v).onclick = () => categoriasModal();
   $('[data-grupos]', v).onclick = () => gruposACategoriasModal();
+  $$('.menu-pop .btn', v).forEach(b => b.addEventListener('click', () => { const d = b.closest('details'); if (d) d.open = false; }));
   WebProd.cargar();
   { const kpisEl = $('#inv-kpis', v); invRepintar = () => { if (kpisEl.isConnected) paint(); }; }
   if (!InvFotos.listo()) { const kpisEl = $('#inv-kpis', v); InvFotos.cargar().then(() => { if (kpisEl.isConnected) paint(); }); }
