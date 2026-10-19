@@ -1381,6 +1381,7 @@
     letter-spacing:.3px; color:var(--tinta); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; text-transform:uppercase; text-decoration:none; }
   .marca-logo-card, .mega-marca{ text-decoration:none; }
   .marca-logo-card .logo-texto, .mega-marca .logo-texto{ font-size:13.5px; height:auto; white-space:normal; text-align:center; text-overflow:clip; }
+  .fac-panel[open] > summary .vfd-pista{ display:none; }
   .fac-panel > summary .vfd-pista{ margin-left:10px; font-size:13px; font-weight:400; color:var(--texto-3); white-space:nowrap; overflow:hidden; text-overflow:ellipsis; min-width:0; }
   @media (min-width: 1101px){
     /* Inicio: las marcas en una sola franja abajo del texto (antes 3 + 3 + 1 en la columna derecha) */
@@ -1397,10 +1398,12 @@
     .hero-marcas{ flex-direction:column; align-items:stretch; gap:10px; }
   }
   @media (min-width: 1180px){
-    /* Con la guía «En esta categoría» a la derecha: sin el árbol de la izquierda (las categorías se abren con el botón de la cabecera)
-       ni la lista de subcategorías repetida bajo el título. Los productos ganan ancho. */
+    /* Con la guía «En esta categoría» a la derecha, el árbol de la izquierda queda guardado para que los productos
+       ganen ancho; la pestaña «☰ Categorías y subcategorías» lo despliega (y se recuerda). */
     .layout:has(> #guia-sub:not([hidden])) > #sidebar{ display:none; }
-    .layout:has(> #guia-sub:not([hidden])) .cab-cat .subcat-chips{ display:none; }
+    body.arbol-on .layout:has(> #guia-sub:not([hidden])) > #sidebar{ display:block; }
+    .layout:has(> #guia-sub:not([hidden])) #btn-menu{ display:inline-flex; align-items:center; gap:6px; flex:none; }
+    body.arbol-on .layout:has(> #guia-sub:not([hidden])) #btn-menu{ background:var(--fondo); color:var(--tinta); border:1px solid var(--linea); }
   }
   /* ================= Celular más cómodo (beta) ================= */
   .det-barra{ display:none; }
@@ -1423,7 +1426,6 @@
     .vista-toggle button{ font-size:12px; }
     .controls select#vista-columnas{ height:36px; }
     /* si está la tira de subcategorías arriba, no se repite la lista debajo del título */
-    #guia-tira:not([hidden]) ~ #contenido .cab-cat .subcat-chips{ display:none; }
     .cab-cat{ margin-bottom:14px; }
     .cab-cat-fila{ margin:2px 0 6px; gap:6px 10px; }
     .cab-cat-titulo{ font-size:24px; }
@@ -4168,12 +4170,14 @@ function panelFacHTML(base, defs){
   if (!grupos.length) return '';
   const soloMarca = grupos.length === 1 && grupos[0].indexOf('data-clave="marca"') >= 0;
   const nAct = nActFac();
-  // Empieza cerrado (no tapa los productos) salvo que haya filtros puestos; el resumen dice qué se puede filtrar.
-  const abierto = panelFacAbierto === null ? nAct > 0 : panelFacAbierto;
+  // En computadora empieza abierto; en el celular cerrado (salvo filtros puestos). Cerrado, el resumen dice qué se puede filtrar.
+  const abierto = panelFacAbierto === null ? window.innerWidth > 760 || nAct > 0 : panelFacAbierto;
   const pista = nombresFac.length > 1 ? nombresFac.slice(0, 4).join(' · ') + (nombresFac.length > 4 ? ' y más' : '') : '';
   return '<details class="vfd-panel fac-panel" id="fac-panel"' + (abierto ? ' open' : '') + '>' +
     '<summary><span>' + (soloMarca ? 'Filtrar por marca' : 'Filtrar por especificación y marca') + '</span>' + (nAct ? '<span class="vfd-act">' + nAct + ' activo' + (nAct > 1 ? 's' : '') + '</span>' : (pista ? '<span class="vfd-pista">' + escHtml(pista) + '</span>' : '')) + '</summary>' +
     '<div class="vfd-cuerpo">' + grupos.join('') +
+    // en una familia (ej. Control de Motores) solo hay marca: los técnicos dependen de la categoría
+    (soloMarca && seleccion.length === 1 ? '<div class="vfd-ayuda">Para ver los filtros técnicos (amperaje, tensión, potencia…), entra a una categoría de la lista de arriba.</div>' : '') +
     (nAct ? '<button type="button" class="vfd-limpiar" id="fac-limpiar">Limpiar filtros</button>' : '') + '</div></details>';
 }
 function conectarPanelFac(){
@@ -5176,7 +5180,21 @@ document.querySelectorAll('.overlay').forEach(ov => {
 });
 document.getElementById('btn-cart').addEventListener('click', () => document.getElementById('cart-drawer').classList.add('abierto'));
 document.getElementById('btn-cerrar-cart').addEventListener('click', () => document.getElementById('cart-drawer').classList.remove('abierto'));
-document.getElementById('btn-menu').addEventListener('click', toggleSidebar);
+document.getElementById('btn-menu').addEventListener('click', () => {
+  if (window.innerWidth >= 1180){
+    const on = document.body.classList.toggle('arbol-on');
+    try { localStorage.setItem('suin_arbol_abierto', on ? '1' : '0'); } catch (e) {}
+    pintarBtnArbol();
+  } else toggleSidebar();
+});
+function pintarBtnArbol(){
+  const b = document.getElementById('btn-menu');
+  if (window.innerWidth >= 1180) b.textContent = document.body.classList.contains('arbol-on') ? '✕ Ocultar categorías' : '☰ Categorías y subcategorías';
+  else b.textContent = '☰ Ver categorías';
+}
+try { if (localStorage.getItem('suin_arbol_abierto') === '1') document.body.classList.add('arbol-on'); } catch (e) {}
+pintarBtnArbol();
+window.addEventListener('resize', pintarBtnArbol);
 
 document.getElementById('brand-inicio').addEventListener('click', () => {
   vista = 'inicio'; filtroMarca = null; destacado = null;
