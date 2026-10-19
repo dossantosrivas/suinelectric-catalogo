@@ -23,10 +23,10 @@ const DOMINIO = 'https://suinelectric.com';          // dirección principal de 
 const IMAGEN_GENERAL = DOMINIO + '/imagenes/og-suinelectric.jpg';
 const DESCUENTO_GENERAL = 60;                          // % que ven los visitantes (igual que en Supabase)
 const MOSTRAR_PRECIO = true;                           // false = no poner precio en las páginas
-const MAX_EN_CATEGORIA = 120;
+const MAX_EN_CATEGORIA = 120;                          // más de esto: se muestran subcategorías + una muestra
 // Súbelo cada vez que cambies publico.css o publico.js: el navegador los guarda un día
 // (ver _headers) y sin esto las páginas nuevas se ven con el estilo viejo.
-const VERSION_ESTILOS = 4;                          // más de esto: se muestran subcategorías + una muestra
+const VERSION_ESTILOS = 5;
 
 /* ---------- Cargar la organización de categorías desde tienda.html ----------
    Así hay una sola fuente: si cambias las familias en tienda.html, las páginas
@@ -155,6 +155,15 @@ function separarDatos(desc){
   }
   if (filas.length < 2) return { texto: String(desc || ''), filas: [] };
   return { texto: texto.length ? texto.join('. ') + '.' : '', filas };
+}
+// Íconos de las condiciones de venta (garantía, entrega, nota de entrega)
+const ICONO_WA = '<svg aria-hidden="true" width="18" height="18" viewBox="0 0 24 24"><path fill="currentColor" d="M12 2a10 10 0 0 0-8.6 15.1L2 22l5-1.3A10 10 0 1 0 12 2zm0 18.2a8.2 8.2 0 0 1-4.2-1.2l-.3-.2-3 .8.8-2.9-.2-.3A8.2 8.2 0 1 1 12 20.2zm4.5-6.1c-.2-.1-1.5-.7-1.7-.8-.2-.1-.4-.1-.6.1l-.8 1c-.1.2-.3.2-.5.1a6.7 6.7 0 0 1-3.3-2.9c-.3-.4.3-.4.7-1.3.1-.2 0-.3 0-.4l-.8-1.8c-.2-.5-.4-.4-.6-.4h-.5a1 1 0 0 0-.7.3 3 3 0 0 0-.9 2.2c0 1.3.9 2.5 1.1 2.7.1.2 1.8 2.8 4.4 3.9 1.6.7 2.3.8 3.1.6.5-.1 1.5-.6 1.7-1.2.2-.6.2-1.1.2-1.2-.1-.1-.3-.2-.5-.3z"/></svg>';
+function iconoCond(txt){
+  const t = String(txt).toLowerCase();
+  const d = /garant/.test(t) ? '<path d="M12 3l8 3v6c0 4.5-3.4 8-8 9-4.6-1-8-4.5-8-9V6z"/><path d="M9 12l2 2 4-4"/>'
+    : /entrega/.test(t) && !/nota/.test(t) ? '<path d="M3 7h11v9H3z"/><path d="M14 10h4l3 3v3h-7"/><circle cx="7" cy="18" r="1.6"/><circle cx="17" cy="18" r="1.6"/>'
+    : '<path d="M6 3h9l3 3v15H6z"/><path d="M9 11h6M9 15h6"/>';
+  return '<svg aria-hidden="true" width="22" height="22" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round">' + d + '</svg>';
 }
 const urlP = (p) => '/p/' + T.slugDe(p.modelo);
 const urlC = (ruta) => '/c/' + ruta.map(T.slugDe).join('/');
@@ -329,7 +338,7 @@ for (const p of productos){
           '<a class="btn wa" href="' + esc(waLink(textoWa)) + '" data-modelo="' + esc(p.modelo) + '" rel="noopener">Cotizar por WhatsApp</a>' +
           '<a class="btn amarillo" href="/tienda#/?p=' + encodeURIComponent(p.modelo) + '">Agregar al pedido</a>' +
         '</div>' +
-        '<ul class="p-cond">' + CONDICIONES.map(c => '<li>' + esc(c) + '</li>').join('') + '<li>Con nota de entrega.</li></ul>' +
+        '<ul class="p-cond">' + CONDICIONES.concat(['Con nota de entrega.']).map(c => '<li>' + iconoCond(c) + '<span>' + esc(c) + '</span></li>').join('') + '</ul>' +
         (sep.filas.length ? '<h2 class="p-sub">Especificaciones</h2><table class="p-tabla"><tbody>' +
           sep.filas.map(([k, v]) => '<tr><th scope="row">' + esc(k) + '</th><td>' + esc(v) + '</td></tr>').join('') + '</tbody></table>' : '') +
         '<dl class="p-datos">' +
@@ -338,6 +347,9 @@ for (const p of productos){
           (p.sku && p.sku !== p.modelo ? '<dt>Código</dt><dd>' + esc(p.sku) + '</dd>' : '') +
           '<dt>Categoría</dt><dd>' + ruta.map((n, i) => '<a href="' + urlC(ruta.slice(0, i + 1)) + '">' + esc(n) + '</a>').join(' › ') + '</dd>' +
         '</dl>' +
+        // celular: barra fija abajo con el modelo, el precio y Cotizar
+        '<div class="p-barra"><div class="p-barra-txt"><strong>' + esc(p.modelo) + '</strong><span class="precio-cli"' + datosPrecio(p) + '>' + (precio != null ? dinero(precio) : 'Consultar precio') + '</span></div>' +
+          '<a class="btn wa" href="' + esc(waLink(textoWa)) + '" data-modelo="' + esc(p.modelo) + '" rel="noopener">' + ICONO_WA + 'Cotizar</a></div>' +
       '</div>' +
     '</article>' +
     (hermanos.length ? '<section><h2>También en ' + esc(ruta[ruta.length - 1] || 'esta categoría') + '</h2><div class="rejilla">' + hermanos.map(tarjeta).join('') + '</div></section>' : '');

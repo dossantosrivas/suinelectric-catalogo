@@ -69,9 +69,10 @@ h2{ font-family:var(--display); font-weight:700; font-size:24px; color:var(--tin
 .ok{ background:var(--ok-s); color:var(--ok); }
 .off{ background:var(--off-s); color:var(--off); }
 .p-botones{ display:grid; grid-template-columns:1fr 1fr; gap:10px; margin-bottom:18px; }
-.p-cond{ list-style:none; margin:0 0 20px; padding:12px 16px; background:var(--azul-s); border-radius:var(--radio); color:var(--texto); font-size:14px; }
-.p-cond li{ position:relative; padding:2px 0 2px 16px; }
-.p-cond li::before{ content:'•'; position:absolute; left:2px; color:var(--azul); font-weight:700; }
+.p-cond{ list-style:none; margin:0 0 20px; padding:0; display:grid; grid-template-columns:repeat(3,minmax(0,1fr)); gap:8px; color:var(--texto); font-size:13.5px; line-height:1.35; }
+.p-cond li{ display:flex; gap:9px; align-items:flex-start; background:var(--azul-s); border-radius:var(--radio); padding:10px 12px; }
+.p-cond svg{ flex:none; color:var(--azul-t); }
+.p-barra{ display:none; }
 .p-sub{ font-size:22px; margin:4px 0 8px; }
 .p-tabla{ width:100%; border-collapse:collapse; font-size:14.5px; margin-bottom:20px; }
 .p-tabla th, .p-tabla td{ padding:9px 12px; text-align:left; vertical-align:top; }
@@ -123,6 +124,17 @@ h2{ font-family:var(--display); font-weight:700; font-size:24px; color:var(--tin
   .cabecera .btn{ min-height:44px; padding:0 14px; }
 }
 @media (max-width:760px){
+  .p-cond{ grid-template-columns:1fr; gap:6px; }
+  /* barra fija con el precio y Cotizar */
+  body:has(.p-barra){ padding-bottom:calc(76px + env(safe-area-inset-bottom, 0px)); }
+  .p-barra{ display:flex; align-items:center; gap:12px; position:fixed; left:0; right:0; bottom:0; z-index:20; background:#fff;
+    border-top:1px solid var(--linea); box-shadow:0 -6px 20px rgba(14,42,59,.10); padding:10px 16px calc(10px + env(safe-area-inset-bottom, 0px)); }
+  .p-barra-txt{ display:flex; flex-direction:column; min-width:0; flex:1; }
+  .p-barra-txt strong{ font-family:var(--display); font-size:19px; color:var(--tinta); line-height:1.1; overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .p-barra-txt span{ font-size:13.5px; color:var(--t2); font-weight:600; }
+  .p-barra-txt .dto-badge{ margin-left:6px; }
+  .p-barra .btn{ flex:none; min-height:48px; padding:0 18px; }
+
   .topbar span{ display:none; }
   .producto{ grid-template-columns:1fr; padding:16px; gap:16px; }
   .p-info h1{ font-size:34px; }
