@@ -1916,7 +1916,7 @@ function bloqueAdminPrecios(p){
   const a = p._adm, f = (n) => n != null && Number(n) > 0 ? formatoMoneda(Number(n)) : 'sin precio';
   const lista = a.otro.precio != null && Number(a.otro.precio) > 0 ? Number(a.otro.precio) : null;
   const web = lista == null ? null : a.otro._manual ? lista : precioConDescuento(lista);
-  const usaInv = a.stock !== 'pedido' && a.inv != null && Number(a.inv) > 0;
+  const usaInv = a.usa ? a.usa === 'inv' : false;
   return '<div class="adm-precios" title="Esto solo lo ven los administradores">' +
     '<div class="' + (usaInv ? 'usa' : '') + '">' + (usaInv ? '✓ ' : '') + 'Tu inventario: <b>' + f(a.inv) + '</b>' + (a.stock === 'pedido' ? ' <span>(sin existencia)</span>' : '') + '</div>' +
     '<div class="' + (!usaInv ? 'usa' : '') + '">' + (!usaInv ? '✓ ' : '') + a.otro.fuente + ': <b>' + f(web) + '</b>' + (lista != null && !a.otro._manual && Math.ceil(web) < Math.ceil(lista) ? ' <span>(lista ' + f(lista) + ')</span>' : '') + '</div>' +
@@ -4869,9 +4869,12 @@ async function traerDelPanel(){
 /* ---------- Tu inventario (15_inventario_web.sql) ----------
    La app de ventas publica lo que tienes en existencia (tuyo + de tu papá).
    Si el modelo también viene del distribuidor o del panel, queda UNA sola
-   tarjeta con tu marca, tu nombre, tu precio (tal cual, sin el descuento
-   general) y tu existencia; fotos, descripción y categoría del distribuidor
-   cuando tu producto no las tiene. Lo que solo tienes tú se agrega.
+   tarjeta con tu marca, tu nombre y tu existencia; fotos, descripción y
+   categoría del distribuidor cuando tu producto no las tiene.
+   PRECIO: manda el del distribuidor (con su descuento de siempre). Si en
+   Gestión le pusiste "Precio en la tienda", llega como producto del panel y
+   manda ese. Tu precio de venta del inventario solo se usa cuando el
+   distribuidor no trae precio. Lo que solo tienes tú se agrega.
    El modelo se compara sin guiones, espacios ni mayúsculas. */
 function claveModelo(m){ return normalizarBusqueda(m).replace(/[^a-z0-9]/g, ''); }
 // categoría que manda la app de ventas: "Contactores > Accesorios" → ['Contactores', 'Accesorios']
@@ -4937,7 +4940,7 @@ function ponerFotosExtra(lista, extra){
 function unirInventarioBase(lista, inventario, ocultos){
   if (!inventario.length) return lista;
   const inv = new Map(), pedido = new Map(), ocultosClave = new Set([...ocultos].map(claveModelo)), pedidoEnLista = new Map();
-  const otroDe = (p) => ({ precio: p.precio, _manual: !!p._manual, fuente: p._panel ? 'Panel /admin' : 'Distribuidor' });
+  const otroDe = (p) => ({ precio: p.precio, _manual: !!p._manual, fuente: p._panel ? 'Precio en la tienda' : 'Distribuidor' });
   // tuyo sin existencia y también en la tienda: se deja el de la tienda, pero el admin ve tu precio
   const marcarPedido = (arr) => !pedidoEnLista.size ? arr : arr.map(p => { const r = pedidoEnLista.get(claveModelo(p.modelo)); return r && !p._adm ? Object.assign({}, p, { _adm: { inv: r.precio, stock: 'pedido', otro: otroDe(p) } }) : p; });
   // "pedido" = tuyo pero sin existencia: si el producto ya está en la tienda (distribuidor o panel) se deja
@@ -4973,7 +4976,10 @@ function unirInventarioBase(lista, inventario, ocultos){
     if (r.marca) q.marca = String(r.marca).toUpperCase();
     if (r.nombre) q.nombre = r.nombre;
     if (r.descripcion && !p.descripcion) q.descripcion = r.descripcion;
-    if (r.precio != null && Number(r.precio) > 0){ q.precio = Number(r.precio); q._manual = true; }
+    // el precio del distribuidor (o el "Precio en la tienda" que pusiste) gana; tu precio de inventario solo si no hay
+    const usaInv = !(p.precio != null && Number(p.precio) > 0) && r.precio != null && Number(r.precio) > 0;
+    if (usaInv){ q.precio = Number(r.precio); q._manual = true; }
+    q._adm.usa = usaInv ? 'inv' : 'otro';
     salida.push(q);
   });
   const usadas = new Set(elegido.keys());
@@ -5003,7 +5009,7 @@ async function cargar(silencioso){
     const correcciones = new Map(panel.web.filter(r => r.correccion).map(r => [r.modelo, r]));   // productos del distribuidor corregidos
     const delPanel = panel.web.filter(r => !r.correccion).map(formaTiendaDePanel);
     const setPanel = new Set(delPanel.map(p => p.modelo));
-    const manuales = delPanel.concat(manualesJson.filter(p => !setPanel.has(p.modelo))).filter(p => !ocultos.has(p.modelo));
+    const manuales = delPanel.concat(manualesJson.filter(p => !setPanel.has(p.modelo)).map(p => correcciones.has(p.modelo) ? aplicarCorreccion(p, correcciones.get(p.modelo)) : p)).filter(p => !ocultos.has(p.modelo));
     origenLista = new Map(manuales.map(p => [p.modelo, setPanel.has(p.modelo) ? 'panel' : 'lista']));
     data.productos = (data.productos || []).filter(p => !ocultos.has(p.modelo))
       .map(p => correcciones.has(p.modelo) ? aplicarCorreccion(p, correcciones.get(p.modelo)) : p);

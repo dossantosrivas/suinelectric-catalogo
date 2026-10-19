@@ -1602,13 +1602,16 @@ const Catalog = {
   /* productos del scraping tapados por uno del panel con el mismo modelo: el panel gana en precio
      y búsqueda, pero estos se guardan aparte para seguir mostrando la existencia del distribuidor */
   sombra: [],
+  /* productos de las listas de precios (SAER, EMI…) tapados por uno del panel: para saber que el distribuidor sí lo trae */
+  tapados: [],
   trim(p, src) {
     return {
       src, m: String(p.modelo || p.sku || '').trim(), n: String(p.nombre || p.modelo || '').trim(), marca: String(p.marca || '').trim(),
       cat: String(p.categoria_principal || '').trim(), precio: typeof p.precio === 'number' ? p.precio : parseFloat(p.precio) || null,
       disp: p.disponible !== false, exist: p.existencias != null ? p.existencias : null, desc: String(p.descripcion || '').trim(), sku: String(p.sku || '').trim(), url: p.url || '',
       subs: Array.isArray(p.subcategorias) ? p.subcategorias.filter(Boolean).map(String) : (p.subcategoria ? String(p.subcategoria).split(' > ').filter(Boolean) : []),
-      img: String(p.imagen || (Array.isArray(p.imagenes) ? p.imagenes[0] || '' : '') || '')
+      img: String(p.imagen || (Array.isArray(p.imagenes) ? p.imagenes[0] || '' : '') || ''),
+      pan: p._pan ? 1 : 0     // 1 = viene del panel / de tu ficha de Gestión, no del distribuidor
     };
   },
   apply(docs, origen) {
@@ -1619,18 +1622,18 @@ const Catalog = {
       all = all.concat(arr.map(p => this.trim(p, src)).filter(p => p.m));
       if (json.generado) gen = json.generado;
     });
-    const seen = new Set(); this.items = []; this.sombra = [];
-    all.forEach(p => { const k = p.m.toUpperCase() + '|' + p.marca.toUpperCase(); if (!seen.has(k)) { seen.add(k); p._k = normTxt(p.m + ' ' + p.n + ' ' + p.marca + ' ' + p.desc + ' ' + p.sku + ' ' + p.cat); this.items.push(p); } else if (p.src === 's') this.sombra.push(p); });
+    const seen = new Set(); this.items = []; this.sombra = []; this.tapados = [];
+    all.forEach(p => { const k = p.m.toUpperCase() + '|' + p.marca.toUpperCase(); if (!seen.has(k)) { seen.add(k); p._k = normTxt(p.m + ' ' + p.n + ' ' + p.marca + ' ' + p.desc + ' ' + p.sku + ' ' + p.cat); this.items.push(p); } else if (p.src === 's') this.sombra.push(p); else if (!p.pan) this.tapados.push(p); });
     this.meta = { generado: gen || nowISO(), leido: nowISO(), total: this.items.length, origen };
-    IDB.set('catalogo', { items: this.items.map(p => { const c = Object.assign({}, p); delete c._k; return c; }), sombra: this.sombra, meta: this.meta });
+    IDB.set('catalogo', { items: this.items.map(p => { const c = Object.assign({}, p); delete c._k; return c; }), sombra: this.sombra, tapados: this.tapados, meta: this.meta });
     Bus.emit('catalog');
   },
   async load() {
     const c = await IDB.get('catalogo');
-    if (c && c.items) { this.items = c.items.map(p => Object.assign(p, { _k: normTxt(p.m + ' ' + p.n + ' ' + p.marca + ' ' + p.desc + ' ' + p.sku + ' ' + p.cat) })); this.sombra = Array.isArray(c.sombra) ? c.sombra : []; this.meta = c.meta; Bus.emit('catalog'); }
+    if (c && c.items) { this.items = c.items.map(p => Object.assign(p, { _k: normTxt(p.m + ' ' + p.n + ' ' + p.marca + ' ' + p.desc + ' ' + p.sku + ' ' + p.cat) })); this.sombra = Array.isArray(c.sombra) ? c.sombra : []; this.tapados = Array.isArray(c.tapados) ? c.tapados : []; this.meta = c.meta; Bus.emit('catalog'); }
     const age = this.meta ? Date.now() - new Date(this.meta.leido).getTime() : Infinity;
     /* la copia guardada sin subcategorías (versión anterior) no sirve para los descuentos por categoría */
-    if (age > 3 * 3600e3 || (this.items.length && !Array.isArray(this.items[0].subs)) || (c && c.items && !Array.isArray(c.sombra))) this.refresh();      // copia vieja sin la existencia de los tapados por el panel
+    if (age > 3 * 3600e3 || (this.items.length && !Array.isArray(this.items[0].subs)) || (c && c.items && (!Array.isArray(c.sombra) || !Array.isArray(c.tapados)))) this.refresh();      // copia vieja sin la existencia de los tapados por el panel
     else this.mezclarPanel();      // los del panel → Productos se ven al momento, sin esperar 3 horas
   },
   /* Productos agregados o corregidos en el panel de la tienda → Productos (14_productos_web.sql).
@@ -1640,7 +1643,8 @@ const Catalog = {
       const r = await fetch(SUPABASE_URL_FIJA + '/rest/v1/productos_web?select=*&activo=eq.true', { headers: { apikey: SUPABASE_KEY_FIJA }, cache: 'no-store' });
       if (!r.ok) return [];
       const rows = await r.json();
-      return (Array.isArray(rows) ? rows : []).map(x => ({ modelo: x.modelo, sku: x.modelo, nombre: x.nombre || x.modelo, marca: x.marca, categoria_principal: x.categoria_principal,
+      // las correcciones (productos del distribuidor editados) no tapan al distribuidor: su precio y costo siguen siendo los de él
+      return (Array.isArray(rows) ? rows : []).filter(x => !x.correccion).map(x => ({ _pan: 1, modelo: x.modelo, sku: x.modelo, nombre: x.nombre || x.modelo, marca: x.marca, categoria_principal: x.categoria_principal,
         subcategorias: x.subcategorias || [], precio: x.precio, imagen: (x.imagenes || [])[0] || '', disponible: x.disponible !== false && x.existencias !== 0, existencias: x.existencias, descripcion: x.descripcion || '' }));
     } catch (e) { return []; }
   },
@@ -1650,7 +1654,7 @@ const Catalog = {
     const k = (p) => p.m.toUpperCase() + '|' + p.marca.toUpperCase();
     const ks = new Set(panel.map(k));
     panel.forEach(p => { p._k = normTxt(p.m + ' ' + p.n + ' ' + p.marca + ' ' + p.desc + ' ' + p.sku + ' ' + p.cat); });
-    this.items.forEach(p => { if (p.src === 's' && ks.has(k(p))) this.sombra.push(p); });
+    this.items.forEach(p => { if (!ks.has(k(p)) || p.pan) return; if (p.src === 's') this.sombra.push(p); else this.tapados.push(p); });
     this.items = panel.concat(this.items.filter(p => !ks.has(k(p))));
     Bus.emit('catalog');
   },
@@ -2413,6 +2417,10 @@ const lineFromCatalogo = (c, tipo) => {
 };
 const findProductoByCodigo = (cod) => { const k = normKey(cod); if (!k) return null; return Store.all('productos').find(p => normKey(p.codigo) === k) || null; };
 const catalogoByCodigo = (cod) => { const k = normKey(cod); return k ? Catalog.items.find(c => normKey(c.m) === k) : null; };
+/* El producto del distribuidor (scraping o lista de precios) con ese código, aunque un producto
+   tuyo publicado lo tape en el catálogo. null si ningún distribuidor lo trae. */
+const distribuidorDe = (cod) => { const k = normKey(cod); if (!k) return null; const f = (c) => !c.pan && normKey(c.m) === k;
+  return Catalog.items.find(f) || Catalog.sombra.find(f) || (Catalog.tapados || []).find(f) || null; };
 
 /* línea de oferta/nota a partir de un producto que viene de la tienda (pedido web o carrito del administrador):
    si lo tienes en tu inventario sale de ahí (tuyo primero, luego de tu papá); si no, del distribuidor */
@@ -4480,7 +4488,7 @@ function productoModal(p) {
   const s = isNew ? { manuel: { cant: 0, costo: 0 }, papa: { cant: 0, costo: 0 } } : Calc.st(p.id);
   Calc.build(); const movs = (Calc.movs.get(p.id) || []).slice().sort((a, b) => (b.doc.fecha || '').localeCompare(a.doc.fecha || ''));
   const cats = Array.from(new Set(Store.all('productos').map(x => x.categoria).filter(Boolean))).sort();
-  const cat = catalogoByCodigo(p.codigo);
+  let dist = distribuidorDe(p.codigo);
   const mc = MatchCat.de(p);
   const marcasL = Array.from(new Set(Catalog.items.map(c => (c.marca || '').toUpperCase()).concat(Store.all('productos').map(x => (x.marca || '').toUpperCase())).filter(Boolean))).sort();
   const m = UI.modal({
@@ -4492,8 +4500,10 @@ function productoModal(p) {
       <label class="fld" style="grid-column:1/-1"><span>Nombre</span><input class="inp" data-k="nombre" value="${esc(p.nombre || '')}"></label>
       <label class="fld" style="grid-column:1/-1"><span>Descripción</span><textarea class="inp" data-k="descripcion" rows="3">${esc(p.descripcion || '')}</textarea></label>
       <label class="fld"><span>Precio de venta ($)</span><input class="inp num" inputmode="decimal" data-k="precio" value="${p.precio ? esc(p.precio) : ''}"></label>
+      <label class="fld"><span>Precio en la tienda ($)</span><input class="inp num" inputmode="decimal" data-k="precioTienda" value="${num(p.precioTienda) > 0 ? esc(p.precioTienda) : ''}"></label>
       <label class="fld"><span>Unidad</span><input class="inp" data-k="unidad" value="${esc(p.unidad || 'UND')}"></label>
       <label class="fld"><span>&nbsp;</span><label class="chk"><input type="checkbox" data-k="activo" ${p.activo !== false ? 'checked' : ''}> Activo</label></label>
+      <div class="small muted" data-pt-info style="grid-column:1/-1;margin-top:-4px"></div>
     </div>
     <datalist id="dl-cat">${cats.map(c => `<option value="${esc(c)}">`).join('')}</datalist>
     <datalist id="dl-marcas">${marcasL.map(c => `<option value="${esc(c)}">`).join('')}</datalist>
@@ -4508,7 +4518,7 @@ function productoModal(p) {
       <div style="margin-top:10px"><span class="small muted">Fotos (hasta 8)</span><div class="row" data-fotos style="margin-top:6px"></div>
         <div class="row" style="margin-top:6px"><label class="btn sm" style="cursor:pointer">Subir foto<input type="file" accept="image/*" multiple hidden data-subir></label><input class="inp" style="flex:1 1 220px" data-url placeholder="o pega el enlace de una foto (https://…)"><button type="button" class="btn sm" data-url-ok>Agregar</button></div></div>
     </div>
-    ${cat ? `<p class="small muted">En el catálogo del distribuidor: lista ${fmtUSD(cat.precio)} · venta web ${fmtUSD(precioWeb(cat))}${cat.exist != null ? ' · existencia ' + esc(cat.exist) : ''}</p>` : ''}
+    <p class="small muted" data-dist-info hidden></p>
     <h3 style="font-size:17.5px;margin:18px 0 8px">Existencias</h3>
     <div class="grid g2">${['manuel', 'papa'].map(i => `<div class="panel" style="padding:12px"><div style="margin-bottom:8px">${ownTag(i)}</div><div class="grid g2">
       <label class="fld"><span>Existencia</span><input class="inp num" inputmode="decimal" data-inv="${i}" data-ik="cant" value="${fmtQty(s[i].cant)}"></label>
@@ -4518,7 +4528,8 @@ function productoModal(p) {
     ${movs.length ? `<h3 style="font-size:17.5px;margin:18px 0 8px">Movimientos</h3><div class="tbl-wrap" style="max-height:280px"><table class="tbl"><thead><tr><th>Fecha</th><th>Documento</th><th>Inventario</th><th class="r">Cant.</th><th class="r">Precio / costo</th></tr></thead><tbody>${movs.slice(0, 200).map(x => `<tr class="click" data-doc="${esc(x.doc.id)}"><td class="mono small">${esc(fmtFecha(x.doc.fecha))}</td><td><span class="small">${esc(TIPOS[x.doc.tipo])}</span> <span class="mono small muted">${esc(x.doc.numero)}</span>${x.doc.estado === 'anulada' ? ' <span class="pill bad">anulada</span>' : ''}<div class="small muted">${esc(x.doc.tipo === 'compra' ? (x.doc.proveedor && x.doc.proveedor.nombre || '') : (x.doc.cliente && x.doc.cliente.nombre || x.doc.notas || ''))}</div></td><td>${ownTag(x.inv)}</td><td class="num" style="color:${x.delta < 0 ? 'var(--red)' : 'var(--ok)'}">${x.delta > 0 ? '+' : ''}${fmtQty(x.delta)}</td><td class="num">${fmtUSD(num(esVenta(x.doc) ? x.item.precio : x.item.costo))}</td></tr>`).join('')}</tbody></table></div>` : ''}`,
     foot: [].concat(isNew ? [] : [['Eliminar', 'red', async (close) => { if (movs.length) { UI.toast('Tiene movimientos: márcalo como inactivo en vez de eliminarlo', 3200); return; } if (await UI.confirm('¿Eliminar este producto?', { ok: 'Eliminar', danger: true })) { Store.del('productos', p.id); close(); } }]])
       .concat([['Cancelar', '', c => c()], ['Guardar', 'pri', (close) => {
-        $$('[data-k]', m.body).forEach(i => { const k = i.dataset.k; p[k] = i.type === 'checkbox' ? i.checked : k === 'precio' ? num(i.value) : i.value.trim(); });
+        $$('[data-k]', m.body).forEach(i => { const k = i.dataset.k; p[k] = i.type === 'checkbox' ? i.checked : k === 'precio' || k === 'precioTienda' ? num(i.value) : i.value.trim(); });
+        if (!(num(p.precioTienda) > 0)) delete p.precioTienda;   // vacío = la tienda usa el precio del distribuidor (o tu precio si no lo trae)
         if (!p.codigo) { UI.toast('Escribe el código'); return; }
         const partes = $('[data-ruta]', m.body).value.split(/\s*[›>]\s*/).map(x => x.trim()).filter(Boolean);
         p.webCat = partes[0] || ''; p.webSubs = partes.slice(1); p.imagenes = fotos.slice(0, 8); if (p.webCat) p.catAuto = 'ok';
@@ -4545,6 +4556,29 @@ function productoModal(p) {
       }]])
   });
   $$('[data-doc]', m.body).forEach(tr => tr.onclick = () => { m.close(); Route.nav('#/doc/' + tr.dataset.doc); });
+  /* Distribuidor: si el código también lo trae un distribuidor, se muestra su precio y costo.
+     En un producto NUEVO, el precio de venta y el costo se ponen solos con los del distribuidor
+     (mientras no los cambies tú). La tienda muestra el precio del distribuidor salvo que pongas
+     un "Precio en la tienda". */
+  const autoDist = {};
+  const ptInfo = () => {
+    const el = $('[data-pt-info]', m.body), inp = $('[data-k="precioTienda"]', m.body), pw = dist ? precioWeb(dist) : null;
+    inp.placeholder = pw != null ? fmtUSD(pw) + ' (distribuidor)' : 'tu precio de venta';
+    el.textContent = dist ? (pw != null ? `Precio en la tienda vacío = la tienda muestra el del distribuidor (${fmtUSD(pw)}). Escríbelo solo si quieres otro.` : 'El distribuidor no tiene precio: con el precio en la tienda vacío se usa tu precio de venta.') : 'Precio en la tienda vacío = la tienda usa tu precio de venta.';
+  };
+  const ponerDist = () => {
+    dist = distribuidorDe($('[data-k="codigo"]', m.body).value);
+    const info = $('[data-dist-info]', m.body), pw = dist ? precioWeb(dist) : null, dd = dist ? distDeCat(dist) : null, cd = dist ? costoDist(dist, dd) : null;
+    info.hidden = !dist;
+    info.innerHTML = dist ? `En ${esc(dd ? dd.nombre : 'el distribuidor')}: lista ${dist.precio ? fmtUSD(dist.precio) : '—'} · venta en la tienda ${pw != null ? fmtUSD(pw) : '—'}${cd != null ? ' · tu costo ' + fmtUSD(cd) : ''}${dist.exist != null ? ' · existencia ' + esc(dist.exist) : ''}${isNew && (pw != null || cd != null) ? ' <span class="pill ok">precio y costo tomados del distribuidor</span>' : ''}` : '';
+    ptInfo();
+    if (!isNew) return;
+    const llenar = (el, clave, val) => { if (!el) return; const cur = el.value.trim(); if (cur && cur !== autoDist[clave]) return; const v = val != null && val > 0 ? String(round2(val)) : ''; el.value = v; autoDist[clave] = v; };
+    llenar($('[data-k="precio"]', m.body), 'precio', pw);
+    ['manuel', 'papa'].forEach(i => llenar($(`[data-inv="${i}"][data-ik="costo"]`, m.body), 'costo_' + i, cd));
+  };
+  $('[data-k="codigo"]', m.body).addEventListener('input', debounce(ponerDist, 350));
+  ponerDist();
   /* fotos y estado en la tienda */
   const pintarFotos = () => { $('[data-fotos]', m.body).innerHTML = fotos.length ? fotos.map((u, i) => `<span style="position:relative;display:inline-block"><img src="${esc(u)}" alt="" style="width:72px;height:72px;object-fit:contain;border:1px solid var(--line);border-radius:6px;background:#fff"><button type="button" data-qf="${i}" title="Quitar" style="position:absolute;top:-6px;right:-6px;border:none;border-radius:50%;width:20px;height:20px;background:var(--red);color:#fff;font-size:12px;line-height:20px;padding:0">✕</button></span>`).join('') : '<span class="muted small">Sin fotos</span>';
     $$('[data-qf]', m.body).forEach(b => b.onclick = () => { fotos.splice(+b.dataset.qf, 1); pintarFotos(); }); };
@@ -5466,7 +5500,7 @@ const Tienda = (() => {
    - Se compara por modelo (sin guiones, espacios ni mayúsculas). Si se edita en dos lados, gana lo más reciente.
    ===================================================================== */
 const WebProd = (() => {
-  let ocultos = new Set(), last = 0, loading = false, error = '', filas = 0;
+  let ocultos = new Set(), last = 0, loading = false, error = '', filas = 0, filasWeb = new Map(), convirtiendo = false;
   const sb = () => Sync.online() ? Sync.sb : null;
   const estado = (p) => p.tienda || 'publicado';           // los que ya tenías antes de esto: publicados (como hasta ahora)
   const publicado = (p) => estado(p) === 'publicado';
@@ -5491,11 +5525,15 @@ const WebProd = (() => {
         const cur = porClave.get(k);
         if (cur && cur.webAct && r.actualizado && r.actualizado <= cur.webAct) return;     // ya estaba al día
         const p = cur ? clone(cur) : { id: 'p_web_' + k, codigo: r.modelo, unidad: 'UND', inv: {}, activo: true, notas: '', deWeb: true };
+        // precio: una corrección (producto del distribuidor) no trae precio; si tienes "Precio en la tienda",
+        // el de la fila es ese y no toca tu precio de venta
+        const propio = num(p.precioTienda) > 0;
         Object.assign(p, {
           nombre: r.nombre || p.nombre || '', marca: r.marca || p.marca || '', descripcion: r.descripcion || p.descripcion || '',
           webCat: r.categoria_principal || '', webSubs: r.subcategorias || [], imagenes: r.imagenes || [],
-          precio: r.precio != null ? num(r.precio) : num(p.precio), tienda: r.activo ? 'publicado' : 'borrador', webAct: r.actualizado
+          precio: r.correccion || propio || r.precio == null ? num(p.precio) : num(r.precio), tienda: r.activo ? 'publicado' : 'borrador', webAct: r.actualizado
         });
+        if (propio && !r.correccion && r.precio != null && num(r.precio) > 0) p.precioTienda = num(r.precio);
         if (!p.categoria) p.categoria = r.categoria_principal || '';
         Store.put('productos', p, { quiet: true }); n++;
       });
@@ -5505,8 +5543,10 @@ const WebProd = (() => {
         else if (!oc && estado(p) === 'oculto' && p.ocultoWeb) { p.tienda = p.tiendaAntes || 'publicado'; delete p.ocultoWeb; Store.put('productos', p, { quiet: true }); n++; }
       });
       filas = (rw.data || []).length;
+      filasWeb = new Map((rw.data || []).map(r => [r.modelo, r]));
       if (n) Bus.emit('data', 'productos');
       last = Date.now();
+      setTimeout(() => convertir(), 1500);
     } catch (e) { console.warn('Productos web', e); error = /productos_web|schema cache|does not exist/i.test(e.message || '') ? 'Falta instalar "Productos" (14_productos_web.sql) en Supabase' : 'No se pudo leer los productos de la tienda'; }
     loading = false; Bus.emit('tienda');
     return !error;
@@ -5516,21 +5556,51 @@ const WebProd = (() => {
     const s = sb(); if (!s) return { ok: false, msg: 'sin conexión: se guardó solo aquí' };
     const out = { ok: true, msg: '' };
     const oc = estado(p) === 'oculto';
+    // ¿Lo trae un distribuidor? Entonces en la tienda se guarda como CORRECCIÓN de ese producto (tu nombre,
+    // marca, categoría y fotos) y el precio sigue siendo el del distribuidor. Solo si pones "Precio en la
+    // tienda" se guarda como producto propio con ese precio.
+    const dist = distribuidorDe(p.codigo), propio = num(p.precioTienda) > 0;
+    const modelo = dist ? dist.m : String(p.codigo).trim();
     try {
-      if (oc) await s.from('productos_ocultos').upsert({ modelo: String(p.codigo).trim() }, { onConflict: 'modelo' });
-      else if (ocultos.has(normKey(p.codigo))) { await s.from('productos_ocultos').delete().eq('modelo', String(p.codigo).trim()); ocultos.delete(normKey(p.codigo)); }
+      if (oc) await s.from('productos_ocultos').upsert({ modelo }, { onConflict: 'modelo' });
+      else if (ocultos.has(normKey(p.codigo))) { await s.from('productos_ocultos').delete().eq('modelo', modelo); ocultos.delete(normKey(p.codigo)); }
     } catch (e) { /* tabla de ocultos opcional */ }
     if (oc) { ocultos.add(normKey(p.codigo)); const r0 = Store.get('productos', p.id); if (r0 && !r0.ocultoWeb) { r0.ocultoWeb = true; Store.put('productos', r0, { quiet: true }); } }
     const falta = faltan(p);
     if (falta.length) return { ok: false, msg: 'falta ' + falta.join(' y ') + ' para que aparezca en /admin y en la tienda' };
-    const d = { modelo: String(p.codigo).trim(), nombre: (p.nombre && p.nombre !== p.codigo ? p.nombre : null), marca: String(p.marca).trim().toUpperCase(),
-      categoria_principal: p.webCat, subcategorias: p.webSubs || [], descripcion: p.descripcion || null, precio: num(p.precio) > 0 ? num(p.precio) : null,
-      disponible: true, imagenes: (p.imagenes || []).slice(0, 8), activo: estado(p) === 'publicado' };
+    const d = { modelo, nombre: (p.nombre && p.nombre !== p.codigo ? p.nombre : null), marca: String(p.marca).trim().toUpperCase(),
+      categoria_principal: p.webCat, subcategorias: p.webSubs || [], descripcion: p.descripcion || null, precio: propio ? num(p.precioTienda) : num(p.precio) > 0 ? num(p.precio) : null,
+      disponible: true, imagenes: (p.imagenes || []).slice(0, 8), activo: estado(p) === 'publicado', correccion: false };
+    if (dist && !propio) Object.assign(d, { correccion: true, precio: null, existencias: null, descripcion: null });   // la descripción también la pone el distribuidor
     const { data, error: er } = await s.from('productos_web').upsert(d, { onConflict: 'modelo' }).select().maybeSingle();
     if (er) return { ok: false, msg: er.message };
+    if (data) filasWeb.set(modelo, data);
+    // filas viejas del mismo producto escritas distinto ("3rt6023-1AG20" y "3RT6023-1AG20"): se quitan para que no tapen al distribuidor
+    const viejas = Array.from(new Set(Array.from(filasWeb.keys()).concat(String(p.codigo).trim()))).filter(x => x !== modelo && normKey(x) === normKey(modelo));
+    if (viejas.length) { try { await s.from('productos_web').delete().in('modelo', viejas); viejas.forEach(x => filasWeb.delete(x)); } catch (e) { /* no importa */ } }
     const rec = Store.get('productos', p.id); if (rec && data) { rec.webAct = data.actualizado; Store.put('productos', rec, { quiet: true }); }
     return out;
   };
+  /* Una sola vez por equipo: tus productos con inventario que ya estaban en la tienda como producto propio
+     y que el distribuidor también trae pasan a usar el precio del distribuidor (salvo los que tengan
+     "Precio en la tienda"). Antes tapaban al producto del distribuidor con tu precio de venta. */
+  const convertir = async () => {
+    if (convirtiendo || lsGet('suinadm_precio_dist', '') === '1' || !filasWeb.size || Catalog.loading || !Catalog.items.length || !Array.isArray(Catalog.tapados) || !sb()) return;
+    convirtiendo = true;
+    try {
+      Calc.build();
+      const filas = Array.from(filasWeb.values());
+      const xs = Store.all('productos').filter(p => String(p.codigo || '').trim() && !(num(p.precioTienda) > 0) && estado(p) !== 'oculto' && !faltan(p).length
+        && (Object.keys(p.inv || {}).length || (Calc.movs.get(p.id) || []).length)
+        && distribuidorDe(p.codigo) && filas.some(r => !r.correccion && normKey(r.modelo) === normKey(p.codigo)));
+      let ok = 0;
+      for (const p of xs) { const r = await guardar(p); if (r.ok) ok++; }
+      if (ok === xs.length) lsSet('suinadm_precio_dist', '1');
+      if (ok) UI.toast(ok + (ok === 1 ? ' producto tuyo ahora muestra' : ' productos tuyos ahora muestran') + ' en la tienda el precio del distribuidor', 4500);
+    } catch (e) { console.warn('Precio del distribuidor', e); }
+    convirtiendo = false;
+  };
+  Bus.on('catalog', () => setTimeout(() => convertir(), 1500));
   /* fotos: el mismo almacén que usa /admin */
   const foto = (file) => new Promise((res, rej) => {
     const img = new Image(), url = URL.createObjectURL(file);
