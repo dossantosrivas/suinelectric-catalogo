@@ -333,6 +333,11 @@
   .adm-ex-link{ display:inline-flex; align-items:center; gap:4px; margin-top:6px; font-weight:700; font-size:12.5px; color:#7a5200; text-decoration:underline; }
   .adm-ex-link svg{ width:13px; height:13px; }
   .adm-ex.chico{ margin:6px 0 4px; padding:5px 7px; font-size:11.5px; line-height:1.4; }
+  .adm-dist{ width:100%; border-collapse:collapse; margin:4px 0 2px; font-size:12.5px; }
+  .adm-dist th{ text-align:left; font-size:10.5px; text-transform:uppercase; letter-spacing:.4px; opacity:.7; padding:2px 4px; border-bottom:1px solid rgba(184,134,11,.45); }
+  .adm-dist td{ padding:3px 4px; vertical-align:top; border-bottom:1px dotted rgba(184,134,11,.35); font-weight:600; }
+  .adm-dist td small{ display:block; font-weight:400; font-size:10.5px; opacity:.75; }
+  .adm-dist td.ok{ color:#1b6b2f; } .adm-dist td.cero{ color:#a33; }
   .adm-ex.chico .adm-ex-link{ margin-top:2px; font-size:11.5px; }
   .adm-precios .usa{ font-weight:600; } .adm-precios span{ opacity:.75; } .adm-precios .adm-nota{ font-size:11px; opacity:.7; margin-top:2px; }
   .dto-badge{ display:inline-block; font-size:12.5px; font-weight:700; line-height:1; padding:4px 7px; border-radius:4px;
@@ -1960,8 +1965,9 @@ function bloqueAdminExistencias(p, compacto){
     const inv = !e.tuyo ? 'Inventario: <b class="cero">no lo tienes</b>'
       : e.m != null || e.pa != null ? 'Tú <b class="' + cls(e.m) + '">' + n(e.m) + '</b> · Papá <b class="' + cls(e.pa) + '">' + n(e.pa) + '</b>'
       : 'Inventario <b class="' + cls(e.total) + '">' + n(e.total) + '</b>';
+    const porDist = htmlDistribuidores(p, true);
     return '<div class="adm-ex chico" title="Solo administradores">' +
-      '<div>' + inv + '</div><div>' + (e.dist ? e.dist.nombre.replace(/ \(.*\)$/, '') : 'Distribuidor') + ': ' + distTxt + '</div>' + link + '</div>';
+      '<div>' + inv + '</div>' + (porDist || '<div>' + (e.dist ? e.dist.nombre.replace(/ \(.*\)$/, '') : 'Distribuidor') + ': ' + distTxt + '</div>') + link + '</div>';
   }
   const fila = (nombre, valor) => '<div class="adm-ex-fila"><span>' + nombre + '</span>' + valor + '</div>';
   const inv = !e.tuyo ? fila('Tu inventario', '<b class="cero">No lo tienes</b>')
@@ -1970,9 +1976,110 @@ function bloqueAdminExistencias(p, compacto){
       : fila('Tu inventario (ambos)', '<b class="' + cls(e.total) + '">' + n(e.total) + '</b>');
   return '<div class="adm-ex" title="Esto solo lo ven los administradores">' +
     '<div class="adm-ex-tit">Existencias · solo administradores</div>' + inv +
-    fila(e.dist ? e.dist.nombre : 'Distribuidor', '<b>' + distTxt + '</b>') +
+    (htmlDistribuidores(p) || fila(e.dist ? e.dist.nombre : 'Distribuidor', '<b>' + distTxt + '</b>')) +
     link + '</div>';
 }
+/* =====================================================================
+   POR DISTRIBUIDOR (solo administradores)
+   En cada producto: qué distribuidor lo trae, cuántos tiene, cuánto te
+   cuesta y a cuánto lo vende la tienda al público.
+   · Grupos Eléctricos: el scraping (existencia real del distribuidor).
+   · Listas de precios (productos_manuales.json): SAER (INVT), EMI
+     (Schneider), etc., según la marca que surte cada distribuidor.
+   · Costo: las mismas reglas que Gestión → Distribuidores (descuento
+     general, por categoría, grupo o producto, y recargo si es internacional).
+   Los distribuidores se leen de Gestión (adm_registros, solo administradores).
+   ===================================================================== */
+let fuentesDist = new Map();   // clave de modelo -> [{ tipo: 's' | 'lista', p }]
+let distAdmin = null;          // distribuidores de Gestión
+let descCostoDistCfg = null;   // descuento general de costo del scraping (Ajustes de Gestión, versión vieja)
+let listasAdmin = null;        // productos_manuales.json tal cual (las listas, sin lo del panel)
+function anotarFuentesDist(scraper){
+  const m = new Map();
+  const add = (p, tipo) => { const k = claveModelo(p && p.modelo); if (!k) return; const a = m.get(k) || []; a.push({ tipo, p }); m.set(k, a); };
+  (listasAdmin || []).forEach(p => add(p, 'lista'));
+  (scraper || []).forEach(p => add(p, 's'));
+  fuentesDist = m;
+}
+async function cargarDistribuidoresAdmin(){
+  if (!sb || !sesion.admin) return;
+  try {
+    const [rp, rc, rl] = await Promise.all([
+      sb.from('adm_registros').select('id,data').eq('coleccion', 'proveedores').eq('borrado', false),
+      sb.from('adm_registros').select('data').eq('coleccion', 'config').eq('id', 'main').maybeSingle(),
+      listasAdmin ? Promise.resolve(null) : fetch('productos_manuales.json', { cache: 'no-cache' }).then(r => r.ok ? r.json() : null).catch(() => null)
+    ]);
+    if (!rp.error && Array.isArray(rp.data)) distAdmin = rp.data.map(r => r.data).filter(d => d && d.nombre);
+    if (rc && rc.data && rc.data.data) descCostoDistCfg = rc.data.data.descCostoDist;
+    if (rl){ const arr = Array.isArray(rl) ? rl : (rl.productos || []); listasAdmin = arr.filter(p => p && p.modelo && p.modelo !== 'EJEMPLO-BORRAR'); }
+    if (typeof catalogoBase !== 'undefined' && catalogoBase) anotarFuentesDist(catalogoBase);
+  } catch (e) { console.warn('Distribuidores (admin)', e); }
+}
+const numA = (x) => { const n = parseFloat(String(x == null ? '' : x).replace(',', '.')); return isNaN(n) ? 0 : n; };
+const marcasDeA = (s) => String(s || '').split(/[,;\n]/).map(claveModelo).filter(Boolean);
+function distDeFuente(f){
+  const ds = distAdmin || [];
+  if (f.tipo === 's') return ds.find(d => d.surte && d.surte.scraping) || null;
+  const mk = claveModelo(f.p.marca);
+  return (mk && ds.find(d => d.surte && marcasDeA(d.surte.marcas).includes(mk))) || null;
+}
+function costoDeFuente(f, d){
+  const lista = numA(f.p.precio);
+  if (!d) return null;
+  const rs = (Array.isArray(d.reglas) ? d.reglas : []).filter(r => r && ((r.pct !== '' && r.pct != null) || numA(r.costo) > 0));
+  const mk = claveModelo(f.p.modelo);
+  let dp = null;
+  const rp = rs.find(r => r.tipo === 'prod' && claveModelo(r.modelo) === mk);
+  if (rp){ const cf = numA(rp.costo) > 0 ? numA(rp.costo) : null; dp = { pct: cf && lista > 0 ? (1 - cf / lista) * 100 : numA(rp.pct), fijo: cf, regla: 'producto' + (cf ? ' (costo fijo)' : '') }; }
+  if (!dp){ const g = rs.find(r => r.tipo === 'grupo' && (r.modelos || []).some(x => claveModelo(x) === mk)); if (g) dp = { pct: numA(g.pct), regla: 'grupo ' + (g.nombre || '') }; }
+  if (!dp){
+    const ruta = rutaDe(f.p).map(claveModelo);
+    const cs = rs.filter(r => r.tipo === 'cat' && (r.ruta || []).length && r.ruta.length <= ruta.length && r.ruta.every((x, i) => claveModelo(x) === ruta[i])).sort((a, b) => b.ruta.length - a.ruta.length);
+    if (cs.length) dp = { pct: numA(cs[0].pct), regla: 'categoría ' + cs[0].ruta.join(' › ') };
+  }
+  if (!dp){
+    const gen = numA(d.descuento) > 0 ? numA(d.descuento) : (d.surte && d.surte.scraping && descCostoDistCfg != null && descCostoDistCfg !== '' ? numA(descCostoDistCfg) : null);
+    if (gen != null) dp = { pct: gen, regla: 'descuento general' };
+  }
+  const l = d.logistica || {}, rec = d.alcance === 'internacional' ? numA(l.fletePct) + numA(l.aduanaPct) + numA(l.otrosPct) : 0;
+  if (dp && dp.fijo) return { costo: dp.fijo * (1 + rec / 100), detalle: dp.regla + (rec ? ' + ' + rec + '% importación' : '') };
+  if (!(lista > 0) || (!dp && !rec)) return null;
+  const pct = dp ? dp.pct : 0;
+  return { costo: lista * (1 - pct / 100) * (1 + rec / 100), detalle: (dp ? dp.regla + ' ' + (Math.round(pct * 10) / 10) + '%' : 'sin descuento') + (rec ? ' + ' + rec + '% importación' : '') };
+}
+function filasDistribuidores(p){
+  if (typeof sesion === 'undefined' || !sesion.admin || !p) return [];
+  const fs = fuentesDist.get(p._invClave || claveModelo(p.modelo)) || [];
+  return fs.map(f => {
+    const d = distDeFuente(f);
+    const lista = numA(f.p.precio) > 0 ? numA(f.p.precio) : null;
+    const venta = lista == null ? null : precioMostrado(Object.assign({}, f.p, { _manual: f.tipo === 'lista' }), null);
+    const c = costoDeFuente(f, d);
+    let cant;
+    if (f.tipo === 's'){
+      const ex = existenciasReales && typeof existenciasReales[f.p.modelo] === 'number' ? existenciasReales[f.p.modelo] : (typeof f.p.existencias === 'number' ? f.p.existencias : null);
+      cant = ex != null ? { txt: String(ex), ok: ex > 0 } : { txt: f.p.disponible === false ? 'agotado' : (f.p.stock || 'disp.'), ok: f.p.disponible !== false };
+    } else {
+      const ex = typeof f.p.existencias === 'number' ? f.p.existencias : null;
+      cant = ex != null ? { txt: String(ex), ok: ex > 0 } : { txt: f.p.disponible === false ? 'no disp.' : 'en lista', ok: f.p.disponible !== false };
+    }
+    const nombre = d ? d.nombre : f.tipo === 's' ? 'Grupos Eléctricos' : 'Lista ' + (f.p.marca || '');
+    return { nombre, lista, venta, costo: c ? c.costo : null, detalle: c ? c.detalle : (d ? 'sin descuento cargado en Gestión' : 'distribuidor sin asignar en Gestión'), cant };
+  });
+}
+function htmlDistribuidores(p, compacto){
+  const fs = filasDistribuidores(p);
+  if (!fs.length) return null;
+  const m = (x) => x == null ? '—' : formatoMoneda(x);
+  if (compacto) return fs.map(f => '<div title="' + escHtml(f.detalle) + '">' + escHtml(f.nombre) + ': <b class="' + (f.cant.ok ? 'ok' : 'cero') + '">' + escHtml(f.cant.txt) + '</b> · costo <b>' + m(f.costo) + '</b> · venta <b>' + m(f.venta) + '</b></div>').join('');
+  return '<table class="adm-dist"><thead><tr><th>Distribuidor</th><th>Cant.</th><th>Costo</th><th>Venta</th></tr></thead><tbody>' +
+    fs.map(f => '<tr><td>' + escHtml(f.nombre) + (f.lista != null && f.venta != null && Math.ceil(f.venta) !== Math.ceil(f.lista) ? '<small>lista ' + m(f.lista) + '</small>' : '') + '</td>' +
+      '<td class="' + (f.cant.ok ? 'ok' : 'cero') + '">' + escHtml(f.cant.txt) + '</td>' +
+      '<td title="' + escHtml(f.detalle) + '">' + m(f.costo) + (f.costo != null ? '<small>' + escHtml(f.detalle) + '</small>' : '') + '</td>' +
+      '<td>' + m(f.venta) + (f.costo != null && f.venta > 0 ? '<small>gana ' + Math.round((1 - f.costo / f.venta) * 100) + '%</small>' : '') + '</td></tr>').join('') +
+    '</tbody></table>';
+}
+
 function bloquePrecioRegistro(p, grande){
   const pr = precioRegistro(p);
   if (pr == null) return '';
@@ -1996,6 +2103,7 @@ function registroDesdePrecio(ev){
 let existenciasReales = null;
 let cantidadesInventario = null;   // Map(clave de modelo -> cantidad) de tu inventario (mismo permiso)
 let detalleInventario = null;      // Map(clave de modelo -> {t, m, p}): total, tuyo y de tu papá (solo administradores)
+let catalogoBase = null;           // productos del scraping (para "Por distribuidor" de los administradores)
 let origenLista = new Map();       // modelo -> 'lista' (productos_manuales.json) o 'panel' (agregado en /admin)
 function cantidadReal(p){
   if (p && p._inv && cantidadesInventario && cantidadesInventario.has(p._invClave)) return cantidadesInventario.get(p._invClave);
@@ -5026,6 +5134,7 @@ async function cargar(silencioso){
     // Se marcan con _manual:true para que el descuento NUNCA se les aplique
     // (los agregados a mano siempre muestran su precio de catálogo, tal cual).
     manuales.forEach(p => { p._manual = true; });
+    catalogoBase = data.productos || []; if (typeof sesion !== 'undefined' && sesion.admin) anotarFuentesDist(catalogoBase);
     const modelosManuales = new Set(manuales.map(p => p.modelo));
     const delScraper = (data.productos || []).filter(p => !modelosManuales.has(p.modelo));
     delScraper.forEach(p => { p._manual = false; });
@@ -5291,6 +5400,7 @@ async function cargarSesionYReglas(){
           const { data: di, error: errDi } = await sb.rpc('inventario_detalle_admin');
           if (!errDi && di && typeof di === 'object') detalleInventario = new Map(Object.keys(di).map(m => [claveModelo(m), di[m]]));
         } catch (e) { /* 22_existencias_admin.sql sin correr: se muestra el total */ }
+        await cargarDistribuidoresAdmin();
       }
     }
     const [{ data: reglas, error: errR }, { data: tipos }] = await Promise.all([
