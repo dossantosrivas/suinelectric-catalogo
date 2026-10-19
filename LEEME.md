@@ -166,3 +166,15 @@ Desde ahí, la app de ventas (`/ventas`) sube sola a la tienda lo que tienes en 
 - El modelo se compara sin guiones, espacios ni mayúsculas. Si dos marcas usan el mismo código para cosas distintas, oculta el que sobra desde el panel → Productos.
 - En el panel → **Productos**, el filtro **Inventario** muestra todo lo que sale de tu inventario: los que solo tienes tú (etiqueta *Tu inventario*, se editan en la app de ventas) y los unidos con uno del proveedor o manual (etiqueta *+ tu inventario*, con el precio y la marca que ve la tienda). **Ocultar** funciona en ambos.
 - La tienda pública solo ve el rango (+10 / Últimas unidades). Las cantidades exactas solo las ven los administradores y los clientes con "Ver existencias reales". No se publican costos.
+
+## 13. Precios: nacional vs internacional (Gestión → Precios)
+Buscas un modelo y ves, lado a lado: tu inventario (costo y venta), el catálogo del distribuidor (lista, tu costo, venta web) y los resultados de **eBay** e **IAInventory** con el **costo puesto en Venezuela** (precio + envío en EE. UU. hasta tu courier + courier por kg + % extra). Los costos de importación y la lista de tiendas para buscar (MercadoLibre, Amazon, AliExpress, o cualquiera con `{q}` en la dirección) se cambian en **Costos de importación**.
+
+IAInventory funciona sin nada más. Para eBay (gratis):
+1. developer.ebay.com → crea una cuenta → **Application Keys** → crea un keyset de **Production**.
+2. Cloudflare → **Workers & Pages** → proyecto de la tienda → **Settings → Variables and Secrets** → agrega en **Production** (tipo *Secret*):
+   - `EBAY_CLIENT_ID` = el **App ID (Client ID)**
+   - `EBAY_CLIENT_SECRET` = el **Cert ID (Client Secret)**
+3. Vuelve a publicar (o espera el próximo cambio en `main`). Sin las claves, la sección te muestra el enlace para buscar en eBay a mano.
+
+Solo responde a administradores con sesión iniciada (`functions/api/precios.js`).
