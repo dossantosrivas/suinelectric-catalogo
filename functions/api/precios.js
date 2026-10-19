@@ -4,10 +4,11 @@
    Lo usa Gestión → Precios. Busca un modelo en:
      • eBay (API oficial "Browse", gratis) — precio, envío dentro de EE. UU.
        hasta el código postal de tu courier, condición y vendedor.
-     • IAInventory (tienda Shopify) — precio de cada condición (nuevo, usado…).
+     • IAInventory y ChipsGate (tiendas Shopify) — precio de cada condición
+       (nuevo, reacondicionado, usado…) y si hay existencia.
    Solo responde a administradores (misma sesión de Supabase que Gestión).
 
-   GET /api/precios?q=GD20-2R2G-4&fuentes=ebay,iai&zip=33166&cond=todas
+   GET /api/precios?q=GD20-2R2G-4&fuentes=ebay,iai,cg&zip=33166&cond=todas
      cond: todas | nuevo | usado
 
    Variables en Cloudflare (Settings → Variables and Secrets, Production, tipo Secret):
@@ -93,30 +94,42 @@ async function buscarEbay(q, { zip, cond }, env){
   return { total: j.total || items.length, items };
 }
 
-/* ---------- IAInventory (Shopify) ---------- */
-async function buscarIai(q){
-  const base = 'https://iainventory.com';
+/* ---------- tiendas Shopify (IAInventory, ChipsGate…) ----------
+   La búsqueda normal de la tienda da los enlaces /products/<handle>; cada
+   /products/<handle>.js trae título, foto y precio (en centavos) por variante. */
+const SHOPIFY = {
+  iai: { base: 'https://iainventory.com', enlace: '' },
+  cg: { base: 'https://www.chipsgate.com', enlace: '/es' },   // enlaces a la versión en español
+};
+// condición de una variante: nuevo (New, Brand New, New Surplus…) o usado (Used, Refurbished…)
+const condDe = (nombre) => /used|usad|refurb|reacond|second/i.test(nombre) ? 'usado' : /new|nuev/i.test(nombre) ? 'nuevo' : '';
+async function buscarShopify(fuente, q, cond){
+  const { base, enlace } = SHOPIFY[fuente];
   const r = await fetch(base + '/search?type=product&q=' + encodeURIComponent(q), { headers: { 'User-Agent': UA, Accept: 'text/html' } });
-  if (!r.ok) throw new Error('IAInventory ' + r.status);
+  if (!r.ok) throw new Error('La tienda respondió ' + r.status);
   const html = await r.text();
   const handles = [];
   for (const m of html.matchAll(/\/products\/([a-z0-9][a-z0-9\-_.%]*)/gi)) {
     const h = m[1].toLowerCase().replace(/\.(js|json)$/, '');
     if (!handles.includes(h)) handles.push(h);
-    if (handles.length >= 10) break;
+    if (handles.length >= 12) break;
   }
   const prods = await Promise.all(handles.map(h =>
     fetch(base + '/products/' + h + '.js', { headers: { 'User-Agent': UA, Accept: 'application/json' } })
       .then(x => (x.ok ? x.json() : null)).catch(() => null)));
   const items = prods.filter(Boolean).map(p => {
     const variantes = (p.variants || []).map(v => ({ nombre: v.title === 'Default Title' ? '' : v.title, precio: n2(v.price / 100), disponible: !!v.available }));
-    const disp = variantes.filter(v => v.disponible);
-    const min = (disp.length ? disp : variantes).reduce((a, v) => (v.precio != null && (a == null || v.precio < a) ? v.precio : a), null);
+    // con filtro Nuevo/Usado el precio principal es el de esa condición (si la tienda la tiene)
+    const deCond = cond === 'nuevo' || cond === 'usado' ? variantes.filter(v => condDe(v.nombre) === cond) : [];
+    const pool = deCond.length ? deCond : cond === 'nuevo' || cond === 'usado' ? [] : variantes;
+    if (!pool.length && (cond === 'nuevo' || cond === 'usado')) return null;
+    const disp = pool.filter(v => v.disponible);
+    const min = (disp.length ? disp : pool).reduce((a, v) => (v.precio != null && (a == null || v.precio < a) ? v.precio : a), null);
     const img = p.featured_image ? (String(p.featured_image).startsWith('//') ? 'https:' + p.featured_image : p.featured_image) : '';
     return {
-      fuente: 'iai',
+      fuente,
       titulo: p.title || '',
-      url: base + (p.url || '/products/' + p.handle),
+      url: base + enlace + (p.url || '/products/' + p.handle),
       img: img ? img + (img.includes('?') ? '&' : '?') + 'width=200' : '',
       precio: min != null ? min : n2(p.price / 100),
       moneda: 'USD',
@@ -125,9 +138,9 @@ async function buscarIai(q){
       variantes,
       vendedor: p.vendor || '',
       ubicacion: '',
-      disponible: !!p.available,
+      disponible: disp.length > 0,
     };
-  });
+  }).filter(Boolean);
   return { total: items.length, items };
 }
 
@@ -136,7 +149,7 @@ export async function onRequestGet({ request, env }){
   const q = (u.searchParams.get('q') || '').trim().slice(0, 120);
   if (q.length < 2) return json({ error: 'Escribe al menos 2 letras.' }, 400);
   if (!(await esAdmin(request, env))) return json({ error: 'Solo administradores. Inicia sesión en Gestión.' }, 401);
-  const fuentes = (u.searchParams.get('fuentes') || 'ebay,iai').split(',');
+  const fuentes = (u.searchParams.get('fuentes') || 'ebay,iai,cg').split(',');
   const zip = (u.searchParams.get('zip') || '').replace(/[^0-9]/g, '').slice(0, 5);
   const cond = u.searchParams.get('cond') || 'todas';
 
@@ -147,7 +160,8 @@ export async function onRequestGet({ request, env }){
   };
   const res = await Promise.all([
     tarea('ebay', () => buscarEbay(q, { zip, cond }, env)),
-    tarea('iai', () => buscarIai(q)),
+    tarea('iai', () => buscarShopify('iai', q, cond)),
+    tarea('cg', () => buscarShopify('cg', q, cond)),
   ]);
   const out = { q, fecha: new Date().toISOString() };
   res.forEach(([k, v]) => { if (v) out[k] = v; });

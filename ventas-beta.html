@@ -4917,7 +4917,7 @@ Views.distribuidores = (v, id) => { if (id) return fichaDistribuidor(v, id); ret
 
 /* =====================================================================
    PRECIOS: comparar nacional vs internacional
-   Busca un modelo en eBay e IAInventory (vía /api/precios), calcula el
+   Busca un modelo en eBay, IAInventory y ChipsGate (vía /api/precios), calcula el
    costo puesto en Venezuela (envío en EE. UU. + courier por kg + % extra)
    y lo pone al lado de tu inventario y del catálogo del distribuidor.
    ===================================================================== */
@@ -4932,14 +4932,21 @@ const PRECIOS_DEF = {
     { nombre: 'MercadoLibre VE', url: 'https://listado.mercadolibre.com.ve/{q}' },
     { nombre: 'eBay', url: 'https://www.ebay.com/sch/i.html?_nkw={q}&LH_BIN=1' },
     { nombre: 'IAInventory', url: 'https://iainventory.com/search?type=product&q={q}' },
+    { nombre: 'ChipsGate', url: 'https://www.chipsgate.com/es/search?type=product&q={q}' },
     { nombre: 'Amazon', url: 'https://www.amazon.com/s?k={q}' },
     { nombre: 'AliExpress', url: 'https://www.aliexpress.com/wholesale?SearchText={q}' },
     { nombre: 'Google Shopping', url: 'https://www.google.com/search?tbm=shop&q={q}' }
   ]
 };
 const PrecCfg = {
-  get() { const c = CFG().precios || {}; const o = Object.assign({}, PRECIOS_DEF, c); if (!Array.isArray(o.tiendas) || !o.tiendas.length) o.tiendas = PRECIOS_DEF.tiendas.slice(); return o; },
-  set(mut) { const r = clone(DB.config.get('main') || { id: 'main' }); r.id = 'main'; const p = Object.assign({}, PrecCfg.get()); mut(p); r.precios = p; Store.put('config', r); }
+  get() {
+    const c = CFG().precios || {}; const o = Object.assign({}, PRECIOS_DEF, c);
+    if (!Array.isArray(o.tiendas) || !o.tiendas.length) o.tiendas = PRECIOS_DEF.tiendas.slice();
+    // tiendas nuevas que se agregan una sola vez a una lista ya guardada (si luego la borras, no vuelve)
+    else if (!(c.tiendasV >= 2)) { const cg = PRECIOS_DEF.tiendas.find(x => x.nombre === 'ChipsGate'); if (!o.tiendas.some(x => /chipsgate/i.test(x.url))) o.tiendas = o.tiendas.concat(cg); }
+    return o;
+  },
+  set(mut) { const r = clone(DB.config.get('main') || { id: 'main' }); r.id = 'main'; const p = Object.assign({}, PrecCfg.get()); mut(p); p.tiendasV = 2; r.precios = p; Store.put('config', r); }
 };
 const PrecCache = new Map(); // q|cond|zip -> respuesta (mientras la página esté abierta)
 const precUrlTienda = (t, q) => String(t.url || '').replace(/\{q\}/g, encodeURIComponent(q).replace(/%20/g, '+'));
@@ -4959,7 +4966,7 @@ Views.precios = (v, qArg) => {
   if (qArg) F.q = qArg;
   const hist = lsGet('suinadm_prec_hist', []);
   v.innerHTML = `<div class="vh"><h1>Precios</h1><div class="act"><button class="btn" data-aj>${ico('gear')} Costos de importación</button></div>
-    <div class="sub">Busca un modelo en eBay e IAInventory y compáralo con tu inventario y tu distribuidor. El <b>puesto en Venezuela</b> suma el envío en EE. UU. hasta tu courier, el courier por kg y el % extra.</div></div>
+    <div class="sub">Busca un modelo en eBay, IAInventory y ChipsGate y compáralo con tu inventario y tu distribuidor. El <b>puesto en Venezuela</b> suma el envío en EE. UU. hasta tu courier, el courier por kg y el % extra.</div></div>
     <form class="panel prec-buscar" data-form>
       <div class="inv-q"><svg viewBox="0 0 24 24"><circle cx="11" cy="11" r="7"/><path d="m20 20-3.5-3.5"/></svg><input class="inp" type="search" name="q" placeholder="Modelo exacto, ej. GD20-2R2G-4 o 6ES7214-1AG40-0XB0" value="${esc(F.q)}" autocomplete="off" spellcheck="false" enterkeyhint="search"></div>
       <div class="seg" data-cond>${[['todas', 'Todo'], ['nuevo', 'Nuevo'], ['usado', 'Usado']].map(([k, l]) => `<button type="button" data-v="${k}" class="${F.cond === k ? 'on' : ''}">${l}</button>`).join('')}</div>
@@ -4992,7 +4999,7 @@ Views.precios = (v, qArg) => {
       const { data } = await Sync.sb.auth.getSession();
       const tok = data && data.session && data.session.access_token;
       if (!tok) throw new Error('Inicia sesión en Gestión para buscar precios.');
-      const u = `/api/precios?q=${encodeURIComponent(q)}&cond=${F.cond}&zip=${encodeURIComponent(P.zip || '')}&fuentes=ebay,iai`;
+      const u = `/api/precios?q=${encodeURIComponent(q)}&cond=${F.cond}&zip=${encodeURIComponent(P.zip || '')}&fuentes=ebay,iai,cg`;
       const r = await fetch(u, { headers: { Authorization: 'Bearer ' + tok, apikey: Sync.conf().key } });
       const j = await r.json().catch(() => null);
       if (!r.ok || !j) throw new Error((j && j.error) || (r.status === 404 ? 'El buscador aún no está publicado (falta functions/api/precios.js en Cloudflare).' : 'Error ' + r.status));
@@ -5010,14 +5017,14 @@ Views.precios = (v, qArg) => {
 
   function pintar() {
     if (!F.q) return;
-    if (cargando) { res.innerHTML = '<div class="panel empty">Buscando en eBay e IAInventory…</div>'; return; }
+    if (cargando) { res.innerHTML = '<div class="panel empty">Buscando en eBay, IAInventory y ChipsGate…</div>'; return; }
     if (!datos) return;
     const q = F.q, k = normKey(q), kg = F.kg;
     const N = nacional(q);
     const filtrar = (xs) => F.exacto && k.length >= 4 ? xs.filter(it => normKey(it.titulo).includes(k)) : xs;
     const prep = (src) => { const blk = datos[src]; if (!blk) return null; const todos = blk.items || []; const xs = filtrar(todos).map(it => Object.assign({}, it, { p: precPuesto(it, kg, P) })).sort((a, b) => a.p.total - b.p.total); return { blk, xs, ocultos: todos.length - xs.length }; };
-    const E = prep('ebay'), I = prep('iai');
-    const inter = [].concat(E ? E.xs : [], I ? I.xs : []).sort((a, b) => a.p.total - b.p.total);
+    const E = prep('ebay'), I = prep('iai'), C = prep('cg');
+    const inter = [].concat(E ? E.xs : [], I ? I.xs : [], C ? C.xs : []).sort((a, b) => a.p.total - b.p.total);
     const mejor = inter[0];
     // referencia nacional: tu costo (inventario) o tu costo con el distribuidor
     const refs = [];
@@ -5032,7 +5039,7 @@ Views.precios = (v, qArg) => {
       const d = dif(mejor.p.total, ref.v);
       return `<div class="d ${d < 0 ? 'ok' : 'bad'}">${d < 0 ? 'Importar sale ' + Math.abs(d) + '% más barato' : d === 0 ? 'Cuesta lo mismo' : 'Importar sale ' + d + '% más caro'} que ${esc(ref.l.toLowerCase())} (${fmtUSD(ref.v)})${ventaRef ? `<br>Vendiendo a ${fmtUSD(ventaRef.v)}: ${pctMargen(ventaRef.v, mejor.p.total)} importado vs ${pctMargen(ventaRef.v, ref.v)} nacional` : ''}</div>`;
     };
-    const fuenteNom = { ebay: 'eBay', iai: 'IAInventory' };
+    const fuenteNom = { ebay: 'eBay', iai: 'IAInventory', cg: 'ChipsGate' };
     const errBlk = (src) => {
       const b = datos[src]; if (!b || !b.error) return '';
       if (b.error === 'sin_clave') return `<div class="banner">eBay aún no tiene clave. Crea una app gratis en <a href="https://developer.ebay.com/my/keys" target="_blank" rel="noopener">developer.ebay.com</a> (keyset de <b>Production</b>) y guarda en Cloudflare → tu proyecto → Settings → Variables and Secrets: <code>EBAY_CLIENT_ID</code> (App ID) y <code>EBAY_CLIENT_SECRET</code> (Cert ID). Mientras tanto: <a href="${esc(precUrlTienda(P.tiendas.find(t => /ebay/i.test(t.nombre)) || PRECIOS_DEF.tiendas[1], q))}" target="_blank" rel="noopener">buscar en eBay ↗</a></div>`;
@@ -5040,15 +5047,16 @@ Views.precios = (v, qArg) => {
     };
     const fila = (it) => `<tr><td class="prec-img">${it.img ? `<img src="${esc(it.img)}" alt="" loading="lazy" referrerpolicy="no-referrer">` : ''}</td>
       <td><a href="${esc(it.url)}" target="_blank" rel="noopener" class="prec-tit">${esc(it.titulo)}</a>
-        <div class="muted small">${[`<span class="pill ${it.fuente === 'ebay' ? 'info' : 'warn'}">${fuenteNom[it.fuente]}</span>`, it.condicion ? esc(it.condicion) : '', it.vendedor ? esc(it.vendedor) : '', it.ubicacion ? esc(it.ubicacion) : '', it.oferta ? 'acepta ofertas' : '', it.disponible === false ? '<span class="pill bad">agotado</span>' : ''].filter(Boolean).join(' · ')}</div>
+        <div class="muted small">${[`<span class="pill ${it.fuente === 'ebay' ? 'info' : it.fuente === 'cg' ? 'ok' : 'warn'}">${fuenteNom[it.fuente]}</span>`, it.condicion ? esc(it.condicion) : '', it.vendedor ? esc(it.vendedor) : '', it.ubicacion ? esc(it.ubicacion) : '', it.oferta ? 'acepta ofertas' : '', it.disponible === false ? '<span class="pill bad">agotado</span>' : ''].filter(Boolean).join(' · ')}</div>
         ${it.variantes && it.variantes.length > 1 ? `<div class="small">${it.variantes.map(x => `${esc(x.nombre || '—')}: <b>${fmtUSD(x.precio)}</b>${x.disponible ? '' : ' <span class="muted">(agotado)</span>'}`).join(' · ')}</div>` : ''}</td>
       <td class="num">${fmtUSD(it.precio)}</td>
       <td class="num hm" title="${it.p.envSupuesto ? 'La tienda no indica el envío: se suponen ' + fmtUSD(it.p.envio) : 'Envío hasta ' + esc(P.zip || 'EE. UU.')}">${it.p.envSupuesto ? `<span class="muted">${fmtUSD(it.p.envio)}*</span>` : it.p.envio ? fmtUSD(it.p.envio) : '<span class="pill ok">gratis</span>'}</td>
       <td class="num hm" title="Courier ${fmtUSD(it.p.courier)} + extra ${fmtUSD(it.p.extra)}">${fmtUSD(it.p.courier + it.p.extra)}</td>
       <td class="num"><b>${fmtUSD(it.p.total)}</b>${ref ? `<div class="small ${it.p.total <= ref.v ? 'prec-ok' : 'prec-bad'}">${dif(it.p.total, ref.v) > 0 ? '+' : ''}${dif(it.p.total, ref.v)}%</div>` : ''}</td></tr>`;
     const tabla = (xs) => xs.length ? `<div class="tbl-wrap"><table class="tbl prec-tbl"><thead><tr><th></th><th>Producto</th><th class="r">Precio</th><th class="r hm">Envío EE. UU.</th><th class="r hm">Courier + extra</th><th class="r">Puesto en Vzla</th></tr></thead><tbody>${xs.map(fila).join('')}</tbody></table></div>` : '';
-    const lista = F.fuente === 'ebay' ? (E ? E.xs : []) : F.fuente === 'iai' ? (I ? I.xs : []) : inter;
-    const ocultos = (E ? E.ocultos : 0) + (I ? I.ocultos : 0);
+    const porFuente = { ebay: E, iai: I, cg: C };
+    const lista = porFuente[F.fuente] ? porFuente[F.fuente].xs : inter;
+    const ocultos = (E ? E.ocultos : 0) + (I ? I.ocultos : 0) + (C ? C.ocultos : 0);
 
     res.innerHTML = datos.errorGeneral ? `<div class="banner">${esc(datos.errorGeneral)}</div>` : `
       <div class="prec-cmp">
@@ -5062,9 +5070,9 @@ Views.precios = (v, qArg) => {
           ${verdict()}
         </div>
       </div>
-      ${errBlk('ebay')}${errBlk('iai')}
+      ${errBlk('ebay')}${errBlk('iai')}${errBlk('cg')}
       <div class="row prec-filtros">
-        <div class="seg" data-src>${[['todas', 'Todas (' + inter.length + ')'], ['ebay', 'eBay (' + (E ? E.xs.length : 0) + ')'], ['iai', 'IAInventory (' + (I ? I.xs.length : 0) + ')']].map(([kk, l]) => `<button type="button" data-v="${kk}" class="${F.fuente === kk ? 'on' : ''}">${l}</button>`).join('')}</div>
+        <div class="seg" data-src>${[['todas', 'Todas (' + inter.length + ')'], ['ebay', 'eBay (' + (E ? E.xs.length : 0) + ')'], ['iai', 'IAInventory (' + (I ? I.xs.length : 0) + ')'], ['cg', 'ChipsGate (' + (C ? C.xs.length : 0) + ')']].map(([kk, l]) => `<button type="button" data-v="${kk}" class="${F.fuente === kk ? 'on' : ''}">${l}</button>`).join('')}</div>
         <label class="row small"><input type="checkbox" data-exacto ${F.exacto ? 'checked' : ''}> Solo títulos con “${esc(q)}”${F.exacto && ocultos ? ` <span class="muted">(${ocultos} ocultos)</span>` : ''}</label>
       </div>
       ${tabla(lista) || '<div class="panel empty">Sin resultados con este filtro.</div>'}
