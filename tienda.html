@@ -674,6 +674,8 @@
   .det-agregar .btn-cart-add{ padding:13px 14px; font-size:15.5px; }
   #modal-detalle .det-desc-label{ display:block; font-family:var(--display); font-size:20px; font-weight:700; color:var(--tinta); margin:0 0 4px; }
   #modal-detalle .det-desc{ font-size:15px; line-height:1.6; color:var(--texto); max-width:75ch; white-space:pre-line; overflow-wrap:anywhere; margin-bottom:16px; padding-bottom:16px; border-bottom:1px solid var(--linea-suave); }
+  #modal-detalle .det-ficha{ display:block; width:fit-content; margin-top:10px; font-weight:600; color:var(--azul-texto); text-decoration:none; white-space:normal; }
+  #modal-detalle .det-ficha:hover{ text-decoration:underline; }
   .btn-copiar{
     display:block; width:100%; background:#fff; color:var(--tinta); border:1px solid var(--linea);
     padding:11px 12px; font-size:14px; font-weight:600; border-radius:var(--radio); cursor:pointer; margin-top:10px;
@@ -4636,7 +4638,9 @@ function abrirDetalle(modelo){
           '<div><span class="estado ' + (p.disponible ? 'ok' : 'off') + '">' + (p.disponible ? estadoTexto : 'Agotado') + '</span></div>' +
         '</div>' +
         '<span class="det-desc-label">Descripción</span>' +
-        '<div class="det-desc">' + (p.descripcion || 'Sin descripción disponible para este producto.') + '</div>' +
+        '<div class="det-desc">' + (p.descripcion || 'Sin descripción disponible para este producto.') +
+          (/^https?:\/\//i.test(p.ficha_tecnica || '') ? '<a class="det-ficha" href="' + escHtml(p.ficha_tecnica) + '" target="_blank" rel="noopener">📄&#xFE0E; Ficha técnica del fabricante' + (p.marca ? ' (' + escHtml(p.marca) + ')' : '') + ' ↗</a>' : '') +
+        '</div>' +
         fichaEspecsHTML(p) +
         '<ul class="det-condiciones">' + CONDICIONES_VENTA.map(c => '<li>' + c + '</li>').join('') + '</ul>' +
         '<div class="det-grid">' +
