@@ -167,10 +167,10 @@ Desde ahí, la app de ventas (`/ventas`) sube sola a la tienda lo que tienes en 
 - En el panel → **Productos**, el filtro **Inventario** muestra todo lo que sale de tu inventario: los que solo tienes tú (etiqueta *Tu inventario*, se editan en la app de ventas) y los unidos con uno del proveedor o manual (etiqueta *+ tu inventario*, con el precio y la marca que ve la tienda). **Ocultar** funciona en ambos.
 - La tienda pública solo ve el rango (+10 / Últimas unidades). Las cantidades exactas solo las ven los administradores y los clientes con "Ver existencias reales". No se publican costos.
 
-## 13. Precios: nacional vs internacional (Gestión → Precios)
-Buscas un modelo y ves, lado a lado: tu inventario (costo y venta), el catálogo del distribuidor (lista, tu costo, venta web) y los resultados de **eBay** e **IAInventory** con el **costo puesto en Venezuela** (precio + envío en EE. UU. hasta tu courier + courier por kg + % extra). Los costos de importación y la lista de tiendas para buscar (MercadoLibre, Amazon, AliExpress, o cualquiera con `{q}` en la dirección) se cambian en **Costos de importación**.
+## 13. Precios: nacional vs internacional (Gestión → Precios, en `/ventas/precios`)
+Buscas un modelo y ves, lado a lado: tu inventario (costo y venta), el catálogo del distribuidor (lista, tu costo, venta web) y los resultados de **eBay**, **IAInventory** y **ChipsGate** con el **costo puesto en Venezuela** (precio + envío en EE. UU. hasta tu courier + courier por kg + % extra). Los costos de importación y la lista de tiendas para buscar (MercadoLibre, Amazon, AliExpress, o cualquiera con `{q}` en la dirección) se cambian en **Costos de importación**.
 
-IAInventory funciona sin nada más. Para eBay (gratis):
+IAInventory y ChipsGate funcionan sin nada más (muestran el precio de cada condición: nuevo, reacondicionado, usado; con el filtro *Nuevo* o *Usado* se toma el de esa condición). Para eBay (gratis):
 1. developer.ebay.com → crea una cuenta → **Application Keys** → crea un keyset de **Production**.
 2. Cloudflare → **Workers & Pages** → proyecto de la tienda → **Settings → Variables and Secrets** → agrega en **Production** (tipo *Secret*):
    - `EBAY_CLIENT_ID` = el **App ID (Client ID)**
