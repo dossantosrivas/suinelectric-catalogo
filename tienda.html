@@ -332,6 +332,9 @@
   .adm-ex b.ok, .adm-ex span.ok{ color:#1b6b2f; } .adm-ex b.cero, .adm-ex span.cero{ color:#a33; font-weight:600; }
   .adm-ex-link{ display:inline-flex; align-items:center; gap:4px; margin-top:6px; font-weight:700; font-size:12.5px; color:#7a5200; text-decoration:underline; }
   .adm-ex-link svg{ width:13px; height:13px; }
+  .adm-ex .lst{ color:#6D28D9; font-weight:700; } .adm-ex .lst.cero{ color:#94A3B8; }
+  .adm-ex-edad{ font-size:11px; font-weight:600; padding:0 5px; border-radius:4px; background:#EDE9FE; color:#5B21B6; margin-left:4px; white-space:nowrap; }
+  .adm-ex-edad.media{ background:#FEF3C7; color:#92400E; } .adm-ex-edad.vieja{ background:#E2E8F0; color:#475569; }
   .adm-ex.chico{ margin:6px 0 4px; padding:5px 7px; font-size:11.5px; line-height:1.4; }
   .adm-ex.chico .adm-ex-link{ margin-top:2px; font-size:11.5px; }
   .adm-precios .usa{ font-weight:600; } .adm-precios span{ opacity:.75; } .adm-precios .adm-nota{ font-size:11px; opacity:.7; margin-top:2px; }
@@ -1944,7 +1947,8 @@ function existenciasAdmin(p){
   }
   else if (origen === 'panel') dist = { nombre: 'Agregado en el Panel web', txt: p.disponible ? 'disponible' : 'no disponible', ok: !!p.disponible };
   else dist = null;
-  return { tuyo, total, m: det && det.m != null ? det.m : null, pa: det && det.p != null ? det.p : null, dist,
+  const listas = listasDist ? (listasDist.get(k) || listasDist.get(claveModelo(p.modelo)) || []) : [];
+  return { tuyo, total, m: det && det.m != null ? det.m : null, pa: det && det.p != null ? det.p : null, dist, listas,
     link: tuyo ? { url: URL_GESTION + '/producto-web/' + encodeURIComponent(p.modelo), txt: 'Ver en el inventario (Gestión)' }
                : { url: URL_PANEL + '/productos/' + encodeURIComponent(p.modelo), txt: 'Editar en el Panel web' } };
 }
@@ -1961,7 +1965,8 @@ function bloqueAdminExistencias(p, compacto){
       : e.m != null || e.pa != null ? 'Tú <b class="' + cls(e.m) + '">' + n(e.m) + '</b> · Papá <b class="' + cls(e.pa) + '">' + n(e.pa) + '</b>'
       : 'Inventario <b class="' + cls(e.total) + '">' + n(e.total) + '</b>';
     return '<div class="adm-ex chico" title="Solo administradores">' +
-      '<div>' + inv + '</div><div>' + (e.dist ? e.dist.nombre.replace(/ \(.*\)$/, '') : 'Distribuidor') + ': ' + distTxt + '</div>' + link + '</div>';
+      '<div>' + inv + '</div><div>' + (e.dist ? e.dist.nombre.replace(/ \(.*\)$/, '') : 'Distribuidor') + ': ' + distTxt + '</div>' +
+      e.listas.map(l => { const ed = edadLista(l.fecha); return '<div>' + escHtml(l.dist) + ': <b class="lst' + (l.q > 0 ? '' : ' cero') + '">' + l.q + '</b><span class="adm-ex-edad ' + ed.cls + '">' + ed.txt + '</span></div>'; }).join('') + link + '</div>';
   }
   const fila = (nombre, valor) => '<div class="adm-ex-fila"><span>' + nombre + '</span>' + valor + '</div>';
   const inv = !e.tuyo ? fila('Tu inventario', '<b class="cero">No lo tienes</b>')
@@ -1971,6 +1976,9 @@ function bloqueAdminExistencias(p, compacto){
   return '<div class="adm-ex" title="Esto solo lo ven los administradores">' +
     '<div class="adm-ex-tit">Existencias · solo administradores</div>' + inv +
     fila(e.dist ? e.dist.nombre : 'Distribuidor', '<b>' + distTxt + '</b>') +
+    e.listas.map(l => { const ed = edadLista(l.fecha);
+      return fila(escHtml(l.dist) + ' <span style="opacity:.7">(lista ' + escHtml(l.marca || '') + ' del ' + fechaCorta(l.fecha) + ')</span>',
+        '<span><b class="lst' + (l.q > 0 ? '' : ' cero') + '">' + (l.q > 0 ? l.q + ' disp.' : 'sin existencia') + '</b>' + (l.precio ? ' · $' + l.precio.toFixed(2) : '') + '<span class="adm-ex-edad ' + ed.cls + '" title="Es la lista que te mandan: no cambia en vivo">' + ed.txt + '</span></span>'); }).join('') +
     link + '</div>';
 }
 function bloquePrecioRegistro(p, grande){
@@ -1996,6 +2004,30 @@ function registroDesdePrecio(ev){
 let existenciasReales = null;
 let cantidadesInventario = null;   // Map(clave de modelo -> cantidad) de tu inventario (mismo permiso)
 let detalleInventario = null;      // Map(clave de modelo -> {t, m, p}): total, tuyo y de tu papá (solo administradores)
+/* Listas de existencias que te mandan los distribuidores (EMI…), subidas en Gestión → Listas de existencias.
+   Solo administradores: Map(clave de modelo -> [{ dist, marca, fecha, q, precio }]) */
+let listasDist = null;
+async function cargarListasDist(){
+  listasDist = null;
+  try {
+    const { data: ls, error } = await sb.from('adm_registros').select('id,data').eq('coleccion', 'listas').eq('borrado', false);
+    if (error || !Array.isArray(ls) || !ls.length) return;
+    const ids = Array.from(new Set(ls.map(r => r.data && r.data.dist).filter(Boolean)));
+    const { data: pv } = await sb.from('adm_registros').select('id,data').eq('coleccion', 'proveedores').in('id', ids);
+    const nom = new Map((pv || []).map(r => [r.id, (r.data && r.data.nombre) || 'Distribuidor']));
+    const m = new Map();
+    ls.forEach(r => { const l = r.data || {}; if (!Array.isArray(l.items) || !nom.has(l.dist)) return; const pr = l.precios || {};
+      l.items.forEach(it => { const k = claveModelo(it.m); if (!k) return; const x = pr[k];
+        if (!m.has(k)) m.set(k, []); m.get(k).push({ dist: nom.get(l.dist), marca: l.marca || '', fecha: l.fecha || '', q: Number(it.q) || 0, precio: x && Number(x.p) > 0 ? Number(x.p) : null }); }); });
+    listasDist = m;
+  } catch (e) { /* sin permiso o sin listas: no se muestra */ }
+}
+function edadLista(f){
+  const t = Date.parse(String(f || '').slice(0, 10) + 'T12:00:00'); if (!isFinite(t)) return { cls: 'vieja', txt: '' };
+  const d = Math.max(0, Math.floor((Date.now() - t) / 864e5));
+  return { cls: d <= 10 ? 'nueva' : d <= 30 ? 'media' : 'vieja', txt: d === 0 ? 'de hoy' : d === 1 ? 'de ayer' : 'hace ' + d + ' días' };
+}
+function fechaCorta(f){ const m = String(f || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? m[3] + '/' + m[2] + '/' + m[1] : ''; }
 let origenLista = new Map();       // modelo -> 'lista' (productos_manuales.json) o 'panel' (agregado en /admin)
 function cantidadReal(p){
   if (p && p._inv && cantidadesInventario && cantidadesInventario.has(p._invClave)) return cantidadesInventario.get(p._invClave);
@@ -5291,7 +5323,8 @@ async function cargarSesionYReglas(){
           const { data: di, error: errDi } = await sb.rpc('inventario_detalle_admin');
           if (!errDi && di && typeof di === 'object') detalleInventario = new Map(Object.keys(di).map(m => [claveModelo(m), di[m]]));
         } catch (e) { /* 22_existencias_admin.sql sin correr: se muestra el total */ }
-      }
+        await cargarListasDist();
+      } else listasDist = null;
     }
     const [{ data: reglas, error: errR }, { data: tipos }] = await Promise.all([
       sb.from('reglas_descuento').select('*').eq('activo', true),
