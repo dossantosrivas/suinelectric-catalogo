@@ -2505,6 +2505,71 @@ footer{
   .hero-btn, .card, .dest-card, .fam-card, .carrusel-card{ transition:none; }
 }
 
+
+/* ================= Lista tipo Excel (una fila por producto, columnas fijas) ================= */
+#contenido.vista-lista{ --xl-cols:52px 92px minmax(150px,1.1fr) minmax(220px,3fr) 112px 118px 176px 126px; }
+#contenido.vista-lista .grid{
+  display:grid; grid-template-columns:minmax(0,1fr); gap:0; overflow-x:auto;
+  border:1px solid var(--linea); border-radius:10px; background:#fff; box-shadow:none;
+}
+#contenido.vista-lista .xl-cab,
+#contenido.vista-lista .grid > .card.fila-xl{
+  display:grid; grid-template-columns:var(--xl-cols); min-width:990px; align-items:stretch;
+}
+#contenido.vista-lista .xl-cab{
+  position:sticky; top:0; z-index:3; background:#eef3f5; border-bottom:2px solid var(--linea);
+  font-size:11.5px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:var(--texto-2);
+}
+#contenido.vista-lista .xl-cab .xl-c{ padding:8px 10px; }
+#contenido.vista-lista .xl-c{ border-right:1px solid var(--linea); min-width:0; padding:5px 10px; display:flex; align-items:center; gap:6px; }
+#contenido.vista-lista .xl-c:last-child{ border-right:none; }
+#contenido.vista-lista .xl-num{ justify-content:flex-end; text-align:right; }
+#contenido.vista-lista .grid > .card.fila-xl{
+  border:none; border-bottom:1px solid var(--linea); border-radius:0; box-shadow:none; transform:none;
+  background:#fff; overflow:visible; flex-direction:initial; font-size:13px;
+}
+#contenido.vista-lista .grid > .card.fila-xl:nth-of-type(even){ background:#f8fafb; }
+#contenido.vista-lista .grid > .card.fila-xl:last-child{ border-bottom:none; }
+#contenido.vista-lista .grid > .card.fila-xl:hover{ background:#eaf6fa; transform:none; box-shadow:none; }
+#contenido.vista-lista .fila-xl .xl-foto{ padding:3px; justify-content:center; }
+#contenido.vista-lista .fila-xl .thumb{
+  width:40px; height:40px; min-height:0; padding:2px; margin:0; border:none; border-radius:4px; background:#fff; flex:none;
+}
+#contenido.vista-lista .fila-xl .thumb img{ transform:none !important; }
+#contenido.vista-lista .fila-xl .thumb.sin-imagen{ font-size:12px; background:transparent; }
+#contenido.vista-lista .fila-xl .thumb img{ max-width:100%; max-height:100%; }
+#contenido.vista-lista .fila-xl .xl-marca{ font-size:12px; font-weight:600; color:var(--texto-2); }
+#contenido.vista-lista .fila-xl .xl-marca img{ max-width:72px; max-height:18px; object-fit:contain; }
+#contenido.vista-lista .fila-xl .xl-modelo{ flex-direction:column; align-items:flex-start; justify-content:center; gap:2px; }
+#contenido.vista-lista .fila-xl .modelo{ font-size:14px; line-height:1.2; }
+#contenido.vista-lista .fila-xl .var-badge{ margin:0; font-size:10.5px; padding:1px 6px; }
+#contenido.vista-lista .fila-xl .xl-desc-txt{
+  display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; overflow:hidden;
+  font-size:12.5px; line-height:1.35; color:var(--texto-2);
+}
+#contenido.vista-lista .fila-xl .xl-estado{ flex-direction:column; align-items:flex-start; justify-content:center; gap:3px; }
+#contenido.vista-lista .fila-xl .estado{ margin:0; font-size:11.5px; padding:1px 7px 1px 6px; white-space:nowrap; }
+#contenido.vista-lista .fila-xl .adm-ex.chico{ margin:0; padding:0; border:none; background:none; font-size:10.5px; line-height:1.3; }
+#contenido.vista-lista .fila-xl .xl-precio{ flex-direction:column; align-items:flex-end; justify-content:center; gap:1px; }
+#contenido.vista-lista .fila-xl .precio{ font-size:15px; font-weight:700; }
+#contenido.vista-lista .fila-xl .precio-original{ font-size:11px; }
+#contenido.vista-lista .fila-xl .dto-badge{ font-size:10px; padding:1px 4px; }
+#contenido.vista-lista .fila-xl .xl-reg{
+  border:none; background:none; padding:0; cursor:pointer; font:inherit; font-size:10.5px; color:var(--azul-texto, #0b6e8e); text-decoration:underline;
+}
+#contenido.vista-lista .fila-xl .xl-cant{ margin:0; flex-wrap:nowrap; }
+#contenido.vista-lista .fila-xl .qty-selector{ flex:none; height:28px; }
+#contenido.vista-lista .fila-xl .qty-btn{ width:22px; font-size:14px; }
+#contenido.vista-lista .fila-xl .qty-input{ flex:none; width:30px; font-size:12.5px; padding:0; }
+#contenido.vista-lista .fila-xl .btn-cart-add{ flex:1 1 auto; height:28px; padding:0 8px; font-size:12px; border-radius:6px; min-width:0; }
+#contenido.vista-lista .fila-xl .xl-wa{ gap:4px; }
+#contenido.vista-lista .fila-xl .btn-wa{ flex:1 1 50%; height:28px; padding:0 5px; font-size:11px; gap:3px; border-width:1px; border-radius:6px; }
+#contenido.vista-lista .fila-xl .btn-wa .ico-wa{ width:13px; height:13px; }
+@media (max-width:640px){
+  #contenido.vista-lista{ --xl-cols:44px 70px 130px 200px 96px 96px 150px 112px; }
+  #contenido.vista-lista .xl-cab, #contenido.vista-lista .grid > .card.fila-xl{ min-width:898px; }
+  #contenido.vista-lista .fila-xl .thumb{ width:34px; height:34px; }
+}
 </style>
 
 </head>
@@ -2580,7 +2645,7 @@ footer{
         <div class="vista-toggle" role="group" aria-label="Ver productos como">
           <button type="button" data-vista-modo="ficha" title="Ficha: más productos y datos a la vista"><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M1 1h4v4H1zM6.5 1.5H15V3H6.5zM6.5 3.8H12V5H6.5zM1 9h4v4H1zM6.5 9.5H15V11H6.5zM6.5 11.8H12V13H6.5z"/></svg>Ficha</button>
           <button type="button" data-vista-modo="cuadros" title="Ver en cuadros"><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M1 1h6v6H1zM9 1h6v6H9zM1 9h6v6H1zM9 9h6v6H9z"/></svg>Cuadros</button>
-          <button type="button" data-vista-modo="lista" title="Ver en lista"><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M1 1h5v5H1zM8 2h7v1.5H8zM8 4h5v1.2H8zM1 10h5v5H1zM8 11h7v1.5H8zM8 13h5v1.2H8z"/></svg>Lista</button>
+          <button type="button" data-vista-modo="lista" title="Lista tipo Excel: una fila por producto, en columnas"><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M1 1h5v5H1zM8 2h7v1.5H8zM8 4h5v1.2H8zM1 10h5v5H1zM8 11h7v1.5H8zM8 13h5v1.2H8z"/></svg>Lista</button>
           <button type="button" data-vista-modo="compacta" title="Vista compacta: una línea por producto"><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M1 1.5h14V4H1zM1 6.75h14v2.5H1zM1 12h14v2.5H1z"/></svg>Compacta</button>
         </div>
         <select id="vista-columnas" aria-label="Productos por fila" title="Productos por fila"></select>
@@ -4062,8 +4127,56 @@ function waLinks(mensaje){
   };
 }
 
+/* ---------- Vista Lista tipo Excel: una fila por producto, en columnas ---------- */
+function esVistaTabla(){
+  const c = document.getElementById('contenido');
+  return !!(c && c.classList.contains('vista-lista'));
+}
+const CABECERA_TABLA_HTML =
+  '<div class="xl-cab" aria-hidden="true">' +
+    '<div class="xl-c">Foto</div><div class="xl-c">Marca</div><div class="xl-c">Modelo</div>' +
+    '<div class="xl-c">Descripción</div><div class="xl-c">Existencia</div><div class="xl-c xl-num">Precio</div>' +
+    '<div class="xl-c">Cantidad</div><div class="xl-c">Consultar</div>' +
+  '</div>';
+function filaTablaHTML(p){
+  const links = waLinks("Hola, quiero consultar disponibilidad y precio de: " + p.modelo + "\n" + urlProducto(p.modelo));
+  const precioFinal = precioMostrado(p);
+  let precioTachado = null;
+  if (p.precio != null && precioFinal != null && Math.ceil(precioFinal) < Math.ceil(Number(p.precio))) precioTachado = p.precio;
+  else if (!esManual(p) && p.precio_lista != null) precioTachado = p.precio_lista;
+  const logoMarca = logoDeMarca(p.marca);
+  const pr = precioRegistro(p);
+  const dis = !p.disponible ? 'disabled' : '';
+  return `
+    <div class="card fila-xl">
+      <div class="xl-c xl-foto"><div class="thumb ${p.imagen ? '' : 'sin-imagen'}">${p.imagen ? '<img src="'+p.imagen+'" alt="'+p.modelo+'" loading="lazy">' : '—'}</div></div>
+      <div class="xl-c xl-marca">${logoMarca ? '<img src="'+logoMarca+'" alt="'+(p.marca||'')+'" title="'+(p.marca||'')+'">' : escHtml(p.marca || '')}</div>
+      <div class="xl-c xl-modelo"><span class="modelo" data-modelo="${p.modelo}">${p.modelo || 'S/N'}</span>${badgeVariantes(p)}</div>
+      <div class="xl-c xl-desc"><span class="xl-desc-txt" title="${String(p.descripcion || '').replace(/"/g,'&quot;')}">${p.descripcion || ''}</span></div>
+      <div class="xl-c xl-estado"><span class="estado ${p.disponible ? 'ok' : 'off'}">${textoStock(p, 'Agotado')}</span>${bloqueAdminExistencias(p, true)}</div>
+      <div class="xl-c xl-precio xl-num">
+        ${precioTachado != null ? '<span class="precio-original">'+formatoMoneda(precioTachado)+'</span>' : ''}
+        <span class="precio">${formatoMoneda(precioFinal)}</span>${badgeDescuento(p)}
+        ${pr != null ? '<button type="button" class="xl-reg" onclick="registroDesdePrecio(event)" title="Regístrate gratis para comprar a este precio">Registrado: '+formatoMoneda(pr)+'</button>' : ''}
+      </div>
+      <div class="xl-c xl-cant actions">
+        <div class="qty-selector" data-modelo-qty="${p.modelo}">
+          <button class="qty-btn qty-menos" data-qm="${p.modelo}" ${dis}>−</button>
+          <input type="number" class="qty-input" id="qty-${p.modelo}" value="1" min="1" ${dis}>
+          <button class="qty-btn qty-mas" data-qp="${p.modelo}" ${dis}>+</button>
+        </div>
+        <button class="btn btn-cart-add" data-modelo="${p.modelo}" ${dis} title="Agregar al pedido">Agregar</button>
+      </div>
+      <div class="xl-c xl-wa">
+        <a class="btn btn-wa" href="${links.prioritario}" target="_blank" rel="noopener" title="Consultar por WhatsApp al 0412-4111319">${ICONO_WA}0412</a>
+        <a class="btn btn-wa btn-wa-2" href="${links.secundario}" target="_blank" rel="noopener" title="Consultar por WhatsApp al 0424-4561921">${ICONO_WA}0424</a>
+      </div>
+    </div>`;
+}
+
 /* ---------- Tarjeta ---------- */
 function tarjetaHTML(p){
+  if (esVistaTabla()) return filaTablaHTML(p);
   const links = waLinks("Hola, quiero consultar disponibilidad y precio de: " + p.modelo + "\n" + urlProducto(p.modelo));
   const precioFinal = precioMostrado(p);
   let precioTachado = null;
@@ -4313,7 +4426,7 @@ function pintarTanda(n){
       seccion.innerHTML = '<h2>' + (partes.length ? '<span class="ruta-prev">' + migasHTML(partes) + '</span>' : '') +
                           (rutaG.length <= MAX_NIVELES ? enlaceCat(rutaG, ultimo, 'grupo-titulo') : '<span>' + escHtml(ultimo) + '</span>') +
                           '<span class="conteo-badge">' + g.productos.length + (g.productos.length === 1 ? ' producto' : ' productos') + '</span></h2>' +
-                          '<div class="grid"></div>';
+                          '<div class="grid">' + (esVistaTabla() ? CABECERA_TABLA_HTML : '') + '</div>';
       st.cont.insertBefore(seccion, st.sentinela);
       st.grid = seccion.querySelector('.grid');
     }
@@ -6225,6 +6338,7 @@ document.getElementById('filtro-disponibilidad').addEventListener('change', () =
   const sel = document.getElementById('vista-columnas');
   const botones = Array.from(document.querySelectorAll('[data-vista-modo]'));
 
+  let eraTabla = null;
   function aplicar(){
     const p = actual();
     const opciones = mqMovil.matches ? OPC_MOVIL : OPC_PC;
@@ -6236,6 +6350,12 @@ document.getElementById('filtro-disponibilidad').addEventListener('change', () =
     cont.className = cont.className.split(/\s+/).filter(c => !/^(vista-|cols-)/.test(c)).join(' ');
     cont.classList.add('vista-' + p.modo);
     if (p.modo === 'cuadros' && p.cols !== 'auto') cont.classList.add('cols-' + p.cols);
+    // La Lista tipo Excel usa otro HTML por fila: al entrar o salir de ella se vuelve a pintar.
+    const esTabla = p.modo === 'lista';
+    if (eraTabla !== null && esTabla !== eraTabla && typeof vista !== 'undefined' && vista === 'catalogo'){
+      const y = window.scrollY; mostrarVista(); window.scrollTo(0, y);
+    }
+    eraTabla = esTabla;
   }
   botones.forEach(b => b.addEventListener('click', () => {
     actual().modo = b.getAttribute('data-vista-modo'); guardar(); aplicar();
