@@ -1,0 +1,8 @@
+# Solo lo lee Netlify (Cloudflare Pages lo ignora).
+# La dirección vieja suinelectrica.netlify.app manda todo, con su ruta, a suinelectric.com.
+# force = true: redirige aunque el archivo exista en Netlify (si no, servía una copia de la tienda).
+[[redirects]]
+  from = "/*"
+  to = "https://suinelectric.com/:splat"
+  status = 301
+  force = true
