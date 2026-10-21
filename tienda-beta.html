@@ -2602,7 +2602,6 @@ footer{
     </div>
     <div class="header-right">
       <button id="btn-mega" class="btn-mega" type="button" aria-expanded="false" aria-controls="mega"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg><span>Categorías</span></button>
-      <label class="descuento-box" title="Descuento aplicado a los precios del catálogo">Dto. <input type="number" id="descuento" min="0" max="90" value="60" step="0.5"> %</label>
       <button id="btn-cuenta" type="button" aria-label="Mi cuenta" style="display:none">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>
         <span class="cuenta-txt">Ingresar</span>
@@ -2646,7 +2645,6 @@ footer{
           <button type="button" data-vista-modo="ficha" title="Ficha: más productos y datos a la vista"><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M1 1h4v4H1zM6.5 1.5H15V3H6.5zM6.5 3.8H12V5H6.5zM1 9h4v4H1zM6.5 9.5H15V11H6.5zM6.5 11.8H12V13H6.5z"/></svg>Ficha</button>
           <button type="button" data-vista-modo="cuadros" title="Ver en cuadros"><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M1 1h6v6H1zM9 1h6v6H9zM1 9h6v6H1zM9 9h6v6H9z"/></svg>Cuadros</button>
           <button type="button" data-vista-modo="lista" title="Lista tipo Excel: una fila por producto, en columnas"><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M1 1h5v5H1zM8 2h7v1.5H8zM8 4h5v1.2H8zM1 10h5v5H1zM8 11h7v1.5H8zM8 13h5v1.2H8z"/></svg>Lista</button>
-          <button type="button" data-vista-modo="compacta" title="Vista compacta: una línea por producto"><svg viewBox="0 0 16 16" aria-hidden="true"><path fill="currentColor" d="M1 1.5h14V4H1zM1 6.75h14v2.5H1zM1 12h14v2.5H1z"/></svg>Compacta</button>
         </div>
         <select id="vista-columnas" aria-label="Productos por fila" title="Productos por fila"></select>
       </div>
@@ -6341,6 +6339,7 @@ document.getElementById('filtro-disponibilidad').addEventListener('change', () =
   let eraTabla = null;
   function aplicar(){
     const p = actual();
+    if (!['ficha','cuadros','lista'].includes(p.modo)) p.modo = 'lista';
     const opciones = mqMovil.matches ? OPC_MOVIL : OPC_PC;
     if (!opciones.some(o => o[0] === p.cols)) p.cols = mqMovil.matches ? '2' : 'auto';
     sel.innerHTML = opciones.map(o => '<option value="' + o[0] + '">' + o[1] + '</option>').join('');
@@ -6369,7 +6368,7 @@ document.getElementById('filtro-orden').addEventListener('change', () => {
   if (vista !== 'catalogo') vista = 'catalogo';
   renderSidebar(); mostrarVista();
 });
-document.getElementById('descuento').addEventListener('input', (e) => {
+document.getElementById('descuento')?.addEventListener('input', (e) => {
   let v = parseFloat(e.target.value);
   if (isNaN(v) || v < 0) v = 0;
   if (v > 90) v = 90;
