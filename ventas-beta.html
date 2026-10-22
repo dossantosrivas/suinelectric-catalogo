@@ -1526,6 +1526,30 @@ const reglasDe = (d) => (d && Array.isArray(d.reglas) ? d.reglas : []).filter(r 
 const tieneDesc = (d) => !!d && (descDist(d) != null || reglasDe(d).length > 0);
 const rutaTxt = (r) => (r || []).join(' › ');
 const empiezaCon = (ruta, pref) => pref.length && pref.length <= ruta.length && pref.every((x, i) => normKey(x) === normKey(ruta[i]));
+/* categoría de un producto para los descuentos del distribuidor. Los que solo vienen en una lista de
+   existencias (EMI…) no traen categoría: se toma la del mismo modelo en el catálogo y, si no está,
+   se reconoce por el nombre o la referencia (Altivar/ATV = variador, Altistart/ATS = arrancador suave). */
+const OTROS_CAT = 'Otros Productos';
+const adivinaCat = (c) => {
+  const t = normTxt([c.n, c.desc, c.cat].filter(Boolean).join(' ')), k = normKey(c.m);
+  if (/arrancador(es)?\s+suave|soft\s*-?\s*starter|altistart/.test(t) || /^ats\d/.test(k)) return 'Arrancadores Suaves';
+  if (/variador|convertidor de frecuencia|altivar/.test(t) || /^atv\d/.test(k)) return 'Variadores de Frecuencia';
+  return '';
+};
+let _catMod = null, _catModArr = null, _catModN = -1;
+const catPorModelo = (k) => {
+  if (!_catMod || _catModArr !== Catalog.items || _catModN !== Catalog.items.length) { _catMod = new Map(); _catModArr = Catalog.items; _catModN = Catalog.items.length; Catalog.items.forEach(c => { const x = normKey(c.m); if (x && !_catMod.has(x)) _catMod.set(x, c); }); }
+  return _catMod.get(k) || null;
+};
+const rutaCosto = (c) => {
+  if (!c) return [];
+  const sinCat = c.src === 'e' || c.src === 'el' || !!c.dist || !(c.cat || (c.subs || []).length);
+  const r = sinCat ? [] : CatTienda.ruta(c);
+  if (r.length && r[0] !== OTROS_CAT) return r;
+  const pc = catPorModelo(normKey(c.m));
+  if (pc && pc !== c) { const r2 = CatTienda.ruta(pc); if (r2.length && r2[0] !== OTROS_CAT) return r2; }
+  const g = adivinaCat(c); return g ? CatTienda.MAPA_CATEGORIAS[g].slice() : r;
+};
 /* qué descuento aplica a un producto del catálogo: { pct, regla } */
 const descPara = (d, c) => {
   if (!d) return null;
@@ -1535,7 +1559,7 @@ const descPara = (d, c) => {
     if (p) { const cf = p.costo !== '' && p.costo != null && num(p.costo) > 0 ? num(p.costo) : null; return { pct: cf && c && c.precio > 0 ? (1 - cf / c.precio) * 100 : num(p.pct), costoFijo: cf, regla: 'Producto ' + p.modelo + (cf ? ' (costo fijo)' : ''), tipo: 'prod' }; }
     const g = rs.find(r => r.tipo === 'grupo' && (r.modelos || []).some(x => normKey(x) === mk)); if (g) return { pct: num(g.pct), regla: 'Grupo ' + (g.nombre || ''), tipo: 'grupo' };
   }
-  const ruta = c ? CatTienda.ruta(c) : [];
+  const ruta = c ? rutaCosto(c) : [];
   const cs = rs.filter(r => r.tipo === 'cat' && empiezaCon(ruta, r.ruta || [])).sort((a, b) => b.ruta.length - a.ruta.length);
   if (cs.length) return { pct: num(cs[0].pct), regla: 'Categoría ' + rutaTxt(cs[0].ruta), tipo: 'cat' };
   const gen = descDist(d); return gen != null ? { pct: gen, regla: 'Descuento general', tipo: 'gen' } : null;
@@ -1548,13 +1572,15 @@ const costoInfo = (c, d) => {
   if (!c || !d) return null;
   const dp = descPara(d, c); const rec = recargoInter(d);
   /* producto que está en la lista de existencias de este distribuidor (EMI…): precio de su lista (o el de Grupos Eléctricos)
-     menos el descuento puesto en esa lista; no usa el descuento general de la ficha. Un costo fijo por producto sigue mandando. */
+     menos el descuento puesto en esa lista; no usa el descuento general de la ficha. Un costo fijo por producto sigue mandando,
+     y un descuento por categoría o grupo de la ficha (p. ej. variadores y arrancadores suaves) reemplaza al de la lista. */
   if (!(dp && dp.tipo === 'prod')) {
     const le = Listas.de(c.m).find(e => e.dist === d.id);
     if (le) {
       const pr = le.precio > 0 ? le.precio : c.precio; if (!(pr > 0)) return null;
-      const pct = num(le.dto), base = pr * (1 - pct / 100);
-      return { lista: pr, pct, regla: `Lista ${le.marca || d.nombre}${pct ? ' · desc. ' + fmtNum(pct, 1) + '%' : ' (precio = costo)'}`, base: round2(base), recargo: rec, costo: round2(base * (1 + rec / 100)), dist: d };
+      const esp = dp && (dp.tipo === 'cat' || dp.tipo === 'grupo');
+      const pct = esp ? num(dp.pct) : num(le.dto), base = pr * (1 - pct / 100);
+      return { lista: pr, pct, regla: esp ? `Lista ${le.marca || d.nombre} · ${dp.regla} ${fmtNum(pct, 1)}%` : `Lista ${le.marca || d.nombre}${pct ? ' · desc. ' + fmtNum(pct, 1) + '%' : ' (precio = costo)'}`, base: round2(base), recargo: rec, costo: round2(base * (1 + rec / 100)), dist: d };
     }
   }
   if (dp && dp.costoFijo > 0) { const base = dp.costoFijo; return { lista: c.precio > 0 ? c.precio : null, pct: c.precio > 0 ? round2(dp.pct) : null, regla: dp.regla, base: round2(base), recargo: rec, costo: round2(base * (1 + rec / 100)), dist: d }; }
@@ -5499,6 +5525,20 @@ Views.proveedores = () => Route.nav('#/distribuidores', { replace: true });
    /ventas/existencias[/<id de lista>]: las listas que te mandan los distribuidores (EMI…).
    Solo se consultan; en el cotizador salen como etiquetas junto a tu inventario. */
 const edadTxt = (f, soloHace) => { const e = Listas.edad(f); return `<span class="pill ${e === 'nueva' ? 'ok' : e === 'media' ? 'warn' : ''}" title="${e === 'vieja' ? 'Tiene más de 30 días: pide una lista nueva' : ''}">${soloHace ? '' : esc(fmtFecha(f) || 'sin fecha') + ' · '}${esc(Listas.haceTxt(f) || '')}${e === 'vieja' ? ' · pide una nueva' : ''}</span>`; };
+/* descuentos aparte por categoría desde la lista (EMI: variadores y arrancadores suaves): son reglas "Categoría" de la ficha */
+const ESP_LISTA = { var: { nombre: 'Variadores de frecuencia', cat: 'Variadores de Frecuencia' }, arr: { nombre: 'Arrancadores suaves', cat: 'Arrancadores Suaves' } };
+const rutaEsp = (k) => CatTienda.MAPA_CATEGORIAS[ESP_LISTA[k].cat];
+const reglaEsp = (d, k) => { const rk = rutaEsp(k).map(normKey).join('|'); return ((d && d.reglas) || []).find(r => r && r.tipo === 'cat' && (r.ruta || []).map(normKey).join('|') === rk) || null; };
+const setReglaEsp = (distId, k, pct) => {
+  const d = clone(Store.get('proveedores', distId)); if (!d) return;
+  d.reglas = Array.isArray(d.reglas) ? d.reglas : [];
+  const r = reglaEsp(d, k);
+  if (pct == null) d.reglas = d.reglas.filter(x => x !== r);
+  else if (r) r.pct = pct;
+  else d.reglas.push({ id: uid('r'), tipo: 'cat', ruta: rutaEsp(k).slice(), pct });
+  Store.put('proveedores', d);
+};
+const esEspLista = (it, k) => empiezaCon(rutaCosto(catPorModelo(normKey(it.m)) || { src: 'e', m: it.m, n: it.n || '' }), rutaEsp(k));
 let lsRepintar = null;
 Bus.on('catalog', debounce(() => { if (lsRepintar) lsRepintar(); }, 400));
 Bus.on('data', (c) => { if ((c === 'listas' || c === 'proveedores') && lsRepintar) lsRepintar(); });
@@ -5525,6 +5565,9 @@ Views.existencias = (v, sel) => {
       <div class="kpi"><div class="l">Precio de Grupos Eléctricos</div><div class="v">${fmtQty(conG)}</div><div class="d">${fmtQty(filas.length - conP - conG)} sin precio</div></div></div>
     <section class="panel"><div class="ph"><h2>${esc(distNombre(L.dist))}${L.marca ? ' · ' + esc(L.marca) : ''}</h2><div class="act"><button class="btn sm" data-up2>Subir lista nueva</button><button class="btn sm" data-pr title="Agregar o cambiar precios de algunos productos">Agregar precios</button><a class="btn sm ghost" href="#/distribuidores/${esc(L.dist)}">Ficha del distribuidor</a><button class="btn sm ghost red" data-del>Borrar lista</button></div></div>
       <div class="row" style="gap:10px;flex-wrap:wrap;align-items:end;margin:-2px 0 12px;padding:10px 12px;background:#F5F3FF;border:1px solid #DDD6FE;border-radius:10px"><label class="fld" style="margin:0"><span>Descuento que te da ${esc(distNombre(L.dist))} sobre estos precios %</span><input class="inp num" inputmode="decimal" data-dto value="${L.dto != null && L.dto !== '' ? esc(L.dto) : ''}" placeholder="0" style="max-width:140px"></label><span class="muted small" style="flex:1 1 260px">Tu costo de los productos de esta lista = precio − este descuento. Vacío: el precio es tu costo. No usa el descuento general de la ficha (${esc(distNombre(L.dist))}${num((Store.get('proveedores', L.dist) || {}).descuento) ? ' ' + fmtNum(num(Store.get('proveedores', L.dist).descuento), 1) + '%' : ''}).</span></div>
+      ${(() => { const dd = Store.get('proveedores', L.dist) || {}; const cnt = (k) => filas.filter(f => esEspLista(f.it, k)).length;
+        const campo = (k, t) => { const r = reglaEsp(dd, k); return `<label class="fld" style="margin:0"><span>${t} %</span><input class="inp num" inputmode="decimal" data-esp="${k}" value="${r ? esc(r.pct) : ''}" placeholder="igual que la lista" style="max-width:160px"><span class="muted small">${fmtQty(cnt(k))} en esta lista</span></label>`; };
+        return `<div class="row" style="gap:14px;flex-wrap:wrap;align-items:start;margin:-4px 0 12px;padding:10px 12px;background:#F5F3FF;border:1px solid #DDD6FE;border-radius:10px"><div style="flex:1 1 100%;font-weight:600">Descuento aparte de ${esc(distNombre(L.dist))}</div>${campo('var', 'Variadores de frecuencia')}${campo('arr', 'Arrancadores suaves')}<span class="muted small" style="flex:1 1 220px;align-self:center">Si lo llenas, esos productos usan este descuento en vez del de la lista. Vacío: usan el de la lista. Se guarda en la ficha del distribuidor (Descuentos → Categoría), donde puedes poner otras categorías.</span></div>`; })()}
       <p class="muted small" style="margin:-4px 0 10px">Archivo: ${esc(L.archivo || '—')} · subida el ${esc(fmtFecha(L.cargado))}${L.por ? ' por ' + esc(L.por) : ''}</p>
       <div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:10px">
         <input class="inp" data-q placeholder="Buscar referencia, nombre o código…" value="${esc(F.q)}" style="flex:1 1 260px">
@@ -5548,6 +5591,7 @@ Views.existencias = (v, sel) => {
   $('[data-stock]', body).onchange = (e) => { F.stock = e.target.value; guardaF(); };
   $('[data-precio]', body).onchange = (e) => { F.precio = e.target.value; guardaF(); };
   $('[data-dto]', body).onchange = (e) => { const r = clone(Store.get('listas', L.id)); const t = e.target.value.trim(); r.dto = t === '' ? '' : num(t); Store.put('listas', r); UI.toast(t === '' ? 'Sin descuento: el precio es tu costo' : `Descuento de ${fmtNum(num(t), 1)}% guardado`); };
+  $$('[data-esp]', body).forEach(inp => inp.onchange = (e) => { const t = e.target.value.trim(); setReglaEsp(L.dist, e.target.dataset.esp, t === '' ? null : num(t)); UI.toast(t === '' ? `Sin descuento aparte: ${ESP_LISTA[e.target.dataset.esp].nombre.toLowerCase()} usan el de la lista` : `${ESP_LISTA[e.target.dataset.esp].nombre}: descuento de ${fmtNum(num(t), 1)}% guardado`, 3500); });
   $('[data-up2]', body).onclick = () => subirListaModal(L.dist, L.marca);
   $('[data-pr]', body).onclick = () => subirListaModal(L.dist, L.marca, 'parte');
   $('[data-del]', body).onclick = async () => { if (!(await UI.confirm(`¿Borrar la lista de ${distNombre(L.dist)}${L.marca ? ' ' + L.marca : ''}? Dejará de salir en el cotizador.`, { ok: 'Borrar', danger: true }))) return; Listas.borrar(L.id); lsSet('suinadm_lista_sel', ''); Route.nav('#/existencias', { replace: true }); };
