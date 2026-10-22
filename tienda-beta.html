@@ -1862,7 +1862,7 @@
 
 <script>window.SUIN_RASTREO_MANUAL = true; /* rastreo.js arranca cuando se sabe si es administrador */</script>
 <script src="/especificaciones.js?v=2"></script>
-<script src="/enlaces-oficiales.js?v=1"></script>
+<script src="/enlaces-oficiales.js?v=2"></script>
 <!-- beta: sin rastreo.js para no mezclar las pruebas con las visitas reales -->
 <script>window.suinRastreo = { visitante: '', evento: function(){}, iniciar: function(){}, tarjetas: function(){}, noContarMas: function(){}, vaciar: function(){} };</script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -2433,7 +2433,7 @@ function enlacesOficialesHTML(p){
   const marca = p.marca ? ' ' + escHtml(p.marca) : '';
   return '<div class="det-enlaces">' +
     (e.pagina ? '<a class="det-ficha" href="' + escHtml(e.pagina) + '" target="_blank" rel="noopener">🔗&#xFE0E; Página oficial' + marca + ' ↗</a>' : '') +
-    (e.manual ? '<a class="det-ficha" href="' + escHtml(e.manual) + '" target="_blank" rel="noopener">📄&#xFE0E; Manual (PDF) ↗</a>' : '') +
+    (e.manual ? '<a class="det-ficha" href="' + escHtml(e.manual) + '" target="_blank" rel="noopener">📄&#xFE0E; ' + escHtml(e.manualTexto || 'Manual (PDF)') + ' ↗</a>' : '') +
     '</div>';
 }
 

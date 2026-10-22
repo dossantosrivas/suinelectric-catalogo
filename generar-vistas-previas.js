@@ -178,7 +178,7 @@ function enlacesOficiales(p){
   if (!e.pagina && !e.manual) return '';
   return '<div class="p-enlaces">' +
     (e.pagina ? '<a href="' + esc(e.pagina) + '" target="_blank" rel="noopener nofollow">Página oficial' + (p.marca ? ' ' + esc(String(p.marca).toUpperCase()) : '') + ' ↗</a>' : '') +
-    (e.manual ? '<a href="' + esc(e.manual) + '" target="_blank" rel="noopener nofollow">Manual (PDF) ↗</a>' : '') +
+    (e.manual ? '<a href="' + esc(e.manual) + '" target="_blank" rel="noopener nofollow">' + esc(e.manualTexto || 'Manual (PDF)') + ' ↗</a>' : '') +
     '</div>';
 }
 

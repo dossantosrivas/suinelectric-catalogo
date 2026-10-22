@@ -16,7 +16,7 @@
      · generar-vistas-previas.js (páginas /p/)
      · tienda.html (en el navegador, para productos del panel o del inventario)
 
-   Para agregar una serie: copia una línea de SERIES_INVT con el inicio del
+   Para agregar una serie: copia una línea de SERIES_INVT (o REGLAS_HYUNDAI) con el inicio del
    modelo (prefijo), la página y el manual. Nunca poner enlaces al proveedor.
    ===================================================================== */
 (function (raiz, fabrica){
@@ -44,6 +44,28 @@ const SERIES_INVT = [
   { serie: 'EC-PG',  pagina: INVT + 'pg-series-encoder-interface-card-49', manual: null },
 ];
 
+// HYUNDAI (hyundai-electric.es). Se revisan en orden: el primero que coincide gana.
+// pdfTexto: cómo se llama el botón del PDF (casi siempre es la ficha técnica).
+const HY = 'https://hyundai-electric.es/producto/';
+const HYPDF = 'https://hyundai-electric.es/wp-content/uploads/';
+const FICHA = 'Ficha técnica (PDF)';
+const REGLAS_HYUNDAI = [
+  { re: /^(HGC|HOK)/,                  pagina: HY + 'contactores-magneticos-hgc-y-minicontactores-umm', pdf: HYPDF + 'datasheet_HGC.pdf', pdfTexto: FICHA },
+  { re: /^HGT/,                        pagina: HY + 'reles-termicos-hgt',             pdf: HYPDF + 'datasheet_HGT.pdf', pdfTexto: FICHA },
+  { re: /^MMS/,                        pagina: HY + 'guardamotores',                  pdf: HYPDF + 'datasheet_MMS.pdf', pdfTexto: FICHA },
+  { re: /^(AUX|ALT|AXT|ENC)-?HGD/,     pagina: HY + 'accesorios-aparamenta-modular',  pdf: HYPDF + 'datasheet_HGD63_HGD100_ACCESORIOS-1.pdf', pdfTexto: FICHA },
+  { re: /^HGD63/,                      pagina: HY + 'proteccion-magnetotermica-std',  pdf: HYPDF + 'datasheet_HGD63_HGD100_ACCESORIOS.pdf', pdfTexto: FICHA },
+  { re: /^HGD/,                        pagina: HY + 'proteccion-magnetotermica-std',  pdf: null },
+  { re: /^HGM/,                        pagina: HY + 'interruptores-caja-moldeada-hgm-hasta-1250a', pdf: HYPDF + 'datasheet_MCCB_HGM.pdf', pdfTexto: FICHA },
+  { re: /^(CTB|TQQ|TBB|TCF|AUX|ALT|AXT|SHT|UVT|TFG|TFH|MOT|MIF|PLD|DRA)[0-9]/,
+                                       pagina: HY + 'accesorios-de-interruptores-de-caja-moldeada-mccb', pdf: HYPDF + 'datasheet_MCCB_accesorios.pdf', pdfTexto: FICHA },
+  { re: /^HGNS/,                       pagina: HY + 'accesorios-de-interruptores-de-bastidor-abierto-hgn-hgs', pdf: HYPDF + 'MANUAL-HGN-S-ACB-ES1.pdf', pdfTexto: 'Manual (PDF)' },
+  { re: /^HGN/,                        pagina: HY + 'interruptores-bastidor-abierto-hgn-hgs-hasta-6300a', pdf: HYPDF + 'datasheet_ACB_HGN.pdf', pdfTexto: FICHA },
+  { re: /^HGP/,                        pagina: HY + 'interruptores-caja-moldeada-hgp-hasta-800a', pdf: HYPDF + 'datasheet_MCCB_HGP.pdf', pdfTexto: FICHA },
+  { re: /^HGV/,                        pagina: HY + 'interruptor-de-media-tension-hgv', pdf: 'https://hyundai-electric.es/media/FICHA%20TECNICA%20INT_%20MEDIA%20TENSION%20HGV-co.pdf', pdfTexto: FICHA },
+  { re: /^UVC/,                        pagina: HY + 'contactor-media-tension-en-vacio', pdf: null },
+];
+
 const limpiar = (u) => {
   let s = String(u || '').trim().replace(/&amp;/gi, '&').replace(/&;+/g, '&').replace(/[.,;)]+$/, '');
   if (!/^https?:\/\//i.test(s) || /grupo-electricos\.com/i.test(s)) return null;   // nunca al proveedor
@@ -63,6 +85,10 @@ function porReglas(p){
     const s = SERIES_INVT.find(x => modelo.startsWith(x.serie));
     return s ? { pagina: s.pagina, manual: s.manual } : {};
   }
+  if (/HYUNDAI/.test(marca)){
+    const s = REGLAS_HYUNDAI.find(x => x.re.test(modelo));
+    return s ? { pagina: s.pagina, manual: s.pdf, manualTexto: s.pdfTexto } : {};
+  }
   if (/SIEMENS/.test(marca) && /^[0-9][A-Z0-9]{2,}([- ][A-Z0-9]+)*$/.test(modelo))
     return { pagina: urlSiemens(p.modelo) };
   if (/SCHNEIDER|TELEMECANIQUE|SQUARE ?D/.test(marca) && /^[A-Z0-9][A-Z0-9-]{3,}$/.test(modelo))
@@ -76,8 +102,9 @@ function enlacesDe(p){
   return {
     pagina: limpiar(p.pagina_oficial) || limpiar(p.ficha_tecnica) || limpiar(p.info_tecnica_url) || limpiar(r.pagina),
     manual: limpiar(p.manual_url) || limpiar(r.manual),
+    manualTexto: (!limpiar(p.manual_url) && r.manualTexto) || 'Manual (PDF)',
   };
 }
 
-return { enlacesDe, SERIES_INVT };
+return { enlacesDe, SERIES_INVT, REGLAS_HYUNDAI };
 });
