@@ -740,6 +740,33 @@ body.gen .letra button{width:100%;min-width:0}
 .prec-baja td{opacity:.55}.prec-baja:hover td{opacity:1}
 .prec-ok{color:var(--ok)}.prec-bad{color:var(--red)}
 @media (max-width:760px){.prec-cmp{grid-template-columns:minmax(0,1fr)}.prec-img{width:48px}.prec-img img{width:44px;height:44px}.prec-big{font-size:26px}}
+/* ===== Escáner de códigos de barra ===== */
+.esc-top{display:flex;flex-wrap:wrap;gap:8px;margin-bottom:10px}
+.esc-grid{display:grid;grid-template-columns:minmax(0,1fr) minmax(0,1.15fr);gap:14px;align-items:start}
+@media (max-width:760px){.esc-grid{grid-template-columns:minmax(0,1fr)}}
+.esc-cam{position:relative;background:#0b1620;border-radius:8px;overflow:hidden;aspect-ratio:4/3;max-height:44vh;width:100%}
+.esc-cam video{width:100%;height:100%;object-fit:cover;display:block}
+.esc-guia{position:absolute;left:7%;right:7%;top:28%;bottom:28%;border:3px solid rgba(255,194,14,.95);border-radius:10px;box-shadow:0 0 0 999px rgba(0,0,0,.28);pointer-events:none;transition:border-color .15s}
+.esc-guia::after{content:'';position:absolute;left:5%;right:5%;top:50%;height:2px;background:rgba(239,68,68,.85)}
+.esc-cam.ok .esc-guia{border-color:#22c55e}
+.esc-off{position:absolute;inset:0;display:flex;align-items:center;justify-content:center;color:#fff;text-align:center;padding:16px;background:#0b1620;z-index:1}
+.esc-cam [hidden]{display:none!important}
+.esc-cam-btns{position:absolute;right:8px;bottom:8px;display:flex;gap:6px;z-index:2}
+.esc-man{display:flex;gap:6px;margin-top:8px}.esc-man .inp{flex:1;min-width:0}
+.esc-card{border:1px solid var(--line);border-radius:8px;padding:12px;background:var(--panel-2)}
+.esc-nuevo{border-color:var(--amber);background:var(--amber-soft)}
+.esc-exist{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:6px;margin-top:10px}
+.esc-exist>div{background:var(--panel);border:1px solid var(--line-2);border-radius:6px;padding:6px 8px;display:flex;flex-direction:column}
+.esc-exist b{font-size:20px}.esc-exist b.neg{color:var(--red)}
+.esc-lp{display:flex;flex-direction:column;gap:6px;max-height:260px;overflow:auto}
+.esc-op{display:flex;flex-direction:column;align-items:flex-start;text-align:left;gap:2px;padding:8px 10px;border:1px solid var(--line);border-radius:6px;background:var(--panel);cursor:pointer;font:inherit;color:inherit}
+.esc-op:hover{border-color:var(--plate-2)}
+.esc-mas{font-size:18px;padding:10px 12px;border-radius:8px;background:var(--ok-soft);color:var(--ok);margin-bottom:8px}
+.esc-cnt-h{display:flex;justify-content:space-between;align-items:center;gap:8px;flex-wrap:wrap;margin:4px 0 8px}
+.esc-tbl{max-height:46vh}
+.esc-nom{max-width:240px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+.esc-q{display:inline-flex;gap:4px;align-items:center}.esc-q .inp{width:62px;text-align:center;padding-left:4px;padding-right:4px}
+.esc-dif{font-weight:700}.esc-dif.pos{color:var(--ok)}.esc-dif.neg{color:var(--red)}
 </style>
 </head>
 <body>
@@ -1983,7 +2010,7 @@ const ico = (n) => `<svg viewBox="0 0 24 24">${ICON[n] || ''}</svg>`;
 const NAV = [
   ['resumen', 'Resumen', 'home'], ['ofertas', 'Ofertas', 'offer'], ['ventas', 'Ventas', 'sale'], ['compras', 'Compras', 'buy'],
   ['empleados', 'Empleados', 'badge'], ['clientes', 'Clientes', 'users'], ['distribuidores', 'Distribuidores', 'truck'],
-  ['inventario', 'Inventario', 'box'], ['existencias', 'Listas de existencias', 'list'], ['pedidos', 'Pedidos a distribuidores', 'bolt'], ['precios', 'Precios', 'search'], ['ajustes', 'Ajustes', 'gear']
+  ['inventario', 'Inventario', 'box'], ['escanear', 'Escanear', 'scan'], ['existencias', 'Listas de existencias', 'list'], ['pedidos', 'Pedidos a distribuidores', 'bolt'], ['precios', 'Precios', 'search'], ['ajustes', 'Ajustes', 'gear']
 ];
 
 const UI = {
@@ -4419,7 +4446,7 @@ Views.inventario = (v, invArg) => {
   Calc.movs.forEach((ms, pid) => { let q = 0, ult = ''; ms.forEach(x => { if (esVenta(x.doc) && x.doc.estado !== 'anulada') { q += -x.delta; if ((x.doc.fecha || '') > ult) ult = x.doc.fecha; } }); vend.set(pid, { q, ult, mov: ms.reduce((a, x) => (x.doc.fecha || '') > a ? x.doc.fecha : a, '') }); });
   const caminoTag = (p) => { const c = Calc.enCamino(p.id); return c ? `<span class="inv-camino" title="Compra internacional que todavía no llega: ${esc(c.docs.map(d => d.numero).join(', '))}">✈ ${fmtQty(c.cant)} en camino</span>` : ''; };
   const FILTROS = [['1', 'Con existencia'], ['camino', '✈ En camino'], ['0', 'Todos'], ['pocas', 'Pocas unidades'], ['sin', 'Agotados'], ['neg', 'Negativos'], ['sinprecio', 'Sin precio'], ['sincosto', 'Sin costo']];
-  v.innerHTML = `<div class="vh"><h1>Inventario</h1><div class="act"><details class="menu-mas"><summary class="btn">Más herramientas</summary><div class="menu-pop"><button class="btn ghost" data-cats>Ordenar categorías</button><button class="btn ghost" data-grupos title="Cambia el grupo de cada producto por su categoría de la tienda">Grupos → categorías</button><button class="btn ghost" data-desc>Mejorar descripciones</button><button class="btn ghost" data-exp>${ico('pdf')} Exportar</button></div></details><button class="btn pri" data-np>${ico('plus')} Producto</button></div><div class="sub">Las existencias se calculan con las compras, ventas y ajustes. Toca un producto para ver su ficha o corregirlo.</div></div>
+  v.innerHTML = `<div class="vh"><h1>Inventario</h1><div class="act"><details class="menu-mas"><summary class="btn">Más herramientas</summary><div class="menu-pop"><button class="btn ghost" data-cats>Ordenar categorías</button><button class="btn ghost" data-grupos title="Cambia el grupo de cada producto por su categoría de la tienda">Grupos → categorías</button><button class="btn ghost" data-desc>Mejorar descripciones</button><button class="btn ghost" data-exp>${ico('pdf')} Exportar</button></div></details><button class="btn" data-scan title="Buscar o contar con la cámara o un lector de código de barras">${ico('scan')} Escanear</button><button class="btn pri" data-np>${ico('plus')} Producto</button></div><div class="sub">Las existencias se calculan con las compras, ventas y ajustes. Toca un producto para ver su ficha o corregirlo.</div></div>
     <div class="inv-kpis" id="inv-kpis"></div>
     <div class="panel inv-filtros">
       <div class="inv-buscar">
@@ -4618,6 +4645,7 @@ Views.inventario = (v, invArg) => {
   $('[data-seg]', v).addEventListener('click', e => { const b = e.target.closest('[data-v]'); if (!b) return; F.inv = b.dataset.v; $$('[data-seg] [data-v]', v).forEach(x => x.classList.toggle('on', x === b)); if (invArg) Route.nav('#/inventario', { replace: true, silent: true }); paint(); });
   $('[data-vista]', v).addEventListener('click', e => { const b = e.target.closest('[data-v]'); if (!b) return; F.vista = b.dataset.v; $$('[data-vista] [data-v]', v).forEach(x => x.classList.toggle('on', x === b)); paint(); });
   $('[data-np]', v).onclick = () => productoModal(null);
+  $('[data-scan]', v).onclick = () => Escaner.abrir();
   $('[data-desc]', v).onclick = () => descripcionesModal();
   $('[data-cats]', v).onclick = () => categoriasModal();
   $('[data-grupos]', v).onclick = () => gruposACategoriasModal();
@@ -4633,9 +4661,364 @@ Views.inventario = (v, invArg) => {
   paint();
 };
 
-function productoModal(p) {
+/* ---------------- Escáner de códigos de barra ----------------
+   Con la cámara del celular (lector nativo del navegador en Android/Chrome; ZXing en iPhone y PC)
+   o con un lector USB/Bluetooth (escribe el código y Enter en la casilla).
+   Cada producto guarda sus códigos en p.barras; el código/modelo del producto también sirve como
+   código (para las etiquetas propias). Si escaneas un código que no conoce, te pregunta de qué
+   producto es y lo aprende.
+   Modos: Buscar (ver el producto y su existencia) y Contar (conteo físico: al terminar registra un
+   ajuste con las diferencias, como cuando corriges la existencia a mano). El conteo en curso se
+   guarda en este equipo, así que no se pierde si se cierra la página. */
+ICON.scan = '<path d="M4 8V5a1 1 0 0 1 1-1h3M16 4h3a1 1 0 0 1 1 1v3M20 16v3a1 1 0 0 1-1 1h-3M8 20H5a1 1 0 0 1-1-1v-3"/><path d="M7.5 8v8M10 8v8M12.5 8v8M15 8v5M16.5 8v8"/>';
+
+const Barras = {
+  norm: (s) => String(s == null ? '' : s).trim().replace(/\s+/g, '').toUpperCase(),
+  /* EAN/UPC con dígito verificador correcto = código del modelo (igual en todas las cajas) */
+  gtin(s) {
+    const k = this.norm(s); if (!/^\d+$/.test(k) || ![8, 12, 13, 14].includes(k.length)) return false;
+    let sum = 0; for (let i = k.length - 2, w = 3; i >= 0; i--, w = w === 3 ? 1 : 3) sum += +k[i] * w;
+    return (10 - sum % 10) % 10 === +k[k.length - 1];
+  },
+  variantes(k) { // un UPC-A (12) también se lee como EAN-13 con un 0 delante
+    const v = [k]; if (/^0\d{12}$/.test(k)) v.push(k.slice(1)); else if (/^\d{12}$/.test(k)) v.push('0' + k); return v;
+  },
+  index() {
+    const m = new Map();
+    Store.all('productos').forEach(p => (p.barras || []).forEach(b => { const k = this.norm(b); if (k && !m.has(k)) m.set(k, p); }));
+    return m;
+  },
+  buscar(code) {
+    const k = this.norm(code); if (!k) return null;
+    const m = this.index();
+    for (const x of this.variantes(k)) if (m.has(x)) return { p: m.get(x), como: 'barras' };
+    const nk = normKey(code); if (!nk) return null;
+    const p = Store.all('productos').find(x => normKey(x.codigo) === nk);
+    return p ? { p, como: 'codigo' } : null;
+  },
+  dueno(code, salvoId) { // ¿qué otro producto ya tiene este código?
+    const k = this.norm(code);
+    return Store.all('productos').find(p => p.id !== salvoId && ((p.barras || []).some(b => this.variantes(k).includes(this.norm(b))) || normKey(p.codigo) === normKey(code))) || null;
+  },
+  vincular(pid, code) {
+    const r = Store.get('productos', pid); if (!r) return null;
+    const k = this.norm(code);
+    r.barras = Array.from(new Set((r.barras || []).map(x => this.norm(x)).concat(k))).filter(Boolean);
+    Store.put('productos', r); return r;
+  },
+  textoDe: (p) => [p.codigo, p.nombre, p.marca, p.descripcion].concat(p.barras || []).join(' '),
+  filtrar(q, n = 8) {
+    const w = normTxt(q).split(/\s+/).filter(Boolean); if (!w.length) return [];
+    return Store.all('productos').filter(p => { const t = normTxt(this.textoDe(p)); return w.every(x => t.includes(x)); })
+      .sort((a, b) => (normKey(a.codigo) === normKey(q) ? -1 : 0) - (normKey(b.codigo) === normKey(q) ? -1 : 0) || String(a.codigo).localeCompare(String(b.codigo))).slice(0, n);
+  }
+};
+
+/* cámara: lector nativo (BarcodeDetector) si el navegador lo trae; si no, ZXing (se carga solo al usarlo) */
+const Camara = (() => {
+  const ZX = ['https://cdn.jsdelivr.net/npm/@zxing/library@0.23.0/umd/index.min.js', 'https://unpkg.com/@zxing/library@0.23.0/umd/index.min.js'];
+  const FMT = ['ean_13', 'ean_8', 'upc_a', 'upc_e', 'code_128', 'code_39', 'code_93', 'itf', 'codabar', 'qr_code', 'data_matrix'];
+  let nativoOk = null;
+  const nativo = async () => {
+    if (!('BarcodeDetector' in window)) return null;
+    try {
+      const sup = await window.BarcodeDetector.getSupportedFormats();
+      const f = FMT.filter(x => sup.includes(x)); if (!f.length) return null;
+      const d = new window.BarcodeDetector({ formats: f });
+      return async (video) => { const r = await d.detect(video); return r && r[0] ? r[0].rawValue : null; };
+    } catch (e) { return null; }
+  };
+  const zxing = async () => {
+    await cargarJS(ZX, () => window.ZXing);
+    const Z = window.ZXing, hints = new Map();
+    hints.set(Z.DecodeHintType.POSSIBLE_FORMATS, ['EAN_13', 'EAN_8', 'UPC_A', 'UPC_E', 'CODE_128', 'CODE_39', 'CODE_93', 'ITF', 'CODABAR', 'QR_CODE', 'DATA_MATRIX'].map(k => Z.BarcodeFormat[k]).filter(x => x != null));
+    hints.set(Z.DecodeHintType.TRY_HARDER, true);
+    const rd = new Z.MultiFormatReader(); rd.setHints(hints);
+    const cv = document.createElement('canvas'), cx = cv.getContext('2d', { willReadFrequently: true });
+    let franja = 0;
+    return async (video) => {
+      const w = video.videoWidth, h = video.videoHeight; if (!w || !h) return null;
+      // la franja de la guía (centro); cada tanto, toda la imagen por si el código está más arriba o abajo
+      const toda = (franja++ % 4) === 3;
+      const sh = toda ? h : Math.round(h * 0.45), sy = toda ? 0 : Math.round((h - sh) / 2);
+      const sc = Math.min(1, 960 / w);
+      cv.width = Math.round(w * sc); cv.height = Math.round(sh * sc);
+      cx.drawImage(video, 0, sy, w, sh, 0, 0, cv.width, cv.height);
+      try { return rd.decodeWithState(new Z.BinaryBitmap(new Z.HybridBinarizer(new Z.HTMLCanvasElementLuminanceSource(cv)))).getText(); }
+      catch (e) { return null; }
+    };
+  };
+  const errTxt = (e) => {
+    const n = e && e.name;
+    if (!window.isSecureContext) return 'La cámara solo funciona con https://';
+    if (n === 'NotAllowedError' || n === 'SecurityError') return 'No diste permiso para usar la cámara. Actívalo en el candado de la barra de direcciones (Permisos → Cámara) y vuelve a intentar.';
+    if (n === 'NotFoundError' || n === 'OverconstrainedError') return 'Este equipo no tiene cámara. Usa la casilla de abajo o un lector USB/Bluetooth.';
+    if (n === 'NotReadableError') return 'Otra app está usando la cámara. Ciérrala y vuelve a intentar.';
+    return 'No se pudo abrir la cámara: ' + ((e && e.message) || e);
+  };
+  /* inicia la cámara en <video> y llama onCode(texto) con cada lectura. Devuelve { stop, torch, tieneTorch, motor } */
+  const iniciar = async (video, onCode) => {
+    if (!navigator.mediaDevices || !navigator.mediaDevices.getUserMedia) throw new Error(errTxt({ name: window.isSecureContext ? 'NotFoundError' : '' }));
+    let stream;
+    try { stream = await navigator.mediaDevices.getUserMedia({ audio: false, video: { facingMode: { ideal: 'environment' }, width: { ideal: 1280 }, height: { ideal: 720 } } }); }
+    catch (e) { throw new Error(errTxt(e)); }
+    video.setAttribute('playsinline', ''); video.setAttribute('muted', ''); video.muted = true; video.srcObject = stream;
+    try { await video.play(); } catch (e) { /* algunos navegadores ya lo reproducen */ }
+    const track = stream.getVideoTracks()[0];
+    try { await track.applyConstraints({ advanced: [{ focusMode: 'continuous' }] }); } catch (e) { /* no todas las cámaras */ }
+    let detect = null, motor = 'zxing';
+    if (nativoOk !== false) { detect = await nativo(); nativoOk = !!detect; if (detect) motor = 'nativo'; }
+    if (!detect) { try { detect = await zxing(); } catch (e) { stream.getTracks().forEach(t => t.stop()); throw new Error('No se pudo cargar el lector de códigos (revisa el internet).'); } }
+    let parado = false, ocupado = false, fallos = 0;
+    const tick = async () => {
+      if (parado) return;
+      if (!ocupado && video.readyState >= 2) {
+        ocupado = true;
+        try { const c = await detect(video); if (c && !parado) onCode(String(c)); fallos = 0; }
+        catch (e) { if (motor === 'nativo' && ++fallos > 8) { try { detect = await zxing(); motor = 'zxing'; nativoOk = false; } catch (er) { /* se queda el nativo */ } } }
+        ocupado = false;
+      }
+      setTimeout(tick, motor === 'nativo' ? 120 : 220);
+    };
+    tick();
+    const caps = track.getCapabilities ? track.getCapabilities() : {};
+    let luz = false;
+    return {
+      motor, tieneTorch: !!caps.torch,
+      async torch() { luz = !luz; try { await track.applyConstraints({ advanced: [{ torch: luz }] }); } catch (e) { luz = false; } return luz; },
+      stop() { parado = true; stream.getTracks().forEach(t => t.stop()); video.srcObject = null; }
+    };
+  };
+  return { iniciar };
+})();
+
+/* pitido y vibración al leer */
+const Pitido = (() => {
+  let ac = null;
+  return (ok = true) => {
+    try { if (navigator.vibrate) navigator.vibrate(ok ? 60 : [40, 60, 40]); } catch (e) { /* */ }
+    try {
+      ac = ac || new (window.AudioContext || window.webkitAudioContext)();
+      const o = ac.createOscillator(), g = ac.createGain(); o.type = 'square'; o.frequency.value = ok ? 1650 : 420;
+      g.gain.setValueAtTime(0.06, ac.currentTime); g.gain.exponentialRampToValueAtTime(0.0001, ac.currentTime + (ok ? 0.09 : 0.22));
+      o.connect(g); g.connect(ac.destination); o.start(); o.stop(ac.currentTime + (ok ? 0.1 : 0.24));
+    } catch (e) { /* sin sonido */ }
+  };
+})();
+
+/* recuadro de cámara + casilla para escribir o para el lector físico. onCode(texto, desdeCamara) */
+function panelEscaner(box, onCode, { auto = true } = {}) {
+  box.innerHTML = `
+    <div class="esc-cam" data-cam>
+      <video playsinline muted></video>
+      <div class="esc-guia"></div>
+      <div class="esc-off" data-off><div><div style="font-weight:700;margin-bottom:6px">Cámara apagada</div><button type="button" class="btn pri" data-on>${ico('scan')} Encender cámara</button></div></div>
+      <div class="esc-cam-btns"><button type="button" class="btn sm" data-luz hidden>Linterna</button><button type="button" class="btn sm" data-apagar hidden>Apagar</button></div>
+    </div>
+    <form class="esc-man" data-man autocomplete="off"><input class="inp mono" data-cod placeholder="Escribe el código o usa un lector" title="Si tienes un lector USB o Bluetooth, escanea con el cursor aquí" inputmode="text" enterkeyhint="search" autocapitalize="characters" spellcheck="false"><button class="btn" type="submit">Buscar</button></form>`;
+  const video = $('video', box), off = $('[data-off]', box), cam = $('[data-cam]', box), luzB = $('[data-luz]', box), apB = $('[data-apagar]', box);
+  let ctl = null, ultimo = '', ultimoT = 0;
+  const leer = (txt, desdeCamara) => {
+    const k = Barras.norm(txt); if (!k) return;
+    if (desdeCamara) { const t = Date.now(); if (k === ultimo && t - ultimoT < 1100) { ultimoT = t; return; } ultimo = k; ultimoT = t; cam.classList.add('ok'); setTimeout(() => cam.classList.remove('ok'), 350); }
+    onCode(k, desdeCamara);
+  };
+  const encender = async () => {
+    off.innerHTML = '<div>Abriendo la cámara…</div>';
+    try {
+      ctl = await Camara.iniciar(video, (c) => leer(c, true));
+      if (!box.isConnected) { ctl.stop(); return; }
+      off.hidden = true; apB.hidden = false; luzB.hidden = !ctl.tieneTorch;
+    } catch (e) {
+      off.hidden = false;
+      off.innerHTML = `<div><div style="margin-bottom:8px">${esc(e.message || e)}</div><button type="button" class="btn" data-on>Intentar de nuevo</button></div>`;
+      $('[data-on]', off).onclick = encender;
+    }
+  };
+  const apagar = () => { if (ctl) { ctl.stop(); ctl = null; } off.hidden = false; apB.hidden = true; luzB.hidden = true; off.innerHTML = `<div><div style="font-weight:700;margin-bottom:6px">Cámara apagada</div><button type="button" class="btn pri" data-on>${ico('scan')} Encender cámara</button></div>`; $('[data-on]', off).onclick = encender; };
+  $('[data-on]', off).onclick = encender;
+  apB.onclick = apagar;
+  luzB.onclick = async () => { const on = await ctl.torch(); luzB.classList.toggle('pri', on); };
+  $('[data-man]', box).onsubmit = (e) => { e.preventDefault(); const i = $('[data-cod]', box); const v = i.value; i.value = ''; leer(v, false); if (!matchMedia('(pointer:coarse)').matches) i.focus(); };
+  if (auto) encender();
+  return { reset: () => { ultimo = ''; ultimoT = 0; }, stop: () => { if (ctl) { ctl.stop(); ctl = null; } }, focus: () => { if (!matchMedia('(pointer:coarse)').matches) $('[data-cod]', box).focus(); } };
+}
+
+const Escaner = (() => {
+  const KEY = 'suinadm_conteo';
+  const conteo = () => { const c = lsGet(KEY, null); return c && c.items ? c : { inv: 'manuel', items: {}, orden: [], inicio: '' }; };
+  const guardarConteo = (c) => lsSet(KEY, c);
+
+  /* captura un solo código (para la ficha del producto) */
+  const capturar = () => new Promise(res => {
+    let val = null;
+    const m = UI.modal({ title: 'Escanear código de barras', foot: [['Cancelar', '', c => c()]], body: '<div data-pan></div><p class="small muted" style="margin:8px 0 0">Apunta al código del modelo (EAN/UPC), no al número de serie (S/N).</p>', onClose: () => { pan.stop(); res(val); } });
+    const pan = panelEscaner($('[data-pan]', m.body), (k) => { Pitido(true); val = k; m.close(); });
+    pan.focus();
+  });
+
+  const abrir = (opc = {}) => {
+    let modo = opc.modo || lsGet('suinadm_esc_modo', 'buscar');
+    let C = conteo();
+    let pendiente = null;   // código que no se conoce y espera que digas de qué producto es
+    const m = UI.modal({
+      title: 'Escanear', wide: true, foot: false,
+      body: `
+      <div class="esc-top">
+        <div class="seg" data-modo>${[['buscar', 'Buscar'], ['contar', 'Contar inventario']].map(([k, l]) => `<button type="button" data-v="${k}">${l}</button>`).join('')}</div>
+        <div class="seg" data-inv>${['manuel', 'papa'].map(k => `<button type="button" data-v="${k}">${esc(origenNombre(k))}</button>`).join('')}</div>
+      </div>
+      <div class="esc-grid">
+        <div><div data-pan></div><div class="small muted" data-ayuda style="margin-top:6px"></div></div>
+        <div><div class="esc-res" data-res></div><div data-cnt></div></div>
+      </div>`,
+      onClose: () => pan.stop()
+    });
+    const B = m.body;
+    const pan = panelEscaner($('[data-pan]', B), (k, cam) => leer(k, cam));
+    pan.focus();
+
+    const ayuda = () => {
+      $('[data-ayuda]', B).innerHTML = modo === 'contar'
+        ? `Contando el inventario de <b>${esc(origenNombre(C.inv))}</b>. Escanea cada unidad (o corrige la cantidad en la lista). Al terminar, Gestión registra un ajuste solo con las diferencias.`
+        : 'Escanea un producto para ver su existencia y precio. Si el código es nuevo, te pregunta de qué producto es y lo aprende.';
+    };
+    const pintarModo = () => {
+      $$('[data-modo] [data-v]', B).forEach(b => b.classList.toggle('on', b.dataset.v === modo));
+      $$('[data-inv] [data-v]', B).forEach(b => b.classList.toggle('on', b.dataset.v === C.inv));
+      $('[data-inv]', B).style.display = modo === 'contar' ? '' : 'none';
+      ayuda(); pintarConteo();
+    };
+    $('[data-modo]', B).addEventListener('click', e => { const b = e.target.closest('[data-v]'); if (!b) return; modo = b.dataset.v; lsSet('suinadm_esc_modo', modo); $('[data-res]', B).innerHTML = ''; pendiente = null; pan.reset(); pintarModo(); pan.focus(); });
+    $('[data-inv]', B).addEventListener('click', async e => {
+      const b = e.target.closest('[data-v]'); if (!b || b.dataset.v === C.inv) return;
+      if (Object.keys(C.items).length && !(await UI.confirm(`Ya contaste ${Object.keys(C.items).length} productos en el inventario de ${origenNombre(C.inv)}. ¿Empezar un conteo nuevo en el de ${origenNombre(b.dataset.v)}? Se borra el conteo actual (sin ajustar nada).`, { ok: 'Empezar de nuevo', danger: true }))) return;
+      C = { inv: b.dataset.v, items: {}, orden: [], inicio: '' }; guardarConteo(C); pintarModo();
+    });
+
+    /* ---- ficha rápida del producto ---- */
+    const tarjeta = (p, como, code) => {
+      const s = Calc.st(p.id), cam = Calc.enCamino(p.id);
+      return `<div class="esc-card">
+        <div class="row" style="justify-content:space-between;align-items:flex-start;gap:8px">
+          <div style="min-width:0"><div class="mono" style="font-weight:700;font-size:18px">${esc(p.codigo)}</div>
+          <div>${esc(p.nombre || p.descripcion || '')}</div>${p.marca ? `<div class="small muted">${esc(p.marca)}</div>` : ''}</div>
+          ${(p.imagenes || [])[0] ? `<img src="${esc(p.imagenes[0])}" alt="" style="width:64px;height:64px;object-fit:contain;flex:none">` : ''}
+        </div>
+        <div class="esc-exist">${['manuel', 'papa'].map(i => `<div><span class="small muted">${esc(origenNombre(i))}</span><b class="${s[i].cant < 0 ? 'neg' : ''}">${fmtQty(s[i].cant)}</b></div>`).join('')}
+          <div><span class="small muted">Total</span><b>${fmtQty(s.manuel.cant + s.papa.cant)}</b></div>
+          <div><span class="small muted">Precio</span><b>${num(p.precio) ? fmtUSD(p.precio) : '—'}</b></div></div>
+        ${cam ? `<div class="small" style="margin-top:6px">✈ ${fmtQty(cam.cant)} en camino</div>` : ''}
+        <div class="small muted" style="margin-top:6px">Leído: <span class="mono">${esc(code)}</span>${como === 'codigo' ? ' (es su código/modelo)' : ''}</div>
+        <div class="row" style="margin-top:10px"><button type="button" class="btn sm" data-ficha="${esc(p.id)}">Abrir ficha</button></div>
+      </div>`;
+    };
+    const conectarFicha = (box) => $$('[data-ficha]', box).forEach(b => b.onclick = () => productoModal(Store.get('productos', b.dataset.ficha)));
+
+    /* ---- código nuevo: ¿de qué producto es? ---- */
+    const desconocido = (code) => {
+      pendiente = code;
+      const ok = Barras.gtin(code);
+      const res = $('[data-res]', B);
+      res.innerHTML = `<div class="esc-card esc-nuevo">
+        <div style="font-weight:700">Código nuevo: <span class="mono">${esc(code)}</span></div>
+        <div class="small" style="margin:4px 0 8px">${ok ? '<span class="pill ok">EAN/UPC</span> Es un código de modelo: sirve para todas las cajas iguales.' : '<span class="pill warn">Revisa</span> No es un EAN/UPC. Si es el <b>número de serie (S/N)</b> o un lote, no lo guardes: cambia en cada equipo.'}</div>
+        <label class="fld"><span>¿De qué producto es?</span><input class="inp" data-qp placeholder="Busca por código, nombre o marca" autocomplete="off" spellcheck="false"></label>
+        <div data-lp class="esc-lp"></div>
+        <div class="row" style="margin-top:8px"><button type="button" class="btn sm" data-crear>${ico('plus')} Crear producto con este código</button><button type="button" class="btn sm ghost" data-ignorar>No guardar</button></div>
+      </div>`;
+      const qp = $('[data-qp]', res), lp = $('[data-lp]', res);
+      const listar = () => {
+        const xs = Barras.filtrar(qp.value);
+        lp.innerHTML = !qp.value.trim() ? '' : xs.length ? xs.map(p => { const s = Calc.st(p.id); return `<button type="button" class="esc-op" data-pid="${esc(p.id)}"><span class="mono">${esc(p.codigo)}</span><span class="small">${esc(p.nombre || p.descripcion || '')}</span><span class="small muted">${p.marca ? esc(p.marca) + ' · ' : ''}${fmtQty(s.manuel.cant + s.papa.cant)} en existencia${(p.barras || []).length ? ' · ya tiene ' + p.barras.length + ' código' + (p.barras.length > 1 ? 's' : '') : ''}</span></button>`; }).join('') : '<div class="small muted">No hay productos con eso en tu inventario. Puedes crearlo.</div>';
+        $$('[data-pid]', lp).forEach(b => b.onclick = () => {
+          const p = Barras.vincular(b.dataset.pid, code); pendiente = null;
+          UI.toast(`Listo: ${code} queda guardado para ${p.codigo}`, 2600);
+          encontrado(p, 'barras', code);
+        });
+      };
+      qp.addEventListener('input', debounce(listar, 150));
+      if (!matchMedia('(pointer:coarse)').matches) setTimeout(() => qp.focus(), 30);
+      $('[data-crear]', res).onclick = () => { pendiente = null; res.innerHTML = `<div class="small muted">Completa el producto y guárdalo; luego vuelve a escanear el código.</div>`; productoModal(null, { barras: [code] }); };
+      $('[data-ignorar]', res).onclick = () => { pendiente = null; res.innerHTML = ''; pan.focus(); };
+    };
+
+    /* ---- producto encontrado ---- */
+    const encontrado = (p, como, code) => {
+      const res = $('[data-res]', B);
+      if (modo === 'contar') {
+        if (!C.items[p.id]) { C.items[p.id] = 0; C.orden.unshift(p.id); } else { C.orden = [p.id].concat(C.orden.filter(x => x !== p.id)); }
+        C.items[p.id] = round2(num(C.items[p.id]) + 1); if (!C.inicio) C.inicio = localStamp();
+        guardarConteo(C);
+        res.innerHTML = `<div class="esc-mas"><b>+1</b> <span class="mono">${esc(p.codigo)}</span> · contados: <b>${fmtQty(C.items[p.id])}</b></div>`;
+        pintarConteo();
+      } else {
+        res.innerHTML = tarjeta(p, como, code); conectarFicha(res);
+      }
+    };
+
+    const leer = (code, cam) => {
+      if (pendiente) { if (cam) return; pendiente = null; }   // con la cámara: espera a que digas de qué producto es
+      const r = Barras.buscar(code);
+      if (!r) { Pitido(false); desconocido(code); return; }
+      Pitido(true); encontrado(r.p, r.como, code);
+    };
+
+    /* ---- lista del conteo ---- */
+    const filas = () => C.orden.filter(pid => C.items[pid] != null && Store.get('productos', pid)).map(pid => {
+      const p = Store.get('productos', pid), sis = Calc.st(pid)[C.inv].cant, cont = num(C.items[pid]);
+      return { p, sis, cont, dif: round2(cont - sis) };
+    });
+    function pintarConteo() {
+      const box = $('[data-cnt]', B);
+      if (modo !== 'contar') { box.innerHTML = ''; return; }
+      const fs = filas(), nDif = fs.filter(f => f.dif).length, uds = fs.reduce((a, f) => a + f.cont, 0);
+      box.innerHTML = `<div class="esc-cnt-h"><div><b>${fs.length}</b> producto${fs.length === 1 ? '' : 's'} · <b>${fmtQty(uds)}</b> unidades contadas${C.inicio ? ` <span class="small muted">· desde ${esc(C.inicio)}</span>` : ''}</div>
+          <div class="small">${fs.length ? (nDif ? `<span class="pill warn">${nDif} con diferencia</span>` : '<span class="pill ok">todo cuadra</span>') : ''}</div></div>
+        ${fs.length ? `<div class="tbl-wrap esc-tbl"><table class="tbl"><thead><tr><th>Producto</th><th class="r">Contado</th><th class="r">Sistema</th><th class="r">Dif.</th></tr></thead><tbody>
+          ${fs.map(f => `<tr><td><div class="mono" style="font-weight:600">${esc(f.p.codigo)}</div><div class="small muted esc-nom">${esc(f.p.nombre || f.p.descripcion || '')}</div></td>
+            <td class="r"><div class="esc-q"><button type="button" class="btn sm" data-menos="${esc(f.p.id)}" aria-label="Uno menos">−</button><input class="inp num" inputmode="decimal" data-cant="${esc(f.p.id)}" value="${fmtQty(f.cont)}"><button type="button" class="btn sm" data-mas="${esc(f.p.id)}" aria-label="Uno más">+</button></div></td>
+            <td class="r">${fmtQty(f.sis)}</td><td class="r esc-dif ${f.dif > 0 ? 'pos' : f.dif < 0 ? 'neg' : ''}">${f.dif > 0 ? '+' : ''}${fmtQty(f.dif)}</td></tr>`).join('')}
+        </tbody></table></div>
+        <div class="row" style="justify-content:space-between;margin-top:10px;gap:8px"><button type="button" class="btn ghost" data-vaciar>Borrar conteo</button><button type="button" class="btn pri" data-ajustar>${nDif ? `Terminar y ajustar (${nDif})` : 'Terminar conteo'}</button></div>
+        <p class="small muted" style="margin:8px 0 0">Solo se ajustan los productos que contaste; los que no escaneaste quedan igual. El conteo se guarda en este equipo hasta que lo termines.</p>`
+        : '<p class="small muted" style="margin:6px 0 0">Todavía no has contado nada. Escanea el primer producto.</p>'}`;
+      const cambiar = (pid, v) => { C.items[pid] = Math.max(0, round2(v)); guardarConteo(C); pintarConteo(); };
+      $$('[data-mas]', box).forEach(b => b.onclick = () => cambiar(b.dataset.mas, num(C.items[b.dataset.mas]) + 1));
+      $$('[data-menos]', box).forEach(b => b.onclick = () => cambiar(b.dataset.menos, num(C.items[b.dataset.menos]) - 1));
+      $$('[data-cant]', box).forEach(i => i.onchange = () => cambiar(i.dataset.cant, num(i.value)));
+      const vac = $('[data-vaciar]', box); if (vac) vac.onclick = async () => { if (!(await UI.confirm('¿Borrar el conteo? No se ajusta nada.', { ok: 'Borrar', danger: true }))) return; C = { inv: C.inv, items: {}, orden: [], inicio: '' }; guardarConteo(C); $('[data-res]', B).innerHTML = ''; pintarConteo(); };
+      const aj = $('[data-ajustar]', box); if (aj) aj.onclick = terminar;
+    }
+    const terminar = async () => {
+      const fs = filas(), difs = fs.filter(f => f.dif);
+      if (!difs.length) {
+        if (!(await UI.confirm(`Todo cuadra: lo contado coincide con el sistema en los ${fs.length} productos. ¿Cerrar el conteo?`, { ok: 'Cerrar conteo' }))) return;
+      } else {
+        const sube = difs.filter(f => f.dif > 0).length, baja = difs.length - sube;
+        if (!(await UI.confirm(`Se registrará un ajuste en el inventario de ${origenNombre(C.inv)} con ${difs.length} producto${difs.length === 1 ? '' : 's'} (${sube} suben, ${baja} bajan). Los otros ${fs.length - difs.length} ya cuadran.`, { ok: 'Registrar ajuste' }))) return;
+        const inv = C.inv;
+        const items = difs.map(f => ({ id: uid('i'), productoId: f.p.id, codigo: f.p.codigo, desc: `*${f.p.codigo}*`, cant: f.dif, precio: 0, costo: round2(Calc.st(f.p.id)[inv].costo || 0), origen: inv }));
+        const d = newDoc('ajuste', { inventario: inv, notas: `Conteo físico con escáner: ${fs.length} productos contados${C.inicio ? ' desde ' + C.inicio : ''}, ${difs.length} con diferencia`, items });
+        Store.put('docs', d);
+        C = { inv, items: {}, orden: [], inicio: '' }; guardarConteo(C);
+        m.close(); UI.toast('Ajuste registrado: ' + d.numero, 3000); Route.nav('#/doc/' + d.id);
+        return;
+      }
+      C = { inv: C.inv, items: {}, orden: [], inicio: '' }; guardarConteo(C); $('[data-res]', B).innerHTML = ''; pintarConteo(); UI.toast('Conteo cerrado');
+    };
+
+    pintarModo();
+    // si cambian los productos o movimientos (otro equipo), se actualiza la lista del conteo
+    const onData = (c) => { if (!m.el.isConnected) { const l = Bus.fns.data || []; const i = l.indexOf(onData); if (i >= 0) l.splice(i, 1); return; } if ((c === 'docs' || c === 'productos') && !(document.activeElement && document.activeElement.matches && document.activeElement.matches('[data-cant]'))) pintarConteo(); };
+    Bus.on('data', onData);
+  };
+  return { abrir, capturar };
+})();
+
+function productoModal(p, extra) {
   const isNew = !p;
-  p = p ? clone(p) : { id: uid('p_'), codigo: '', nombre: '', descripcion: '', marca: '', categoria: '', unidad: 'UND', precio: 0, inv: {}, activo: true, notas: '', tienda: 'borrador', imagenes: [] };
+  p = p ? clone(p) : { id: uid('p_'), codigo: '', nombre: '', descripcion: '', marca: '', categoria: '', unidad: 'UND', precio: 0, inv: {}, activo: true, notas: '', tienda: 'borrador', imagenes: [], barras: (extra && extra.barras) || [] };
   let fotos = (p.imagenes || []).slice();
   const tiendaEst = WebProd.estado(p);
   const s = isNew ? { manuel: { cant: 0, costo: 0 }, papa: { cant: 0, costo: 0 } } : Calc.st(p.id);
@@ -4657,6 +5040,7 @@ function productoModal(p) {
       <label class="fld"><span>Unidad</span><input class="inp" data-k="unidad" value="${esc(p.unidad || 'UND')}"></label>
       <label class="fld"><span>&nbsp;</span><label class="chk"><input type="checkbox" data-k="activo" ${p.activo !== false ? 'checked' : ''}> Activo</label></label>
       <div class="small muted" data-pt-info style="grid-column:1/-1;margin-top:-4px"></div>
+      <div class="fld" style="grid-column:1/-1"><span>Códigos de barras</span><div class="row" style="gap:6px;flex-wrap:nowrap"><input class="inp mono" style="flex:1;min-width:0" data-barras value="${esc((p.barras || []).join(', '))}" placeholder="Escanéalos o escríbelos separados por coma" autocomplete="off" spellcheck="false"><button type="button" class="btn sm" data-esc-barra>${ico('scan')} Escanear</button></div><span class="small muted" style="font-weight:400">El del modelo (EAN/UPC), no el número de serie. El código/modelo del producto ya sirve para tus etiquetas propias.</span></div>
     </div>
     <datalist id="dl-cat">${cats.map(c => `<option value="${esc(c)}">`).join('')}</datalist>
     <datalist id="dl-marcas">${marcasL.map(c => `<option value="${esc(c)}">`).join('')}</datalist>
@@ -4690,6 +5074,9 @@ function productoModal(p) {
         if (p.marca) p.marca = p.marca.toUpperCase();
         if (p.tienda === 'publicado' && WebProd.faltan(p).length) { UI.toast('Para publicarlo en la tienda falta ' + WebProd.faltan(p).join(' y '), 3500); return; }
         const dup = Store.all('productos').find(x => x.id !== p.id && normKey(x.codigo) === normKey(p.codigo)); if (dup) { UI.toast('Ya existe un producto con ese código'); return; }
+        const barras = Array.from(new Set($('[data-barras]', m.body).value.split(/[,;\n]+/).map(Barras.norm).filter(Boolean)));
+        for (const b of barras) { const otro = Barras.dueno(b, p.id); if (otro) { UI.toast(`El código de barras ${b} ya es de ${otro.codigo}`, 3500); return; } }
+        if (barras.length) p.barras = barras; else delete p.barras;
         p.inv = p.inv || {}; const ajustes = [];
         ['manuel', 'papa'].forEach(i => {
           const ci = $(`[data-inv="${i}"][data-ik="cant"]`, m.body), co = $(`[data-inv="${i}"][data-ik="costo"]`, m.body);
@@ -4732,6 +5119,13 @@ function productoModal(p) {
   };
   $('[data-k="codigo"]', m.body).addEventListener('input', debounce(ponerDist, 350));
   ponerDist();
+  $('[data-esc-barra]', m.body).onclick = async () => {
+    const k = await Escaner.capturar(); if (!k) return;
+    const inp = $('[data-barras]', m.body), xs = inp.value.split(/[,;\n]+/).map(Barras.norm).filter(Boolean);
+    const otro = Barras.dueno(k, p.id); if (otro) { UI.toast(`Ese código ya es de ${otro.codigo}`, 3500); return; }
+    if (!xs.includes(k)) xs.push(k); inp.value = xs.join(', ');
+    UI.toast(Barras.gtin(k) ? 'Código agregado: guarda para que quede' : 'Agregado. Ojo: no es un EAN/UPC; revisa que no sea el número de serie', 3200);
+  };
   /* fotos y estado en la tienda */
   const pintarFotos = () => { $('[data-fotos]', m.body).innerHTML = fotos.length ? fotos.map((u, i) => `<span style="position:relative;display:inline-block"><img src="${esc(u)}" alt="" style="width:72px;height:72px;object-fit:contain;border:1px solid var(--line);border-radius:6px;background:#fff"><button type="button" data-qf="${i}" title="Quitar" style="position:absolute;top:-6px;right:-6px;border:none;border-radius:50%;width:20px;height:20px;background:var(--red);color:#fff;font-size:12px;line-height:20px;padding:0">✕</button></span>`).join('') : '<span class="muted small">Sin fotos</span>';
     $$('[data-qf]', m.body).forEach(b => b.onclick = () => { fotos.splice(+b.dataset.qf, 1); pintarFotos(); }); };
@@ -4791,6 +5185,7 @@ function productoModal(p) {
 }
 
 /* ---------------- Distribuidores ---------------- */
+Views.escanear = (v, modo) => { Views.inventario(v); setTimeout(() => Escaner.abrir({ modo: modo === 'contar' ? 'contar' : undefined }), 30); };
 Views.distribuidor = (v, sel) => Route.nav('#/pedidos' + (sel ? '/' + sel : ''), { replace: true });
 Views.pedidos = (v, sel) => {
   const F = { tab: lsGet('suinadm_f_dist', 'pedidos') };
