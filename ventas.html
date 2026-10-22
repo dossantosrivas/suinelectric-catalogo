@@ -1641,13 +1641,13 @@ const Listas = (() => {
     const g = ge().get(normKey(it.m));
     return g ? { precio: g.precio, fuente: 'ge' } : { precio: null, fuente: '' };
   };
-  const entrada = ({ l, it }) => { const pr = precioDe(l, it); const d = Store.get('proveedores', l.dist); return { lista: l.id, dist: l.dist, nombre: d ? d.nombre : 'Distribuidor', marca: l.marca || '', fecha: l.fecha || '', dto: l.dto, m: it.m, c: it.c || '', n: it.n || '', u: it.u || '', q: num(it.q), precio: pr.precio, fuentePrecio: pr.fuente }; };
+  const entrada = ({ l, it }) => { const pr = precioDe(l, it); const d = Store.get('proveedores', l.dist); return { lista: l.id, dist: l.dist, nombre: d ? d.nombre : 'Distribuidor', marca: it.mk || l.marca || '', fecha: l.fecha || '', dto: l.dto, m: it.m, c: it.c || '', n: it.n || '', u: it.u || '', q: num(it.q), precio: pr.precio, fuentePrecio: pr.fuente }; };
   /* existencias de un modelo en todas las listas */
   const de = (cod) => { const k = normKey(cod); return k ? (build().get(k) || []).map(entrada) : []; };
   /* precio puesto en la lista de precios de ese distribuidor (no el copiado de Grupos Eléctricos) */
   const precioPropio = (distId, cod) => { const k = normKey(cod); if (!k || !distId) return null; for (const x of build().get(k) || []) { if (x.l.dist !== distId) continue; const pr = (x.l.precios || {})[k]; if (pr && num(pr.p) > 0) return num(pr.p); } return null; };
   /* producto de una lista con forma de producto del catálogo (para costos, líneas y búsquedas) */
-  const comoCat = (e) => ({ src: 'e', m: e.m, n: e.n || e.m, marca: e.marca, cat: e.nombre, subs: [], precio: e.precio, disp: e.q > 0, exist: e.q, desc: e.n || '', sku: e.c, url: '', img: '', pan: 0, dist: e.dist, lista: e.lista });
+  const comoCat = (e) => ({ src: e.fuentePrecio === 'lista' ? 'el' : 'e', m: e.m, n: e.n || e.m, marca: e.marca, cat: e.nombre, subs: [], precio: e.precio, disp: e.q > 0, exist: e.q, desc: e.n || '', sku: e.c, url: '', img: '', pan: 0, dist: e.dist, lista: e.lista });
   const comoCatalogo = (cod) => { const xs = de(cod).sort((a, b) => b.q - a.q); return xs.length ? comoCat(xs[0]) : null; };
   const enCatalogo = (k) => Catalog.items.some(c => normKey(c.m) === k);
   /* búsqueda: solo los que no están ya en el catálogo */
@@ -1675,7 +1675,7 @@ const Listas = (() => {
     return out;
   };
   /* filas (arreglos de celdas) → { filas: [{ c, m, q, u, n, p }], conPrecio, conCant } */
-  const COLS_RE = { m: /^(ref|referencia|modelo|n[uú]mero de parte|part)/, c: /^(c[oó]d|codigo|sku)/, q: /(cant|exist|stock|dispon)/, u: /^(unid|und|um\b|u\.?m)/, n: /(nombre|descrip|detalle)/, p: /(precio|price|p\.?\s*venta|usd|\$)/ };
+  const COLS_RE = { m: /^(ref|referencia|modelo|n[uú]mero de parte|part)/, c: /^(c[oó]d|codigo|sku)/, k: /^marca/, q: /(cant|exist|stock|dispon)/, u: /^(unid|und|um\b|u\.?m)/, n: /(nombre|descrip|detalle)/, p: /(precio|price|p\.?\s*venta|usd|\$)/ };
   const interpretar = (rows) => {
     let hi = -1, col = {};
     for (let i = 0; i < Math.min(rows.length, 15) && hi < 0; i++) {
@@ -1692,7 +1692,7 @@ const Listas = (() => {
       if (!m && cod) m = cod.replace(/^[A-Z]{2}\.(?:[A-Z]{2,4}\.)?/, '');      // sin referencia: el código sin el prefijo del distribuidor
       if (!m) return;
       const qv = g('q'), pv = g('p');
-      filas.push({ c: cod, m, q: qv === '' || qv == null ? null : num(qv), u: String(g('u') || '').trim(), n: String(g('n') || '').trim(), p: pv === '' || pv == null ? null : num(pv) });
+      filas.push({ c: cod, m, k: String(g('k') || '').trim().toUpperCase(), q: qv === '' || qv == null ? null : num(qv), u: String(g('u') || '').trim(), n: String(g('n') || '').trim(), p: pv === '' || pv == null ? null : num(pv) });
     });
     return { filas, conPrecio: col.p != null && filas.some(f => f.p > 0), conCant: col.q != null };
   };
@@ -1719,11 +1719,11 @@ const Listas = (() => {
     const id = idDe(distId, marca); const viejo = Store.get('listas', id);
     const rec = viejo ? clone(viejo) : { id, dist: distId, marca: String(marca || '').toUpperCase(), items: [], precios: {} };
     rec.precios = rec.precios || {};
-    const limpio = (f) => { const o = { m: f.m }; if (f.c) o.c = f.c; o.q = f.q == null ? 0 : f.q; if (f.u && f.u !== 'UN') o.u = f.u; if (f.n) o.n = f.n; return o; };
+    const limpio = (f) => { const o = { m: f.m }; if (f.c) o.c = f.c; if (f.k) o.mk = f.k; o.q = f.q == null ? 0 : f.q; if (f.u && f.u !== 'UN') o.u = f.u; if (f.n) o.n = f.n; return o; };
     if (modo === 'todo') rec.items = filas.map(limpio);
     else {
       const m = new Map(rec.items.map(it => [normKey(it.m), it]));
-      filas.forEach(f => { const k = normKey(f.m), cur = m.get(k); if (cur) { if (f.q != null) cur.q = f.q; if (f.n && !cur.n) cur.n = f.n; if (f.c && !cur.c) cur.c = f.c; } else { const o = limpio(f); rec.items.push(o); m.set(k, o); } });
+      filas.forEach(f => { const k = normKey(f.m), cur = m.get(k); if (cur) { if (f.q != null) cur.q = f.q; if (f.k) cur.mk = f.k; if (f.n && !cur.n) cur.n = f.n; if (f.c && !cur.c) cur.c = f.c; } else { const o = limpio(f); rec.items.push(o); m.set(k, o); } });
     }
     let nPrecios = 0;
     filas.forEach(f => { if (f.p > 0) { rec.precios[normKey(f.m)] = { p: round2(f.p), f: fecha || '' }; nPrecios++; } });
@@ -6487,7 +6487,8 @@ const Cot = (() => {
     ls.forEach(l => { const d = Store.get('proveedores', l.dist); l.items.forEach(it => {
       const k = normKey(it.m); if (!k || ks.has(k)) return; ks.add(k);
       const pr = Listas.precioDe(l, it);
-      extra.push({ src: 's', _lst: 1, m: it.m, n: it.m, marca: l.marca || '', cat: d ? d.nombre : 'Distribuidor', sub: '', precio: pr.precio, moneda: 'USD', disp: true, exist: null, desc: it.n || '', sku: it.c || '' });
+      // con precio de la lista del distribuidor (tu costo) va tal cual; con el de Grupos Eléctricos, como Grupos Eléctricos
+      extra.push({ src: pr.fuente === 'lista' ? 'm' : 's', _lst: 1, m: it.m, n: it.m, marca: it.mk || l.marca || '', cat: d ? d.nombre : 'Distribuidor', sub: '', precio: pr.precio, moneda: 'USD', disp: true, exist: null, desc: it.n || '', sku: it.c || '' });
     }); });
     cat.push(...extra); cat.__lst = fl;
   };

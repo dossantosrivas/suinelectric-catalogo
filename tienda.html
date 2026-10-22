@@ -2085,7 +2085,7 @@ async function cargarListasDist(){
     const m = new Map();
     ls.forEach(r => { const l = r.data || {}; if (!Array.isArray(l.items) || !nom.has(l.dist)) return; const pr = l.precios || {};
       l.items.forEach(it => { const k = claveModelo(it.m); if (!k) return; const x = pr[k];
-        if (!m.has(k)) m.set(k, []); m.get(k).push({ dist: nom.get(l.dist), marca: l.marca || '', fecha: l.fecha || '', q: Number(it.q) || 0, precio: x && Number(x.p) > 0 ? Number(x.p) : null }); }); });
+        if (!m.has(k)) m.set(k, []); m.get(k).push({ dist: nom.get(l.dist), marca: it.mk || l.marca || '', fecha: l.fecha || '', q: Number(it.q) || 0, precio: x && Number(x.p) > 0 ? Number(x.p) : null }); }); });
     listasDist = m;
   } catch (e) { /* sin permiso o sin listas: no se muestra */ }
 }
