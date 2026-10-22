@@ -1532,24 +1532,254 @@ function abrirCliente(c){
   };
 }
 
+/* ---------- Categorías de la tienda (misma organización que /tienda y Gestión; para los descuentos por categoría) ---------- */
+const CatTienda = (() => {
+const FAMILIAS = [
+  { nombre: 'Variadores y Arrancadores', categorias: ['Variadores de Frecuencia', 'Arrancadores Suaves', 'Arrancadores de Motor'] },
+  { nombre: 'Control de Motores', categorias: ['Contactores', 'Guardamotores', 'Relés de Sobrecarga', 'Relés de Supervisión y Control'] },
+  { nombre: 'Protección Eléctrica', categorias: ['Breakers Automáticos', 'Breakers en Caja Moldeada', 'Breakers en Aire', 'Breakers para Transferencia', 'Fusibles Ultrarrápidos', 'Seccionadores', 'Media Tensión y Transformadores'] },
+  { nombre: 'Automatización y PLC', categorias: ['PLC Básicos', 'PLC Avanzados', 'PLC Allen Bradley', 'Paneles HMI', 'Periferia Descentralizada', 'Fuentes de Alimentación', 'Software y Programación'] },
+  { nombre: 'Redes Industriales', categorias: ['SIMATIC NET', 'SCALANCE'] },
+  { nombre: 'Sensores e Instrumentación', categorias: ['Sensores de Proximidad', 'Encoders', 'Finales de Carrera', 'Instrumentación', 'Medidores de Energía'] },
+  { nombre: 'Mando y Señalización', categorias: ['Pulsadores y Pilotos', 'Balizas Luminosas y Acústicas', 'Iluminación'] },
+  { nombre: 'Tableros, Cableado y Neumática', categorias: ['Bornes de Conexión', 'Cableado y Accesorios para Tableros', 'Neumática', 'Hidroneumáticos'] },
+];
+const FAMILIA_OTROS = 'Otros Productos';
+
+// Categoría principal del proveedor → [familia, categoría, ...niveles extra antes de sus subcategorías]
+const MAPA_CATEGORIAS = {
+  'Variadores de Frecuencia':              ['Variadores y Arrancadores', 'Variadores de Frecuencia'],
+  'Arrancadores Suaves':                   ['Variadores y Arrancadores', 'Arrancadores Suaves'],
+  'Arrancadores':                          ['Variadores y Arrancadores', 'Arrancadores de Motor'],
+  'Contactores':                           ['Control de Motores', 'Contactores'],
+  'Guardamotores':                         ['Control de Motores', 'Guardamotores'],
+  'Reles de Sobrecarga':                   ['Control de Motores', 'Relés de Sobrecarga'],
+  'Rele de Supervisión y Control':         ['Control de Motores', 'Relés de Supervisión y Control'],
+  'Breakers Automaticos':                  ['Protección Eléctrica', 'Breakers Automáticos'],
+  'Breakers en Caja Moldeada':             ['Protección Eléctrica', 'Breakers en Caja Moldeada'],
+  'Breakers en Aire 3WT8':                 ['Protección Eléctrica', 'Breakers en Aire', 'Siemens 3WT8'],
+  'Breakers en Configuracion de transferencia': ['Protección Eléctrica', 'Breakers para Transferencia'],
+  'Fusibles Ultrarapidos':                 ['Protección Eléctrica', 'Fusibles Ultrarrápidos'],
+  'Seccionadores 3LD 3P IP65':             ['Protección Eléctrica', 'Seccionadores', 'Siemens 3LD IP65'],
+  'Automatizacion Basica':                 ['Automatización y PLC', 'PLC Básicos'],
+  'Automatizacion Avanzada':               ['Automatización y PLC', 'PLC Avanzados'],
+  'Paneles de Visualizacion HMI':          ['Automatización y PLC', 'Paneles HMI'],
+  'Paneles de Visualización HMI':          ['Automatización y PLC', 'Paneles HMI'],
+  'Periferia Descentralizada':             ['Automatización y PLC', 'Periferia Descentralizada'],
+  'Fuentes de Alimentacion':               ['Automatización y PLC', 'Fuentes de Alimentación'],
+  'Software y Equipos de Programacion':    ['Automatización y PLC', 'Software y Programación'],
+  'SIMATIC NET Componentes de Red':        ['Redes Industriales', 'SIMATIC NET'],
+  'SCALANCE Comunicación Industrial':      ['Redes Industriales', 'SCALANCE'],
+  'Sensores de Proximidad':                ['Sensores e Instrumentación', 'Sensores de Proximidad'],
+  'Encoders':                              ['Sensores e Instrumentación', 'Encoders'],
+  'Interruptores de posición finales de carrera': ['Sensores e Instrumentación', 'Finales de Carrera'],
+  'Instrumentacion':                       ['Sensores e Instrumentación', 'Instrumentación'],
+  'SENTRON PAC Medidores':                 ['Sensores e Instrumentación', 'Medidores de Energía', 'SENTRON PAC'],
+  'Mando y Señalización':                  ['Mando y Señalización', 'Pulsadores y Pilotos'],
+  'Balizas Luminosas / Acústicas':         ['Mando y Señalización', 'Balizas Luminosas y Acústicas'],
+  'Iluminacion y Aire acondicionado':      ['Mando y Señalización', 'Iluminación'],
+  'Bornes de Conexión':                    ['Tableros, Cableado y Neumática', 'Bornes de Conexión'],
+  'Cableado y Accesorios para tableros':   ['Tableros, Cableado y Neumática', 'Cableado y Accesorios para Tableros'],
+  'Conectores Pneumaticos':                ['Tableros, Cableado y Neumática', 'Neumática', 'Conectores y Racores'],
+  'Festo':                                 ['Tableros, Cableado y Neumática', 'Neumática', 'Festo'],
+  'Hidroneumaticos':                       ['Tableros, Cableado y Neumática', 'Hidroneumáticos'],
+};
+
+// Raíces que son una MARCA (productos manuales o del proveedor): se decide
+// por su primera subcategoría. Resultado: [familia, categoría, ...niveles],
+// y luego se agregan las subcategorías restantes del producto.
+const MAPA_MARCAS = {
+  'Schneider': {
+    'Variadores de Velocidad':                     ['Variadores y Arrancadores', 'Variadores de Frecuencia', 'Schneider'],
+    'Arrancadores Suaves':                         ['Variadores y Arrancadores', 'Arrancadores Suaves', 'Schneider'],
+    'Contactores':                                 ['Control de Motores', 'Contactores', 'Schneider'],
+    'Contactores Auxiliares':                      ['Control de Motores', 'Contactores', 'Schneider', 'Contactores Auxiliares'],
+    'Accesorios para Contactores':                 ['Control de Motores', 'Contactores', 'Schneider', 'Accesorios'],
+    'Guardamotores Termomagnéticos':               ['Control de Motores', 'Guardamotores', 'Schneider'],
+    'Accesorios para Guardamotores':               ['Control de Motores', 'Guardamotores', 'Schneider', 'Accesorios'],
+    'Relés Térmicos de Sobrecarga':                ['Control de Motores', 'Relés de Sobrecarga', 'Schneider'],
+    'Relés de Control':                            ['Control de Motores', 'Relés de Supervisión y Control', 'Schneider'],
+    'Interruptores en Caja Moldeada':              ['Protección Eléctrica', 'Breakers en Caja Moldeada', 'Schneider'],
+    'Accesorios para Interruptores Caja Moldeada': ['Protección Eléctrica', 'Breakers en Caja Moldeada', 'Schneider', 'Accesorios'],
+    'Mando y Señalización':                        ['Mando y Señalización', 'Pulsadores y Pilotos', 'Schneider'],
+    'Balizas y Sirenas':                           ['Mando y Señalización', 'Balizas Luminosas y Acústicas', 'Schneider'],
+  },
+  'Hyundai': {
+    'Contactores':                                 ['Control de Motores', 'Contactores', 'Hyundai'],
+    'Accesorios para Contactores':                 ['Control de Motores', 'Contactores', 'Hyundai', 'Accesorios'],
+    'Guardamotores Termomagnéticos':               ['Control de Motores', 'Guardamotores', 'Hyundai'],
+    'Accesorios para Guardamotores':               ['Control de Motores', 'Guardamotores', 'Hyundai', 'Accesorios'],
+    'Relés Térmicos de Sobrecarga':                ['Control de Motores', 'Relés de Sobrecarga', 'Hyundai'],
+    'Relés de Control':                            ['Control de Motores', 'Relés de Supervisión y Control', 'Hyundai'],
+    'Cajas para Arrancadores':                     ['Variadores y Arrancadores', 'Arrancadores de Motor', 'Hyundai'],
+    'Automáticos de Riel DIN':                     ['Protección Eléctrica', 'Breakers Automáticos', 'Hyundai'],
+    'Diferenciales de Riel DIN':                   ['Protección Eléctrica', 'Breakers Automáticos', 'Hyundai', 'Diferenciales'],
+    'Accesorios para Automáticos':                 ['Protección Eléctrica', 'Breakers Automáticos', 'Hyundai', 'Accesorios'],
+    'Interruptores en Caja Moldeada':              ['Protección Eléctrica', 'Breakers en Caja Moldeada', 'Hyundai'],
+    'Accesorios para Interruptores Caja Moldeada': ['Protección Eléctrica', 'Breakers en Caja Moldeada', 'Hyundai', 'Accesorios'],
+    'Interruptores de Potencia en Aire':           ['Protección Eléctrica', 'Breakers en Aire', 'Hyundai'],
+    'Accesorios para Interruptores de Aire':       ['Protección Eléctrica', 'Breakers en Aire', 'Hyundai', 'Accesorios'],
+    // "Otros Productos" se reparte por modelo (ver rutaEspecial)
+  },
+  'ALLEN BRADLEY': {
+    'CONTROL-LOGIX':    ['Automatización y PLC', 'PLC Allen Bradley', 'ControlLogix'],
+    'FLEX I/O':         ['Automatización y PLC', 'PLC Allen Bradley', 'FLEX I/O'],
+    'Sensores Opticos': ['Sensores e Instrumentación', 'Sensores de Proximidad', 'Ópticos', 'Allen Bradley'],
+  },
+};
+
+// Casos puntuales que no se pueden decidir solo por la categoría.
+function rutaEspecial(p, raiz, subs){
+  if (raiz === 'Hyundai' && subs[0] === 'Otros Productos'){
+    if (/^HGP/i.test(p.modelo || '')) return ['Protección Eléctrica', 'Breakers en Caja Moldeada', 'Hyundai', 'Especiales HGP'];
+    return ['Protección Eléctrica', 'Media Tensión y Transformadores', 'Hyundai'];
+  }
+  return null;
+}
+
+// Nombres que se reemplazan completos.
+const RENOMBRAR = {
+  'Amperimetros / Voltimetros AMPERIMETROS / VOLTIMETROS': 'Amperímetros / Voltímetros',
+  'Amperimetros / Voltimetros Pilotos luminosos 22 mm': 'Pilotos Luminosos 22 mm',
+  'Rele de Supervisión monofasico de tension monofasico': 'Relé de Supervisión de Tensión Monofásico',
+  'Rele de Supervisión de tension / corriente monofasico': 'Relé de Supervisión de Tensión / Corriente Monofásico',
+  'LOGO': 'LOGO!',
+  'MICRO MASTER': 'MICROMASTER',
+  'DANFOSS': 'Danfoss',
+  'KINCO': 'Kinco',
+  'NORDIC': 'Nordic',
+  'Terminales De Punta': 'Terminales de Punta',
+  // Series casi repetidas del proveedor → una sola
+  'SIRIUS 3RT1 / 3RT2 / 3RT5': 'SIRIUS 3RT',
+  'SIRIUS 3RT1 / 3RT2 / 3RT6': 'SIRIUS 3RT',
+  'SIRIUS 3RT1 / 3RT5': 'SIRIUS 3RT',
+  'Termomagnéticos SIRIUS 3RV1 / 3RV2': 'Termomagnéticos SIRIUS 3RV',
+  'Termomagnéticos SIRIUS 3RV1 / 3RV2 / 3RV5 / 3RV6': 'Termomagnéticos SIRIUS 3RV',
+};
+
+// Palabras sin acento (o mal escritas) que se corrigen donde aparezcan.
+const ACENTOS = {
+  basico:'básico', basicos:'básicos', estandar:'estándar', opticos:'ópticos', optico:'óptico',
+  magneticos:'magnéticos', magnetico:'magnético', ultrasonicos:'ultrasónicos', electroneumaticos:'electroneumáticos',
+  presion:'presión', marcacion:'marcación', conexion:'conexión', diametro:'diámetro', alimentacion:'alimentación',
+  analogicas:'analógicas', analogica:'analógica', analogicos:'analógicos', analogico:'analógico',
+  tempertura:'temperatura', termicos:'térmicos', termico:'térmico', reles:'relés', rele:'relé',
+  generacion:'generación', programacion:'programación', comunicacion:'comunicación', instrumentacion:'instrumentación',
+  iluminacion:'iluminación', automatizacion:'automatización', visualizacion:'visualización', configuracion:'configuración',
+  lamparas:'lámparas', lampara:'lámpara', plasticas:'plásticas', plastica:'plástica', multiples:'múltiples',
+  tension:'tensión', solido:'sólido', monofasico:'monofásico', monofasicos:'monofásicos', trifasico:'trifásico',
+  trifasicos:'trifásicos', pneumaticos:'neumáticos', neumaticos:'neumáticos', expansion:'expansión',
+  supervision:'supervisión', proteccion:'protección', camara:'cámara', inversion:'inversión', minima:'mínima',
+  electronicos:'electrónicos', bimetalicos:'bimetálicos', amperimetros:'amperímetros', voltimetros:'voltímetros',
+  ultrarapidos:'ultrarrápidos', acusticas:'acústicas', logica:'lógica', logicos:'lógicos', modulos:'módulos',
+  modulo:'módulo', electricos:'eléctricos', bateria:'batería', baterias:'baterías', maxima:'máxima', version:'versión',
+};
+/* ---------- Limpieza de nombres ---------- */
+const _cacheNombre = new Map();
+function limpiarNombre(s){
+  if (s == null) return '';
+  const orig = String(s);
+  if (_cacheNombre.has(orig)) return _cacheNombre.get(orig);
+  let t = orig.trim().replace(/\s+/g, ' ');
+  t = t.replace(/^\d+\s*\.-\s*/, '');           // "1.- LOGO" -> "LOGO"
+  t = t.replace(/(\d)(Amp)\b/g, '$1 $2');         // "90Amp" -> "90 Amp"
+  if (RENOMBRAR[t]) t = RENOMBRAR[t];
+  t = t.replace(/[A-Za-z]+/g, w => {
+    const r = ACENTOS[w.toLowerCase()];
+    if (!r) return w;
+    if (w === w.toUpperCase() && w.length > 1) return r.toUpperCase();
+    return w[0] === w[0].toUpperCase() ? r[0].toUpperCase() + r.slice(1) : r;
+  });
+  if (RENOMBRAR[t]) t = RENOMBRAR[t];
+  _cacheNombre.set(orig, t);
+  return t;
+}
+
+/* ---------- Ruta de un producto dentro de la nueva organización ---------- */
+// Todos los niveles de categoría son navegables y tienen su propio link
+// (ej. Automatización y PLC › PLC Básicos › LOGO! › Versión 5/7 › CPU).
+const MAX_NIVELES = 10; // todos los niveles tienen su link (antes 4)
+
+const _cacheRuta = new WeakMap();
+function rutaOriginalDe(p){
+  const cat = p.categoria_principal || p.marca || 'OTROS';
+  let subs = Array.isArray(p.subcategorias) ? p.subcategorias.slice() : null;
+  if (!subs){ // compat con JSON viejo (subcategoria string)
+    subs = p.subcategoria ? String(p.subcategoria).split(' > ') : [];
+  }
+  return [cat, ...subs.filter(Boolean)];
+}
+// Ruta completa (todas las subcategorías), ya reorganizada y con nombres limpios.
+
+/* Raíces que ya son una familia o categoría de la tienda (o una raíz conocida escrita con
+   otras mayúsculas/acentos): así un producto guardado como "Seccionadores" o "CONTACTORES"
+   no cae en Otros Productos. */
+function claveCat(s){ return String(s || '').normalize('NFD').replace(/[̀-ͯ]/g, '').toLowerCase().replace(/[^a-z0-9]/g, ''); }
+const _canonCat = new Map();
+FAMILIAS.forEach(f => { _canonCat.set(claveCat(f.nombre), [f.nombre]); f.categorias.forEach(c => _canonCat.set(claveCat(c), [f.nombre, c])); });
+Object.keys(MAPA_CATEGORIAS).forEach(k => { const kk = claveCat(k); if (!_canonCat.has(kk)) _canonCat.set(kk, MAPA_CATEGORIAS[k]); });
+function canonCat(r){ return _canonCat.get(claveCat(r)) || null; }
+function rutaDe(p){
+  const hit = _cacheRuta.get(p);
+  if (hit) return hit;
+  const orig = rutaOriginalDe(p);
+  const raiz = orig[0], subs = orig.slice(1);
+  let base, resto;
+  const esp = rutaEspecial(p, raiz, subs);
+  if (esp){ base = esp; resto = subs.slice(2); }
+  else if (MAPA_MARCAS[raiz] && subs.length && MAPA_MARCAS[raiz][subs[0]]){
+    base = MAPA_MARCAS[raiz][subs[0]]; resto = subs.slice(1);
+  } else if (MAPA_CATEGORIAS[raiz]){
+    base = MAPA_CATEGORIAS[raiz]; resto = subs;
+  } else if (canonCat(raiz)){
+    base = canonCat(raiz); resto = subs;
+  } else {
+    base = [FAMILIA_OTROS, raiz]; resto = subs;
+  }
+  const ruta = [];
+  for (const seg of base.concat(resto)){
+    const n = limpiarNombre(seg);
+    if (n && ruta[ruta.length - 1] !== n) ruta.push(n); // sin niveles repetidos seguidos
+  }
+  _cacheRuta.set(p, ruta);
+  return ruta;
+}
+  const _rc = new WeakMap();
+  /* ruta de un producto del catálogo del panel: [familia, categoría, …] */
+  const ruta = (c) => { if (!c) return []; let r = _rc.get(c); if (!r) { r = rutaDe({ categoria_principal: c.cat, marca: c.marca, modelo: c.m, subcategorias: c.subs || [] }); _rc.set(c, r); } return r; };
+  const famIdx = (n) => { const i = FAMILIAS.findIndex(f => f.nombre === n); return i < 0 ? 99 : i; };
+  return { ruta, famIdx, FAMILIAS, MAPA_CATEGORIAS, rutaDe };
+})();
+const claveCat = (x) => String(x || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, '');
+const _rutaP = new WeakMap();
+const rutaProd = (p) => { if (p._ruta) return p._ruta; let r = _rutaP.get(p); if (!r) { r = CatTienda.rutaDe(p); _rutaP.set(p, r); } return r; };
+const enCategoria = (p, cat) => { const k = claveCat(cat); return rutaProd(p).slice(0, 2).some(x => claveCat(x) === k); };
+/* familia → sus categorías, para elegir en "Dar un descuento" */
+const opcionesCategoria = (sel) => CatTienda.FAMILIAS.map(f => '<optgroup label="' + esc(f.nombre) + '"><option value="' + esc(f.nombre) + '"' + (sel === f.nombre ? ' selected' : '') + '>' + esc(f.nombre) + ' (toda la familia)</option>' +
+  f.categorias.map(c => '<option value="' + esc(c) + '"' + (sel === c ? ' selected' : '') + '>' + esc(c) + '</option>').join('') + '</optgroup>').join('');
+
 /* ---------- Descuentos ---------- */
 let reglaDestinoInicial = '';
 // Misma lógica que la tienda: gana la regla más específica.
-const RANGO = { '00': 1, '01': 2, '02': 3, '10': 4, '20': 5, '11': 6, '21': 7, '12': 8, '22': 9 };
+// que: 0 modelo · 1 marca+categoría · 2 categoría · 3 marca · 4 todo   quien: 0 cliente · 1 tipo · 2 todos
+const rangoRegla = (que, quien) => que === 0 ? 1 + quien : 4 + quien * 4 + (que - 1);
 function reglaPara(p, email, tipo){
   const marca = String(p.marca || '').toUpperCase().trim(), modelo = String(p.modelo || '').toUpperCase().trim();
   let mejor = null, mr = 99;
   for (const r of reglas){
-    if (!r.activo || r.categoria) continue;      // descuento por categoría: por ahora solo en /admin-beta
+    if (!r.activo) continue;
     let quien, que;
     if (r.cliente_email){ if (r.cliente_email !== email) continue; quien = 0; }
     else if (r.tipo_id){ if (r.tipo_id !== tipo) continue; quien = 1; }
     else quien = 2;
     if (r.modelo){ if (String(r.modelo).toUpperCase().trim() !== modelo) continue; que = 0; }
-    else if (r.marca){ if (String(r.marca).toUpperCase().trim() !== marca) continue; que = 1; }
-    else que = 2;
-    if (p._manual && que === 2) continue;
-    const k = RANGO['' + que + quien];
+    else {
+      if (r.marca && String(r.marca).toUpperCase().trim() !== marca) continue;
+      if (r.categoria && !enCategoria(p, r.categoria)) continue;
+      que = r.marca && r.categoria ? 1 : r.categoria ? 2 : r.marca ? 3 : 4;
+    }
+    if (p._manual && que === 4) continue;
+    const k = rangoRegla(que, quien);
     if (k < mr){ mejor = r; mr = k; }
   }
   return mejor;
@@ -1562,7 +1792,7 @@ function precioPara(p, email, tipo){
   return { precio: Number(p.precio), r: null };
 }
 function describirQuien(r){ return r.cliente_email ? '<div class="persona" style="min-width:0"><div class="avatar" style="width:30px;height:30px;font-size:12px">' + esc(iniciales(clientes.find(c => c.email === r.cliente_email) || { email: r.cliente_email })) + '</div><div><strong>' + esc(nombreCliente(r.cliente_email)) + '</strong><span>' + esc(r.cliente_email) + '</span></div></div>' : r.tipo_id ? '<span class="pill azul">' + esc(nombreTipo(r.tipo_id)) + '</span>' : '<span class="pill tinta">Todos</span>'; }
-function describirQue(r){ if (r.categoria) return (r.marca ? 'Marca <strong>' + esc(r.marca) + '</strong> · ' : '') + 'Categoría <strong>' + esc(r.categoria) + '</strong> <small class="muted">(solo en beta)</small>'; return r.modelo ? 'Modelo <span class="mono">' + esc(r.modelo) + '</span>' : r.marca ? 'Marca <strong>' + esc(r.marca) + '</strong>' : 'Todo el catálogo'; }
+function describirQue(r){ return r.modelo ? 'Modelo <span class="mono">' + esc(r.modelo) + '</span>' : (r.marca || r.categoria) ? [r.marca ? 'Marca <strong>' + esc(r.marca) + '</strong>' : '', r.categoria ? 'Categoría <strong>' + esc(r.categoria) + '</strong>' : ''].filter(Boolean).join(' · ') : 'Todo el catálogo'; }
 function vistaDescuentos(){
   const destinoOpts = '<option value="t:">Todos (visitantes y clientes)</option>' +
     '<optgroup label="Tipo de cliente">' + tipos.map(t => '<option value="tp:' + t.id + '">' + esc(t.nombre) + '</option>').join('') + '</optgroup>' +
@@ -1572,13 +1802,14 @@ function vistaDescuentos(){
     plegBarra() +
     '<div class="plegables" id="desc-plegables">' +
     plegable('desc', 'dar', ICO.descuentos, 'Dar un descuento', 'Elige a quién, en qué productos y cuánto', '<form id="r-form">' +
-    '<p class="ayuda">La de un modelo gana a la de una marca, y la de una marca a la de todos los productos; la de un cliente gana a la de su tipo o la general. ' +
-    'Los productos cargados a mano solo cambian con reglas de su marca o modelo.</p>' +
+    '<p class="ayuda">Gana la más específica: modelo, luego marca en una categoría, luego categoría, luego marca y por último todos los productos; la de un cliente gana a la de su tipo o la general. ' +
+    'Los productos cargados a mano solo cambian con reglas de su marca, categoría o modelo.</p>' +
     '<div class="fila">' +
       '<label class="campo" style="flex:2 1 260px"><span><span class="paso">1</span>¿A quién?</span><select name="destino">' + destinoOpts + '</select></label>' +
-      '<label class="campo" style="flex:1 1 190px"><span><span class="paso">2</span>¿En qué productos?</span><select name="alcance"><option value="todo">Todos los productos</option><option value="marca">Solo una marca</option><option value="modelo">Solo un modelo</option></select></label>' +
+      '<label class="campo" style="flex:1 1 190px"><span><span class="paso">2</span>¿En qué productos?</span><select name="alcance"><option value="todo">Todos los productos</option><option value="marca">Solo una marca</option><option value="cat">Solo una categoría</option><option value="marcacat">Una marca en una categoría</option><option value="modelo">Solo un modelo</option></select></label>' +
     '</div><div class="fila" style="margin-top:12px">' +
       '<label class="campo" style="flex:1 1 170px" id="r-marca-l" hidden>Marca<select name="marca">' + marcas().map(m => '<option>' + esc(m) + '</option>').join('') + '</select></label>' +
+      '<label class="campo" style="flex:2 1 240px" id="r-cat-l" hidden>Categoría<select name="categoria">' + opcionesCategoria('Variadores de Frecuencia') + '</select></label>' +
       '<label class="campo" style="flex:2 1 200px" id="r-modelo-l" hidden>Modelo<input name="modelo" list="dl-modelos" placeholder="Ej. GD20-2R2G-S2"></label>' +
     '</div><div class="fila" style="margin-top:12px">' +
       '<label class="campo" style="flex:2 1 260px"><span><span class="paso">3</span>¿Cuánto?</span><select name="forma">' +
@@ -1612,18 +1843,21 @@ function vistaDescuentos(){
     const alc = f.elements.alcance.value;
     return {
       k, v, alc, forma: f.elements.forma.value, valor: Number(f.elements.valor.value),
-      marca: alc === 'marca' ? f.elements.marca.value.toUpperCase() : null,
+      marca: alc === 'marca' || alc === 'marcacat' ? f.elements.marca.value.toUpperCase() : null,
+      categoria: alc === 'cat' || alc === 'marcacat' ? f.elements.categoria.value : null,
       modelo: alc === 'modelo' ? f.elements.modelo.value.trim() : null,
     };
   };
   const nombreDestino = (x) => x.k === 'c' ? nombreCliente(x.v) : x.k === 'tp' ? 'Los clientes tipo ' + nombreTipo(x.v) : 'Todos (visitantes y clientes)';
-  const nombreAlcance = (x) => x.alc === 'marca' ? 'en ' + x.marca : x.alc === 'modelo' ? 'en el modelo ' + (x.modelo || '…') : 'en todos los productos';
+  const nombreAlcance = (x) => x.alc === 'marca' ? 'en ' + x.marca : x.alc === 'cat' ? 'en ' + x.categoria : x.alc === 'marcacat' ? 'en ' + x.categoria + ' de ' + x.marca : x.alc === 'modelo' ? 'en el modelo ' + (x.modelo || '…') : 'en todos los productos';
   // Descuento que tiene HOY ese destino en esos productos (sin contar una regla idéntica que se vaya a reemplazar).
   const baseActual = (x) => {
     const email = x.k === 'c' ? x.v : null;
     const cli = email ? clientes.find(c => c.email === email) : null;
     const tipo = x.k === 'tp' ? x.v : (cli ? cli.tipo_id : null);
-    const p = { marca: x.marca || '', modelo: x.modelo || '' };
+    const fam = x.categoria ? (CatTienda.FAMILIAS.find(f => f.nombre === x.categoria || f.categorias.includes(x.categoria)) || {}).nombre : null;
+    const p = { marca: x.marca || '', modelo: x.modelo || '', _ruta: x.categoria ? [fam || x.categoria, x.categoria] : ['—'] };
+    if (x.modelo){ const pm = productos.find(q => String(q.modelo || '').toUpperCase() === String(x.modelo).toUpperCase()); if (pm){ p.marca = pm.marca || ''; p._ruta = rutaProd(pm); p._manual = pm._manual; } }
     const guardadas = reglas;
     reglas = reglas.filter(r => !mismaClave(r, x));
     const r = reglaPara(p, email, tipo);
@@ -1631,12 +1865,13 @@ function vistaDescuentos(){
     return r;
   };
   const mismaClave = (r, x) => (r.cliente_email || null) === (x.k === 'c' ? x.v : null) && (r.tipo_id || null) === (x.k === 'tp' ? x.v : null) &&
-    (r.marca || null) === x.marca && String(r.modelo || '').toUpperCase() === String(x.modelo || '').toUpperCase();
+    (r.marca || null) === x.marca && (r.categoria || null) === (x.categoria || null) && String(r.modelo || '').toUpperCase() === String(x.modelo || '').toUpperCase();
   const pctTotal = (base, extra) => Math.round((100 - (100 - base) * (100 - extra) / 100) * 100) / 100;
 
   const sync = () => {
     const x = leerForm();
-    $('r-marca-l').hidden = x.alc !== 'marca';
+    $('r-marca-l').hidden = x.alc !== 'marca' && x.alc !== 'marcacat';
+    $('r-cat-l').hidden = x.alc !== 'cat' && x.alc !== 'marcacat';
     $('r-modelo-l').hidden = x.alc !== 'modelo';
     const fijo = f.elements.forma.querySelector('[value=fijo]');
     fijo.disabled = x.alc !== 'modelo';
@@ -1646,7 +1881,7 @@ function vistaDescuentos(){
     const base = baseActual(x);
     const hoy = !base ? 'precio de lista (sin descuento)'
       : base.precio_fijo != null ? 'precio fijo de ' + money(base.precio_fijo)
-      : Number(base.descuento_pct) + '% de descuento (' + (base.cliente_email ? 'regla propia' : base.tipo_id ? 'por ser ' + nombreTipo(base.tipo_id) : base.marca ? 'regla de ' + base.marca + ' para todos' : 'descuento general') + ')';
+      : Number(base.descuento_pct) + '% de descuento (' + (base.cliente_email ? 'regla propia' : base.tipo_id ? 'por ser ' + nombreTipo(base.tipo_id) : (base.marca || base.categoria) ? 'regla de ' + [base.marca, base.categoria].filter(Boolean).join(' · ') + ' para todos' : 'descuento general') + ')';
     let nuevo = '';
     if (x.valor > 0 || (forma !== 'adic' && f.elements.valor.value !== '')){
       if (forma === 'fijo') nuevo = 'precio fijo de <strong>' + money(x.valor) + '</strong>';
@@ -1657,7 +1892,7 @@ function vistaDescuentos(){
     $('r-resumen').innerHTML = '<strong>' + esc(nombreDestino(x)) + '</strong> ' + esc(nombreAlcance(x)) + ':<br>Hoy: ' + hoy +
       (nuevo ? '<br>Con esta regla: ' + nuevo : '');
   };
-  ['destino', 'alcance', 'marca', 'forma'].forEach(n => f.elements[n].addEventListener('change', sync));
+  ['destino', 'alcance', 'marca', 'categoria', 'forma'].forEach(n => f.elements[n].addEventListener('change', sync));
   ['modelo', 'valor'].forEach(n => f.elements[n].addEventListener('input', sync));
   sync();
 
@@ -1665,7 +1900,7 @@ function vistaDescuentos(){
     e.preventDefault();
     $('r-err').textContent = '';
     const x = leerForm();
-    const d = { cliente_email: x.k === 'c' ? x.v : null, tipo_id: x.k === 'tp' ? x.v : null, marca: x.marca, modelo: x.modelo,
+    const d = { cliente_email: x.k === 'c' ? x.v : null, tipo_id: x.k === 'tp' ? x.v : null, marca: x.marca, modelo: x.modelo, categoria: x.categoria,
                 descuento_pct: null, precio_fijo: null, nota: f.elements.nota.value.trim() || null };
     if (x.alc === 'modelo' && !d.modelo){ $('r-err').textContent = 'Escribe el modelo.'; return; }
     if (!(x.valor >= 0)){ $('r-err').textContent = 'Escribe el valor.'; return; }

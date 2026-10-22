@@ -68,7 +68,9 @@ function precioVisitante(p){
 // (mismas reglas de descuento que la tienda: por cliente, tipo, marca o modelo).
 function datosPrecio(p){
   const lista = (p.precio != null && !isNaN(Number(p.precio))) ? Number(p.precio) : '';
-  return ' data-lista="' + esc(lista) + '" data-marca="' + esc(p.marca || '') + '" data-modelo="' + esc(p.modelo) + '"' + (p._manual ? ' data-manual="1"' : '');
+  // familia y categoría de la tienda: para los descuentos de clientes por categoría (publico.js)
+  let cat = ''; try { cat = T.rutaDe(p).slice(0, 2).join('|'); } catch (e) {}
+  return ' data-lista="' + esc(lista) + '" data-marca="' + esc(p.marca || '') + '" data-modelo="' + esc(p.modelo) + '"' + (cat ? ' data-cat="' + esc(cat) + '"' : '') + (p._manual ? ' data-manual="1"' : '');
 }
 /* ---------- Imagen para la vista previa (WhatsApp, Facebook, Telegram…) ----------
    WhatsApp no muestra (o muestra diminuta) una foto de menos de 300 px, y la

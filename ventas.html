@@ -1498,6 +1498,30 @@ const reglasDe = (d) => (d && Array.isArray(d.reglas) ? d.reglas : []).filter(r 
 const tieneDesc = (d) => !!d && (descDist(d) != null || reglasDe(d).length > 0);
 const rutaTxt = (r) => (r || []).join(' › ');
 const empiezaCon = (ruta, pref) => pref.length && pref.length <= ruta.length && pref.every((x, i) => normKey(x) === normKey(ruta[i]));
+/* categoría de un producto para los descuentos del distribuidor. Los que solo vienen en una lista de
+   existencias (EMI…) no traen categoría: se toma la del mismo modelo en el catálogo y, si no está,
+   se reconoce por el nombre o la referencia (Altivar/ATV = variador, Altistart/ATS = arrancador suave). */
+const OTROS_CAT = 'Otros Productos';
+const adivinaCat = (c) => {
+  const t = normTxt([c.n, c.desc, c.cat].filter(Boolean).join(' ')), k = normKey(c.m);
+  if (/arrancador(es)?\s+suave|soft\s*-?\s*starter|altistart/.test(t) || /^ats\d/.test(k)) return 'Arrancadores Suaves';
+  if (/variador|convertidor de frecuencia|altivar/.test(t) || /^atv\d/.test(k)) return 'Variadores de Frecuencia';
+  return '';
+};
+let _catMod = null, _catModArr = null, _catModN = -1;
+const catPorModelo = (k) => {
+  if (!_catMod || _catModArr !== Catalog.items || _catModN !== Catalog.items.length) { _catMod = new Map(); _catModArr = Catalog.items; _catModN = Catalog.items.length; Catalog.items.forEach(c => { const x = normKey(c.m); if (x && !_catMod.has(x)) _catMod.set(x, c); }); }
+  return _catMod.get(k) || null;
+};
+const rutaCosto = (c) => {
+  if (!c) return [];
+  const sinCat = c.src === 'e' || c.src === 'el' || !!c.dist || !(c.cat || (c.subs || []).length);
+  const r = sinCat ? [] : CatTienda.ruta(c);
+  if (r.length && r[0] !== OTROS_CAT) return r;
+  const pc = catPorModelo(normKey(c.m));
+  if (pc && pc !== c) { const r2 = CatTienda.ruta(pc); if (r2.length && r2[0] !== OTROS_CAT) return r2; }
+  const g = adivinaCat(c); return g ? CatTienda.MAPA_CATEGORIAS[g].slice() : r;
+};
 /* qué descuento aplica a un producto del catálogo: { pct, regla } */
 const descPara = (d, c) => {
   if (!d) return null;
@@ -1507,7 +1531,7 @@ const descPara = (d, c) => {
     if (p) { const cf = p.costo !== '' && p.costo != null && num(p.costo) > 0 ? num(p.costo) : null; return { pct: cf && c && c.precio > 0 ? (1 - cf / c.precio) * 100 : num(p.pct), costoFijo: cf, regla: 'Producto ' + p.modelo + (cf ? ' (costo fijo)' : ''), tipo: 'prod' }; }
     const g = rs.find(r => r.tipo === 'grupo' && (r.modelos || []).some(x => normKey(x) === mk)); if (g) return { pct: num(g.pct), regla: 'Grupo ' + (g.nombre || ''), tipo: 'grupo' };
   }
-  const ruta = c ? CatTienda.ruta(c) : [];
+  const ruta = c ? rutaCosto(c) : [];
   const cs = rs.filter(r => r.tipo === 'cat' && empiezaCon(ruta, r.ruta || [])).sort((a, b) => b.ruta.length - a.ruta.length);
   if (cs.length) return { pct: num(cs[0].pct), regla: 'Categoría ' + rutaTxt(cs[0].ruta), tipo: 'cat' };
   const gen = descDist(d); return gen != null ? { pct: gen, regla: 'Descuento general', tipo: 'gen' } : null;
@@ -1520,13 +1544,15 @@ const costoInfo = (c, d) => {
   if (!c || !d) return null;
   const dp = descPara(d, c); const rec = recargoInter(d);
   /* producto que está en la lista de existencias de este distribuidor (EMI…): precio de su lista (o el de Grupos Eléctricos)
-     menos el descuento puesto en esa lista; no usa el descuento general de la ficha. Un costo fijo por producto sigue mandando. */
+     menos el descuento puesto en esa lista; no usa el descuento general de la ficha. Un costo fijo por producto sigue mandando,
+     y un descuento por categoría o grupo de la ficha (p. ej. variadores y arrancadores suaves) reemplaza al de la lista. */
   if (!(dp && dp.tipo === 'prod')) {
     const le = Listas.de(c.m).find(e => e.dist === d.id);
     if (le) {
       const pr = le.precio > 0 ? le.precio : c.precio; if (!(pr > 0)) return null;
-      const pct = num(le.dto), base = pr * (1 - pct / 100);
-      return { lista: pr, pct, regla: `Lista ${le.marca || d.nombre}${pct ? ' · desc. ' + fmtNum(pct, 1) + '%' : ' (precio = costo)'}`, base: round2(base), recargo: rec, costo: round2(base * (1 + rec / 100)), dist: d };
+      const esp = dp && (dp.tipo === 'cat' || dp.tipo === 'grupo');
+      const pct = esp ? num(dp.pct) : num(le.dto), base = pr * (1 - pct / 100);
+      return { lista: pr, pct, regla: esp ? `Lista ${le.marca || d.nombre} · ${dp.regla} ${fmtNum(pct, 1)}%` : `Lista ${le.marca || d.nombre}${pct ? ' · desc. ' + fmtNum(pct, 1) + '%' : ' (precio = costo)'}`, base: round2(base), recargo: rec, costo: round2(base * (1 + rec / 100)), dist: d };
     }
   }
   if (dp && dp.costoFijo > 0) { const base = dp.costoFijo; return { lista: c.precio > 0 ? c.precio : null, pct: c.precio > 0 ? round2(dp.pct) : null, regla: dp.regla, base: round2(base), recargo: rec, costo: round2(base * (1 + rec / 100)), dist: d }; }
@@ -5103,6 +5129,20 @@ Views.proveedores = () => Route.nav('#/distribuidores', { replace: true });
    /ventas/existencias[/<id de lista>]: las listas que te mandan los distribuidores (EMI…).
    Solo se consultan; en el cotizador salen como etiquetas junto a tu inventario. */
 const edadTxt = (f, soloHace) => { const e = Listas.edad(f); return `<span class="pill ${e === 'nueva' ? 'ok' : e === 'media' ? 'warn' : ''}" title="${e === 'vieja' ? 'Tiene más de 30 días: pide una lista nueva' : ''}">${soloHace ? '' : esc(fmtFecha(f) || 'sin fecha') + ' · '}${esc(Listas.haceTxt(f) || '')}${e === 'vieja' ? ' · pide una nueva' : ''}</span>`; };
+/* descuentos aparte por categoría desde la lista (EMI: variadores y arrancadores suaves): son reglas "Categoría" de la ficha */
+const ESP_LISTA = { var: { nombre: 'Variadores de frecuencia', cat: 'Variadores de Frecuencia' }, arr: { nombre: 'Arrancadores suaves', cat: 'Arrancadores Suaves' } };
+const rutaEsp = (k) => CatTienda.MAPA_CATEGORIAS[ESP_LISTA[k].cat];
+const reglaEsp = (d, k) => { const rk = rutaEsp(k).map(normKey).join('|'); return ((d && d.reglas) || []).find(r => r && r.tipo === 'cat' && (r.ruta || []).map(normKey).join('|') === rk) || null; };
+const setReglaEsp = (distId, k, pct) => {
+  const d = clone(Store.get('proveedores', distId)); if (!d) return;
+  d.reglas = Array.isArray(d.reglas) ? d.reglas : [];
+  const r = reglaEsp(d, k);
+  if (pct == null) d.reglas = d.reglas.filter(x => x !== r);
+  else if (r) r.pct = pct;
+  else d.reglas.push({ id: uid('r'), tipo: 'cat', ruta: rutaEsp(k).slice(), pct });
+  Store.put('proveedores', d);
+};
+const esEspLista = (it, k) => empiezaCon(rutaCosto(catPorModelo(normKey(it.m)) || { src: 'e', m: it.m, n: it.n || '' }), rutaEsp(k));
 let lsRepintar = null;
 Bus.on('catalog', debounce(() => { if (lsRepintar) lsRepintar(); }, 400));
 Bus.on('data', (c) => { if ((c === 'listas' || c === 'proveedores') && lsRepintar) lsRepintar(); });
@@ -5129,6 +5169,9 @@ Views.existencias = (v, sel) => {
       <div class="kpi"><div class="l">Precio de Grupos Eléctricos</div><div class="v">${fmtQty(conG)}</div><div class="d">${fmtQty(filas.length - conP - conG)} sin precio</div></div></div>
     <section class="panel"><div class="ph"><h2>${esc(distNombre(L.dist))}${L.marca ? ' · ' + esc(L.marca) : ''}</h2><div class="act"><button class="btn sm" data-up2>Subir lista nueva</button><button class="btn sm" data-pr title="Agregar o cambiar precios de algunos productos">Agregar precios</button><a class="btn sm ghost" href="#/distribuidores/${esc(L.dist)}">Ficha del distribuidor</a><button class="btn sm ghost red" data-del>Borrar lista</button></div></div>
       <div class="row" style="gap:10px;flex-wrap:wrap;align-items:end;margin:-2px 0 12px;padding:10px 12px;background:#F5F3FF;border:1px solid #DDD6FE;border-radius:10px"><label class="fld" style="margin:0"><span>Descuento que te da ${esc(distNombre(L.dist))} sobre estos precios %</span><input class="inp num" inputmode="decimal" data-dto value="${L.dto != null && L.dto !== '' ? esc(L.dto) : ''}" placeholder="0" style="max-width:140px"></label><span class="muted small" style="flex:1 1 260px">Tu costo de los productos de esta lista = precio − este descuento. Vacío: el precio es tu costo. No usa el descuento general de la ficha (${esc(distNombre(L.dist))}${num((Store.get('proveedores', L.dist) || {}).descuento) ? ' ' + fmtNum(num(Store.get('proveedores', L.dist).descuento), 1) + '%' : ''}).</span></div>
+      ${(() => { const dd = Store.get('proveedores', L.dist) || {}; const cnt = (k) => filas.filter(f => esEspLista(f.it, k)).length;
+        const campo = (k, t) => { const r = reglaEsp(dd, k); return `<label class="fld" style="margin:0"><span>${t} %</span><input class="inp num" inputmode="decimal" data-esp="${k}" value="${r ? esc(r.pct) : ''}" placeholder="igual que la lista" style="max-width:160px"><span class="muted small">${fmtQty(cnt(k))} en esta lista</span></label>`; };
+        return `<div class="row" style="gap:14px;flex-wrap:wrap;align-items:start;margin:-4px 0 12px;padding:10px 12px;background:#F5F3FF;border:1px solid #DDD6FE;border-radius:10px"><div style="flex:1 1 100%;font-weight:600">Descuento aparte de ${esc(distNombre(L.dist))}</div>${campo('var', 'Variadores de frecuencia')}${campo('arr', 'Arrancadores suaves')}<span class="muted small" style="flex:1 1 220px;align-self:center">Si lo llenas, esos productos usan este descuento en vez del de la lista. Vacío: usan el de la lista. Se guarda en la ficha del distribuidor (Descuentos → Categoría), donde puedes poner otras categorías.</span></div>`; })()}
       <p class="muted small" style="margin:-4px 0 10px">Archivo: ${esc(L.archivo || '—')} · subida el ${esc(fmtFecha(L.cargado))}${L.por ? ' por ' + esc(L.por) : ''}</p>
       <div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:10px">
         <input class="inp" data-q placeholder="Buscar referencia, nombre o código…" value="${esc(F.q)}" style="flex:1 1 260px">
@@ -5152,6 +5195,7 @@ Views.existencias = (v, sel) => {
   $('[data-stock]', body).onchange = (e) => { F.stock = e.target.value; guardaF(); };
   $('[data-precio]', body).onchange = (e) => { F.precio = e.target.value; guardaF(); };
   $('[data-dto]', body).onchange = (e) => { const r = clone(Store.get('listas', L.id)); const t = e.target.value.trim(); r.dto = t === '' ? '' : num(t); Store.put('listas', r); UI.toast(t === '' ? 'Sin descuento: el precio es tu costo' : `Descuento de ${fmtNum(num(t), 1)}% guardado`); };
+  $$('[data-esp]', body).forEach(inp => inp.onchange = (e) => { const t = e.target.value.trim(); setReglaEsp(L.dist, e.target.dataset.esp, t === '' ? null : num(t)); UI.toast(t === '' ? `Sin descuento aparte: ${ESP_LISTA[e.target.dataset.esp].nombre.toLowerCase()} usan el de la lista` : `${ESP_LISTA[e.target.dataset.esp].nombre}: descuento de ${fmtNum(num(t), 1)}% guardado`, 3500); });
   $('[data-up2]', body).onclick = () => subirListaModal(L.dist, L.marca);
   $('[data-pr]', body).onclick = () => subirListaModal(L.dist, L.marca, 'parte');
   $('[data-del]', body).onclick = async () => { if (!(await UI.confirm(`¿Borrar la lista de ${distNombre(L.dist)}${L.marca ? ' ' + L.marca : ''}? Dejará de salir en el cotizador.`, { ok: 'Borrar', danger: true }))) return; Listas.borrar(L.id); lsSet('suinadm_lista_sel', ''); Route.nav('#/existencias', { replace: true }); };
@@ -5662,7 +5706,7 @@ function fichaDistribuidor(v, id) {
    Si se editan aquí, se actualiza también su cuenta de la tienda.
    ===================================================================== */
 const Tienda = (() => {
-  let tipos = [], pedidos = [], ok = false, loading = false, last = 0, error = '';
+  let tipos = [], pedidos = [], reglas = [], ok = false, loading = false, last = 0, error = '';
   const sb = () => Sync.online() ? Sync.sb : null;
 
   /* pedidos de la tienda sin atender (para el Resumen) */
@@ -5686,13 +5730,15 @@ const Tienda = (() => {
     if (!force && Date.now() - last < 60000) return ok;
     loading = true; error = '';
     try {
-      const [rt, rc, rp] = await Promise.all([
+      const [rt, rc, rp, rr] = await Promise.all([
         s.from('tipos_cliente').select('*').order('orden'),
         s.from('clientes').select('*').eq('es_admin', false),
-        s.from('pedidos').select('*').order('creado', { ascending: false }).limit(1000)
+        s.from('pedidos').select('*').order('creado', { ascending: false }).limit(1000),
+        s.from('reglas_descuento').select('*').eq('activo', true)
       ]);
       if (rc.error) throw rc.error;
       tipos = rt.data || []; pedidos = rp.error ? [] : (rp.data || []);
+      if (!rr.error) { reglas = rr.data || []; Bus.emit('reglas'); }
       let n = 0;
       (rc.data || []).forEach(t => {
         const email = String(t.email || '').toLowerCase(); if (!email) return;
@@ -5758,7 +5804,56 @@ const Tienda = (() => {
     const d = newDoc(tipo, { clienteId: c ? c.id : null, cliente: c ? docClienteSnap(c) : { nombre: p.cliente_email, rif: '', direccion: '', extras: [] }, items, pedidoWeb: p.id, notas: [p.nota_cliente ? 'Nota del cliente: ' + p.nota_cliente : '', `Pedido web #${p.id}`].filter(Boolean).join('\n') });
     App.pendingDoc = d; App.pendingEditor = true; Route.nav('#/nuevo/' + tipo);
   };
-  return { cargar, guardar, crear, pedidosDe, porAtender, cambiarEstado, aDocumento, get tipos() { return tipos; }, get error() { return error; }, get ok() { return ok; } };
+  return { cargar, guardar, crear, pedidosDe, porAtender, cambiarEstado, aDocumento, get tipos() { return tipos; }, get reglas() { return reglas; }, get error() { return error; }, get ok() { return ok; } };
+})();
+
+/* ---------------- descuento del cliente en las ofertas ----------------
+   Los descuentos que le das a un cliente en el Panel web (por cliente o por su tipo; de todo,
+   una marca, una categoría o un modelo) se aplican también en el generador: el producto queda
+   al precio que ese cliente ve en la tienda, como "Descuento especial" de la línea, solo si
+   ese precio es menor que el del generador. Misma lógica que la tienda: gana la regla más específica. */
+const DtoCli = (() => {
+  // que: 0 modelo · 1 marca+categoría · 2 categoría · 3 marca · 4 todo   quien: 0 cliente · 1 tipo · 2 todos
+  const rango = (que, quien) => que === 0 ? 1 + quien : 4 + quien * 4 + (que - 1);
+  const enCat = (c, cat) => { const k = normKey(cat); return CatTienda.ruta(c).slice(0, 2).some(x => normKey(x) === k); };
+  /* quién es en la tienda: correo de su cuenta y tipo de cliente */
+  const quien = (rec) => {
+    if (!rec) return null;
+    const email = String(rec.tiendaEmail || rec.correo || '').trim().toLowerCase() || null;
+    const tp = Tienda.tipos.find(x => normKey(x.nombre) === normKey(rec.tipo) || x.id === rec.tipo);
+    return { email, tipoId: tp ? tp.id : null, tipoNombre: tp ? tp.nombre : '' };
+  };
+  const propias = (q) => q ? Tienda.reglas.filter(r => (r.cliente_email && r.cliente_email === q.email) || (!r.cliente_email && r.tipo_id && r.tipo_id === q.tipoId)) : [];
+  const reglaPara = (c, q) => {
+    const marca = String(c.marca || '').toUpperCase().trim(), modelo = String(c.m || '').toUpperCase().trim(), manual = c.src !== 's';
+    let mejor = null, mr = 99;
+    for (const r of Tienda.reglas) {
+      let qn, que;
+      if (r.cliente_email) { if (!q.email || r.cliente_email !== q.email) continue; qn = 0; }
+      else if (r.tipo_id) { if (!q.tipoId || r.tipo_id !== q.tipoId) continue; qn = 1; }
+      else qn = 2;
+      if (r.modelo) { if (String(r.modelo).toUpperCase().trim() !== modelo) continue; que = 0; }
+      else {
+        if (r.marca && String(r.marca).toUpperCase().trim() !== marca) continue;
+        if (r.categoria && !enCat(c, r.categoria)) continue;
+        que = r.marca && r.categoria ? 1 : r.categoria ? 2 : r.marca ? 3 : 4;
+      }
+      if (manual && que === 4) continue;      // en la tienda los productos cargados a mano no usan el descuento de "todo"
+      const k = rango(que, qn); if (k < mr) { mejor = r; mr = k; }
+    }
+    return mejor;
+  };
+  const queTxt = (r) => r.modelo ? r.modelo : [r.marca, r.categoria].filter(Boolean).join(' · ') || 'todo';
+  const reglaTxt = (r) => (r.precio_fijo != null ? 'precio fijo ' + fmtUSD(num(r.precio_fijo)) : fmtNum(num(r.descuento_pct), 1) + '%') + ' en ' + queTxt(r);
+  /* precio de la tienda para este cliente en este producto, si tiene una regla suya (o de su tipo) */
+  const precio = (c, q) => {
+    if (!c || !q) return null;
+    const r = reglaPara(c, q); if (!r || !(r.cliente_email || r.tipo_id)) return null;
+    if (r.precio_fijo != null) return { precio: round2(num(r.precio_fijo)), r };
+    if (!(c.precio > 0) || r.descuento_pct == null) return null;
+    return { precio: round2(c.precio * (1 - num(r.descuento_pct) / 100)), r };
+  };
+  return { quien, propias, precio, reglaTxt };
 })();
 /* =====================================================================
    PRODUCTOS: /ventas ⇄ /admin ⇄ /tienda (tabla productos_web, la de /admin → Productos)
@@ -6609,6 +6704,15 @@ const Cot = (() => {
   #adm-cli .ac-use:hover{background:#006d8c}
   #adm-cli .ac-msg{font-size:12.5px;font-weight:600;min-height:1.2em;color:#15803d}
   #adm-cli .ac-msg.err{color:#b91c1c}
+  #adm-cli-dto{display:none;grid-column:1/-1;margin-top:8px;padding:8px 10px;background:#F0FDF4;border:1.5px solid #BBF7D0;border-radius:9px;font-size:13.5px;color:#14532d;align-items:center;gap:8px 12px;flex-wrap:wrap}
+  #adm-cli-dto.on{display:flex}
+  #adm-cli-dto .t{flex:1 1 260px;min-width:0}
+  #adm-cli-dto .t b{color:#166534}
+  #adm-cli-dto button{border:0;background:#15803d;color:#fff;border-radius:7px;font:inherit;font-size:13px;font-weight:700;padding:5px 11px;cursor:pointer;white-space:nowrap}
+  #adm-cli-dto button:hover{background:#166534}
+  #adm-cli-dto label{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;font-weight:600;white-space:nowrap;cursor:pointer}
+  #adm-cli-dto .r{flex:1 1 100%;font-size:12.5px;font-weight:600;color:#15803d;min-height:0}
+  #adm-cli-dto .r:empty{display:none}
   `;
   const setupCliente = (w) => {
     const dd = w.document; const paste = dd.getElementById('act-paste'); const cli = dd.getElementById('act-clients');
@@ -6655,6 +6759,65 @@ const Cot = (() => {
       const falta = [!c.nombre && 'nombre', !c.rif && 'RIF', !c.direccion && 'dirección'].filter(Boolean);
       say(falta.length ? `✓ Cargado. Falta: ${falta.join(', ')}` : '✓ Datos del cliente cargados', false);
     };
+    /* ----- descuento del cliente (reglas del Panel web) ----- */
+    const dbox = dd.createElement('div'); dbox.id = 'adm-cli-dto';
+    box.appendChild(dbox);
+    let cliRec = null, cliQ = null;
+    const tbodyEl = () => dd.getElementById('items-tbody');
+    const filasDoc = () => { const tb = tbodyEl(); return tb ? Array.from(tb.querySelectorAll(':scope > tr.item-row')) : []; };
+    const precioFila = (tr) => num((tr.querySelector('.unit-price') || {}).innerText || '');
+    const verDto = () => { try { const v = w.localStorage.getItem('suin_aj_show'); return v == null ? true : JSON.parse(v) !== false; } catch (e) { return true; } };
+    const autoOn = () => lsGet('suinadm_dtocli_auto', true) !== false;
+    /* aplica el precio del cliente a esas filas; soloNuevas: no toca las que ya tienen descuento */
+    const aplicar = (rows, soloNuevas) => {
+      const A = w.SuinAjuste; if (!A || !cliQ) return { n: 0, igual: 0 };
+      let n = 0, igual = 0;
+      rows.forEach(tr => {
+        const model = modeloDesc(((tr.querySelector('.item-desc') || {}).innerText || '')); if (!model) return;
+        const pc = DtoCli.precio(catalogoByCodigo(model), cliQ); if (!pc) return;
+        const d = A.dtoDe(tr); if (d && soloNuevas) return;
+        const base = d ? d.base : precioFila(tr); if (!(base > 0)) return;
+        if (!(pc.precio < base - 0.005)) { igual++; return; }
+        A.setDto(tr, round2((1 - pc.precio / base) * 100), base, verDto()); n++;
+      });
+      if (n) { const t = dd.getElementById('items-table'); if (t) t.dispatchEvent(new w.Event('input', { bubbles: true })); dd.dispatchEvent(new w.Event('suin:docchanged')); }
+      return { n, igual };
+    };
+    const pintarDto = () => {
+      const rs = DtoCli.propias(cliQ);
+      if (!cliRec || !rs.length) { dbox.classList.remove('on'); dbox.innerHTML = ''; return; }
+      const porCli = rs.filter(r => r.cliente_email), porTipo = rs.filter(r => !r.cliente_email);
+      const txt = [porCli.length ? 'propio: ' + porCli.map(DtoCli.reglaTxt).join(', ') : '', porTipo.length ? 'por ser <b>' + esc(cliQ.tipoNombre) + '</b>: ' + porTipo.map(DtoCli.reglaTxt).join(', ') : ''].filter(Boolean).join(' · ');
+      dbox.innerHTML = `<span class="t">💲 <b>${esc(cliRec.nombre)}</b> tiene descuento de cliente — ${txt}</span>
+        <label title="Al agregar un producto, ponerle el precio de este cliente"><input type="checkbox" data-dto-auto ${autoOn() ? 'checked' : ''}> Al agregar productos</label>
+        <button type="button" data-dto-ap title="Poner el precio de este cliente en los productos de la oferta">Aplicar a los productos</button><span class="r"></span>`;
+      dbox.classList.add('on');
+      dbox.querySelector('[data-dto-auto]').onchange = (e) => lsSet('suinadm_dtocli_auto', e.target.checked);
+      dbox.querySelector('[data-dto-ap]').onclick = () => {
+        const x = aplicar(filasDoc(), false);
+        dbox.querySelector('.r').textContent = x.n ? `✓ Precio de cliente en ${x.n} producto${x.n === 1 ? '' : 's'}${x.igual ? ` · ${x.igual} ya tenía${x.igual === 1 ? '' : 'n'} un precio igual o mejor` : ''}. Puedes quitarlo en "% Ajustar precios y descuentos".` : x.igual ? `Los productos ya tienen un precio igual o mejor que el de este cliente.` : 'Ningún producto de la oferta entra en sus descuentos.';
+      };
+    };
+    const buscarCli = () => {
+      const nombre = read('client-name'), rif = read('client-rif');
+      const rec = nombre || rif ? findCliente({ nombre, rif }) : null;
+      cliRec = rec; cliQ = DtoCli.quien(rec); pintarDto();
+    };
+    const obsCli = new w.MutationObserver(debounce(buscarCli, 400));
+    ['client-name', 'client-rif'].forEach(id => { const el = span(id); if (el) obsCli.observe(el, { childList: true, characterData: true, subtree: true }); });
+    Bus.on('reglas', () => { if (dd.defaultView) buscarCli(); });
+    Bus.on('tienda', () => { if (dd.defaultView) buscarCli(); });
+    Tienda.cargar();
+    buscarCli();
+    /* productos agregados desde el buscador (no al abrir una oferta guardada): precio del cliente */
+    let ultimoAgregar = 0;
+    dd.addEventListener('click', (e) => { if (e.target.closest && e.target.closest('.cr-add-btn, .m-res-add')) ultimoAgregar = Date.now(); }, true);
+    const tb = tbodyEl();
+    if (tb) new w.MutationObserver((ms) => {
+      if (!cliQ || !autoOn() || Date.now() - ultimoAgregar > 1500) return;
+      const nuevas = []; ms.forEach(m => m.addedNodes.forEach(n => { if (n.nodeType === 1 && n.matches('tr.item-row')) nuevas.push(n); }));
+      if (nuevas.length) setTimeout(() => { const x = aplicar(nuevas, true); if (x.n) say(`✓ Precio de cliente aplicado`, false); }, 60);
+    }).observe(tb, { childList: true });
     ta.addEventListener('paste', () => setTimeout(use, 0));
     ta.addEventListener('keydown', (e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); use(); } });
     $('.ac-use', box).onclick = use;

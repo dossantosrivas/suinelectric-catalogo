@@ -5579,9 +5579,12 @@ function refrescarPrecios(){
 
 /* ---------- Motor de precios ----------
    Gana la regla más específica (no se suman):
-   modelo+cliente > modelo+tipo > modelo (todos) > marca+cliente > cliente >
-   marca+tipo > tipo > marca (todos) > descuento general. */
-const RANGO_REGLA = { '00': 1, '01': 2, '02': 3, '10': 4, '20': 5, '11': 6, '21': 7, '12': 8, '22': 9 };
+   primero las de un modelo (cliente > tipo > todos); luego, para el cliente, su tipo y todos
+   (en ese orden): marca+categoría > categoría > marca > todo el catálogo.
+   que: 0 modelo · 1 marca+categoría · 2 categoría · 3 marca · 4 todo   quien: 0 cliente · 1 tipo · 2 todos */
+const rangoRegla = (que, quien) => que === 0 ? 1 + quien : 4 + quien * 4 + (que - 1);
+// la categoría de una regla es una familia o categoría de la tienda (los dos primeros niveles de la ruta)
+function enCategoria(p, cat){ const k = claveCat(cat); return rutaDe(p).slice(0, 2).some(x => claveCat(x) === k); }
 function reglaPara(p, tipoSimulado){
   if (!reglasDescuento.length) return null;
   const marca = String(p.marca || '').toUpperCase().trim();
@@ -5594,18 +5597,20 @@ function reglaPara(p, tipoSimulado){
   const emailRegla = otro ? otro.email : sesion.email;
   let mejor = null, mejorRango = 99;
   for (const r of reglasDescuento){
-    if (r.categoria) continue;      // descuento por categoría: por ahora solo en /tienda-beta
     let quien, que;
     if (r.cliente_email){ if (simulando || !emailRegla || r.cliente_email !== emailRegla) continue; quien = 0; }
     else if (r.tipo_id){ if (!tipo || r.tipo_id !== tipo) continue; quien = 1; }
     else quien = 2;
     if (r.modelo){ if (String(r.modelo).toUpperCase().trim() !== modelo) continue; que = 0; }
-    else if (r.marca){ if (String(r.marca).toUpperCase().trim() !== marca) continue; que = 1; }
-    else que = 2;
+    else {
+      if (r.marca && String(r.marca).toUpperCase().trim() !== marca) continue;
+      if (r.categoria && !enCategoria(p, r.categoria)) continue;
+      que = r.marca && r.categoria ? 1 : r.categoria ? 2 : r.marca ? 3 : 4;
+    }
     // Los productos cargados a mano ya traen precio de catálogo: solo les
-    // aplican reglas de su marca o modelo.
-    if (esManual(p) && que === 2) continue;
-    const rango = RANGO_REGLA['' + que + quien];
+    // aplican reglas de su marca, categoría o modelo.
+    if (esManual(p) && que === 4) continue;
+    const rango = rangoRegla(que, quien);
     if (rango < mejorRango){ mejor = r; mejorRango = rango; }
   }
   return mejor;
@@ -5614,7 +5619,7 @@ function reglaPara(p, tipoSimulado){
 function textoRegla(r){
   if (!r) return '';
   const quien = r.cliente_email ? 'tu cuenta' : r.tipo_id ? (tiposCliente[r.tipo_id] || r.tipo_id) : 'general';
-  const que = r.modelo ? r.modelo : r.marca ? r.marca : 'todo';
+  const que = r.modelo ? r.modelo : [r.marca, r.categoria].filter(Boolean).join(' · ') || 'todo';
   return (r.precio_fijo != null ? 'precio especial' : Number(r.descuento_pct) + '%') + ' · ' + quien + (que !== 'todo' ? ' · ' + que : '');
 }
 

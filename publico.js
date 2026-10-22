@@ -53,22 +53,27 @@
   try { hay = localStorage.getItem(LLAVE); } catch (e) {}
   if (!hay || !document.querySelector('.precio-cli')) return;
 
-  var RANGO = { '00': 1, '01': 2, '02': 3, '10': 4, '20': 5, '11': 6, '21': 7, '12': 8, '22': 9 };
+  // que: 0 modelo · 1 marca+categoría · 2 categoría · 3 marca · 4 todo   quien: 0 cliente · 1 tipo · 2 todos
+  function rango(que, quien){ return que === 0 ? 1 + quien : 4 + quien * 4 + (que - 1); }
   function may(s){ return String(s || '').toUpperCase().trim(); }
+  function clave(s){ return String(s || '').normalize('NFD').replace(/[\u0300-\u036f]/g, '').toLowerCase().replace(/[^a-z0-9]/g, ''); }
+  function enCat(p, cat){ var k = clave(cat); return (p.cats || []).some(function(x){ return clave(x) === k; }); }
   function reglaPara(p, reglas, email, tipo){
     var mejor = null, mejorRango = 99;
     for (var i = 0; i < reglas.length; i++){
       var r = reglas[i], quien, que;
-      if (r.categoria) continue;      // descuento por categoría: por ahora solo en /tienda-beta
       if (r.cliente_email){ if (!email || r.cliente_email !== email) continue; quien = 0; }
       else if (r.tipo_id){ if (!tipo || r.tipo_id !== tipo) continue; quien = 1; }
       else quien = 2;
       if (r.modelo){ if (may(r.modelo) !== may(p.modelo)) continue; que = 0; }
-      else if (r.marca){ if (may(r.marca) !== may(p.marca)) continue; que = 1; }
-      else que = 2;
-      if (p.manual && que === 2) continue;   // los manuales solo usan reglas de marca o modelo
-      var rango = RANGO['' + que + quien];
-      if (rango < mejorRango){ mejor = r; mejorRango = rango; }
+      else {
+        if (r.marca && may(r.marca) !== may(p.marca)) continue;
+        if (r.categoria && !enCat(p, r.categoria)) continue;
+        que = r.marca && r.categoria ? 1 : r.categoria ? 2 : r.marca ? 3 : 4;
+      }
+      if (p.manual && que === 4) continue;   // los manuales solo usan reglas de marca, categoría o modelo
+      var k = rango(que, quien);
+      if (k < mejorRango){ mejor = r; mejorRango = k; }
     }
     return mejor;
   }
@@ -93,7 +98,8 @@
       var l = el.getAttribute('data-lista');
       var p = { lista: (l === '' || l == null || isNaN(Number(l))) ? null : Number(l),
                 marca: el.getAttribute('data-marca'), modelo: el.getAttribute('data-modelo'),
-                manual: el.getAttribute('data-manual') === '1' };
+                manual: el.getAttribute('data-manual') === '1',
+                cats: String(el.getAttribute('data-cat') || '').split('|').filter(Boolean) };
       var r = reglaPara(p, reglas, email, tipo);
       var final = precioPara(p, r, general);
       if (final == null || isNaN(final)) continue;
