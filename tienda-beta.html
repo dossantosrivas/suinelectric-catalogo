@@ -991,7 +991,7 @@
     background:var(--azul-suave); border-radius:5px; padding:2px 7px; line-height:1.5; }
   .especs-mini .fi, .especs-mini .fi svg{ width:14px; height:14px; }
   .especs-mini .fi-color{ width:10px; height:10px; }
-  #contenido.vista-cuadros .especs-mini, #contenido.vista-compacta .especs-mini{ display:none; }
+  #contenido.vista-compacta .especs-mini{ display:none; }
   @media (max-width: 640px){
     #contenido.vista-ficha .grid{ grid-template-columns:1fr; gap:10px; }
     #contenido.vista-ficha .card{ grid-template-columns:86px minmax(0,1fr); }
@@ -1472,8 +1472,20 @@
 }
 #contenido.vista-lista .xl-cab,
 #contenido.vista-lista .grid > .card.fila-xl{
-  display:grid; grid-template-columns:var(--xl-cols); min-width:990px; align-items:stretch;
+  display:grid; grid-template-columns:var(--xl-cols); min-width:var(--xl-min, 990px); align-items:stretch;
 }
+/* Características: columnas por especificación (categoría filtrada) o etiquetas (todas) */
+#contenido.vista-lista .xl-cab .xl-ord{ all:unset; cursor:pointer; display:block; min-width:0; line-height:1.25; overflow-wrap:anywhere; }
+#contenido.vista-lista .xl-cab .xl-ord .fl{ margin-left:3px; }
+#contenido.vista-lista .xl-cab .xl-ord:hover{ color:var(--azul-texto); }
+#contenido.vista-lista .xl-cab .xl-ord .fl{ font-size:10px; opacity:.45; }
+#contenido.vista-lista .xl-cab .xl-ord.activo{ color:var(--tinta); }
+#contenido.vista-lista .xl-cab .xl-ord.activo .fl{ opacity:1; }
+#contenido.vista-lista .xl-cab .xl-u{ text-transform:none; font-weight:600; color:var(--texto-3); letter-spacing:0; }
+#contenido.vista-lista .fila-xl .xl-esp{ font-size:13px; font-weight:600; color:var(--tinta); font-variant-numeric:tabular-nums; }
+#contenido.vista-lista .fila-xl .xl-esp.vacia{ color:var(--texto-3); font-weight:400; }
+#contenido.vista-lista .fila-xl .xl-chips .especs-mini{ margin:0; gap:3px; }
+#contenido.vista-lista .fila-xl .xl-chips .especs-mini > span{ font-size:11px; padding:1px 6px; }
 #contenido.vista-lista .xl-cab{
   position:sticky; top:0; z-index:3; background:#eef3f5; border-bottom:2px solid var(--linea);
   font-size:11.5px; font-weight:700; letter-spacing:.04em; text-transform:uppercase; color:var(--texto-2);
@@ -1524,8 +1536,8 @@
 #contenido.vista-lista .fila-xl .btn-wa{ flex:1 1 50%; height:28px; padding:0 5px; font-size:11px; gap:3px; border-width:1px; border-radius:6px; }
 #contenido.vista-lista .fila-xl .btn-wa .ico-wa{ width:13px; height:13px; }
 @media (max-width:640px){
-  #contenido.vista-lista{ --xl-cols:44px 70px 130px 200px 96px 96px 150px 112px; }
-  #contenido.vista-lista .xl-cab, #contenido.vista-lista .grid > .card.fila-xl{ min-width:898px; }
+  #contenido.vista-lista{ --xl-cols-m:44px 70px 130px 200px 96px 96px 150px 112px; }
+  #contenido.vista-lista .xl-cab, #contenido.vista-lista .grid > .card.fila-xl{ grid-template-columns:var(--xl-cols-m); min-width:var(--xl-min-m, 898px); }
   #contenido.vista-lista .fila-xl .thumb{ width:34px; height:34px; }
 }
 
@@ -3084,12 +3096,101 @@ function esVistaTabla(){
   const c = document.getElementById('contenido');
   return !!(c && c.classList.contains('vista-lista'));
 }
-const CABECERA_TABLA_HTML =
-  '<div class="xl-cab" aria-hidden="true">' +
+// Columnas de características de la Lista: con una categoría abierta, cada
+// dato técnico en su columna (se ordena tocando el título); viendo todo o
+// buscando, una sola columna con las etiquetas cortas de la ficha.
+const MAX_COLS_ESPEC = 4;
+let colsTabla = { modo:'chips', defs:[] };   // columnas del grupo que se está pintando
+let ordenEspec = null;                       // { clave, dir: 1 | -1 } al tocar un título
+function colsEspecDe(ruta){
+  if (!(catalogoBeta || conEspecs)) return { modo:'ninguna', defs:[] };
+  const buscando = !!document.getElementById('buscador').value.trim();
+  if (buscando || !seleccion.length) return { modo:'chips', defs:[] };
+  const defs = (defsFacDe(ruta) || []).filter(d => d.clave !== 'marca' && d.clave !== 'serie').slice(0, MAX_COLS_ESPEC);
+  return defs.length ? { modo:'columnas', defs } : { modo:'chips', defs:[] };
+}
+function estiloColsTabla(c){
+  const ini = '52px 92px minmax(150px,1.1fr) ', fin = ' 112px 118px 176px 126px';
+  const iniM = '44px 70px 130px ', finM = ' 96px 96px 150px 112px';
+  if (c.modo === 'columnas'){
+    const n = c.defs.length;
+    return '--xl-cols:' + ini + 'minmax(180px,2fr) ' + Array(n).fill('minmax(92px,.8fr)').join(' ') + fin +
+           ';--xl-min:' + (950 + 92 * n) + 'px' +
+           ';--xl-cols-m:' + iniM + '170px ' + Array(n).fill('84px').join(' ') + finM +
+           ';--xl-min-m:' + (868 + 84 * n) + 'px';
+  }
+  if (c.modo === 'chips'){
+    return '--xl-cols:' + ini + 'minmax(180px,2fr) minmax(190px,1.6fr)' + fin + ';--xl-min:1140px' +
+           ';--xl-cols-m:' + iniM + '170px 170px' + finM + ';--xl-min-m:1038px';
+  }
+  return '';
+}
+function tituloEspec(d){
+  const n = escHtml(d.nombre || d.clave), u = d.unidad ? ' <span class="xl-u">(' + escHtml(d.unidad) + ')</span>' : '';
+  const act = ordenEspec && ordenEspec.clave === d.clave;
+  const fl = act ? (ordenEspec.dir === 1 ? '▲' : '▼') : '↕';
+  return '<button type="button" class="xl-ord' + (act ? ' activo' : '') + '" data-orden-espec="' + escHtml(d.clave) +
+         '" title="Ordenar por ' + n + '">' + n + u + '<span class="fl">' + fl + '</span></button>';
+}
+function cabeceraTablaHTML(c){
+  let esp = '';
+  if (c.modo === 'columnas') esp = c.defs.map(d => '<div class="xl-c">' + tituloEspec(d) + '</div>').join('');
+  else if (c.modo === 'chips') esp = '<div class="xl-c">Características</div>';
+  return '<div class="xl-cab">' +
     '<div class="xl-c">Foto</div><div class="xl-c">Marca</div><div class="xl-c">Modelo</div>' +
-    '<div class="xl-c">Descripción</div><div class="xl-c">Existencia</div><div class="xl-c xl-num">Precio</div>' +
+    '<div class="xl-c">Descripción</div>' + esp + '<div class="xl-c">Existencia</div><div class="xl-c xl-num">Precio</div>' +
     '<div class="xl-c">Cantidad</div><div class="xl-c">Consultar</div>' +
   '</div>';
+}
+function valorEspecTabla(p, d){
+  const s = p._specs || {};
+  if (d.tipo === 'rango'){
+    const a = s[d.clave + '_min'], b = s[d.clave + '_max'];
+    return (a != null && b != null) ? FMT_NUM(a) + '–' + FMT_NUM(b) : null;
+  }
+  const v = s[d.clave];
+  if (v == null || v === '') return null;
+  if (d.clave === 'fases') return Number(v) === 1 ? '1F' : '3F';
+  if (typeof v === 'number' || d.tipo === 'numero') return FMT_NUM(v);   // la unidad va en el título
+  return String(v);
+}
+function celdasEspecHTML(p){
+  const c = colsTabla;
+  if (c.modo === 'columnas') return c.defs.map(d => {
+    const v = valorEspecTabla(p, d);
+    return v == null ? '<div class="xl-c xl-esp vacia">—</div>' : '<div class="xl-c xl-esp">' + escHtml(v) + '</div>';
+  }).join('');
+  if (c.modo === 'chips') return '<div class="xl-c xl-chips">' + especsMiniHTML(p) + '</div>';
+  return '';
+}
+// Orden por columna: números de menor a mayor (o al revés); sin dato, al final.
+function ordenarPorEspec(lista, ruta){
+  if (!ordenEspec || !esVistaTabla()) return null;
+  const d = (colsEspecDe(ruta).defs || []).find(x => x.clave === ordenEspec.clave);
+  if (!d) return null;
+  const val = (p) => {
+    const s = p._specs || {};
+    const v = d.tipo === 'rango' ? s[d.clave + '_min'] : s[d.clave];
+    if (v == null || v === '') return null;
+    const n = Number(v);
+    return isNaN(n) ? String(v) : n;
+  };
+  return lista.slice().sort((a, b) => {
+    const x = val(a), y = val(b);
+    if (x == null && y == null) return 0;
+    if (x == null) return 1;
+    if (y == null) return -1;
+    const r = (typeof x === 'number' && typeof y === 'number') ? x - y : String(x).localeCompare(String(y), 'es', { numeric:true });
+    return r * ordenEspec.dir;
+  });
+}
+document.addEventListener('click', (e) => {
+  const b = e.target.closest && e.target.closest('[data-orden-espec]');
+  if (!b) return;
+  const clave = b.getAttribute('data-orden-espec');
+  ordenEspec = (ordenEspec && ordenEspec.clave === clave) ? (ordenEspec.dir === 1 ? { clave, dir:-1 } : null) : { clave, dir:1 };
+  const y = window.scrollY; mostrarVista(); window.scrollTo(0, y);
+});
 function filaTablaHTML(p){
   const links = waLinks("Hola, quiero consultar disponibilidad y precio de: " + p.modelo + "\n" + urlProducto(p.modelo));
   const precioFinal = precioMostrado(p);
@@ -3105,6 +3206,7 @@ function filaTablaHTML(p){
       <div class="xl-c xl-marca">${logoMarca ? '<img src="'+logoMarca+'" alt="'+(p.marca||'')+'" title="'+(p.marca||'')+'">' : escHtml(p.marca || '')}</div>
       <div class="xl-c xl-modelo"><span class="modelo" data-modelo="${p.modelo}">${p.modelo || 'S/N'}</span>${badgeVariantes(p)}</div>
       <div class="xl-c xl-desc"><span class="xl-desc-txt" title="${String(p.descripcion || '').replace(/"/g,'&quot;')}">${p.descripcion || ''}</span></div>
+      ${celdasEspecHTML(p)}
       <div class="xl-c xl-estado"><span class="estado ${p.disponible ? 'ok' : 'off'}">${textoStock(p, 'Agotado')}</span>${bloqueAdminExistencias(p, true)}</div>
       <div class="xl-c xl-precio xl-num">
         ${precioTachado != null ? '<span class="precio-original">'+formatoMoneda(precioTachado)+'</span>' : ''}
@@ -3340,7 +3442,7 @@ function render(lista){
   // Se pintan por tandas: primero lo que se ve y el resto a medida que se
   // baja. Así la búsqueda y "Ver todo" responden al instante aunque haya
   // miles de productos.
-  const cola = claves.map(clave => ({ ruta: clave.split('|||'), productos: ordenarGrupo(grupos[clave]) }));
+  const cola = claves.map(clave => { const ruta = clave.split('|||'); return { ruta, productos: ordenarPorEspec(grupos[clave], ruta) || ordenarGrupo(grupos[clave]) }; });
   const sentinela = document.createElement('div');
   sentinela.className = 'cargar-mas';
   sentinela.innerHTML = '<button type="button" class="btn-cargar-mas">Ver más productos</button>';
@@ -3378,10 +3480,13 @@ function pintarTanda(n){
       seccion.innerHTML = '<h2>' + (partes.length ? '<span class="ruta-prev">' + migasHTML(partes) + '</span>' : '') +
                           (rutaG.length <= MAX_NIVELES ? enlaceCat(rutaG, ultimo, 'grupo-titulo') : '<span>' + escHtml(ultimo) + '</span>') +
                           '<span class="conteo-badge">' + g.productos.length + (g.productos.length === 1 ? ' producto' : ' productos') + '</span></h2>' +
-                          '<div class="grid">' + (esVistaTabla() ? CABECERA_TABLA_HTML : '') + '</div>';
+                          (esVistaTabla()
+                            ? (g.cols = colsEspecDe(rutaG), '<div class="grid" style="' + estiloColsTabla(g.cols) + '">' + cabeceraTablaHTML(g.cols) + '</div>')
+                            : '<div class="grid"></div>');
       st.cont.insertBefore(seccion, st.sentinela);
       st.grid = seccion.querySelector('.grid');
     }
+    if (g.cols) colsTabla = g.cols;
     const trozo = g.productos.slice(st.pi, st.pi + quedan);
     st.grid.insertAdjacentHTML('beforeend', trozo.map(tarjetaHTML).join(''));
     st.pi += trozo.length;
@@ -5338,6 +5443,7 @@ document.getElementById('filtro-disponibilidad').addEventListener('change', () =
 })();
 
 document.getElementById('filtro-orden').addEventListener('change', () => {
+  ordenEspec = null;
   if (vista !== 'catalogo') vista = 'catalogo';
   renderSidebar(); mostrarVista();
 });
