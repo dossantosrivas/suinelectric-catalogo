@@ -59,6 +59,7 @@
     var mejor = null, mejorRango = 99;
     for (var i = 0; i < reglas.length; i++){
       var r = reglas[i], quien, que;
+      if (r.categoria) continue;      // descuento por categoría: por ahora solo en /tienda-beta
       if (r.cliente_email){ if (!email || r.cliente_email !== email) continue; quien = 0; }
       else if (r.tipo_id){ if (!tipo || r.tipo_id !== tipo) continue; quien = 1; }
       else quien = 2;
@@ -75,7 +76,7 @@
     if (r && r.precio_fijo != null) return Number(r.precio_fijo);
     if (p.lista == null) return null;
     if (r && r.descuento_pct != null){
-      var esGeneral = !r.cliente_email && !r.tipo_id && !r.marca && !r.modelo;
+      var esGeneral = !r.cliente_email && !r.tipo_id && !r.marca && !r.modelo && !r.categoria;
       return p.lista * (1 - (esGeneral ? general : Number(r.descuento_pct)) / 100);
     }
     return p.manual ? p.lista : p.lista * (1 - general / 100);
@@ -84,7 +85,7 @@
 
   function aplicar(reglas, email, tipo){
     var g = null;
-    reglas.forEach(function(r){ if (!g && !r.cliente_email && !r.tipo_id && !r.marca && !r.modelo && r.descuento_pct != null) g = r; });
+    reglas.forEach(function(r){ if (!g && !r.cliente_email && !r.tipo_id && !r.marca && !r.modelo && !r.categoria && r.descuento_pct != null) g = r; });
     var general = g ? Number(g.descuento_pct) : DESCUENTO_GENERAL;
     var els = document.querySelectorAll('.precio-cli');
     for (var i = 0; i < els.length; i++){

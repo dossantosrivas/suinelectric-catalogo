@@ -1540,7 +1540,7 @@ function reglaPara(p, email, tipo){
   const marca = String(p.marca || '').toUpperCase().trim(), modelo = String(p.modelo || '').toUpperCase().trim();
   let mejor = null, mr = 99;
   for (const r of reglas){
-    if (!r.activo) continue;
+    if (!r.activo || r.categoria) continue;      // descuento por categoría: por ahora solo en /admin-beta
     let quien, que;
     if (r.cliente_email){ if (r.cliente_email !== email) continue; quien = 0; }
     else if (r.tipo_id){ if (r.tipo_id !== tipo) continue; quien = 1; }
@@ -1562,7 +1562,7 @@ function precioPara(p, email, tipo){
   return { precio: Number(p.precio), r: null };
 }
 function describirQuien(r){ return r.cliente_email ? '<div class="persona" style="min-width:0"><div class="avatar" style="width:30px;height:30px;font-size:12px">' + esc(iniciales(clientes.find(c => c.email === r.cliente_email) || { email: r.cliente_email })) + '</div><div><strong>' + esc(nombreCliente(r.cliente_email)) + '</strong><span>' + esc(r.cliente_email) + '</span></div></div>' : r.tipo_id ? '<span class="pill azul">' + esc(nombreTipo(r.tipo_id)) + '</span>' : '<span class="pill tinta">Todos</span>'; }
-function describirQue(r){ return r.modelo ? 'Modelo <span class="mono">' + esc(r.modelo) + '</span>' : r.marca ? 'Marca <strong>' + esc(r.marca) + '</strong>' : 'Todo el catálogo'; }
+function describirQue(r){ if (r.categoria) return (r.marca ? 'Marca <strong>' + esc(r.marca) + '</strong> · ' : '') + 'Categoría <strong>' + esc(r.categoria) + '</strong> <small class="muted">(solo en beta)</small>'; return r.modelo ? 'Modelo <span class="mono">' + esc(r.modelo) + '</span>' : r.marca ? 'Marca <strong>' + esc(r.marca) + '</strong>' : 'Todo el catálogo'; }
 function vistaDescuentos(){
   const destinoOpts = '<option value="t:">Todos (visitantes y clientes)</option>' +
     '<optgroup label="Tipo de cliente">' + tipos.map(t => '<option value="tp:' + t.id + '">' + esc(t.nombre) + '</option>').join('') + '</optgroup>' +

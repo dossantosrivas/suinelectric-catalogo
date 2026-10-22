@@ -1963,7 +1963,7 @@ function precioMostrado(p, tipoSimulado){
   const n = Number(p.precio);
   if (isNaN(n)) return null;
   if (r && r.descuento_pct != null){
-    const esGeneral = !r.cliente_email && !r.tipo_id && !r.marca && !r.modelo;
+    const esGeneral = !r.cliente_email && !r.tipo_id && !r.marca && !r.modelo && !r.categoria;
     return n * (1 - (esGeneral ? descuentoPct : Number(r.descuento_pct)) / 100);
   }
   return esManual(p) ? n : precioConDescuento(n);
@@ -5469,7 +5469,7 @@ async function cargarSesionYReglas(){
     tiposCliente = {};
     (tipos || []).forEach(t => { tiposCliente[t.id] = t.nombre; });
     // El descuento general (regla sin cliente, tipo, marca ni modelo) es el de la casilla "Dto."
-    const general = reglasDescuento.find(r => !r.cliente_email && !r.tipo_id && !r.marca && !r.modelo && r.descuento_pct != null);
+    const general = reglasDescuento.find(r => !r.cliente_email && !r.tipo_id && !r.marca && !r.modelo && !r.categoria && r.descuento_pct != null);
     if (general){
       descuentoPct = Number(general.descuento_pct);
       const inp = document.getElementById('descuento');
@@ -5594,6 +5594,7 @@ function reglaPara(p, tipoSimulado){
   const emailRegla = otro ? otro.email : sesion.email;
   let mejor = null, mejorRango = 99;
   for (const r of reglasDescuento){
+    if (r.categoria) continue;      // descuento por categoría: por ahora solo en /tienda-beta
     let quien, que;
     if (r.cliente_email){ if (simulando || !emailRegla || r.cliente_email !== emailRegla) continue; quien = 0; }
     else if (r.tipo_id){ if (!tipo || r.tipo_id !== tipo) continue; quien = 1; }
