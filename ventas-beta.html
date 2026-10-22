@@ -6102,7 +6102,7 @@ function fichaDistribuidor(v, id) {
    Si se editan aquí, se actualiza también su cuenta de la tienda.
    ===================================================================== */
 const Tienda = (() => {
-  let tipos = [], pedidos = [], ok = false, loading = false, last = 0, error = '';
+  let tipos = [], pedidos = [], reglas = [], ok = false, loading = false, last = 0, error = '';
   const sb = () => Sync.online() ? Sync.sb : null;
 
   /* pedidos de la tienda sin atender (para el Resumen) */
@@ -6126,13 +6126,15 @@ const Tienda = (() => {
     if (!force && Date.now() - last < 60000) return ok;
     loading = true; error = '';
     try {
-      const [rt, rc, rp] = await Promise.all([
+      const [rt, rc, rp, rr] = await Promise.all([
         s.from('tipos_cliente').select('*').order('orden'),
         s.from('clientes').select('*').eq('es_admin', false),
-        s.from('pedidos').select('*').order('creado', { ascending: false }).limit(1000)
+        s.from('pedidos').select('*').order('creado', { ascending: false }).limit(1000),
+        s.from('reglas_descuento').select('*').eq('activo', true)
       ]);
       if (rc.error) throw rc.error;
       tipos = rt.data || []; pedidos = rp.error ? [] : (rp.data || []);
+      if (!rr.error) { reglas = rr.data || []; Bus.emit('reglas'); }
       let n = 0;
       (rc.data || []).forEach(t => {
         const email = String(t.email || '').toLowerCase(); if (!email) return;
@@ -6198,7 +6200,56 @@ const Tienda = (() => {
     const d = newDoc(tipo, { clienteId: c ? c.id : null, cliente: c ? docClienteSnap(c) : { nombre: p.cliente_email, rif: '', direccion: '', extras: [] }, items, pedidoWeb: p.id, notas: [p.nota_cliente ? 'Nota del cliente: ' + p.nota_cliente : '', `Pedido web #${p.id}`].filter(Boolean).join('\n') });
     App.pendingDoc = d; App.pendingEditor = true; Route.nav('#/nuevo/' + tipo);
   };
-  return { cargar, guardar, crear, pedidosDe, porAtender, cambiarEstado, aDocumento, get tipos() { return tipos; }, get error() { return error; }, get ok() { return ok; } };
+  return { cargar, guardar, crear, pedidosDe, porAtender, cambiarEstado, aDocumento, get tipos() { return tipos; }, get reglas() { return reglas; }, get error() { return error; }, get ok() { return ok; } };
+})();
+
+/* ---------------- descuento del cliente en las ofertas ----------------
+   Los descuentos que le das a un cliente en el Panel web (por cliente o por su tipo; de todo,
+   una marca, una categoría o un modelo) se aplican también en el generador: el producto queda
+   al precio que ese cliente ve en la tienda, como "Descuento especial" de la línea, solo si
+   ese precio es menor que el del generador. Misma lógica que la tienda: gana la regla más específica. */
+const DtoCli = (() => {
+  // que: 0 modelo · 1 marca+categoría · 2 categoría · 3 marca · 4 todo   quien: 0 cliente · 1 tipo · 2 todos
+  const rango = (que, quien) => que === 0 ? 1 + quien : 4 + quien * 4 + (que - 1);
+  const enCat = (c, cat) => { const k = normKey(cat); return CatTienda.ruta(c).slice(0, 2).some(x => normKey(x) === k); };
+  /* quién es en la tienda: correo de su cuenta y tipo de cliente */
+  const quien = (rec) => {
+    if (!rec) return null;
+    const email = String(rec.tiendaEmail || rec.correo || '').trim().toLowerCase() || null;
+    const tp = Tienda.tipos.find(x => normKey(x.nombre) === normKey(rec.tipo) || x.id === rec.tipo);
+    return { email, tipoId: tp ? tp.id : null, tipoNombre: tp ? tp.nombre : '' };
+  };
+  const propias = (q) => q ? Tienda.reglas.filter(r => (r.cliente_email && r.cliente_email === q.email) || (!r.cliente_email && r.tipo_id && r.tipo_id === q.tipoId)) : [];
+  const reglaPara = (c, q) => {
+    const marca = String(c.marca || '').toUpperCase().trim(), modelo = String(c.m || '').toUpperCase().trim(), manual = c.src !== 's';
+    let mejor = null, mr = 99;
+    for (const r of Tienda.reglas) {
+      let qn, que;
+      if (r.cliente_email) { if (!q.email || r.cliente_email !== q.email) continue; qn = 0; }
+      else if (r.tipo_id) { if (!q.tipoId || r.tipo_id !== q.tipoId) continue; qn = 1; }
+      else qn = 2;
+      if (r.modelo) { if (String(r.modelo).toUpperCase().trim() !== modelo) continue; que = 0; }
+      else {
+        if (r.marca && String(r.marca).toUpperCase().trim() !== marca) continue;
+        if (r.categoria && !enCat(c, r.categoria)) continue;
+        que = r.marca && r.categoria ? 1 : r.categoria ? 2 : r.marca ? 3 : 4;
+      }
+      if (manual && que === 4) continue;      // en la tienda los productos cargados a mano no usan el descuento de "todo"
+      const k = rango(que, qn); if (k < mr) { mejor = r; mr = k; }
+    }
+    return mejor;
+  };
+  const queTxt = (r) => r.modelo ? r.modelo : [r.marca, r.categoria].filter(Boolean).join(' · ') || 'todo';
+  const reglaTxt = (r) => (r.precio_fijo != null ? 'precio fijo ' + fmtUSD(num(r.precio_fijo)) : fmtNum(num(r.descuento_pct), 1) + '%') + ' en ' + queTxt(r);
+  /* precio de la tienda para este cliente en este producto, si tiene una regla suya (o de su tipo) */
+  const precio = (c, q) => {
+    if (!c || !q) return null;
+    const r = reglaPara(c, q); if (!r || !(r.cliente_email || r.tipo_id)) return null;
+    if (r.precio_fijo != null) return { precio: round2(num(r.precio_fijo)), r };
+    if (!(c.precio > 0) || r.descuento_pct == null) return null;
+    return { precio: round2(c.precio * (1 - num(r.descuento_pct) / 100)), r };
+  };
+  return { quien, propias, precio, reglaTxt };
 })();
 /* =====================================================================
    PRODUCTOS: /ventas ⇄ /admin ⇄ /tienda (tabla productos_web, la de /admin → Productos)
@@ -7049,6 +7100,15 @@ const Cot = (() => {
   #adm-cli .ac-use:hover{background:#006d8c}
   #adm-cli .ac-msg{font-size:12.5px;font-weight:600;min-height:1.2em;color:#15803d}
   #adm-cli .ac-msg.err{color:#b91c1c}
+  #adm-cli-dto{display:none;grid-column:1/-1;margin-top:8px;padding:8px 10px;background:#F0FDF4;border:1.5px solid #BBF7D0;border-radius:9px;font-size:13.5px;color:#14532d;align-items:center;gap:8px 12px;flex-wrap:wrap}
+  #adm-cli-dto.on{display:flex}
+  #adm-cli-dto .t{flex:1 1 260px;min-width:0}
+  #adm-cli-dto .t b{color:#166534}
+  #adm-cli-dto button{border:0;background:#15803d;color:#fff;border-radius:7px;font:inherit;font-size:13px;font-weight:700;padding:5px 11px;cursor:pointer;white-space:nowrap}
+  #adm-cli-dto button:hover{background:#166534}
+  #adm-cli-dto label{display:inline-flex;align-items:center;gap:5px;font-size:12.5px;font-weight:600;white-space:nowrap;cursor:pointer}
+  #adm-cli-dto .r{flex:1 1 100%;font-size:12.5px;font-weight:600;color:#15803d;min-height:0}
+  #adm-cli-dto .r:empty{display:none}
   `;
   const setupCliente = (w) => {
     const dd = w.document; const paste = dd.getElementById('act-paste'); const cli = dd.getElementById('act-clients');
@@ -7095,6 +7155,65 @@ const Cot = (() => {
       const falta = [!c.nombre && 'nombre', !c.rif && 'RIF', !c.direccion && 'dirección'].filter(Boolean);
       say(falta.length ? `✓ Cargado. Falta: ${falta.join(', ')}` : '✓ Datos del cliente cargados', false);
     };
+    /* ----- descuento del cliente (reglas del Panel web) ----- */
+    const dbox = dd.createElement('div'); dbox.id = 'adm-cli-dto';
+    box.appendChild(dbox);
+    let cliRec = null, cliQ = null;
+    const tbodyEl = () => dd.getElementById('items-tbody');
+    const filasDoc = () => { const tb = tbodyEl(); return tb ? Array.from(tb.querySelectorAll(':scope > tr.item-row')) : []; };
+    const precioFila = (tr) => num((tr.querySelector('.unit-price') || {}).innerText || '');
+    const verDto = () => { try { const v = w.localStorage.getItem('suin_aj_show'); return v == null ? true : JSON.parse(v) !== false; } catch (e) { return true; } };
+    const autoOn = () => lsGet('suinadm_dtocli_auto', true) !== false;
+    /* aplica el precio del cliente a esas filas; soloNuevas: no toca las que ya tienen descuento */
+    const aplicar = (rows, soloNuevas) => {
+      const A = w.SuinAjuste; if (!A || !cliQ) return { n: 0, igual: 0 };
+      let n = 0, igual = 0;
+      rows.forEach(tr => {
+        const model = modeloDesc(((tr.querySelector('.item-desc') || {}).innerText || '')); if (!model) return;
+        const pc = DtoCli.precio(catalogoByCodigo(model), cliQ); if (!pc) return;
+        const d = A.dtoDe(tr); if (d && soloNuevas) return;
+        const base = d ? d.base : precioFila(tr); if (!(base > 0)) return;
+        if (!(pc.precio < base - 0.005)) { igual++; return; }
+        A.setDto(tr, round2((1 - pc.precio / base) * 100), base, verDto()); n++;
+      });
+      if (n) { const t = dd.getElementById('items-table'); if (t) t.dispatchEvent(new w.Event('input', { bubbles: true })); dd.dispatchEvent(new w.Event('suin:docchanged')); }
+      return { n, igual };
+    };
+    const pintarDto = () => {
+      const rs = DtoCli.propias(cliQ);
+      if (!cliRec || !rs.length) { dbox.classList.remove('on'); dbox.innerHTML = ''; return; }
+      const porCli = rs.filter(r => r.cliente_email), porTipo = rs.filter(r => !r.cliente_email);
+      const txt = [porCli.length ? 'propio: ' + porCli.map(DtoCli.reglaTxt).join(', ') : '', porTipo.length ? 'por ser <b>' + esc(cliQ.tipoNombre) + '</b>: ' + porTipo.map(DtoCli.reglaTxt).join(', ') : ''].filter(Boolean).join(' · ');
+      dbox.innerHTML = `<span class="t">💲 <b>${esc(cliRec.nombre)}</b> tiene descuento de cliente — ${txt}</span>
+        <label title="Al agregar un producto, ponerle el precio de este cliente"><input type="checkbox" data-dto-auto ${autoOn() ? 'checked' : ''}> Al agregar productos</label>
+        <button type="button" data-dto-ap title="Poner el precio de este cliente en los productos de la oferta">Aplicar a los productos</button><span class="r"></span>`;
+      dbox.classList.add('on');
+      dbox.querySelector('[data-dto-auto]').onchange = (e) => lsSet('suinadm_dtocli_auto', e.target.checked);
+      dbox.querySelector('[data-dto-ap]').onclick = () => {
+        const x = aplicar(filasDoc(), false);
+        dbox.querySelector('.r').textContent = x.n ? `✓ Precio de cliente en ${x.n} producto${x.n === 1 ? '' : 's'}${x.igual ? ` · ${x.igual} ya tenía${x.igual === 1 ? '' : 'n'} un precio igual o mejor` : ''}. Puedes quitarlo en "% Ajustar precios y descuentos".` : x.igual ? `Los productos ya tienen un precio igual o mejor que el de este cliente.` : 'Ningún producto de la oferta entra en sus descuentos.';
+      };
+    };
+    const buscarCli = () => {
+      const nombre = read('client-name'), rif = read('client-rif');
+      const rec = nombre || rif ? findCliente({ nombre, rif }) : null;
+      cliRec = rec; cliQ = DtoCli.quien(rec); pintarDto();
+    };
+    const obsCli = new w.MutationObserver(debounce(buscarCli, 400));
+    ['client-name', 'client-rif'].forEach(id => { const el = span(id); if (el) obsCli.observe(el, { childList: true, characterData: true, subtree: true }); });
+    Bus.on('reglas', () => { if (dd.defaultView) buscarCli(); });
+    Bus.on('tienda', () => { if (dd.defaultView) buscarCli(); });
+    Tienda.cargar();
+    buscarCli();
+    /* productos agregados desde el buscador (no al abrir una oferta guardada): precio del cliente */
+    let ultimoAgregar = 0;
+    dd.addEventListener('click', (e) => { if (e.target.closest && e.target.closest('.cr-add-btn, .m-res-add')) ultimoAgregar = Date.now(); }, true);
+    const tb = tbodyEl();
+    if (tb) new w.MutationObserver((ms) => {
+      if (!cliQ || !autoOn() || Date.now() - ultimoAgregar > 1500) return;
+      const nuevas = []; ms.forEach(m => m.addedNodes.forEach(n => { if (n.nodeType === 1 && n.matches('tr.item-row')) nuevas.push(n); }));
+      if (nuevas.length) setTimeout(() => { const x = aplicar(nuevas, true); if (x.n) say(`✓ Precio de cliente aplicado`, false); }, 60);
+    }).observe(tb, { childList: true });
     ta.addEventListener('paste', () => setTimeout(use, 0));
     ta.addEventListener('keydown', (e) => { if (e.key === 'Enter' && (e.ctrlKey || e.metaKey)) { e.preventDefault(); use(); } });
     $('.ac-use', box).onclick = use;
