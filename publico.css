@@ -82,6 +82,9 @@ h2{ font-family:var(--display); font-weight:700; font-size:24px; color:var(--tin
 .p-datos{ display:grid; grid-template-columns:auto 1fr; gap:6px 16px; margin:0; font-size:14px; border-top:1px solid var(--linea-s); padding-top:14px; }
 .p-datos dt{ color:var(--t3); }
 .p-datos dd{ margin:0; }
+.p-enlaces{ display:flex; flex-wrap:wrap; gap:8px; margin-top:14px; }
+.p-enlaces a{ display:inline-flex; align-items:center; padding:8px 12px; border:1px solid var(--linea); border-radius:8px; background:var(--azul-s); color:var(--azul-t); font-size:14px; font-weight:600; text-decoration:none; }
+.p-enlaces a:hover{ border-color:var(--azul); text-decoration:underline; }
 
 /* ---------- Categorías ---------- */
 .c-cab{ background:#fff; border:1px solid var(--linea); border-radius:var(--radio); padding:22px 24px; display:flex; flex-wrap:wrap; align-items:center; gap:10px 20px; }

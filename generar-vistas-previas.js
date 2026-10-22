@@ -26,7 +26,7 @@ const MOSTRAR_PRECIO = true;                           // false = no poner preci
 const MAX_EN_CATEGORIA = 120;                          // más de esto: se muestran subcategorías + una muestra
 // Súbelo cada vez que cambies publico.css o publico.js: el navegador los guarda un día
 // (ver _headers) y sin esto las páginas nuevas se ven con el estilo viejo.
-const VERSION_ESTILOS = 5;
+const VERSION_ESTILOS = 6;
 
 /* ---------- Cargar la organización de categorías desde tienda.html ----------
    Así hay una sola fuente: si cambias las familias en tienda.html, las páginas
@@ -170,6 +170,17 @@ const urlC = (ruta) => '/c/' + ruta.map(T.slugDe).join('/');
 const waLink = (texto) => 'https://wa.me/' + WA + '?text=' + encodeURIComponent(texto);
 const jsonLD = (o) => '<script type="application/ld+json">' + JSON.stringify(o).replace(/</g, '\\u003c') + '</script>';
 const ORG = { '@type': 'Organization', name: 'Suinelectric', url: DOMINIO + '/tienda', logo: IMAGEN_GENERAL };
+
+// Página oficial y manual del fabricante (reglas en enlaces-oficiales.js)
+const { enlacesDe } = require('./enlaces-oficiales.js');
+function enlacesOficiales(p){
+  const e = enlacesDe(p);
+  if (!e.pagina && !e.manual) return '';
+  return '<div class="p-enlaces">' +
+    (e.pagina ? '<a href="' + esc(e.pagina) + '" target="_blank" rel="noopener nofollow">Página oficial' + (p.marca ? ' ' + esc(String(p.marca).toUpperCase()) : '') + ' ↗</a>' : '') +
+    (e.manual ? '<a href="' + esc(e.manual) + '" target="_blank" rel="noopener nofollow">Manual (PDF) ↗</a>' : '') +
+    '</div>';
+}
 
 function escribir(rel, contenido){
   const f = path.join(RAIZ, rel);
@@ -347,6 +358,7 @@ for (const p of productos){
           (p.sku && p.sku !== p.modelo ? '<dt>Código</dt><dd>' + esc(p.sku) + '</dd>' : '') +
           '<dt>Categoría</dt><dd>' + ruta.map((n, i) => '<a href="' + urlC(ruta.slice(0, i + 1)) + '">' + esc(n) + '</a>').join(' › ') + '</dd>' +
         '</dl>' +
+        enlacesOficiales(p) +
         // celular: barra fija abajo con el modelo, el precio y Cotizar
         '<div class="p-barra"><div class="p-barra-txt"><strong>' + esc(p.modelo) + '</strong><span class="precio-cli"' + datosPrecio(p) + '>' + (precio != null ? dinero(precio) : 'Consultar precio') + '</span></div>' +
           '<a class="btn wa" href="' + esc(waLink(textoWa)) + '" data-modelo="' + esc(p.modelo) + '" rel="noopener">' + ICONO_WA + 'Cotizar</a></div>' +

@@ -703,6 +703,8 @@
   #modal-detalle .det-desc{ font-size:15px; line-height:1.6; color:var(--texto); max-width:75ch; white-space:pre-line; overflow-wrap:anywhere; margin-bottom:16px; padding-bottom:16px; border-bottom:1px solid var(--linea-suave); }
   #modal-detalle .det-ficha{ display:block; width:fit-content; margin-top:10px; font-weight:600; color:var(--azul-texto); text-decoration:none; white-space:normal; }
   #modal-detalle .det-ficha:hover{ text-decoration:underline; }
+  #modal-detalle .det-enlaces{ display:flex; flex-wrap:wrap; gap:4px 18px; margin-top:10px; }
+  #modal-detalle .det-enlaces .det-ficha{ margin-top:0; }
   .btn-copiar{
     display:block; width:100%; background:#fff; color:var(--tinta); border:1px solid var(--linea);
     padding:11px 12px; font-size:14px; font-weight:600; border-radius:var(--radio); cursor:pointer; margin-top:10px;
@@ -1860,6 +1862,7 @@
 
 <script>window.SUIN_RASTREO_MANUAL = true; /* rastreo.js arranca cuando se sabe si es administrador */</script>
 <script src="/especificaciones.js?v=2"></script>
+<script src="/enlaces-oficiales.js?v=1"></script>
 <!-- beta: sin rastreo.js para no mezclar las pruebas con las visitas reales -->
 <script>window.suinRastreo = { visitante: '', evento: function(){}, iniciar: function(){}, tarjetas: function(){}, noContarMas: function(){}, vaciar: function(){} };</script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
@@ -2422,6 +2425,18 @@ function slugDe(s){
 function hashDeRuta(ruta){
   return ruta.length ? '#/c/' + ruta.slice(0, MAX_NIVELES).map(slugDe).join('/') : '#/todo';
 }
+/* Página oficial y manual del fabricante (reglas en /enlaces-oficiales.js) */
+function enlacesOficialesHTML(p){
+  const e = (window.EnlacesOficiales && EnlacesOficiales.enlacesDe(p)) ||
+    { pagina: /^https?:\/\//i.test(p.ficha_tecnica || '') ? p.ficha_tecnica : null, manual: /^https?:\/\//i.test(p.manual_url || '') ? p.manual_url : null };
+  if (!e.pagina && !e.manual) return '';
+  const marca = p.marca ? ' ' + escHtml(p.marca) : '';
+  return '<div class="det-enlaces">' +
+    (e.pagina ? '<a class="det-ficha" href="' + escHtml(e.pagina) + '" target="_blank" rel="noopener">🔗&#xFE0E; Página oficial' + marca + ' ↗</a>' : '') +
+    (e.manual ? '<a class="det-ficha" href="' + escHtml(e.manual) + '" target="_blank" rel="noopener">📄&#xFE0E; Manual (PDF) ↗</a>' : '') +
+    '</div>';
+}
+
 function escHtml(s){
   return String(s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 }
@@ -4787,7 +4802,7 @@ function abrirDetalle(modelo){
         '</div>' +
         '<span class="det-desc-label">Descripción</span>' +
         '<div class="det-desc">' + (p.descripcion || 'Sin descripción disponible para este producto.') +
-          (/^https?:\/\//i.test(p.ficha_tecnica || '') ? '<a class="det-ficha" href="' + escHtml(p.ficha_tecnica) + '" target="_blank" rel="noopener">📄&#xFE0E; Ficha técnica del fabricante' + (p.marca ? ' (' + escHtml(p.marca) + ')' : '') + ' ↗</a>' : '') +
+          enlacesOficialesHTML(p) +
         '</div>' +
         fichaEspecsHTML(p) +
         '<ul class="det-condiciones">' + CONDICIONES_VENTA.map(c => '<li>' + c + '</li>').join('') + '</ul>' +
