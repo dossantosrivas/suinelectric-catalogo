@@ -1562,6 +1562,9 @@
     background:radial-gradient(circle at 50% 45%, #ffffff 0%, #eef2f5 70%); border:none; border-right:1px solid var(--linea-suave); cursor:zoom-in; }
   .pt-spot-img img{ max-width:100%; max-height:330px; object-fit:contain; mix-blend-mode:multiply; transition:transform .25s; }
   .pt-spot-img:hover img{ transform:scale(1.03); }
+  .pt-spot-img:has(.pt-video){ padding:0; background:#0b1d28; }
+  .pt-video{ position:absolute; inset:0; width:100%; height:100%; object-fit:cover; display:block; }
+  .pt-spot-img:has(.pt-video) .pt-sello{ z-index:1; }
   .pt-sello{ position:absolute; top:16px; left:16px; background:var(--amarillo); color:var(--tinta); font:700 12.5px/1 var(--display);
     letter-spacing:1px; padding:6px 9px; border-radius:4px; }
   .pt-spot-txt{ padding:28px 32px 26px; display:flex; flex-direction:column; min-width:0; }
@@ -1634,6 +1637,7 @@
     .pt-spot{ grid-template-columns:1fr; }
     .pt-spot-img{ min-height:220px; border-right:none; border-bottom:1px solid var(--linea-suave); }
     .pt-spot-img img{ max-height:220px; }
+    .pt-spot-img:has(.pt-video){ min-height:0; aspect-ratio:4 / 3; }
     .pt-vfd{ grid-template-columns:1fr; }
   }
   @media (max-width: 560px){
@@ -3046,6 +3050,9 @@ const PORTADA = {
   versionNueva: 'Versión 9.X',
   // Foto grande (la de la pantalla «LOGO! 9»); si no carga, usa la del producto
   foto: 'imagenes/productos/6ed1052-1md08-0ba3-9f76fa5a.jpg',
+  // Video sin sonido en bucle (tomas del producto del video de Siemens); deja '' para usar solo la foto
+  video: 'imagenes/videos/logo-v9.mp4',
+  videoPoster: 'imagenes/videos/logo-v9.jpg',
   rutaVariadores: ['Variadores y Arrancadores', 'Variadores de Frecuencia'],
   // Lo que trae nuevo la V9 (sale de la ficha de Siemens)
   novedades: ['800 bloques', 'Ethernet + servidor web', 'MQTT y nube', 'Pantalla táctil', 'microSD', 'Ampliable']
@@ -3102,7 +3109,9 @@ function portadaHtml(){
     const waV9 = waLinks('Hola, quiero cotizar el Siemens LOGO! V9 (' + principal.modelo + ').');
     html += '<section class="pt-spot">' +
               '<button type="button" class="pt-spot-img" data-modelo="' + escHtml(principal.modelo) + '" aria-label="Ver ' + escHtml(principal.modelo) + '">' +
-                ((PORTADA.foto || principal.imagen) ? '<img src="' + (PORTADA.foto || principal.imagen) + '" alt="Siemens LOGO! V9 ' + escHtml(principal.modelo) + '"' + (PORTADA.foto && principal.imagen ? ' onerror="this.onerror=null;this.src=\'' + principal.imagen + '\'"' : '') + '>' : '<span class="cat-card-noimg">⚡</span>') +
+                (PORTADA.video
+                  ? '<video class="pt-video" src="' + PORTADA.video + '" poster="' + PORTADA.videoPoster + '" autoplay muted loop playsinline preload="metadata" aria-label="Video del Siemens LOGO! V9"></video>'
+                  : (PORTADA.foto || principal.imagen) ? '<img src="' + (PORTADA.foto || principal.imagen) + '" alt="Siemens LOGO! V9 ' + escHtml(principal.modelo) + '"' + (PORTADA.foto && principal.imagen ? ' onerror="this.onerror=null;this.src=\'' + principal.imagen + '\'"' : '') + '>' : '<span class="cat-card-noimg">⚡</span>') +
                 '<span class="pt-sello">NUEVO</span>' +
               '</button>' +
               '<div class="pt-spot-txt">' +
@@ -3198,6 +3207,11 @@ function portadaHtml(){
 }
 
 function conectarPortada(cont){
+  const vid = cont.querySelector('.pt-video');
+  if (vid){
+    try { if (window.matchMedia('(prefers-reduced-motion: reduce)').matches){ vid.removeAttribute('autoplay'); vid.pause(); } } catch(e){}
+    vid.play && vid.play().catch(() => {}); // algunos navegadores lo bloquean: queda la imagen de portada
+  }
   cont.querySelectorAll('[data-modelo].pt-spot-img, .pt-modelo, .pt-mini').forEach(el =>
     el.addEventListener('click', () => abrirDetalle(el.getAttribute('data-modelo'))));
   cont.querySelectorAll('.pt-chip').forEach(el => el.addEventListener('click', () => {
