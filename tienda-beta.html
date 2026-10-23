@@ -3134,68 +3134,6 @@ function portadaHtml(){
             '</section>';
   }
 
-  // 3) Familia LOGO!: 8.4 e inferiores, expansiones, pantallas y fuentes
-  const versiones = [...new Set(logo.map(p => rutaNavDe(p)[3]).filter(v => v && /^Versi/.test(v) && v !== PORTADA.versionNueva))]
-    .sort((a, b) => b.localeCompare(a, 'es', { numeric: true }));
-  const tarjetasFam = [];
-  const tarjetaRuta = (titulo, sub, ruta, prods) => {
-    if (!prods.length) return;
-    const foto = (prods.find(p => p.imagen && /CPU/.test(rutaNavDe(p).join(' '))) || prods.find(p => p.imagen) || {}).imagen;
-    const disp = prods.filter(p => p.disponible).length;
-    tarjetasFam.push('<a class="enlace-cat pt-fam" href="' + hashDeRuta(ruta) + '" data-ruta="' + encodeURIComponent(claveDe(ruta)) + '">' +
-      '<span class="pt-fam-img">' + (foto ? '<img src="' + foto + '" alt="" loading="lazy">' : '⚡') + '</span>' +
-      '<span class="pt-fam-tit">' + escHtml(titulo) + '<span class="cat-card-flecha">→</span></span>' +
-      '<span class="pt-fam-sub">' + escHtml(sub) + '</span>' +
-      '<span class="pt-fam-meta">' + prods.length + ' modelos · <b>' + disp + ' disponibles</b></span></a>');
-  };
-  for (const v of versiones){
-    const ruta = PORTADA.rutaLogo.concat(v);
-    const prods = logo.filter(p => rutaEmpieza(rutaNavDe(p), ruta));
-    const orden = s => /CPU/.test(s) ? 0 : /M[oó]dulo/.test(s) ? 1 : /Panel/.test(s) ? 2 : 3;
-    const subs = [...new Set(prods.map(p => rutaNavDe(p)[4]).filter(Boolean))].sort((a, b) => orden(a) - orden(b)).slice(0, 3).join(' · ');
-    tarjetaRuta('LOGO! ' + v.replace(/^Versi[oó]n\s*/i, 'V').replace('8.X', '8 / 8.4'), subs || 'CPU y módulos', ruta, prods);
-  }
-  const rutaPower = productos.map(rutaNavDe).find(r => /LOGO\s*!?\s*POWER/i.test(r.join(' ')));
-  if (rutaPower){
-    const i = rutaPower.findIndex(s => /LOGO\s*!?\s*POWER/i.test(s));
-    const ruta = rutaPower.slice(0, i + 1);
-    tarjetaRuta('LOGO!Power', 'Fuentes 5, 12 y 24 V', ruta, productos.filter(p => rutaEmpieza(rutaNavDe(p), ruta)));
-  }
-  if (tarjetasFam.length){
-    html += '<div class="pt-cab"><h2 class="inicio-h2">Familia LOGO!</h2>' +
-              '<a class="enlace-cat pt-vermas" href="' + hashDeRuta(PORTADA.rutaLogo) + '" data-ruta="' + encodeURIComponent(claveDe(PORTADA.rutaLogo)) + '">Ver todo LOGO! →</a></div>' +
-            '<div class="pt-fams">' + tarjetasFam.join('') + '</div>';
-  }
-
-  // 4) Variadores de velocidad: selector rápido por potencia + modelos disponibles
-  const vfd = productos.filter(p => rutaEmpieza(rutaNavDe(p), PORTADA.rutaVariadores) && specsVfd(p));
-  if (vfd.length){
-    const chips = VFD_RANGOS.hp.map((r, i) => {
-      const n = vfd.filter(p => { const s = specsVfd(p); return s.hp != null && s.hp > r[0] && s.hp <= r[1]; }).length;
-      if (!n) return '';
-      const et = r[1] === Infinity ? 'Más de ' + fmtNumVfd(r[0]) + ' HP' : (r[0] === 0 ? 'Hasta ' : fmtNumVfd(r[0]) + '–') + fmtNumVfd(r[1]) + ' HP';
-      return '<button type="button" class="pt-chip" data-pot="' + i + '">' + et + '<span>' + n + '</span></button>';
-    }).join('');
-    // Los que tienes en mano, con precio y foto (primero las fotos propias del sitio), uno por potencia
-    const local = p => !/^https?:/.test(p.imagen) || /suinelectric\.com/.test(p.imagen);
-    const enMano = p => !!(p._inv && p.stock !== 'pedido');
-    const candidatos = vfd.filter(p => p.disponible && p.imagen && specsVfd(p).hp != null && (enMano(p) || precioMostrado(p) != null))
-      .sort((a, b) => enMano(b) - enMano(a) || /INVT/i.test(b.marca || '') - /INVT/i.test(a.marca || '') ||
-                      (precioMostrado(b) != null) - (precioMostrado(a) != null) || local(b) - local(a));
-    const muestra = [], vistos = new Set();
-    for (const p of candidatos){ const k = specsVfd(p).hp; if (vistos.has(k)) continue; vistos.add(k); muestra.push(p); if (muestra.length === 6) break; }
-    muestra.sort((a, b) => (specsVfd(a).hp || 0) - (specsVfd(b).hp || 0));
-    const marcasVfd = [...new Set(vfd.map(p => (p.marca || '').toUpperCase()))].filter(m => LOGOS_MARCAS[m]);
-    html += '<div class="pt-cab"><h2 class="inicio-h2">Variadores de velocidad</h2>' +
-              '<a class="enlace-cat pt-vermas" href="' + hashDeRuta(PORTADA.rutaVariadores) + '" data-ruta="' + encodeURIComponent(claveDe(PORTADA.rutaVariadores)) + '">Ver los ' + vfd.length + ' →</a></div>' +
-            '<section class="pt-vfd">' +
-              '<div class="pt-vfd-sel"><p>¿Qué potencia tiene tu motor?</p><div class="pt-chips">' + chips + '</div>' +
-                (marcasVfd.length ? '<div class="pt-vfd-marcas">' + marcasVfd.map(m => '<a class="marca-logo-card" href="#/marca/' + slugDe(m) + '" data-marca="' + m + '" title="' + m + '"><img src="' + LOGOS_MARCAS[m] + '" alt="' + m + '"></a>').join('') + '</div>' : '') +
-              '</div>' +
-              '<div class="pt-vfd-prods">' + muestra.map(tarjetaMini).join('') + '</div>' +
-            '</section>';
-  }
-
   // 5) Marcas: franja compacta
   const marcasPresentes = Object.keys(LOGOS_MARCAS).filter(m => productos.some(p => (p.marca || '').toUpperCase() === m));
   if (marcasPresentes.length){
