@@ -1632,6 +1632,14 @@
 
   .pt-marcas{ display:grid; grid-template-columns:repeat(auto-fill, minmax(120px, 1fr)); gap:8px; }
   .pt-marcas .marca-logo-card{ height:58px; }
+  @media (min-width: 901px){
+    /* PC: logos de marca más grandes en la portada */
+    .pt-marcas{ grid-template-columns:repeat(auto-fit, minmax(120px, 1fr)); gap:10px; }
+    .pt-marcas .marca-logo-card{ height:96px; padding:14px 12px; border:1px solid var(--linea-suave); }
+    .pt-marcas .marca-logo-card:hover{ border-color:var(--amarillo); }
+    .pt-marcas .marca-logo-card img{ max-height:56px; }
+    .pt-marcas .marca-logo-card .logo-texto{ font-size:17px; }
+  }
 
   @media (max-width: 900px){
     .pt-spot{ grid-template-columns:1fr; }
