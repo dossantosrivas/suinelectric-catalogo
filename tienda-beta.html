@@ -1541,6 +1541,114 @@
   #contenido.vista-lista .fila-xl .thumb{ width:34px; height:34px; }
 }
 
+
+  /* ================= Portada (beta): franja delgada + LOGO! V9 + familia + variadores ================= */
+  .pt-franja{ display:flex; align-items:center; justify-content:space-between; gap:12px 20px; flex-wrap:wrap;
+    background:var(--tinta); color:#fff; border-radius:var(--radio); padding:10px 12px 10px 18px; margin-bottom:18px;
+    border-bottom:3px solid var(--amarillo); }
+  .pt-franja p{ margin:0; font-size:14.5px; color:#c9d6de; }
+  .pt-franja p b{ color:#fff; font-family:var(--display); font-size:17px; letter-spacing:.2px; }
+  .pt-franja-acc{ display:flex; gap:8px; flex-wrap:wrap; flex:none; }
+  @media (min-width: 901px){ .pt-franja{ flex-wrap:nowrap; } .pt-franja p{ min-width:0; white-space:nowrap; overflow:hidden; text-overflow:ellipsis; } }
+  .pt-btn-claro, .pt-btn-wa{ height:36px; padding:0 14px; border-radius:var(--radio); font-size:14px; font-weight:600; cursor:pointer;
+    display:inline-flex; align-items:center; text-decoration:none; border:1.5px solid rgba(255,255,255,.45); background:transparent; color:#fff; }
+  .pt-btn-claro:hover{ border-color:#fff; }
+  .pt-btn-wa{ background:var(--wa); border-color:var(--wa); }
+  .pt-btn-wa:hover{ background:var(--wa-hover); border-color:var(--wa-hover); }
+
+  .pt-spot{ display:grid; grid-template-columns:minmax(0, 1fr) minmax(0, 1.15fr); background:var(--superficie);
+    border:1px solid var(--linea); border-radius:var(--radio); overflow:hidden; margin-bottom:8px; }
+  .pt-spot-img{ position:relative; display:flex; align-items:center; justify-content:center; padding:28px; min-height:340px;
+    background:radial-gradient(circle at 50% 45%, #ffffff 0%, #eef2f5 70%); border:none; border-right:1px solid var(--linea-suave); cursor:zoom-in; }
+  .pt-spot-img img{ max-width:100%; max-height:330px; object-fit:contain; mix-blend-mode:multiply; transition:transform .25s; }
+  .pt-spot-img:hover img{ transform:scale(1.03); }
+  .pt-sello{ position:absolute; top:16px; left:16px; background:var(--amarillo); color:var(--tinta); font:700 12.5px/1 var(--display);
+    letter-spacing:1px; padding:6px 9px; border-radius:4px; }
+  .pt-spot-txt{ padding:28px 32px 26px; display:flex; flex-direction:column; min-width:0; }
+  .pt-eyebrow{ display:flex; align-items:center; gap:10px; color:var(--texto-3); font-size:13.5px; }
+  .pt-eyebrow img{ height:18px; width:auto; }
+  .pt-eyebrow span{ padding-left:10px; border-left:1px solid var(--linea); }
+  .pt-titulo{ font-family:var(--display); font-weight:700; font-size:58px; line-height:1; color:var(--tinta); margin:12px 0 6px; letter-spacing:-.5px; }
+  .pt-ref{ margin:0 0 16px; font-size:15px; color:var(--texto-2); }
+  .pt-novedades{ list-style:none; margin:0 0 18px; padding:0; display:flex; flex-wrap:wrap; gap:6px; }
+  .pt-novedades li{ font-size:13px; color:var(--azul-texto); background:var(--azul-suave); padding:5px 9px; border-radius:20px; }
+  .pt-modelos{ display:flex; flex-direction:column; border:1px solid var(--linea); border-radius:var(--radio); overflow:hidden; margin-bottom:18px; }
+  .pt-modelo{ display:grid; grid-template-columns:auto minmax(0,1fr) auto auto; align-items:center; gap:12px; padding:10px 12px;
+    background:#fff; border:none; border-top:1px solid var(--linea-suave); text-align:left; cursor:pointer; font:inherit; color:var(--texto); }
+  .pt-modelo:first-child{ border-top:none; }
+  .pt-modelo:hover{ background:var(--azul-suave); }
+  .pt-modelo-cod{ font-weight:700; font-size:14px; color:var(--tinta); white-space:nowrap; }
+  .pt-modelo-nom{ font-size:13.5px; color:var(--texto-2); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .pt-modelo-precio{ font:700 17px var(--display); color:var(--tinta); white-space:nowrap; }
+  .pt-stock{ font-size:12px; font-weight:600; padding:3px 8px; border-radius:20px; white-space:nowrap; }
+  .pt-stock.ok{ color:var(--ok); background:var(--ok-suave); }
+  .pt-stock.pedido{ color:var(--texto-2); background:var(--linea-suave); }
+  .pt-stock.off{ color:var(--off); background:var(--off-suave); }
+  .pt-acciones{ display:flex; gap:10px; flex-wrap:wrap; margin-top:auto; }
+  .pt-acciones .hero-btn{ height:44px; }
+  .pt-btn-borde{ height:44px; padding:0 20px; border-radius:var(--radio); border:1.5px solid var(--tinta); color:var(--tinta);
+    font-weight:700; font-size:15px; display:inline-flex; align-items:center; text-decoration:none; }
+  .pt-btn-borde:hover{ background:var(--tinta); color:#fff; }
+
+  .pt-cab{ display:flex; align-items:baseline; justify-content:space-between; gap:12px; }
+  .pt-vermas{ font-size:14.5px; font-weight:600; color:var(--azul-texto); text-decoration:none; white-space:nowrap; }
+  .pt-vermas:hover{ text-decoration:underline; }
+  .pt-fams{ display:grid; grid-template-columns:repeat(auto-fit, minmax(210px, 1fr)); gap:12px; }
+  .pt-fam{ display:flex; flex-direction:column; background:#fff; border:1px solid var(--linea); border-radius:var(--radio);
+    padding:12px 14px 14px; text-decoration:none; color:var(--texto); transition:border-color .15s, box-shadow .15s; }
+  .pt-fam:hover{ border-color:var(--azul); box-shadow:0 4px 14px rgba(14,42,59,.08); }
+  .pt-fam-img{ height:120px; display:flex; align-items:center; justify-content:center; margin-bottom:10px; }
+  .pt-fam-img img{ max-height:120px; max-width:100%; object-fit:contain; mix-blend-mode:multiply; }
+  .pt-fam-tit{ font:700 19px/1.15 var(--display); color:var(--tinta); display:flex; justify-content:space-between; gap:8px; }
+  .pt-fam-sub{ font-size:13px; color:var(--texto-3); margin:3px 0 8px; }
+  .pt-fam-meta{ font-size:13px; color:var(--texto-2); margin-top:auto; }
+  .pt-fam-meta b{ color:var(--ok); }
+
+  .pt-vfd{ display:grid; grid-template-columns:minmax(0, 300px) minmax(0, 1fr); gap:14px; }
+  .pt-vfd-sel{ background:var(--tinta); color:#fff; border-radius:var(--radio); padding:18px; }
+  .pt-vfd-sel > p{ margin:0 0 12px; font:700 19px/1.2 var(--display); }
+  .pt-chips{ display:flex; flex-wrap:wrap; gap:7px; }
+  .pt-chip{ display:inline-flex; align-items:center; gap:7px; height:36px; padding:0 12px; border-radius:20px; cursor:pointer;
+    background:rgba(255,255,255,.08); color:#fff; border:1px solid rgba(255,255,255,.28); font:600 14px var(--sans); }
+  .pt-chip span{ font-size:12px; color:#9fb3bf; font-weight:400; }
+  .pt-chip:hover{ background:var(--amarillo); border-color:var(--amarillo); color:var(--tinta); }
+  .pt-chip:hover span{ color:var(--tinta); }
+  .pt-vfd-marcas{ display:grid; grid-template-columns:repeat(3, 1fr); gap:6px; margin-top:16px; padding-top:14px; border-top:1px solid rgba(255,255,255,.14); }
+  .pt-vfd-marcas .marca-logo-card{ height:44px; padding:6px 8px; }
+  .pt-vfd-prods{ display:grid; grid-template-columns:repeat(auto-fill, minmax(250px, 1fr)); gap:10px; align-content:start; }
+  .pt-mini{ display:flex; gap:10px; align-items:center; text-align:left; background:#fff; border:1px solid var(--linea);
+    border-radius:var(--radio); padding:10px; cursor:pointer; font:inherit; color:var(--texto); min-width:0; }
+  .pt-mini:hover{ border-color:var(--azul); }
+  .pt-mini-img{ flex:none; width:72px; height:72px; display:flex; align-items:center; justify-content:center; }
+  .pt-mini-img img{ max-width:72px; max-height:72px; object-fit:contain; mix-blend-mode:multiply; }
+  .pt-mini-txt{ display:flex; flex-direction:column; gap:3px; min-width:0; }
+  .pt-mini-txt b{ font-size:14px; color:var(--tinta); }
+  .pt-mini-nom{ font-size:12.5px; color:var(--texto-3); overflow:hidden; text-overflow:ellipsis; white-space:nowrap; }
+  .pt-mini-pie{ display:flex; align-items:center; gap:8px; flex-wrap:wrap; }
+  .pt-mini-pie strong{ font:700 16px var(--display); color:var(--tinta); }
+
+  .pt-marcas{ display:grid; grid-template-columns:repeat(auto-fill, minmax(120px, 1fr)); gap:8px; }
+  .pt-marcas .marca-logo-card{ height:58px; }
+
+  @media (max-width: 900px){
+    .pt-spot{ grid-template-columns:1fr; }
+    .pt-spot-img{ min-height:220px; border-right:none; border-bottom:1px solid var(--linea-suave); }
+    .pt-spot-img img{ max-height:220px; }
+    .pt-vfd{ grid-template-columns:1fr; }
+  }
+  @media (max-width: 560px){
+    .pt-franja{ padding:10px 12px; }
+    .pt-franja p span{ display:none; }
+    .pt-spot-txt{ padding:20px 16px; }
+    .pt-titulo{ font-size:44px; }
+    .pt-modelo{ grid-template-columns:minmax(0,1fr) auto; row-gap:4px; }
+    .pt-modelo-nom{ grid-column:1; grid-row:2; }
+    .pt-stock{ justify-self:end; }
+    .pt-fams{ grid-template-columns:repeat(2, minmax(0,1fr)); gap:8px; }
+    .pt-fam-img{ height:84px; } .pt-fam-img img{ max-height:84px; }
+    .pt-vfd-prods{ grid-template-columns:1fr; }
+    .pt-marcas{ grid-template-columns:repeat(3, minmax(0,1fr)); }
+  }
 </style>
 
 </head>
@@ -2930,6 +3038,174 @@ function productosAleatorios(cantidad){
   return resultado;
 }
 
+/* ---------- Portada (beta): LOGO! V9 protagonista, familia LOGO!, variadores ---------- */
+// Cambia aquí el modelo que sale en grande y el orden de la familia.
+const PORTADA = {
+  protagonista: ['6ED1052-1FB08-0BA3', '6ED1052-1MD08-0BA3'],
+  rutaLogo: ['Automatización y PLC', 'PLC Básicos', 'LOGO!'],
+  versionNueva: 'Versión 9.X',
+  // Foto grande (la de la pantalla «LOGO! 9»); si no carga, usa la del producto
+  foto: 'imagenes/productos/6ed1052-1md08-0ba3-9f76fa5a.jpg',
+  rutaVariadores: ['Variadores y Arrancadores', 'Variadores de Frecuencia'],
+  // Lo que trae nuevo la V9 (sale de la ficha de Siemens)
+  novedades: ['800 bloques', 'Ethernet + servidor web', 'MQTT y nube', 'Pantalla táctil', 'microSD', 'Ampliable']
+};
+const rutaEmpieza = (r, pre) => pre.every((seg, i) => r[i] === seg);
+function nombreCortoLogo(p){
+  const t = String(p.nombre || p.descripcion || '');
+  const m = t.match(/LOGO!\s*([0-9/]+\s*[A-Z]+E?)\b/i);
+  return m ? 'LOGO! ' + m[1].replace(/\s+/g, '') : (p.modelo || '');
+}
+function etiquetaDisp(p){
+  const t = textoStock(p, 'Agotado');
+  const cls = !p.disponible ? 'off' : (p.stock === 'pedido' ? 'pedido' : 'ok');
+  return '<span class="pt-stock ' + cls + '">' + escHtml(t) + '</span>';
+}
+function subtituloMini(p){
+  const s = typeof specsVfd === 'function' ? specsVfd(p) : null;
+  if (!s) return String(p.nombre || '').slice(0, 60);
+  return [p.marca, s.hp != null ? fmtNumVfd(s.hp) + ' HP' : '', s.kw != null ? fmtNumVfd(s.kw) + ' kW' : '',
+          s.v ? (s.fase === 1 ? '1F ' : s.fase === 3 ? '3F ' : '') + s.v + ' V' : ''].filter(Boolean).join(' · ');
+}
+function tarjetaMini(p){
+  return '<button type="button" class="pt-mini" data-modelo="' + escHtml(p.modelo) + '">' +
+           '<span class="pt-mini-img">' + (p.imagen ? '<img src="' + p.imagen + '" alt="" loading="lazy">' : '⚡') + '</span>' +
+           '<span class="pt-mini-txt"><b>' + escHtml(p.modelo) + '</b>' +
+             '<span class="pt-mini-nom">' + escHtml(subtituloMini(p)) + '</span>' +
+             '<span class="pt-mini-pie"><strong>' + formatoMoneda(precioMostrado(p)) + '</strong>' + etiquetaDisp(p) + '</span></span>' +
+         '</button>';
+}
+
+function portadaHtml(){
+  let html = '';
+  const disponibles = productos.filter(p => p.disponible).length;
+  const wa = waLinks('Hola, quiero cotizar productos de Suinelectric.');
+
+  // 1) Franja delgada (antes el bloque azul grande)
+  html += '<section class="pt-franja">' +
+            '<p><b>Automatización y control eléctrico</b><span> · ' + disponibles.toLocaleString('es-VE') + ' productos disponibles · entrega en 1–2 días hábiles</span></p>' +
+            '<div class="pt-franja-acc">' +
+              '<button class="pt-btn-claro" id="hero-ver-todo">Ver catálogo</button>' +
+              '<a class="pt-btn-wa" href="' + wa.prioritario + '" target="_blank" rel="noopener">Cotizar por WhatsApp</a>' +
+            '</div>' +
+          '</section>';
+
+  // 2) Protagonista: LOGO! V9
+  const logo = productos.filter(p => rutaEmpieza(rutaNavDe(p), PORTADA.rutaLogo));
+  const rutaV9 = PORTADA.rutaLogo.concat(PORTADA.versionNueva);
+  const v9 = logo.filter(p => rutaEmpieza(rutaNavDe(p), rutaV9));
+  const principal = PORTADA.protagonista.map(m => productos.find(p => p.modelo === m)).find(Boolean) || v9.find(p => p.imagen) || v9[0];
+  if (principal){
+    const cpus = PORTADA.protagonista.map(m => productos.find(p => p.modelo === m)).filter(Boolean);
+    const extras = v9.filter(p => !cpus.includes(p));
+    const lista = cpus.concat(extras);
+    const waV9 = waLinks('Hola, quiero cotizar el Siemens LOGO! V9 (' + principal.modelo + ').');
+    html += '<section class="pt-spot">' +
+              '<button type="button" class="pt-spot-img" data-modelo="' + escHtml(principal.modelo) + '" aria-label="Ver ' + escHtml(principal.modelo) + '">' +
+                ((PORTADA.foto || principal.imagen) ? '<img src="' + (PORTADA.foto || principal.imagen) + '" alt="Siemens LOGO! V9 ' + escHtml(principal.modelo) + '"' + (PORTADA.foto && principal.imagen ? ' onerror="this.onerror=null;this.src=\'' + principal.imagen + '\'"' : '') + '>' : '<span class="cat-card-noimg">⚡</span>') +
+                '<span class="pt-sello">NUEVO</span>' +
+              '</button>' +
+              '<div class="pt-spot-txt">' +
+                '<div class="pt-eyebrow">' + (LOGOS_MARCAS.SIEMENS ? '<img src="' + LOGOS_MARCAS.SIEMENS + '" alt="Siemens">' : 'SIEMENS') + '<span>Módulo lógico programable</span></div>' +
+                '<h1 class="pt-titulo">LOGO! V9</h1>' +
+                '<p class="pt-ref">' + escHtml(principal.modelo) + ' · ' + escHtml(nombreCortoLogo(principal)) + '</p>' +
+                '<ul class="pt-novedades">' + PORTADA.novedades.map(n => '<li>' + escHtml(n) + '</li>').join('') + '</ul>' +
+                '<div class="pt-modelos">' + lista.map(p =>
+                  '<button type="button" class="pt-modelo" data-modelo="' + escHtml(p.modelo) + '">' +
+                    '<span class="pt-modelo-cod">' + escHtml(p.modelo) + '</span>' +
+                    '<span class="pt-modelo-nom">' + escHtml(/^6ED1052/.test(p.modelo) ? nombreCortoLogo(p) : String(p.nombre || '').slice(0, 42)) + '</span>' +
+                    '<span class="pt-modelo-precio">' + formatoMoneda(precioMostrado(p)) + '</span>' +
+                    etiquetaDisp(p) +
+                  '</button>').join('') + '</div>' +
+                '<div class="pt-acciones">' +
+                  '<a class="enlace-cat hero-btn" href="' + hashDeRuta(rutaV9) + '" data-ruta="' + encodeURIComponent(claveDe(rutaV9)) + '">Ver LOGO! V9</a>' +
+                  '<a class="pt-btn-borde" href="' + waV9.prioritario + '" target="_blank" rel="noopener">Cotizar V9</a>' +
+                '</div>' +
+              '</div>' +
+            '</section>';
+  }
+
+  // 3) Familia LOGO!: 8.4 e inferiores, expansiones, pantallas y fuentes
+  const versiones = [...new Set(logo.map(p => rutaNavDe(p)[3]).filter(v => v && /^Versi/.test(v) && v !== PORTADA.versionNueva))]
+    .sort((a, b) => b.localeCompare(a, 'es', { numeric: true }));
+  const tarjetasFam = [];
+  const tarjetaRuta = (titulo, sub, ruta, prods) => {
+    if (!prods.length) return;
+    const foto = (prods.find(p => p.imagen && /CPU/.test(rutaNavDe(p).join(' '))) || prods.find(p => p.imagen) || {}).imagen;
+    const disp = prods.filter(p => p.disponible).length;
+    tarjetasFam.push('<a class="enlace-cat pt-fam" href="' + hashDeRuta(ruta) + '" data-ruta="' + encodeURIComponent(claveDe(ruta)) + '">' +
+      '<span class="pt-fam-img">' + (foto ? '<img src="' + foto + '" alt="" loading="lazy">' : '⚡') + '</span>' +
+      '<span class="pt-fam-tit">' + escHtml(titulo) + '<span class="cat-card-flecha">→</span></span>' +
+      '<span class="pt-fam-sub">' + escHtml(sub) + '</span>' +
+      '<span class="pt-fam-meta">' + prods.length + ' modelos · <b>' + disp + ' disponibles</b></span></a>');
+  };
+  for (const v of versiones){
+    const ruta = PORTADA.rutaLogo.concat(v);
+    const prods = logo.filter(p => rutaEmpieza(rutaNavDe(p), ruta));
+    const orden = s => /CPU/.test(s) ? 0 : /M[oó]dulo/.test(s) ? 1 : /Panel/.test(s) ? 2 : 3;
+    const subs = [...new Set(prods.map(p => rutaNavDe(p)[4]).filter(Boolean))].sort((a, b) => orden(a) - orden(b)).slice(0, 3).join(' · ');
+    tarjetaRuta('LOGO! ' + v.replace(/^Versi[oó]n\s*/i, 'V').replace('8.X', '8 / 8.4'), subs || 'CPU y módulos', ruta, prods);
+  }
+  const rutaPower = productos.map(rutaNavDe).find(r => /LOGO\s*!?\s*POWER/i.test(r.join(' ')));
+  if (rutaPower){
+    const i = rutaPower.findIndex(s => /LOGO\s*!?\s*POWER/i.test(s));
+    const ruta = rutaPower.slice(0, i + 1);
+    tarjetaRuta('LOGO!Power', 'Fuentes 5, 12 y 24 V', ruta, productos.filter(p => rutaEmpieza(rutaNavDe(p), ruta)));
+  }
+  if (tarjetasFam.length){
+    html += '<div class="pt-cab"><h2 class="inicio-h2">Familia LOGO!</h2>' +
+              '<a class="enlace-cat pt-vermas" href="' + hashDeRuta(PORTADA.rutaLogo) + '" data-ruta="' + encodeURIComponent(claveDe(PORTADA.rutaLogo)) + '">Ver todo LOGO! →</a></div>' +
+            '<div class="pt-fams">' + tarjetasFam.join('') + '</div>';
+  }
+
+  // 4) Variadores de velocidad: selector rápido por potencia + modelos disponibles
+  const vfd = productos.filter(p => rutaEmpieza(rutaNavDe(p), PORTADA.rutaVariadores) && specsVfd(p));
+  if (vfd.length){
+    const chips = VFD_RANGOS.hp.map((r, i) => {
+      const n = vfd.filter(p => { const s = specsVfd(p); return s.hp != null && s.hp > r[0] && s.hp <= r[1]; }).length;
+      if (!n) return '';
+      const et = r[1] === Infinity ? 'Más de ' + fmtNumVfd(r[0]) + ' HP' : (r[0] === 0 ? 'Hasta ' : fmtNumVfd(r[0]) + '–') + fmtNumVfd(r[1]) + ' HP';
+      return '<button type="button" class="pt-chip" data-pot="' + i + '">' + et + '<span>' + n + '</span></button>';
+    }).join('');
+    // Los que tienes en mano, con precio y foto (primero las fotos propias del sitio), uno por potencia
+    const local = p => !/^https?:/.test(p.imagen) || /suinelectric\.com/.test(p.imagen);
+    const enMano = p => !!(p._inv && p.stock !== 'pedido');
+    const candidatos = vfd.filter(p => p.disponible && p.imagen && specsVfd(p).hp != null && (enMano(p) || precioMostrado(p) != null))
+      .sort((a, b) => enMano(b) - enMano(a) || /INVT/i.test(b.marca || '') - /INVT/i.test(a.marca || '') ||
+                      (precioMostrado(b) != null) - (precioMostrado(a) != null) || local(b) - local(a));
+    const muestra = [], vistos = new Set();
+    for (const p of candidatos){ const k = specsVfd(p).hp; if (vistos.has(k)) continue; vistos.add(k); muestra.push(p); if (muestra.length === 6) break; }
+    muestra.sort((a, b) => (specsVfd(a).hp || 0) - (specsVfd(b).hp || 0));
+    const marcasVfd = [...new Set(vfd.map(p => (p.marca || '').toUpperCase()))].filter(m => LOGOS_MARCAS[m]);
+    html += '<div class="pt-cab"><h2 class="inicio-h2">Variadores de velocidad</h2>' +
+              '<a class="enlace-cat pt-vermas" href="' + hashDeRuta(PORTADA.rutaVariadores) + '" data-ruta="' + encodeURIComponent(claveDe(PORTADA.rutaVariadores)) + '">Ver los ' + vfd.length + ' →</a></div>' +
+            '<section class="pt-vfd">' +
+              '<div class="pt-vfd-sel"><p>¿Qué potencia tiene tu motor?</p><div class="pt-chips">' + chips + '</div>' +
+                (marcasVfd.length ? '<div class="pt-vfd-marcas">' + marcasVfd.map(m => '<a class="marca-logo-card" href="#/marca/' + slugDe(m) + '" data-marca="' + m + '" title="' + m + '"><img src="' + LOGOS_MARCAS[m] + '" alt="' + m + '"></a>').join('') + '</div>' : '') +
+              '</div>' +
+              '<div class="pt-vfd-prods">' + muestra.map(tarjetaMini).join('') + '</div>' +
+            '</section>';
+  }
+
+  // 5) Marcas: franja compacta
+  const marcasPresentes = Object.keys(LOGOS_MARCAS).filter(m => productos.some(p => (p.marca || '').toUpperCase() === m));
+  if (marcasPresentes.length){
+    html += '<h2 class="inicio-h2">Compra por marca</h2><div class="pt-marcas">' +
+      marcasPresentes.map(m => '<a class="marca-logo-card" href="#/marca/' + slugDe(m) + '" data-marca="' + m + '" title="Ver productos ' + m + '"><img src="' + LOGOS_MARCAS[m] + '" alt="' + m + '"></a>').join('') +
+      '</div>';
+  }
+  return html;
+}
+
+function conectarPortada(cont){
+  cont.querySelectorAll('[data-modelo].pt-spot-img, .pt-modelo, .pt-mini').forEach(el =>
+    el.addEventListener('click', () => abrirDetalle(el.getAttribute('data-modelo'))));
+  cont.querySelectorAll('.pt-chip').forEach(el => el.addEventListener('click', () => {
+    filtrosVfd = { tension: null, fase: null, potencia: el.getAttribute('data-pot'), unidad: 'hp', amperios: '', uso: null };
+    irARuta(PORTADA.rutaVariadores);
+  }));
+}
+
 /* ---------- Página de inicio (categorías con imágenes, sin conteos) ---------- */
 function renderInicio(){
   actualizarControles();
@@ -2942,36 +3218,8 @@ function renderInicio(){
   const totalCategorias = familias.reduce((n, f) => n + Object.keys(arbolInicio.hijos[f].hijos).length, 0);
   const marcasPresentes = Object.keys(LOGOS_MARCAS).filter(m => productos.some(p => (p.marca||'').toUpperCase() === m));
 
-  const disponibles = productos.filter(p => p.disponible).length;
-  const waInicio = waLinks("Hola, quiero cotizar productos de Suinelectric.");
   let html = '<div class="inicio">';
-  html += '<section class="hero">' +
-            '<div class="hero-texto">' +
-              '<h1 class="inicio-titulo">Automatización y control eléctrico, listo para cotizar</h1>' +
-              '<p class="inicio-sub">Variadores, contactores, breakers, arrancadores y control industrial. ' +
-                ((typeof sesion !== 'undefined' && sesion.email) ? 'Estás viendo tus precios de cliente. '
-                  : (descuentoPct > 0 ? 'Los precios del catálogo ya incluyen ' + Math.round(descuentoPct) + '% de descuento. ' : '')) +
-                'Arma tu pedido y envíalo por WhatsApp.</p>' +
-              '<div class="hero-acciones">' +
-                '<button class="hero-btn" id="hero-ver-todo">Ver todo el catálogo</button>' +
-                '<a class="hero-btn sec" href="' + waInicio.prioritario + '" target="_blank" rel="noopener">Cotizar por WhatsApp</a>' +
-              '</div>' +
-              '<div class="hero-datos">' +
-                '<div class="hero-dato"><strong>' + productos.length.toLocaleString('es-VE') + '</strong><span>productos en catálogo</span></div>' +
-                '<div class="hero-dato"><strong>' + disponibles.toLocaleString('es-VE') + '</strong><span>disponibles hoy</span></div>' +
-                '<div class="hero-dato"><strong>' + totalCategorias + '</strong><span>categorías</span></div>' +
-              '</div>' +
-            '</div>';
-  if (marcasPresentes.length){
-    html += '<div class="hero-marcas"><p class="hero-marcas-titulo">Compra por marca</p><div class="marcas-strip">';
-    for (const m of marcasPresentes){
-      html += '<a class="marca-logo-card" href="#/marca/' + slugDe(m) + '" data-marca="' + m + '" title="Ver productos ' + m + '">' +
-                '<img src="' + LOGOS_MARCAS[m] + '" alt="' + m + '">' +
-              '</a>';
-    }
-    html += '</div></div>';
-  }
-  html += '</section>';
+  html += portadaHtml();
 
   html += destacadosHtml();
 
@@ -3021,6 +3269,7 @@ function renderInicio(){
   }
   html += '</div></div>';
   cont.innerHTML = html;
+  conectarPortada(cont);
 
   const verTodo = document.getElementById('hero-ver-todo');
   if (verTodo) verTodo.addEventListener('click', () => {
