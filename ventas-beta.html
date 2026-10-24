@@ -2678,14 +2678,19 @@ Views['desde-tienda'] = (v, tipo) => {
 
 /* ---------------- buscador unificado de productos ---------------- */
 function productFinder(host, { tipo, onPick, placeholder }) {
-  host.innerHTML = `<div class="finder"><input class="inp" type="search" placeholder="${esc(placeholder || 'Buscar producto por modelo, nombre o descripción (tu inventario y el catálogo del distribuidor)')}" autocomplete="off" spellcheck="false"><div class="results hide"></div></div>`;
+  host.innerHTML = `<div class="finder"><div class="row" style="gap:6px;flex-wrap:nowrap"><input class="inp" style="flex:1;min-width:0" type="search" placeholder="${esc(placeholder || 'Buscar producto por modelo, nombre, descripción o código de barras (tu inventario y el catálogo del distribuidor)')}" autocomplete="off" spellcheck="false"><button type="button" class="btn" data-fscan title="Escanear con la cámara o un lector de código de barras">${ico('scan')} Escanear</button></div><div class="results hide"></div></div>`;
   const inp = $('input', host), box = $('.results', host);
+  /* escanear: cada producto escaneado se agrega (si ya está en el documento, sube la cantidad) */
+  $('[data-fscan]', host).onclick = () => escanearVarios({
+    titulo: 'Escanear productos', ayuda: 'Cada producto que escanees se agrega al documento; si ya está, sube la cantidad.',
+    alLeer: (p) => { if (!p) return null; const r = onPick({ k: 'p', p, escaneado: true }); return { ok: true, html: `<div class="esc-mas"><b>${r === 'suma' ? '+1' : '✓'}</b> <span class="mono">${esc(p.codigo)}</span> ${esc(p.nombre || '')}</div>` }; }
+  });
   let list = [], sel = -1;
   const render = () => {
     const q = inp.value.trim();
     if (q.length < 2) { box.classList.add('hide'); return; }
     const t = normTxt(q), words = t.split(/\s+/);
-    const own = Store.all('productos').filter(p => p.activo !== false || true).filter(p => { const k = normTxt(p.codigo + ' ' + p.nombre + ' ' + p.descripcion + ' ' + (p.marca || '') + ' ' + (p.categoria || '')); return words.every(w => k.includes(w)); });
+    const own = Store.all('productos').filter(p => p.activo !== false || true).filter(p => { const k = normTxt(p.codigo + ' ' + p.nombre + ' ' + p.descripcion + ' ' + (p.marca || '') + ' ' + (p.categoria || '') + ' ' + (p.barras || []).join(' ')); return words.every(w => k.includes(w)); });
     own.sort((a, b) => { const sa = Calc.st(a.id), sb = Calc.st(b.id); return (sb.manuel.cant + sb.papa.cant > 0) - (sa.manuel.cant + sa.papa.cant > 0) || a.codigo.localeCompare(b.codigo); });
     const cat = Catalog.search(q, 25);
     list = own.slice(0, 25).map(p => ({ k: 'p', p })).concat(cat.map(c => ({ k: 'c', c })));
@@ -2710,7 +2715,12 @@ function productFinder(host, { tipo, onPick, placeholder }) {
   inp.addEventListener('keydown', (e) => {
     if (e.key === 'ArrowDown') { sel = Math.min(list.length - 1, sel + 1); mark(); e.preventDefault(); }
     else if (e.key === 'ArrowUp') { sel = Math.max(0, sel - 1); mark(); e.preventDefault(); }
-    else if (e.key === 'Enter') { if (sel >= 0) { pick(sel); e.preventDefault(); } }
+    else if (e.key === 'Enter') {
+      // lector USB/Bluetooth: escribe el código de barras (o el modelo exacto) y Enter → se agrega directo
+      const v = inp.value.trim(), r = /^\S{6,}$/.test(v) ? Barras.buscar(v) : null;
+      if (r) { onPick({ k: 'p', p: r.p, escaneado: true }); inp.value = ''; box.classList.add('hide'); e.preventDefault(); return; }
+      if (sel >= 0) { pick(sel); e.preventDefault(); }
+    }
     else if (e.key === 'Escape') box.classList.add('hide');
   });
   box.addEventListener('mousedown', (e) => { const b = e.target.closest('.res'); if (b) { e.preventDefault(); pick(+b.dataset.i); } });
@@ -2883,6 +2893,7 @@ function seguimientoVenta(box, D, { guardar, repintar }) {
       if (!hecha && !pagada) acc += btn('todo', env ? 'Pagado y enviado' : 'Entregado y cobrado', 'pri', 'check') + btn('pago', 'Registrar pago', '', 'cash') + btn(env ? 'envio' : 'entregado', env ? 'Registrar envío' : 'Marcar entregado');
       else if (!hecha) acc += btn(env ? 'envio' : 'entregado', env ? 'Registrar envío' : 'Marcar entregado', 'pri', 'check');
       else if (!pagada) acc += btn('pago', 'Registrar pago', 'pri', 'cash') + btn('recordar', 'Recordar pago por WhatsApp');
+      if (!hecha) acc += btn('revisar', 'Revisar con escáner', '', 'scan');
       if (e.estado === 'enviado' && e.guia) acc += btn('guiawa', 'Enviar guía por WhatsApp');
     }
     box.innerHTML = `<div class="ph"><h2>Seguimiento</h2><div class="act"><span class="pill ${etCls}">${esc(etTxt)}</span></div></div>
@@ -2916,6 +2927,7 @@ function seguimientoVenta(box, D, { guardar, repintar }) {
   const accion = async (a) => {
     const e = D.entrega; const env = e.modo === 'envio';
     const marcarHecha = (extra) => { e.estado = env ? 'enviado' : 'entregado'; e.fecha = localStamp(); delete e.legado; Object.assign(e, extra || {}); logDoc(D, e.estado, env ? { empresa: e.empresa, guia: e.guia } : null); };
+    if (a === 'revisar') return revisarEntrega(D, (uds) => { logDoc(D, 'revisada', { uds }); if (guardar()) { paint(); repintar(false); UI.toast('Revisión guardada: todo completo', 2200); } });
     if (a === 'compartir') return compartirNota(D);
     if (a === 'imprimir') return imprimirNota(D);
     if (a === 'recordar') return abrirWhatsApp(D, `Hola ${nombreCorto(D)}, te escribo por la nota de entrega ${D.numero}: queda pendiente ${fmtUSD(Calc.totals(D).saldo)}. ¡Gracias!`);
@@ -2937,7 +2949,8 @@ const textoHist = (x) => ({
   creada: 'Venta creada',
   pago: 'Pago de ' + fmtUSD(x.monto || 0) + (x.forma ? ' · ' + x.forma : ''),
   entregado: 'Entregada', enviado: 'Enviada' + (x.empresa ? ' por ' + x.empresa : '') + (x.guia ? ' · guía ' + x.guia : ''),
-  pendiente: 'Entrega marcada como pendiente'
+  pendiente: 'Entrega marcada como pendiente',
+  revisada: 'Paquete revisado con el escáner: todo completo' + (x.uds ? ' (' + fmtQty(x.uds) + ' unidades)' : '')
 }[x.e] || x.e);
 
 
@@ -3260,6 +3273,15 @@ function docEditor(v, D, isNew) {
     tipo: D.tipo,
     onPick: (x) => {
       let it;
+      if (x.escaneado && x.k === 'p') {   // escaneado y ya está en el documento: sube la cantidad
+        const ya = D.items.find(i => i.productoId === x.p.id);
+        if (ya) {
+          ya.cant = round2(num(ya.cant) + 1);
+          if ((venta || oferta) && !ya.repartoManual) ajustarReparto(ya, D.id, D.tipo);
+          setDirty(); paintLines(); UI.toast(`${ya.codigo}: ${fmtQty(ya.cant)}`, 1200);
+          return 'suma';
+        }
+      }
       if (x.k === 'p') it = lineFromProducto(x.p, D.tipo, compra || ajuste ? D.inventario : null);
       else { const own = findProductoByCodigo(x.c.m); it = lineFromCatalogo(x.c, D.tipo); if (compra && own) { it.productoId = own.id; delete it.nuevoProd; } }
       if (compra) it.origen = null;
@@ -4522,7 +4544,7 @@ Views.inventario = (v, invArg) => {
     if (F.cat) base = base.filter(r => r.p.categoria === F.cat);
     if (F.marca) base = base.filter(r => r.p.marca === F.marca);
     if (words.length) {
-      base = base.filter(r => { const k = normTxt([r.p.codigo, r.p.nombre, r.p.descripcion, r.p.marca, r.p.categoria].join(' ')); return words.every(w => k.includes(w)); });
+      base = base.filter(r => { const k = normTxt([r.p.codigo, r.p.nombre, r.p.descripcion, r.p.marca, r.p.categoria].concat(r.p.barras || []).join(' ')); return words.every(w => k.includes(w)); });
       const qq = normKey(F.q); base.forEach(r => { const c = normKey(r.p.codigo), n = normTxt(r.p.nombre); r.score = (c === qq ? 100 : 0) + (c.startsWith(qq) ? 50 : 0) + (c.includes(qq) ? 20 : 0) + words.filter(w => n.includes(w)).length * 5 + (r.cant > 0 ? 3 : 0); });
     }
     const pasa = {
@@ -4672,6 +4694,12 @@ Views.inventario = (v, invArg) => {
   $('[data-vista]', v).addEventListener('click', e => { const b = e.target.closest('[data-v]'); if (!b) return; F.vista = b.dataset.v; $$('[data-vista] [data-v]', v).forEach(x => x.classList.toggle('on', x === b)); paint(); });
   $('[data-np]', v).onclick = () => productoModal(null);
   $('[data-scan]', v).onclick = () => Escaner.abrir();
+  // lector USB/Bluetooth en el buscador: el código de barras (o el modelo exacto) + Enter abre la ficha
+  $('[data-f="q"]', v).addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter') return;
+    const q = e.target.value.trim(), r = /^\S{6,}$/.test(q) ? Barras.buscar(q) : null; if (!r) return;
+    e.preventDefault(); Pitido(true); productoModal(r.p);
+  });
   $('[data-desc]', v).onclick = () => descripcionesModal();
   $('[data-cats]', v).onclick = () => categoriasModal();
   $('[data-grupos]', v).onclick = () => gruposACategoriasModal();
@@ -5042,6 +5070,147 @@ const Escaner = (() => {
   return { abrir, capturar };
 })();
 
+/* ---------- Código que no se conoce: ¿de qué producto es? (dentro de otro escaneo) ---------- */
+function vincularCodigo(box, code, alListo) {
+  const ok = Barras.gtin(code);
+  box.innerHTML = `<div class="esc-card esc-nuevo">
+    <div style="font-weight:700">Código nuevo: <span class="mono">${esc(code)}</span></div>
+    <div class="small" style="margin:4px 0 8px">${ok ? '<span class="pill ok">EAN/UPC</span> Dime de qué producto es y lo aprendo para la próxima vez.' : '<span class="pill warn">Revisa</span> No es un EAN/UPC. Si es el <b>número de serie (S/N)</b> o un lote, no lo guardes.'}</div>
+    <input class="inp" data-qp placeholder="Busca el producto por código, nombre o marca" autocomplete="off" spellcheck="false">
+    <div data-lp class="esc-lp" style="margin-top:6px"></div>
+    <div class="row" style="margin-top:8px"><button type="button" class="btn sm ghost" data-ignorar>Seguir sin guardar</button></div>
+  </div>`;
+  const qp = $('[data-qp]', box), lp = $('[data-lp]', box);
+  qp.addEventListener('input', debounce(() => {
+    const xs = Barras.filtrar(qp.value);
+    lp.innerHTML = !qp.value.trim() ? '' : xs.length ? xs.map(p => `<button type="button" class="esc-op" data-pid="${esc(p.id)}"><span class="mono">${esc(p.codigo)}</span><span class="small">${esc(p.nombre || p.descripcion || '')}</span></button>`).join('') : '<div class="small muted">Sin resultados</div>';
+    $$('[data-pid]', lp).forEach(b => b.onclick = () => { const p = Barras.vincular(b.dataset.pid, code); UI.toast(`Listo: ${code} queda guardado para ${p.codigo}`, 2400); alListo(p); });
+  }, 150));
+  if (!matchMedia('(pointer:coarse)').matches) setTimeout(() => qp.focus(), 30);
+  $('[data-ignorar]', box).onclick = () => alListo(null);
+}
+
+/* ---------- Escanear varios seguidos (documentos, generador, revisar una entrega) ----------
+   alLeer(p, code) recibe el producto (o null si el código no es de ningún producto) y devuelve
+   { ok, html } para mostrar el resultado; si devuelve null con un código desconocido, pregunta
+   de qué producto es (y lo aprende). */
+function escanearVarios({ titulo = 'Escanear', ayuda = '', alLeer, extra = '', foot }) {
+  let pendiente = null;
+  const m = UI.modal({
+    title: titulo, wide: true, foot: foot || [['Listo', 'pri', c => c()]],
+    body: `<div class="esc-grid"><div><div data-pan></div>${ayuda ? `<div class="small muted" style="margin-top:6px">${ayuda}</div>` : ''}</div><div><div class="esc-res" data-res></div><div data-extra>${extra}</div></div></div>`,
+    onClose: () => pan.stop()
+  });
+  const B = m.body, res = $('[data-res]', B);
+  const mostrar = (r) => { Pitido(!!(r && r.ok)); res.innerHTML = (r && r.html) || ''; };
+  const leer = (code, cam) => {
+    if (pendiente) { if (cam) return; pendiente = null; }   // con la cámara: espera a que digas de qué producto es
+    const r = Barras.buscar(code);
+    if (r) return mostrar(alLeer(r.p, code));
+    const x = alLeer(null, code);
+    if (x) return mostrar(x);
+    Pitido(false); pendiente = code;
+    vincularCodigo(res, code, (p) => { pendiente = null; if (p) mostrar(alLeer(p, code)); else res.innerHTML = ''; pan.focus(); });
+  };
+  const pan = panelEscaner($('[data-pan]', B), leer);
+  pan.focus();
+  return { m, B };
+}
+
+/* ---------- Revisar una venta con el escáner antes de entregarla ----------
+   Escaneas cada unidad que va en el paquete: marca lo que está completo, lo que falta
+   y avisa si escaneas algo que no va en la venta o que sobra. */
+function revisarEntrega(D, alTerminar) {
+  const filas = [];
+  (D.items || []).forEach(it => {
+    const cant = num(it.cant); if (!(cant > 0)) return;
+    const pid = it.productoId || (findProductoByCodigo(it.codigo || '') || {}).id || null;
+    const f = filas.find(x => (pid && x.pid === pid) || (!pid && it.codigo && normKey(x.cod) === normKey(it.codigo)));
+    if (f) { f.pedido = round2(f.pedido + cant); return; }
+    const p = pid && Store.get('productos', pid);
+    filas.push({ pid, cod: it.codigo || (p && p.codigo) || '', nombre: (p && (p.nombre || p.descripcion)) || String(it.desc || '').replace(/\*/g, '').slice(0, 90), pedido: cant, leido: 0, mano: false, escaneable: !!(pid || it.codigo) });
+  });
+  if (!filas.length) { UI.toast('Esta venta no tiene productos para revisar'); return; }
+  const estado = () => {
+    const falta = filas.filter(f => (f.escaneable ? f.leido < f.pedido : !f.mano) && !f.mano);
+    const sobra = filas.filter(f => f.leido > f.pedido);
+    return { falta, sobra, listo: !falta.length && !sobra.length };
+  };
+  let ctl;
+  const pintar = () => {
+    const box = $('[data-extra]', ctl.B); if (!box) return;
+    const E = estado(), uds = filas.reduce((a, f) => a + f.pedido, 0), ok = filas.reduce((a, f) => a + Math.min(f.leido, f.pedido) + (f.mano ? f.pedido : 0), 0);
+    box.innerHTML = `<div class="esc-cnt-h"><div><b>${fmtQty(Math.min(ok, uds))}</b> de <b>${fmtQty(uds)}</b> unidades revisadas</div>
+      <div class="small">${E.listo ? '<span class="pill ok">Todo completo</span>' : `${E.falta.length ? `<span class="pill warn">${E.falta.length} por completar</span>` : ''} ${E.sobra.length ? `<span class="pill bad">${E.sobra.length} con de más</span>` : ''}`}</div></div>
+      <div class="tbl-wrap esc-tbl"><table class="tbl"><thead><tr><th>Producto</th><th class="r">Va</th><th class="r">Escaneado</th><th></th></tr></thead><tbody>
+      ${filas.map((f, i) => { const est = f.mano || (f.leido === f.pedido) ? 'ok' : f.leido > f.pedido ? 'bad' : f.leido ? 'warn' : ''; return `<tr>
+        <td><div class="mono" style="font-weight:600">${esc(f.cod || '—')}</div><div class="small muted esc-nom">${esc(f.nombre)}</div></td>
+        <td class="r">${fmtQty(f.pedido)}</td>
+        <td class="r">${f.escaneable ? `<div class="esc-q"><button type="button" class="btn sm" data-menos="${i}" aria-label="Uno menos">−</button><b style="min-width:28px;display:inline-block;text-align:center">${fmtQty(f.leido)}</b><button type="button" class="btn sm" data-mas="${i}" aria-label="Uno más">+</button></div>` : '<span class="small muted">sin código</span>'}</td>
+        <td class="r">${est === 'ok' && !f.mano ? '<span class="pill ok">✓</span>' : est === 'bad' ? '<span class="pill bad">sobra</span>' : `<label class="chk small"><input type="checkbox" data-mano="${i}" ${f.mano ? 'checked' : ''}> a mano</label>`}</td></tr>`; }).join('')}
+      </tbody></table></div>
+      ${E.listo ? `<div class="row" style="justify-content:flex-end;margin-top:10px"><button type="button" class="btn pri" data-fin>${ico('check')} Todo revisado</button></div>` : ''}`;
+    $$('[data-mas]', box).forEach(b => b.onclick = () => { filas[+b.dataset.mas].leido++; pintar(); });
+    $$('[data-menos]', box).forEach(b => b.onclick = () => { const f = filas[+b.dataset.menos]; f.leido = Math.max(0, f.leido - 1); pintar(); });
+    $$('[data-mano]', box).forEach(c => c.onchange = () => { filas[+c.dataset.mano].mano = c.checked; pintar(); });
+    const fin = $('[data-fin]', box); if (fin) fin.onclick = () => { ctl.m.close(); alTerminar && alTerminar(filas.reduce((a, f) => a + f.pedido, 0)); };
+  };
+  ctl = escanearVarios({
+    titulo: 'Revisar ' + (D.numero || 'la venta') + ' con el escáner',
+    ayuda: 'Escanea cada unidad que va en el paquete. Te avisa si falta algo, si sobra o si escaneas un producto que no va en esta venta.',
+    alLeer: (p, code) => {
+      const f = p ? filas.find(x => (x.pid && x.pid === p.id) || (x.cod && normKey(x.cod) === normKey(p.codigo))) : filas.find(x => x.cod && normKey(x.cod) === normKey(code));
+      if (!f) return p ? { ok: false, html: `<div class="esc-card" style="border-color:var(--red);background:var(--red-soft,#fdecec)"><b>✗ ${esc(p.codigo)} no va en esta venta</b><div class="small">${esc(p.nombre || p.descripcion || '')}</div><div class="small muted" style="margin-top:4px">Sácalo del paquete o revisa la venta.</div></div>` } : null;
+      f.leido++; pintar();
+      if (f.leido > f.pedido) return { ok: false, html: `<div class="esc-card" style="border-color:var(--red);background:var(--red-soft,#fdecec)"><b>Sobra: ${esc(f.cod)}</b><div class="small">Van ${fmtQty(f.leido)} y la venta lleva ${fmtQty(f.pedido)}.</div></div>` };
+      return { ok: true, html: `<div class="esc-mas"><b>✓</b> <span class="mono">${esc(f.cod)}</span> · ${fmtQty(f.leido)} de ${fmtQty(f.pedido)}</div>` };
+    }
+  });
+  pintar();
+}
+
+/* ---------- Escáner dentro del generador de ofertas y notas ----------
+   Botón "Escanear" junto al buscador del catálogo, y el lector USB escribiendo en el buscador:
+   cada producto escaneado entra como línea; si ya está en el documento, sube la cantidad. */
+function agregarAlGenerador(w, p) {
+  const dd = w.document, App = w.SuinApp; if (!App) return false;
+  const k = normKey(p.codigo);
+  const fila = Array.from(dd.querySelectorAll('#items-table tbody tr.item-row')).find(tr => {
+    const d = tr.querySelector('.item-desc'); const m = d && d.textContent.match(/Ref\s*\/\s*Modelo:\s*([^—\n]+)/i);
+    return m && normKey(m[1].trim()) === k;
+  });
+  if (fila) {
+    const q = fila.querySelector('.quantity'); q.textContent = String(round2(num(q.textContent) + 1));
+    dd.getElementById('items-table').dispatchEvent(new w.Event('input', { bubbles: true }));
+    return 'suma';
+  }
+  const cat = App.getCatalog() || [];
+  const c = cat.find(x => x.src === 'inv' && normKey(x.m) === k) || cat.find(x => normKey(x.m) === k)
+    || { src: 'inv', m: p.codigo, n: p.nombre || p.codigo, marca: p.marca || '', cat: p.categoria || '', precio: num(p.precio) || null, moneda: 'USD', disp: true, exist: null, desc: p.descripcion || '' };
+  App.addProduct(c);
+  return 'nueva';
+}
+function setupEscanerCot(w) {
+  const dd = w.document, inp = dd.getElementById('catalog-search');
+  if (!inp || dd.getElementById('adm-scan')) return;
+  const b = dd.createElement('button'); b.type = 'button'; b.id = 'adm-scan'; b.className = 'act-btn';
+  b.title = 'Escanear con la cámara o un lector de código de barras'; b.textContent = '▥ Escanear';
+  b.style.cssText = 'flex:none;white-space:nowrap;cursor:pointer';
+  inp.insertAdjacentElement('afterend', b);
+  const leerUno = (p) => { const r = agregarAlGenerador(w, p); return r ? { ok: true, html: `<div class="esc-mas"><b>${r === 'suma' ? '+1' : '✓'}</b> <span class="mono">${esc(p.codigo)}</span> ${r === 'suma' ? 'sube la cantidad' : 'agregado al documento'}</div>` } : { ok: false, html: '<div class="small">El generador todavía no está listo.</div>' }; };
+  b.onclick = () => escanearVarios({ titulo: 'Escanear al documento', ayuda: 'Cada producto que escanees entra al documento; si ya está, sube la cantidad.', alLeer: (p) => p ? leerUno(p) : null });
+  // lector USB/Bluetooth: escribe el código en el buscador y pulsa Enter
+  inp.addEventListener('keydown', (e) => {
+    if (e.key !== 'Enter') return;
+    const v = inp.value.trim(); if (!/^\S{6,}$/.test(v)) return;
+    const r = Barras.buscar(v); if (!r) return;
+    e.preventDefault(); e.stopPropagation();
+    const x = agregarAlGenerador(w, r.p); if (!x) return;
+    inp.value = ''; inp.dispatchEvent(new w.Event('input', { bubbles: true }));
+    Pitido(true); UI.toast(`${r.p.codigo}: ${x === 'suma' ? 'sube la cantidad' : 'agregado'}`, 1400);
+  }, true);
+}
+
 function productoModal(p, extra) {
   const isNew = !p;
   p = p ? clone(p) : { id: uid('p_'), codigo: '', nombre: '', descripcion: '', marca: '', categoria: '', unidad: 'UND', precio: 0, inv: {}, activo: true, notas: '', tienda: 'borrador', imagenes: [], barras: (extra && extra.barras) || [] };
@@ -5055,6 +5224,7 @@ function productoModal(p, extra) {
   const marcasL = Array.from(new Set(Catalog.items.map(c => (c.marca || '').toUpperCase()).concat(Store.all('productos').map(x => (x.marca || '').toUpperCase())).filter(Boolean))).sort();
   const m = UI.modal({
     title: isNew ? 'Nuevo producto' : p.codigo, wide: true, body: `
+    ${isNew && !(p.barras || []).length ? `<div class="banner" style="display:flex;align-items:center;justify-content:space-between;gap:10px;flex-wrap:wrap;margin-bottom:12px"><span>¿Trae código de barras? Escanéalo primero: si ese producto ya existe, te lleva a su ficha en vez de crear uno repetido.</span><button type="button" class="btn sm" data-esc-primero>${ico('scan')} Escanear</button></div>` : ''}
     <div class="grid g3">
       <label class="fld"><span>Código / modelo</span><input class="inp mono" data-k="codigo" value="${esc(p.codigo)}"></label>
       <label class="fld"><span>Marca${WebProd.publicado(p) || tiendaEst === 'borrador' ? ' *' : ''}</span><input class="inp" data-k="marca" value="${esc(p.marca || '')}" list="dl-marcas"></label>
@@ -5145,13 +5315,19 @@ function productoModal(p, extra) {
   };
   $('[data-k="codigo"]', m.body).addEventListener('input', debounce(ponerDist, 350));
   ponerDist();
-  $('[data-esc-barra]', m.body).onclick = async () => {
+  const escBarra = async () => {
     const k = await Escaner.capturar(); if (!k) return;
     const inp = $('[data-barras]', m.body), xs = inp.value.split(/[,;\n]+/).map(Barras.norm).filter(Boolean);
-    const otro = Barras.dueno(k, p.id); if (otro) { UI.toast(`Ese código ya es de ${otro.codigo}`, 3500); return; }
+    const otro = Barras.dueno(k, p.id);
+    if (otro && isNew) { if (await UI.confirm(`Ese código ya es de ${otro.codigo}${otro.nombre ? ' (' + otro.nombre + ')' : ''}. ¿Abrir su ficha en vez de crear un producto nuevo?`, { ok: 'Abrir su ficha' })) { m.close(); productoModal(otro); } return; }
+    if (otro) { UI.toast(`Ese código ya es de ${otro.codigo}`, 3500); return; }
+    const ban = $('[data-esc-primero]', m.body); if (ban) ban.closest('.banner').remove();
     if (!xs.includes(k)) xs.push(k); inp.value = xs.join(', ');
     UI.toast(Barras.gtin(k) ? 'Código agregado: guarda para que quede' : 'Agregado. Ojo: no es un EAN/UPC; revisa que no sea el número de serie', 3200);
+    if (isNew && !$('[data-k="codigo"]', m.body).value.trim()) $('[data-k="codigo"]', m.body).focus();
   };
+  $('[data-esc-barra]', m.body).onclick = escBarra;
+  { const b = $('[data-esc-primero]', m.body); if (b) b.onclick = escBarra; }
   /* fotos y estado en la tienda */
   const pintarFotos = () => { $('[data-fotos]', m.body).innerHTML = fotos.length ? fotos.map((u, i) => `<span style="position:relative;display:inline-block"><img src="${esc(u)}" alt="" style="width:72px;height:72px;object-fit:contain;border:1px solid var(--line);border-radius:6px;background:#fff"><button type="button" data-qf="${i}" title="Quitar" style="position:absolute;top:-6px;right:-6px;border:none;border-radius:50%;width:20px;height:20px;background:var(--red);color:#fff;font-size:12px;line-height:20px;padding:0">✕</button></span>`).join('') : '<span class="muted small">Sin fotos</span>';
     $$('[data-qf]', m.body).forEach(b => b.onclick = () => { fotos.splice(+b.dataset.qf, 1); pintarFotos(); }); };
@@ -8175,6 +8351,7 @@ const Cot = (() => {
       try { setupRegistro(w); } catch (e) { console.warn('registro', e); }
       try { enhance(w); } catch (e) { console.warn('diseño', e); }
       try { setupMargen(w); } catch (e) { console.warn('margen', e); }
+      try { setupEscanerCot(w); } catch (e) { console.warn('escáner', e); }
       try { const rf = w.document.getElementById('rapida-frame'); if (rf) { const go = () => { try { setupMargenRapida(rf.contentWindow); } catch (e) { console.warn('margen rápida', e); } }; rf.addEventListener('load', go); go(); } } catch (e) { console.warn('margen rápida', e); }
       const tryInject = () => injectInventario();
       w.document.addEventListener('suinapp:ready', tryInject);
