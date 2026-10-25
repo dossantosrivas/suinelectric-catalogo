@@ -5105,8 +5105,8 @@ const FichaWeb = {
     const tok = data && data.session && data.session.access_token;
     if (!tok) throw new Error('Inicia sesión en Gestión para buscar en la web.');
     const r = await fetch(`/api/ficha-web?q=${encodeURIComponent(q)}&marca=${encodeURIComponent(marca || '')}`, { headers: { Authorization: 'Bearer ' + tok, apikey: Sync.conf().key } });
-    const j = await r.json().catch(() => null);
-    if (!r.ok || !j) throw new Error((j && j.error) || (r.status === 404 ? 'La búsqueda en la web aún no está publicada (functions/api/ficha-web.js).' : 'Error ' + r.status));
+    const txt = await r.text(); let j = null; try { j = JSON.parse(txt); } catch (e) { /* no es JSON */ }
+    if (!r.ok || !j) throw new Error(j && j.error ? j.error + (j.detalle ? ' — Detalle: ' + j.detalle : '') : r.status === 404 ? 'La búsqueda en la web aún no está publicada (functions/api/ficha-web.js).' : 'Error ' + r.status + (txt ? ': ' + txt.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 200) : ''));
     if (j.encontrado) this.cache.set(key, j);
     return j;
   }
@@ -5454,7 +5454,7 @@ function productoModal(p, extra) {
     if (q.length < 3) { UI.toast('Escribe el código / modelo o escanea el código de barras', 3000); return; }
     webRes.innerHTML = `<div class="esc-card small" style="margin-top:8px">Buscando <b class="mono">${esc(q)}</b> en la web… (puede tardar unos segundos)</div>`;
     let d;
-    try { d = await FichaWeb.buscar(q, val('marca').trim()); } catch (e) { webRes.innerHTML = `<div class="esc-card esc-nuevo small" style="margin-top:8px">${esc(e.message || e)}</div>`; return; }
+    try { d = await FichaWeb.buscar(q, val('marca').trim()); } catch (e) { webRes.innerHTML = `<div class="esc-card esc-nuevo small" style="margin-top:8px;user-select:text;word-break:break-word">${esc(e.message || e)}</div>`; return; }
     if (!webRes.isConnected) return;
     const fuentes = (d.fuentes || []).map(f => `<a href="${esc(f.url)}" target="_blank" rel="noopener">${esc(f.titulo || 'fuente')}</a>`).join(' · ');
     if (!d.encontrado) { webRes.innerHTML = `<div class="esc-card esc-nuevo small" style="margin-top:8px"><b>No lo encontré en la web.</b> ${esc(d.nota || (d.porCodigo ? 'Prueba con el modelo, que suele venir en la misma etiqueta.' : ''))}${fuentes ? `<div class="muted" style="margin-top:4px">Revisé: ${fuentes}</div>` : ''}</div>`; return; }

@@ -18,7 +18,8 @@
    ===================================================================== */
 
 const SUPA = 'https://yqnlxhbjassrkudnhvpr.supabase.co';
-const MODELOS = ['gemini-3.5-flash', 'gemini-flash-latest', 'gemini-3.1-flash-lite', 'gemini-3.5-flash-lite', 'gemini-flash-lite-latest'];
+// los mismos del asistente del chat (ya probados con tu clave) y, de respaldo, los 2.5, que traen búsqueda en Google gratis
+const MODELOS = ['gemini-3.5-flash', 'gemini-flash-latest', 'gemini-3.5-flash-lite', 'gemini-3.1-flash-lite', 'gemini-flash-lite-latest', 'gemini-2.5-flash', 'gemini-2.5-flash-lite'];
 const json = (obj, status = 200) => new Response(JSON.stringify(obj), {
   status,
   headers: { 'Content-Type': 'application/json; charset=utf-8', 'Cache-Control': 'no-store', 'X-Robots-Tag': 'noindex' },
@@ -66,19 +67,30 @@ Reglas:
 - No incluyas precios.`;
 
 async function gemini(env, cuerpo){
-  const lista = env.GEMINI_MODEL ? [env.GEMINI_MODEL].concat(MODELOS) : MODELOS;
-  let ultimoError = '';
+  const lista = Array.from(new Set((env.GEMINI_MODEL ? [env.GEMINI_MODEL] : []).concat(MODELOS)));
+  const errores = []; let soloCupo = true;
   for (const modelo of lista){
-    const r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + modelo + ':generateContent', {
-      method: 'POST',
-      headers: { 'Content-Type': 'application/json', 'x-goog-api-key': env.GEMINI_API_KEY },
-      body: JSON.stringify(cuerpo),
-    });
-    if (r.ok) return await r.json();
-    ultimoError = modelo + ' ' + r.status + ': ' + (await r.text()).slice(0, 200);
-    if (![400, 404, 429, 500, 503].includes(r.status)) break;   // 400: el modelo no admite la búsqueda en Google → probar otro
+    let r;
+    try {
+      r = await fetch('https://generativelanguage.googleapis.com/v1beta/models/' + modelo + ':generateContent', {
+        method: 'POST',
+        headers: { 'Content-Type': 'application/json', 'x-goog-api-key': env.GEMINI_API_KEY },
+        body: JSON.stringify(cuerpo),
+      });
+    } catch (e) { errores.push(modelo + ': ' + String(e.message || e).slice(0, 80)); soloCupo = false; continue; }
+    if (r.ok) {
+      const j = await r.json().catch(() => null);
+      const c = j && j.candidates && j.candidates[0];
+      if (c && c.content && (c.content.parts || []).some(p => p.text)) return j;
+      errores.push(modelo + ': respuesta vacía' + (c && c.finishReason ? ' (' + c.finishReason + ')' : '')); soloCupo = false; continue;
+    }
+    const txt = (await r.text().catch(() => '')).replace(/\s+/g, ' ');
+    const msg = (txt.match(/"message":\s*"([^"]{0,160})/) || [])[1] || txt.slice(0, 160);
+    errores.push(modelo + ' ' + r.status + ': ' + msg);
+    if (r.status !== 429) soloCupo = false;
+    if (r.status === 401) break;   // clave inválida: no tiene sentido seguir
   }
-  throw new Error(ultimoError || 'Gemini no respondió');
+  const e = new Error(errores.join(' | ') || 'Gemini no respondió'); e.cupo = soloCupo && errores.length > 0; throw e;
 }
 
 const sacarJson = (txt) => {
@@ -101,7 +113,12 @@ async function existe(u){
   } catch (e) { return false; }
 }
 
-export async function onRequestGet({ request, env }){
+export async function onRequestGet(ctx){
+  try { return await buscar(ctx); }
+  catch (e) { return json({ error: 'Falló la búsqueda en el servidor.', detalle: String((e && e.stack) || e).slice(0, 600) }, 500); }
+}
+
+async function buscar({ request, env }){
   if (!(await esUsuario(request, env))) return json({ error: 'Inicia sesión en Gestión para buscar en la web.' }, 401);
   if (!env.GEMINI_API_KEY) return json({ error: 'Falta GEMINI_API_KEY en Cloudflare (la misma del asistente del chat).' }, 500);
   const q0 = new URL(request.url).searchParams;
@@ -123,7 +140,7 @@ export async function onRequestGet({ request, env }){
     });
   } catch (e) {
     const m = String(e.message || e);
-    return json({ error: /429/.test(m) ? 'Se acabó el cupo gratis de búsquedas de hoy. Prueba mañana o llena la ficha a mano.' : 'No se pudo buscar: ' + m.slice(0, 160) }, 502);
+    return json({ error: e.cupo ? 'Se acabó el cupo gratis de búsquedas por ahora. Prueba más tarde o llena la ficha a mano.' : 'No se pudo buscar en la web.', detalle: m.slice(0, 900) }, 502);
   }
   const cand = res.candidates && res.candidates[0];
   const texto = ((cand && cand.content && cand.content.parts) || []).filter(p => p.text && !p.thought).map(p => p.text).join('\n');
