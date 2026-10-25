@@ -2682,7 +2682,9 @@ function productFinder(host, { tipo, onPick, placeholder }) {
   /* escanear: cada producto escaneado se agrega (si ya está en el documento, sube la cantidad) */
   $('[data-fscan]', host).onclick = () => escanearVarios({
     titulo: 'Escanear productos', ayuda: 'Cada producto que escanees se agrega al documento; si ya está, sube la cantidad.',
-    alLeer: (p) => { if (!p) return null; const r = onPick({ k: 'p', p, escaneado: true }); return { ok: true, html: `<div class="esc-mas"><b>${r === 'suma' ? '+1' : '✓'}</b> <span class="mono">${esc(p.codigo)}</span> ${esc(p.nombre || '')}</div>` }; }
+    alLeer: (p, code, c) => {
+      if (!p && c) { onPick({ k: 'c', c, escaneado: true }); return { ok: true, html: `<div class="esc-mas"><b>✓</b> <span class="mono">${esc(c.m)}</span> agregado desde el catálogo del distribuidor</div>` }; }
+      if (!p) return null; const r = onPick({ k: 'p', p, escaneado: true }); return { ok: true, html: `<div class="esc-mas"><b>${r === 'suma' ? '+1' : '✓'}</b> <span class="mono">${esc(p.codigo)}</span> ${esc(p.nombre || '')}</div>` }; }
   });
   let list = [], sel = -1;
   const render = () => {
@@ -2718,6 +2720,7 @@ function productFinder(host, { tipo, onPick, placeholder }) {
       // lector USB/Bluetooth: escribe el código de barras (o el modelo exacto) y Enter → se agrega directo
       const v = inp.value.trim(), r = /^\S{6,}$/.test(v) ? Barras.buscar(v) : null;
       if (r) { onPick({ k: 'p', p: r.p, escaneado: true }); inp.value = ''; box.classList.add('hide'); e.preventDefault(); return; }
+      const c = Barras.catalogo(v); if (c) { onPick({ k: 'c', c, escaneado: true }); inp.value = ''; box.classList.add('hide'); e.preventDefault(); return; }
       if (sel >= 0) { pick(sel); e.preventDefault(); }
     }
     else if (e.key === 'Escape') box.classList.add('hide');
@@ -3272,8 +3275,8 @@ function docEditor(v, D, isNew) {
     tipo: D.tipo,
     onPick: (x) => {
       let it;
-      if (x.escaneado && x.k === 'p') {   // escaneado y ya está en el documento: sube la cantidad
-        const ya = D.items.find(i => i.productoId === x.p.id);
+      if (x.escaneado) {   // escaneado y ya está en el documento: sube la cantidad
+        const ya = x.k === 'p' ? D.items.find(i => i.productoId === x.p.id) : D.items.find(i => !i.productoId && normKey(i.codigo) === normKey(x.c.m));
         if (ya) {
           ya.cant = round2(num(ya.cant) + 1);
           if ((venta || oferta) && !ya.repartoManual) ajustarReparto(ya, D.id, D.tipo);
@@ -4696,8 +4699,11 @@ Views.inventario = (v, invArg) => {
   // lector USB/Bluetooth en el buscador: el código de barras (o el modelo exacto) + Enter abre la ficha
   $('[data-f="q"]', v).addEventListener('keydown', (e) => {
     if (e.key !== 'Enter') return;
-    const q = e.target.value.trim(), r = /^\S{6,}$/.test(q) ? Barras.buscar(q) : null; if (!r) return;
-    e.preventDefault(); Pitido(true); productoModal(r.p);
+    const q = e.target.value.trim(), r = /^\S{6,}$/.test(q) ? Barras.buscar(q) : null;
+    if (r) { e.preventDefault(); Pitido(true); productoModal(r.p); return; }
+    const c = Barras.catalogo(q); if (!c) return;
+    e.preventDefault(); Pitido(true);
+    UI.confirm(`${c.m} no está en tu inventario, pero sí en el catálogo del distribuidor (${c.n && c.n !== c.m ? c.n : c.desc || c.marca}). ¿Agregarlo con esos datos?`, { ok: 'Agregar a mi inventario' }).then(si => { if (si) crearDesdeCat(c, q); });
   });
   $('[data-desc]', v).onclick = () => descripcionesModal();
   $('[data-cats]', v).onclick = () => categoriasModal();
@@ -4747,7 +4753,17 @@ const Barras = {
     for (const x of this.variantes(k)) if (m.has(x)) return { p: m.get(x), como: 'barras' };
     const nk = normKey(code); if (!nk) return null;
     const p = Store.all('productos').find(x => normKey(x.codigo) === nk);
-    return p ? { p, como: 'codigo' } : null;
+    if (p) return { p, como: 'codigo' };
+    // el catálogo del distribuidor trae el EAN de cada modelo: si ese modelo está en tu inventario, se aprende solo
+    const c = this.catalogo(code), own = c && findProductoByCodigo(c.m);
+    if (own) { this.vincular(own.id, k); return { p: Store.get('productos', own.id) || own, como: 'catalogo' }; }
+    return null;
+  },
+  /* ¿qué modelo es este EAN/UPC según el catálogo del distribuidor? → item del catálogo o null */
+  catalogo(code) {
+    const k = this.norm(code); if (!this.gtin(k)) return null;
+    for (const x of this.variantes(k)) { const c = MatchCat.porSku(x); if (c) return c; }
+    return null;
   },
   dueno(code, salvoId) { // ¿qué otro producto ya tiene este código?
     const k = this.norm(code);
@@ -4969,10 +4985,17 @@ const Escaner = (() => {
     const conectarFicha = (box) => $$('[data-ficha]', box).forEach(b => b.onclick = () => productoModal(Store.get('productos', b.dataset.ficha)));
 
     /* ---- código nuevo: ¿de qué producto es? ---- */
-    const desconocido = (code) => {
+    const desconocido = (code, sinCat) => {
       pendiente = code;
       const ok = Barras.gtin(code);
       const res = $('[data-res]', B);
+      const cat = !sinCat && Barras.catalogo(code);
+      if (cat) {
+        res.innerHTML = tarjetaCat(cat, code);
+        $('[data-crearcat]', res).onclick = () => { pendiente = null; res.innerHTML = `<div class="small muted">Revisa la ficha y guárdala. Después, al escanear este código, ya lo reconoce.</div>`; crearDesdeCat(cat, code); };
+        $('[data-otrocat]', res).onclick = () => desconocido(code, true);
+        return;
+      }
       res.innerHTML = `<div class="esc-card esc-nuevo">
         <div style="font-weight:700">Código nuevo: <span class="mono">${esc(code)}</span></div>
         <div class="small" style="margin:4px 0 8px">${ok ? '<span class="pill ok">EAN/UPC</span> Es un código de modelo: sirve para todas las cajas iguales.' : '<span class="pill warn">Revisa</span> No es un EAN/UPC. Si es el <b>número de serie (S/N)</b> o un lote, no lo guardes: cambia en cada equipo.'}</div>
@@ -5069,6 +5092,22 @@ const Escaner = (() => {
   return { abrir, capturar };
 })();
 
+/* ---------- Código que no está en tu inventario pero sí en el catálogo del distribuidor ---------- */
+function tarjetaCat(c, code) {
+  const pw = precioWeb(c), cd = costoDist(c);
+  return `<div class="esc-card" style="border-color:var(--steel);background:var(--steel-soft)">
+    <div class="small" style="margin-bottom:6px"><span class="pill info">Catálogo del distribuidor</span> No está en tu inventario todavía</div>
+    <div class="row" style="justify-content:space-between;align-items:flex-start;gap:8px">
+      <div style="min-width:0"><div class="mono" style="font-weight:700;font-size:18px">${esc(c.m)}</div><div>${esc(c.n && c.n !== c.m ? c.n : c.desc || '')}</div>${c.marca ? `<div class="small muted">${esc(c.marca)}</div>` : ''}</div>
+      ${c.img ? `<img src="${esc(c.img)}" alt="" style="width:64px;height:64px;object-fit:contain;flex:none">` : ''}
+    </div>
+    <div class="small" style="margin-top:6px">${pw != null ? 'Venta ' + fmtUSD(pw) : ''}${cd != null ? ' · tu costo ' + fmtUSD(cd) : ''}${c.exist != null ? ' · existencia ' + esc(c.exist) : ''}</div>
+    <div class="small muted" style="margin-top:4px">Leído: <span class="mono">${esc(code)}</span></div>
+    <div class="row" style="margin-top:10px;gap:6px;flex-wrap:wrap"><button type="button" class="btn sm pri" data-crearcat>${ico('plus')} Agregar a mi inventario</button><button type="button" class="btn sm ghost" data-otrocat>Es otro producto mío</button></div>
+  </div>`;
+}
+const crearDesdeCat = (c, code) => productoModal(null, { barras: [Barras.norm(code)], cat: c });
+
 /* ---------- Código que no se conoce: ¿de qué producto es? (dentro de otro escaneo) ---------- */
 function vincularCodigo(box, code, alListo) {
   const ok = Barras.gtin(code);
@@ -5106,7 +5145,7 @@ function escanearVarios({ titulo = 'Escanear', ayuda = '', alLeer, extra = '', f
     if (pendiente) { if (cam) return; pendiente = null; }   // con la cámara: espera a que digas de qué producto es
     const r = Barras.buscar(code);
     if (r) return mostrar(alLeer(r.p, code));
-    const x = alLeer(null, code);
+    const x = alLeer(null, code, Barras.catalogo(code));
     if (x) return mostrar(x);
     Pitido(false); pendiente = code;
     vincularCodigo(res, code, (p) => { pendiente = null; if (p) mostrar(alLeer(p, code)); else res.innerHTML = ''; pan.focus(); });
@@ -5157,8 +5196,9 @@ function revisarEntrega(D, alTerminar) {
   ctl = escanearVarios({
     titulo: 'Revisar ' + (D.numero || 'la venta') + ' con el escáner',
     ayuda: 'Escanea cada unidad que va en el paquete. Te avisa si falta algo, si sobra o si escaneas un producto que no va en esta venta.',
-    alLeer: (p, code) => {
-      const f = p ? filas.find(x => (x.pid && x.pid === p.id) || (x.cod && normKey(x.cod) === normKey(p.codigo))) : filas.find(x => x.cod && normKey(x.cod) === normKey(code));
+    alLeer: (p, code, c) => {
+      const f = p ? filas.find(x => (x.pid && x.pid === p.id) || (x.cod && normKey(x.cod) === normKey(p.codigo))) : filas.find(x => x.cod && (normKey(x.cod) === normKey(code) || (c && normKey(x.cod) === normKey(c.m))));
+      if (!f && !p && c) return { ok: false, html: `<div class="esc-card" style="border-color:var(--red);background:var(--red-soft,#fdecec)"><b>✗ ${esc(c.m)} no va en esta venta</b><div class="small muted" style="margin-top:4px">Sácalo del paquete o revisa la venta.</div></div>` };
       if (!f) return p ? { ok: false, html: `<div class="esc-card" style="border-color:var(--red);background:var(--red-soft,#fdecec)"><b>✗ ${esc(p.codigo)} no va en esta venta</b><div class="small">${esc(p.nombre || p.descripcion || '')}</div><div class="small muted" style="margin-top:4px">Sácalo del paquete o revisa la venta.</div></div>` } : null;
       f.leido++; pintar();
       if (f.leido > f.pedido) return { ok: false, html: `<div class="esc-card" style="border-color:var(--red);background:var(--red-soft,#fdecec)"><b>Sobra: ${esc(f.cod)}</b><div class="small">Van ${fmtQty(f.leido)} y la venta lleva ${fmtQty(f.pedido)}.</div></div>` };
@@ -5197,16 +5237,18 @@ function setupEscanerCot(w) {
   b.style.cssText = 'flex:none;white-space:nowrap;cursor:pointer';
   inp.insertAdjacentElement('afterend', b);
   const leerUno = (p) => { const r = agregarAlGenerador(w, p); return r ? { ok: true, html: `<div class="esc-mas"><b>${r === 'suma' ? '+1' : '✓'}</b> <span class="mono">${esc(p.codigo)}</span> ${r === 'suma' ? 'sube la cantidad' : 'agregado al documento'}</div>` } : { ok: false, html: '<div class="small">El generador todavía no está listo.</div>' }; };
-  b.onclick = () => escanearVarios({ titulo: 'Escanear al documento', ayuda: 'Cada producto que escanees entra al documento; si ya está, sube la cantidad.', alLeer: (p) => p ? leerUno(p) : null });
+  const deCat = (c) => ({ codigo: c.m, nombre: c.n, marca: c.marca, descripcion: c.desc, precio: null });
+  b.onclick = () => escanearVarios({ titulo: 'Escanear al documento', ayuda: 'Cada producto que escanees entra al documento; si ya está, sube la cantidad. Si no está en tu inventario pero sí en el catálogo del distribuidor, entra con los datos del distribuidor.', alLeer: (p, code, c) => p ? leerUno(p) : c ? leerUno(deCat(c)) : null });
   // lector USB/Bluetooth: escribe el código en el buscador y pulsa Enter
   inp.addEventListener('keydown', (e) => {
     if (e.key !== 'Enter') return;
     const v = inp.value.trim(); if (!/^\S{6,}$/.test(v)) return;
-    const r = Barras.buscar(v); if (!r) return;
+    const r = Barras.buscar(v), c = r ? null : Barras.catalogo(v); if (!r && !c) return;
     e.preventDefault(); e.stopPropagation();
-    const x = agregarAlGenerador(w, r.p); if (!x) return;
+    const prod = r ? r.p : deCat(c);
+    const x = agregarAlGenerador(w, prod); if (!x) return;
     inp.value = ''; inp.dispatchEvent(new w.Event('input', { bubbles: true }));
-    Pitido(true); UI.toast(`${r.p.codigo}: ${x === 'suma' ? 'sube la cantidad' : 'agregado'}`, 1400);
+    Pitido(true); UI.toast(`${prod.codigo}: ${x === 'suma' ? 'sube la cantidad' : 'agregado'}`, 1400);
   }, true);
 }
 
@@ -5322,6 +5364,8 @@ function productoModal(p, extra) {
     if (otro) { UI.toast(`Ese código ya es de ${otro.codigo}`, 3500); return; }
     const ban = $('[data-esc-primero]', m.body); if (ban) ban.closest('.banner').remove();
     if (!xs.includes(k)) xs.push(k); inp.value = xs.join(', ');
+    const cat = isNew && Barras.catalogo(k);
+    if (cat) { llenarDesdeCat(cat); UI.toast(`Es el ${cat.m} del catálogo del distribuidor: revisa los datos y guarda`, 3500); return; }
     UI.toast(Barras.gtin(k) ? 'Código agregado: guarda para que quede' : 'Agregado. Ojo: no es un EAN/UPC; revisa que no sea el número de serie', 3200);
     if (isNew && !$('[data-k="codigo"]', m.body).value.trim()) $('[data-k="codigo"]', m.body).focus();
   };
@@ -5377,6 +5421,16 @@ function productoModal(p, extra) {
     if (!raw.length) intentar(); else pintar();
     return { set };
   })();
+  /* rellenar la ficha nueva con los datos del catálogo del distribuidor (al escanear su código de barras) */
+  function llenarDesdeCat(c) {
+    const set = (k, v) => { const el = $(`[data-k="${k}"]`, m.body); if (el && v != null && v !== '' && !el.value.trim()) el.value = v; };
+    set('codigo', c.m); if (c.n && c.n !== c.m) set('nombre', c.n); set('descripcion', c.desc); set('marca', (c.marca || '').toUpperCase());
+    if (!$('[data-k="nombre"]', m.body).value.trim()) $('[data-k="nombre"]', m.body).value = c.desc ? c.desc.split(/[,.;]/)[0].slice(0, 90) : c.m;
+    if (c.cat) { try { catUI.set([c.cat].concat(c.subs || []), 'catálogo'); } catch (e) { /* sin categoría */ } }
+    if (c.img && !fotos.includes(c.img) && fotos.length < 8) { fotos.push(c.img); pintarFotos(); }
+    ponerDist();   // precio de venta y costo del distribuidor
+  }
+  if (isNew && extra && extra.cat) llenarDesdeCat(extra.cat);
   const cc = $('[data-copcat]', m.body);
   if (cc) cc.onclick = () => { const c = mc.c; const set = (k, v) => { const el = $(`[data-k="${k}"]`, m.body); if (el && v) el.value = v; };
     if (c.n && c.n !== c.m) set('nombre', c.n); set('descripcion', c.desc); set('marca', (c.marca || '').toUpperCase());
@@ -6571,9 +6625,10 @@ const MatchCat = (() => {
     if (idx && n === Catalog.items.length && arr === Catalog.items) return idx;
     arr = Catalog.items;
     const mod = new Map(), sku = new Map();
-    Catalog.items.forEach(c => { const k = normKey(c.m); if (k && !mod.has(k)) mod.set(k, c); const s2 = normKey(c.sku); if (s2 && s2.length >= 8 && !sku.has(s2)) sku.set(s2, c); });
+    Catalog.items.forEach(c => { const k = normKey(c.m); if (k && !mod.has(k)) mod.set(k, c); const s2 = normKey(c.sku); if (s2 && s2.length >= 8 && (!sku.has(s2) || (sku.get(s2).pan && !c.pan))) sku.set(s2, c); });
     idx = { mod, sku }; n = Catalog.items.length; return idx;
   };
+  const porSku = (code) => { const k = normKey(code); return k ? build().sku.get(k) || null : null; };
   /* devuelve { c, como: 'modelo' | 'código de barras' | 'texto' } o null */
   const de = (p) => {
     const { mod, sku } = build(); const k = normKey(p.codigo);
@@ -6583,7 +6638,7 @@ const MatchCat = (() => {
     for (const t of toks) { const kk = normKey(t); if (kk.length >= 6 && /\d/.test(kk) && /[a-z]/.test(kk) && mod.has(kk)) return { c: mod.get(kk), como: 'texto' }; }
     return null;
   };
-  return { de };
+  return { de, porSku };
 })();
 /* ---------------- Existencia del producto en cada distribuidor ----------------
    Busca el mismo modelo en todo el catálogo (scraping, manuales y panel) y lo agrupa por
