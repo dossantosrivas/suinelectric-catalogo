@@ -5002,7 +5002,7 @@ const Escaner = (() => {
         <div class="small" style="margin:4px 0 8px">${ok ? '<span class="pill ok">EAN/UPC</span> Es un código de modelo: sirve para todas las cajas iguales.' : '<span class="pill warn">Revisa</span> No es un EAN/UPC. Si es el <b>número de serie (S/N)</b> o un lote, no lo guardes: cambia en cada equipo.'}</div>
         <label class="fld"><span>¿De qué producto es?</span><input class="inp" data-qp placeholder="Busca por código, nombre o marca" autocomplete="off" spellcheck="false"></label>
         <div data-lp class="esc-lp"></div>
-        <div class="row" style="margin-top:8px"><button type="button" class="btn sm" data-crear>${ico('plus')} Crear producto con este código</button><button type="button" class="btn sm ghost" data-ignorar>No guardar</button></div>
+        <div class="row" style="margin-top:8px"><button type="button" class="btn sm pri" data-crearweb>${ico('search')} Buscar en la web y crear</button><button type="button" class="btn sm" data-crear>${ico('plus')} Crear producto con este código</button><button type="button" class="btn sm ghost" data-ignorar>No guardar</button></div>
       </div>`;
       const qp = $('[data-qp]', res), lp = $('[data-lp]', res);
       const listar = () => {
@@ -5016,6 +5016,7 @@ const Escaner = (() => {
       };
       qp.addEventListener('input', debounce(listar, 150));
       if (!matchMedia('(pointer:coarse)').matches) setTimeout(() => qp.focus(), 30);
+      $('[data-crearweb]', res).onclick = () => { pendiente = null; res.innerHTML = `<div class="small muted">Revisa la ficha que se abre y guárdala. Después, al escanear este código, ya lo reconoce.</div>`; productoModal(null, { barras: [code], web: code }); };
       $('[data-crear]', res).onclick = () => { pendiente = null; res.innerHTML = `<div class="small muted">Completa el producto y guárdalo; luego vuelve a escanear el código.</div>`; productoModal(null, { barras: [code] }); };
       $('[data-ignorar]', res).onclick = () => { pendiente = null; res.innerHTML = ''; pan.focus(); };
     };
@@ -5092,6 +5093,24 @@ const Escaner = (() => {
   };
   return { abrir, capturar };
 })();
+
+/* ---------- Datos del producto desde la web oficial (vía /api/ficha-web, con Gemini + Google) ---------- */
+const FichaWeb = {
+  cache: new Map(),
+  async buscar(q, marca) {
+    const key = (q + '|' + (marca || '')).toUpperCase();
+    if (this.cache.has(key)) return this.cache.get(key);
+    if (!Sync.sb) throw new Error('Gestión no está conectada a Supabase.');
+    const { data } = await Sync.sb.auth.getSession();
+    const tok = data && data.session && data.session.access_token;
+    if (!tok) throw new Error('Inicia sesión en Gestión para buscar en la web.');
+    const r = await fetch(`/api/ficha-web?q=${encodeURIComponent(q)}&marca=${encodeURIComponent(marca || '')}`, { headers: { Authorization: 'Bearer ' + tok, apikey: Sync.conf().key } });
+    const j = await r.json().catch(() => null);
+    if (!r.ok || !j) throw new Error((j && j.error) || (r.status === 404 ? 'La búsqueda en la web aún no está publicada (functions/api/ficha-web.js).' : 'Error ' + r.status));
+    if (j.encontrado) this.cache.set(key, j);
+    return j;
+  }
+};
 
 /* ---------- Código que no está en tu inventario pero sí en el catálogo del distribuidor ---------- */
 function tarjetaCat(c, code) {
@@ -5279,6 +5298,9 @@ function productoModal(p, extra) {
       <label class="fld"><span>&nbsp;</span><label class="chk"><input type="checkbox" data-k="activo" ${p.activo !== false ? 'checked' : ''}> Activo</label></label>
       <div class="small muted" data-pt-info style="grid-column:1/-1;margin-top:-4px"></div>
       <div class="fld" style="grid-column:1/-1"><span>Códigos de barras</span><div class="row" style="gap:6px;flex-wrap:nowrap"><input class="inp mono" style="flex:1;min-width:0" data-barras value="${esc((p.barras || []).join(', '))}" placeholder="Escanéalos o escríbelos separados por coma" autocomplete="off" spellcheck="false"><button type="button" class="btn sm" data-esc-barra>${ico('scan')} Escanear</button></div><span class="small muted" style="font-weight:400">El del modelo (EAN/UPC), no el número de serie. El código/modelo del producto ya sirve para tus etiquetas propias.</span></div>
+      <div class="fld" style="grid-column:1/-1"><div class="row" style="justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center"><span class="small muted" style="font-weight:400">¿No tienes los datos? Búscalos en la web oficial del fabricante con el modelo o el código de barras.</span><button type="button" class="btn sm" data-web>${ico('search')} Buscar en la web</button></div><div data-web-res></div></div>
+      <label class="fld" style="grid-column:span 2"><span>Página oficial del fabricante</span><input class="inp" data-k="paginaOficial" value="${esc(p.paginaOficial || '')}" placeholder="https://…" autocomplete="off"></label>
+      <label class="fld"><span>Manual (PDF)</span><input class="inp" data-k="manualUrl" value="${esc(p.manualUrl || '')}" placeholder="https://…" autocomplete="off"></label>
     </div>
     <datalist id="dl-cat">${cats.map(c => `<option value="${esc(c)}">`).join('')}</datalist>
     <datalist id="dl-marcas">${marcasL.map(c => `<option value="${esc(c)}">`).join('')}</datalist>
@@ -5304,7 +5326,8 @@ function productoModal(p, extra) {
     foot: [].concat(isNew ? [] : [['Eliminar', 'red', async (close) => { if (movs.length) { UI.toast('Tiene movimientos: márcalo como inactivo en vez de eliminarlo', 3200); return; } if (await UI.confirm('¿Eliminar este producto?', { ok: 'Eliminar', danger: true })) { Store.del('productos', p.id); close(); } }]])
       .concat([['Cancelar', '', c => c()], ['Guardar', 'pri', (close) => {
         $$('[data-k]', m.body).forEach(i => { const k = i.dataset.k; p[k] = i.type === 'checkbox' ? i.checked : k === 'precio' || k === 'precioTienda' ? num(i.value) : i.value.trim(); });
-        if (!(num(p.precioTienda) > 0)) delete p.precioTienda;   // vacío = la tienda usa el precio del distribuidor (o tu precio si no lo trae)
+        if (!(num(p.precioTienda) > 0)) delete p.precioTienda;
+        ['paginaOficial', 'manualUrl'].forEach(k => { if (!/^https?:\/\//i.test(p[k] || '')) delete p[k]; });   // vacío = la tienda usa el precio del distribuidor (o tu precio si no lo trae)
         if (!p.codigo) { UI.toast('Escribe el código'); return; }
         const partes = $('[data-ruta]', m.body).value.split(/\s*[›>]\s*/).map(x => x.trim()).filter(Boolean);
         p.webCat = partes[0] || ''; p.webSubs = partes.slice(1); p.imagenes = fotos.slice(0, 8); if (p.webCat) p.catAuto = 'ok';
@@ -5367,6 +5390,7 @@ function productoModal(p, extra) {
     if (!xs.includes(k)) xs.push(k); inp.value = xs.join(', ');
     const cat = isNew && Barras.catalogo(k);
     if (cat) { llenarDesdeCat(cat); UI.toast(`Es el ${cat.m} del catálogo del distribuidor: revisa los datos y guarda`, 3500); return; }
+    if (isNew && !$('[data-k="codigo"]', m.body).value.trim() && Barras.gtin(k)) { buscarWeb(k); return; }
     UI.toast(Barras.gtin(k) ? 'Código agregado: guarda para que quede' : 'Agregado. Ojo: no es un EAN/UPC; revisa que no sea el número de serie', 3200);
     if (isNew && !$('[data-k="codigo"]', m.body).value.trim()) $('[data-k="codigo"]', m.body).focus();
   };
@@ -5422,6 +5446,41 @@ function productoModal(p, extra) {
     if (!raw.length) intentar(); else pintar();
     return { set };
   })();
+  /* ---- buscar los datos en la web oficial del fabricante (/api/ficha-web) ---- */
+  const webRes = $('[data-web-res]', m.body);
+  async function buscarWeb(q) {
+    const val = (k) => ($(`[data-k="${k}"]`, m.body) || {}).value || '';
+    q = String(q || val('codigo').trim() || ($('[data-barras]', m.body).value.split(/[,;\n]+/).map(Barras.norm).filter(Boolean)[0] || '')).trim();
+    if (q.length < 3) { UI.toast('Escribe el código / modelo o escanea el código de barras', 3000); return; }
+    webRes.innerHTML = `<div class="esc-card small" style="margin-top:8px">Buscando <b class="mono">${esc(q)}</b> en la web… (puede tardar unos segundos)</div>`;
+    let d;
+    try { d = await FichaWeb.buscar(q, val('marca').trim()); } catch (e) { webRes.innerHTML = `<div class="esc-card esc-nuevo small" style="margin-top:8px">${esc(e.message || e)}</div>`; return; }
+    if (!webRes.isConnected) return;
+    const fuentes = (d.fuentes || []).map(f => `<a href="${esc(f.url)}" target="_blank" rel="noopener">${esc(f.titulo || 'fuente')}</a>`).join(' · ');
+    if (!d.encontrado) { webRes.innerHTML = `<div class="esc-card esc-nuevo small" style="margin-top:8px"><b>No lo encontré en la web.</b> ${esc(d.nota || (d.porCodigo ? 'Prueba con el modelo, que suele venir en la misma etiqueta.' : ''))}${fuentes ? `<div class="muted" style="margin-top:4px">Revisé: ${fuentes}</div>` : ''}</div>`; return; }
+    const conf = { alta: ['ok', 'Ficha oficial'], media: ['warn', 'Revisa: fuentes no oficiales'], baja: ['bad', 'Poco seguro: revisa bien'] }[d.confianza] || ['warn', d.confianza];
+    webRes.innerHTML = `<div class="esc-card" style="margin-top:8px">
+      <div class="row" style="justify-content:space-between;gap:8px;align-items:flex-start"><div><div class="mono" style="font-weight:700;font-size:17px">${esc(d.modelo)}</div><div>${esc(d.nombre)}</div><div class="small muted">${esc(d.marca)}${d.tipo ? ' · ' + esc(d.tipo) : ''}</div></div><span class="pill ${conf[0]}">${esc(conf[1])}</span></div>
+      ${d.descripcion ? `<div class="small" style="margin-top:6px">${esc(d.descripcion)}</div>` : ''}
+      ${(d.caracteristicas || []).length ? `<ul class="small" style="margin:6px 0 0;padding-left:18px">${d.caracteristicas.map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}
+      <div class="small" style="margin-top:6px">${d.pagina_oficial ? `<a href="${esc(d.pagina_oficial)}" target="_blank" rel="noopener">Página oficial ↗</a>` : ''}${d.manual ? ` · <a href="${esc(d.manual)}" target="_blank" rel="noopener">Manual ↗</a>` : ''}</div>
+      ${fuentes ? `<div class="small muted" style="margin-top:4px">Fuentes: ${fuentes}</div>` : ''}
+      ${d.nota ? `<div class="small muted" style="margin-top:4px">${esc(d.nota)}</div>` : ''}
+      <div class="row" style="margin-top:10px;gap:6px;flex-wrap:wrap"><button type="button" class="btn sm pri" data-wusar="vacio">Rellenar lo que está vacío</button><button type="button" class="btn sm" data-wusar="todo">Usar todo (reemplaza)</button><button type="button" class="btn sm ghost" data-wcerrar>Descartar</button></div>
+    </div>`;
+    $('[data-wcerrar]', webRes).onclick = () => { webRes.innerHTML = ''; };
+    $$('[data-wusar]', webRes).forEach(b => b.onclick = () => {
+      const todo = b.dataset.wusar === 'todo';
+      const set = (k, v) => { const el = $(`[data-k="${k}"]`, m.body); if (!el || !v) return; if (todo || !el.value.trim()) el.value = v; };
+      const desc = [d.descripcion].concat((d.caracteristicas || []).map(x => '• ' + x)).filter(Boolean).join('\n');
+      const cod = $('[data-k="codigo"]', m.body); if (cod && (!cod.value.trim() || (todo && isNew))) { cod.value = d.modelo; ponerDist(); }
+      set('nombre', d.nombre); set('descripcion', desc); set('marca', d.marca); set('paginaOficial', d.pagina_oficial); set('manualUrl', d.manual);
+      webRes.innerHTML = ''; UI.toast('Datos de la web puestos en la ficha: revisa y guarda', 3000);
+    });
+  }
+  $('[data-web]', m.body).onclick = () => buscarWeb();
+  if (isNew && extra && extra.web) setTimeout(() => buscarWeb(extra.web), 50);
+
   /* rellenar la ficha nueva con los datos del catálogo del distribuidor (al escanear su código de barras) */
   function llenarDesdeCat(c) {
     const set = (k, v) => { const el = $(`[data-k="${k}"]`, m.body); if (el && v != null && v !== '' && !el.value.trim()) el.value = v; };
