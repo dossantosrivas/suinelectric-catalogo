@@ -4362,7 +4362,7 @@ const InvCat = (() => {
   };
   return { SIN, ruta, cmp, txt };
 })();
-const ORDENES_INV = [['relevancia', 'Más relevante'], ['tienda', 'Categoría (como la tienda)'], ['codigo', 'Código A-Z'], ['nombre', 'Nombre A-Z'], ['exist_desc', 'Más existencia'], ['exist_asc', 'Menos existencia'], ['precio_desc', 'Precio mayor'], ['precio_asc', 'Precio menor'], ['valor_desc', 'Más valor en inventario'], ['margen_desc', 'Mayor margen'], ['margen_asc', 'Menor margen'], ['vendidos', 'Más vendidos'], ['ultima', 'Vendidos recientemente'], ['sinmov', 'Sin movimiento hace más tiempo']];
+const ORDENES_INV = [['relevancia', 'Más relevante'], ['web_pub', 'Publicados en la tienda primero'], ['web_nopub', 'No publicados primero'], ['tienda', 'Categoría (como la tienda)'], ['codigo', 'Código A-Z'], ['nombre', 'Nombre A-Z'], ['exist_desc', 'Más existencia'], ['exist_asc', 'Menos existencia'], ['precio_desc', 'Precio mayor'], ['precio_asc', 'Precio menor'], ['valor_desc', 'Más valor en inventario'], ['margen_desc', 'Mayor margen'], ['margen_asc', 'Menor margen'], ['vendidos', 'Más vendidos'], ['ultima', 'Vendidos recientemente'], ['sinmov', 'Sin movimiento hace más tiempo']];
 /* ---------------- Inventario: vista rápida para ver existencias ----------------
    Cada producto con foto, existencia por inventario, precio, costo, margen, lo que
    tiene el distribuidor y cuánto se ha vendido. Lista (PC) o fichas (fotos grandes). */
@@ -4595,7 +4595,12 @@ const InvExport = (() => {
 let invRepintar = null;
 Bus.on('catalog', debounce(() => { if (invRepintar) invRepintar(); }, 400));
 Views.inventario = (v, invArg) => {
-  const F = Object.assign({ q: '', inv: '', stock: '1', cat: '', marca: '', orden: 'codigo', grupo: '', vista: 'lista', tcat: '', tsub: '' }, lsGet('suinadm_f_inv', {}));
+  const F = Object.assign({ q: '', inv: '', stock: '1', cat: '', marca: '', orden: 'codigo', grupo: '', vista: 'lista', tcat: '', tsub: '', web: '' }, lsGet('suinadm_f_inv', {}));
+  // estado en la tienda: publicado / borrador / oculto (ver WebProd)
+  const WEB_EST = { publicado: ['Publicado', 'ok', 0], borrador: ['Borrador', 'warn', 1], oculto: ['Oculto', '', 2] };
+  const webEst = (p) => { const e = WebProd.estado(p); return WEB_EST[e] ? e : 'publicado'; };
+  const webPill = (p) => { const [l, c] = WEB_EST[webEst(p)]; return `<span class="pill ${c}" title="Estado en la tienda">${l}</span>`; };
+  const FILTROS_WEB = [['', 'Todos'], ['publicado', 'Publicados'], ['nopub', 'No publicados (borrador u oculto)'], ['borrador', 'Borrador'], ['oculto', 'Ocultos']];
   if (invArg) { F.inv = invArg; F.stock = '1'; }
   if (!INV_VISTAS.some(x => x[0] === F.vista)) F.vista = 'lista';
   const prods = Store.all('productos');
@@ -4624,10 +4629,11 @@ Views.inventario = (v, invArg) => {
         <div class="seg inv-vista" data-vista role="group" aria-label="Forma de ver los productos">${INV_VISTAS.map(([k, l, t, svg]) => `<button type="button" data-v="${k}" class="${F.vista === k ? 'on' : ''}" title="${t}"><svg viewBox="0 0 24 24">${svg}</svg><span>${l}</span></button>`).join('')}</div>
       </div>
       <div class="inv-chips" data-chips></div>
-      <details class="inv-mas"${F.orden !== 'codigo' || F.grupo || F.tcat || F.cat || F.marca ? ' open' : ''}><summary>Ordenar, agrupar y filtrar por categoría o marca</summary>
+      <details class="inv-mas"${F.orden !== 'codigo' || F.grupo || F.tcat || F.cat || F.marca || F.web ? ' open' : ''}><summary>Ordenar, agrupar y filtrar por categoría, marca o tienda</summary>
       <div class="inv-sel">
         <label>Ordenar <select class="inp" data-f="orden">${ORDENES_INV.map(([k, l]) => `<option value="${k}" ${F.orden === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
         <label>Agrupar <select class="inp" data-f="grupo"><option value="">Sin grupos</option><option value="tienda" ${F.grupo === 'tienda' ? 'selected' : ''}>Categorías y subcategorías (como la tienda)</option><option value="categoria" ${F.grupo === 'categoria' ? 'selected' : ''}>Grupo</option><option value="marca" ${F.grupo === 'marca' ? 'selected' : ''}>Marca</option><option value="origen" ${F.grupo === 'origen' ? 'selected' : ''}>Dónde está</option></select></label>
+        <label>En la tienda <select class="inp" data-f="web">${FILTROS_WEB.map(([k, l]) => `<option value="${k}" ${F.web === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>
         <label>Categoría <select class="inp" data-f="tcat">${tcatOpts()}</select></label>
         <span data-tsubbox style="display:contents"></span>
         <label>Grupo <select class="inp" data-f="cat"><option value="">Todos</option>${cats.map(c => `<option ${F.cat === c ? 'selected' : ''}>${esc(c)}</option>`).join('')}</select></label>
@@ -4664,6 +4670,7 @@ Views.inventario = (v, invArg) => {
     }
     if (F.cat) base = base.filter(r => r.p.categoria === F.cat);
     if (F.marca) base = base.filter(r => r.p.marca === F.marca);
+    if (F.web) base = base.filter(r => F.web === 'nopub' ? webEst(r.p) !== 'publicado' : webEst(r.p) === F.web);
     if (words.length) {
       base = base.filter(r => { const k = normTxt([r.p.codigo, r.p.nombre, r.p.descripcion, r.p.marca, r.p.categoria].concat(r.p.barras || []).join(' ')); return words.every(w => k.includes(w)); });
       const qq = normKey(F.q); base.forEach(r => { const c = normKey(r.p.codigo), n = normTxt(r.p.nombre); r.score = (c === qq ? 100 : 0) + (c.startsWith(qq) ? 50 : 0) + (c.includes(qq) ? 20 : 0) + words.filter(w => n.includes(w)).length * 5 + (r.cant > 0 ? 3 : 0); });
@@ -4679,6 +4686,8 @@ Views.inventario = (v, invArg) => {
     let rows = base.filter(pasa[F.stock] || pasa['0']);
     const cmp = {
       relevancia: (a, b) => b.score - a.score || a.p.codigo.localeCompare(b.p.codigo),
+      web_pub: (a, b) => WEB_EST[webEst(a.p)][2] - WEB_EST[webEst(b.p)][2] || a.p.codigo.localeCompare(b.p.codigo),
+      web_nopub: (a, b) => WEB_EST[webEst(b.p)][2] - WEB_EST[webEst(a.p)][2] || a.p.codigo.localeCompare(b.p.codigo),
       tienda: (a, b) => InvCat.cmp(a.ruta, b.ruta) || InvCat.txt(a.p.codigo, b.p.codigo), codigo: (a, b) => a.p.codigo.localeCompare(b.p.codigo),
       nombre: (a, b) => (a.p.nombre || a.p.descripcion || a.p.codigo).localeCompare(b.p.nombre || b.p.descripcion || b.p.codigo),
       exist_desc: (a, b) => b.cant - a.cant, exist_asc: (a, b) => a.cant - b.cant, precio_desc: (a, b) => num(b.p.precio) - num(a.p.precio), precio_asc: (a, b) => (num(a.p.precio) || 1e12) - (num(b.p.precio) || 1e12),
@@ -4718,7 +4727,7 @@ Views.inventario = (v, invArg) => {
       return `<article class="inv-item ${est}${p.activo === false ? ' inactivo' : ''}" data-id="${esc(p.id)}" tabindex="0">
         <div class="inv-foto">${img}</div>
         <div class="inv-prod">
-          <div class="inv-cod"><span class="code">${esc(p.codigo)}</span><button type="button" class="inv-copiar" data-copiar="${esc(p.codigo)}" title="Copiar código" aria-label="Copiar código">${ico('copy')}</button>${p.activo === false ? '<span class="pill">inactivo</span>' : ''}</div>
+          <div class="inv-cod"><span class="code">${esc(p.codigo)}</span><button type="button" class="inv-copiar" data-copiar="${esc(p.codigo)}" title="Copiar código" aria-label="Copiar código">${ico('copy')}</button>${p.activo === false ? '<span class="pill">inactivo</span>' : ''}${webPill(p)}</div>
           <div class="inv-meta">${[p.marca ? `<b>${esc(p.marca)}</b>` : '', catTxt ? esc(catTxt) : ''].filter(Boolean).join(' · ')}</div>
           <div class="inv-nom" title="${esc([nombre, desc].filter(Boolean).join(' — '))}">${esc(nombre) || '<span class="muted">Sin nombre</span>'}${desc && !fichas ? `<span class="inv-desc"> — ${esc(desc)}</span>` : ''}</div>
         </div>
@@ -4734,7 +4743,7 @@ Views.inventario = (v, invArg) => {
       const [est, estL] = INV_ESTADO(cant); const precio = num(p.precio);
       return `<article class="inv-g ${est}${p.activo === false ? ' inactivo' : ''}" data-id="${esc(p.id)}" tabindex="0">
         <div class="inv-foto">${fotoHtml(InvFotos.de(p, mc))}</div>
-        <div class="g-prod"><div class="g-cod mono">${esc(p.codigo)}</div><div class="g-nom">${esc(p.nombre || p.descripcion || '') || '<span class="muted">Sin nombre</span>'}</div>${p.marca ? `<div class="g-marca">${esc(p.marca)}</div>` : ''}</div>
+        <div class="g-prod"><div class="g-cod mono">${esc(p.codigo)}</div><div class="g-nom">${esc(p.nombre || p.descripcion || '') || '<span class="muted">Sin nombre</span>'}</div>${p.marca ? `<div class="g-marca">${esc(p.marca)}</div>` : ''}<div style="margin-top:4px">${webPill(p)}</div></div>
         <div class="g-ex"><span class="g-l">Hay</span><span class="g-num mono">${fmtQty(cant)}</span><span class="g-est">${estL}</span>${invs.length > 1 ? `<span class="g-owns">${invs.map(i => `${esc(origenNombre(i))}: <b class="mono">${fmtQty(s[i].cant)}</b>`).join(' · ')}</span>` : ''}</div>
         <div class="g-pre"><span class="g-l">Precio</span>${precio ? `<b class="mono">${fmtUSD(precio)}</b>` : '<b class="g-sinp">Sin precio</b>'}</div>
       </article>`;
@@ -4747,7 +4756,7 @@ Views.inventario = (v, invArg) => {
         const dl = DistCat.de(p, mc);
         const dist = dl.length ? dl.map(e => `<div class="t-dl">${dl.length > 1 ? esc(e.nombre) + ': ' : ''}<span class="${DistCat.ok(e) ? 'okt' : 'bad'}">${DistCat.txt(e)}</span>${e.costo ? ` <span class="muted">· ${fmtUSD(e.costo)}</span>` : ''}</div>`).join('') : '<span class="muted">—</span>';
         return `<tr class="click inv-tr ${est}${p.activo === false ? ' inactivo' : ''}" data-id="${esc(p.id)}" tabindex="0">
-          <td class="t-cod"><span class="code">${esc(p.codigo)}</span><button type="button" class="inv-copiar" data-copiar="${esc(p.codigo)}" title="Copiar código" aria-label="Copiar código">${ico('copy')}</button></td>
+          <td class="t-cod"><span class="code">${esc(p.codigo)}</span><button type="button" class="inv-copiar" data-copiar="${esc(p.codigo)}" title="Copiar código" aria-label="Copiar código">${ico('copy')}</button><div>${webPill(p)}</div></td>
           <td class="t-nom"><div>${esc(p.nombre || p.descripcion || '') || '<span class="muted">Sin nombre</span>'}</div>${p.marca ? `<div class="muted small">${esc(p.marca)}</div>` : ''}</td>
           ${invs.length > 1 ? invs.map(i => `<td class="num hm ${s[i].cant > 0 ? '' : 'muted'}">${fmtQty(s[i].cant)}</td>`).join('') : ''}
           <td class="num t-ex"><span class="t-dot"></span><b>${fmtQty(cant)}</b>${caminoTag(p)}</td>
