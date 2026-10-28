@@ -2949,12 +2949,124 @@ function seguimientoVenta(box, D, { guardar, repintar }) {
 const textoHist = (x) => ({
   aceptada: 'Oferta aceptada' + (x.ref ? ' (' + x.ref + ')' : '') + ': se creó la venta',
   creada: 'Venta creada',
+  revision: 'Revisión de ' + (x.ref || 'la oferta') + ' con precios actualizados',
+  revisada: 'Precios actualizados en la revisión ' + (x.ref || ''),
   pago: 'Pago de ' + fmtUSD(x.monto || 0) + (x.forma ? ' · ' + x.forma : ''),
   entregado: 'Entregada', enviado: 'Enviada' + (x.empresa ? ' por ' + x.empresa : '') + (x.guia ? ' · guía ' + x.guia : ''),
   pendiente: 'Entrega marcada como pendiente',
   revisada: 'Paquete revisado con el escáner: todo completo' + (x.uds ? ' (' + fmtQty(x.uds) + ' unidades)' : '')
 }[x.e] || x.e);
 
+
+/* ---------------- Actualizar precios de una oferta vieja ----------------
+   Recalcula el costo de cada línea con los descuentos, listas e inventario de HOY y mantiene el margen
+   que tenía la oferta: precio nuevo = costo de hoy × (precio ÷ costo de la oferta).
+   Si la línea no tenía costo, toma el precio actual del catálogo. La oferta original no se toca:
+   se crea una revisión (OF-…-R1, R2…) con fecha y tasa de hoy, el mismo cliente y el mismo vendedor. */
+const costoHoyParte = (it, p) => {
+  if (p.origen === 'manuel' || p.origen === 'papa') {
+    if (!it.productoId) return null; const c = num(Calc.st(it.productoId)[p.origen].costo);
+    return c > 0 ? { costo: round2(c) } : null;
+  }
+  if (p.origen === 'dist') {
+    const cod = it.codigo || modeloDesc(it.desc); const c = catalogoByCodigo(cod);
+    const d = p.dist ? (Store.get('proveedores', p.dist) || undefined) : undefined;
+    if (c) { const x = costoInfo(c, d); if (x) return { costo: x.costo, listPrice: c.precio, dtoDist: x.pct, recargo: x.recargo || 0, dist: x.dist ? x.dist.id : (p.dist || '') }; }
+    const f = costoFijoModelo(cod); if (f) return { costo: f.costo, dist: f.dist.id };
+  }
+  return null;
+};
+const analizarLineaPrecio = (it) => {
+  const mixto = tieneReparto(it), partes = mixto ? it.reparto : [it];
+  const nuevos = partes.map(p => ({ p, hoy: costoHoyParte(it, p) }));
+  const costoAntes = it.costo === '' || it.costo == null ? null : num(it.costo);
+  let costoHoy = null;
+  if (nuevos.every(x => x.hoy)) { const c = mixto ? costoProm(nuevos.map(x => ({ cant: x.p.cant, costo: x.hoy.costo }))) : nuevos[0].hoy.costo; costoHoy = c === '' ? null : c; }
+  const precio = num(it.precio);
+  let precioHoy = null, como = '';
+  if (costoHoy != null && costoAntes > 0 && precio > 0) { precioHoy = costoHoy * precio / costoAntes; como = 'margen'; }
+  else if (!(costoAntes > 0)) { const c = catalogoByCodigo(it.codigo || modeloDesc(it.desc)); const pw = c && precioWeb(c); if (pw > 0) { precioHoy = pw; como = 'catalogo'; } }
+  return { it, nuevos, costoAntes, costoHoy, precio, precioHoy, como };
+};
+
+function actualizarPreciosModal(O, { antesDeCrear } = {}) {
+  const filas = (O.items || []).map(analizarLineaPrecio);
+  const enteros = filas.every(f => !(f.precio > 0) || Math.abs(f.precio - Math.round(f.precio)) < 1e-9);
+  let redondear = enteros;
+  const precioFinal = (f) => f.precioHoy == null ? f.precio : redondear ? Math.ceil(f.precioHoy - 1e-6) : round2(f.precioHoy);
+  const cambia = (f) => f.precioHoy != null && Math.abs(precioFinal(f) - f.precio) >= 0.005 || (f.costoHoy != null && f.costoAntes != null && Math.abs(f.costoHoy - f.costoAntes) >= 0.005);
+  const elegidas = new Set(filas.map((f, i) => cambia(f) ? i : -1).filter(i => i >= 0));
+  const dias = diasDesde(O.fecha);
+  const m = UI.modal({ title: `Actualizar precios · ${O.numero || 'oferta'}`, wide: true, body: `
+    <p class="small" style="margin-top:0">Oferta del <b>${esc(fmtFecha(O.fecha))}</b>${dias > 0 ? ` (hace ${dias} día${dias === 1 ? '' : 's'})` : ''}. Calculé el costo de cada producto con los descuentos e inventario de hoy y <b>mantuve el margen</b> que tenía cada línea. La oferta original no cambia: se crea una <b>revisión</b> con fecha y tasa de hoy.</p>
+    <label class="chk" style="margin:0 0 8px"><input type="checkbox" data-red ${redondear ? 'checked' : ''}> Redondear precios hacia arriba al dólar entero</label>
+    <div class="tbl-wrap"><table class="tbl"><thead><tr><th class="sel-c"><input type="checkbox" data-todas aria-label="Marcar todas"></th><th>Producto</th><th class="r">Cant.</th><th class="r">Costo antes → hoy</th><th class="r">Precio antes → hoy</th><th class="r">Diferencia</th></tr></thead><tbody data-tb></tbody></table></div>
+    <div data-tot class="row" style="justify-content:flex-end;gap:16px;margin-top:10px;flex-wrap:wrap"></div>`,
+    foot: [['Cancelar', '', c => c()], ['Crear revisión con precios nuevos', 'pri', (close) => {
+      if (!elegidas.size && !(cambioTasa())) { UI.toast('No hay precios que actualizar'); return; }
+      if (antesDeCrear && antesDeCrear() === false) return;
+      const nd = crearRevisionOferta(O, filas.map((f, i) => elegidas.has(i) ? Object.assign({}, f, { precioNuevo: precioFinal(f) }) : null));
+      close(); Route.nav('#/doc/' + nd.id);
+      UI.toast(`Creada la revisión ${nd.numero}${elegidas.size ? ' · ' + elegidas.size + ' precio' + (elegidas.size === 1 ? '' : 's') + ' actualizado' + (elegidas.size === 1 ? '' : 's') : ''}`, 3500);
+    }]] });
+  const tasaHoy = () => { const s = Rates.data[O.tasaFuente] || Rates.data.bcv_usd; return s ? round2(s.v) : null; };
+  const cambioTasa = () => { const t = tasaHoy(); return t && num(O.tasa) && Math.abs(t - num(O.tasa)) >= 0.005; };
+  const flecha = (a, b, fmt) => a == null && b == null ? '<span class="muted">—</span>' : b == null || Math.abs(num(a) - num(b)) < 0.005 ? `<span class="num">${a == null ? '—' : fmt(a)}</span>` : `<span class="num muted">${a == null ? '—' : fmt(a)}</span> → <b class="num">${fmt(b)}</b>`;
+  const paint = () => {
+    $('[data-tb]', m.body).innerHTML = filas.map((f, i) => {
+      const it = f.it, nombre = it.codigo || modeloDesc(it.desc) || plainFirst(it.desc) || 'Producto';
+      const pf = precioFinal(f), dif = (pf - f.precio) * num(it.cant);
+      const nota = f.precioHoy == null ? (f.costoAntes > 0 ? 'Sin costo de hoy: queda igual' : 'Sin costo ni precio de catálogo: queda igual') : f.como === 'catalogo' ? 'Sin costo en la oferta: precio del catálogo de hoy' : f.costoAntes > 0 ? `Margen ${fmtNum((f.precio / f.costoAntes - 1) * 100, 1)}% sobre costo` : '';
+      const puede = cambia(f);
+      return `<tr><td class="sel-c"><input type="checkbox" data-i="${i}" ${elegidas.has(i) ? 'checked' : ''} ${puede ? '' : 'disabled'}></td>
+        <td><b class="mono">${esc(nombre)}</b>${it.marca ? ` <span class="muted small">${esc(it.marca)}</span>` : ''}<div class="small muted">${esc(nota)}${puede ? '' : f.precioHoy != null ? ' · sin cambio' : ''}</div></td>
+        <td class="num">${fmtQty(num(it.cant))}</td>
+        <td class="r">${flecha(f.costoAntes, f.costoHoy, fmtUSD)}</td>
+        <td class="r">${flecha(f.precio, f.precioHoy == null ? null : pf, fmtUSD)}</td>
+        <td class="num" style="color:${!puede || Math.abs(dif) < 0.005 ? 'inherit' : dif > 0 ? 'var(--red)' : 'var(--ok)'}">${puede && Math.abs(dif) >= 0.005 ? (dif > 0 ? '+' : '−') + fmtUSD(Math.abs(dif)) : '—'}</td></tr>`;
+    }).join('');
+    const subA = filas.reduce((a, f) => a + num(f.it.cant) * f.precio, 0);
+    const subN = filas.reduce((a, f, i) => a + num(f.it.cant) * (elegidas.has(i) ? precioFinal(f) : f.precio), 0);
+    const k = (1 - num(O.descPct) / 100) * (1 + num(O.ivaPct) / 100), d = (subN - subA) * k;
+    const t = tasaHoy();
+    $('[data-tot]', m.body).innerHTML = `<span class="small muted">Total antes <b class="num">${fmtUSD(subA * k)}</b></span><span class="small">Total revisión <b class="num">${fmtUSD(subN * k)}</b></span>${Math.abs(d) >= 0.005 ? `<span class="pill ${d > 0 ? 'bad' : 'ok'}">${d > 0 ? '+' : '−'}${fmtUSD(Math.abs(d))}</span>` : ''}${t && num(O.tasa) ? `<span class="small muted">Tasa ${fmtNum(num(O.tasa), 2)} → <b>${fmtNum(t, 2)}</b> Bs/$</span>` : ''}`;
+    const todas = $('[data-todas]', m.body), posibles = filas.filter(cambia).length;
+    todas.checked = posibles > 0 && elegidas.size === posibles; todas.disabled = !posibles;
+  };
+  m.body.addEventListener('change', (e) => {
+    const t = e.target;
+    if (t.matches('[data-red]')) { redondear = t.checked; filas.forEach((f, i) => { if (!cambia(f)) elegidas.delete(i); }); paint(); }
+    else if (t.matches('[data-todas]')) { filas.forEach((f, i) => { if (cambia(f)) { if (t.checked) elegidas.add(i); else elegidas.delete(i); } }); paint(); }
+    else if (t.matches('[data-i]')) { const i = +t.dataset.i; if (t.checked) elegidas.add(i); else elegidas.delete(i); paint(); }
+  });
+  paint();
+}
+/* crea la revisión: cambios[i] = fila analizada con precioNuevo, o null si esa línea se deja igual */
+function crearRevisionOferta(O, cambios) {
+  const raizId = O.revRaiz || O.id, raiz = Store.get('docs', raizId) || O;
+  const base = String(raiz.numero || O.numero || nextNumero('oferta', localStamp())).replace(/-R\d+$/, '');
+  const n = Store.all('docs').filter(x => x.revRaiz === raizId).reduce((a, x) => Math.max(a, num(x.rev)), 0) + 1;
+  const items = clone(O.items || []).map((it, i) => {
+    it.id = uid('i');
+    const f = cambios[i]; if (!f) return it;
+    const viejo = num(it.precio), nuevo = f.precioNuevo;
+    if (num(it.antes) > 0 && viejo > 0) it.antes = round2(num(it.antes) * nuevo / viejo);
+    it.precio = nuevo;
+    if (f.costoHoy != null) {
+      const ps = tieneReparto(it) ? it.reparto : [it];
+      ps.forEach((p, k) => { const h = f.nuevos[k] && f.nuevos[k].hoy; if (!h) return; p.costo = h.costo; if (p.origen === 'dist') { ['listPrice', 'dtoDist', 'recargo'].forEach(c => { if (h[c] != null) p[c] = h[c]; }); if (h.dist) p.dist = h.dist; } });
+      if (tieneReparto(it)) it.costo = costoProm(it.reparto);
+    }
+    return it;
+  });
+  const nd = newDoc('oferta', { clienteId: O.clienteId, cliente: clone(O.cliente || {}), items, descPct: O.descPct, ivaPct: O.ivaPct, condiciones: clone(O.condiciones || []), firmas: O.firmas, titulo: O.titulo, vendedor: O.vendedor || Yo.nombre(), notas: O.notas, numero: base + '-R' + n, revRaiz: raizId, revDe: O.id, rev: n });
+  const s = Rates.data[O.tasaFuente]; if (s) { nd.tasa = round2(s.v); nd.tasaFuente = O.tasaFuente; }
+  else if (!num(nd.tasa) && num(O.tasa)) { nd.tasa = O.tasa; nd.tasaFuente = O.tasaFuente; }   // sin tasa de hoy: se queda la de la oferta
+  logDoc(nd, 'revision', { ref: O.numero });
+  Store.put('docs', nd);
+  const orig = Store.get('docs', O.id); if (orig) { logDoc(orig, 'revisada', { ref: nd.numero }); Store.put('docs', orig); }
+  return nd;
+}
 
 function docEditor(v, D, isNew) {
   const cfg = CFG();
@@ -2978,6 +3090,12 @@ function docEditor(v, D, isNew) {
   ${D.historial ? `<div class="banner">Nota anterior al ${esc(fmtFecha(CFG().corteCotizador))}: se guarda como historial y no cuenta en ventas ni existencias (esas ventas ya vienen de Mi Negocio). <button class="btn sm" data-a="contar">Contarla como venta</button></div>` : ''}
   ${D.origenAuto && !D.historial ? `<div class="banner">Viene del generador: revisa de dónde sale cada producto (${esc(origenNombre('manuel'))}, ${esc(origenNombre('papa'))} o Distribuidor) y guarda.</div>` : ''}
   ${(oferta || venta) && !isNew && D.tipo !== 'venta' ? `<div class="row" style="margin:-4px 0 12px"><button class="btn sm" data-a="engen">${ico('offer')} Abrir en el generador</button><span class="muted small">Los cambios de aquí y del generador se mantienen iguales.</span></div>` : ''}
+  ${oferta && !isNew ? (() => {
+    const de = D.revDe && Store.get('docs', D.revDe), revs = Store.all('docs').filter(x => x.revDe === D.id), dias = diasDesde(D.fecha), vieja = dias > 5 && (D.estado || 'abierta') === 'abierta' && !D.convertidoA;
+    return `${de ? `<div class="banner info-b">Revisión R${esc(D.rev || '')} de <a href="#/doc/${esc(de.id)}">${esc(de.numero)}</a> (${esc(fmtFecha(de.fecha))}), con precios actualizados.</div>` : ''}
+    ${revs.length ? `<div class="banner">Esta oferta tiene revisión${revs.length === 1 ? '' : 'es'} con precios nuevos: ${revs.map(x => `<a href="#/doc/${esc(x.id)}">${esc(x.numero)}</a>`).join(', ')}</div>` : ''}
+    <div class="${vieja ? 'banner' : 'row'}" style="${vieja ? '' : 'margin:-4px 0 12px;'}align-items:center;gap:10px;flex-wrap:wrap">${vieja ? `<span>Esta oferta es de hace <b>${dias} días</b>: los costos y descuentos pueden haber cambiado.</span>` : ''}<button class="btn sm ${vieja ? 'pri' : ''}" data-a="actprecios" title="Recalcula con los costos de hoy manteniendo el margen; crea una revisión">↻ Actualizar precios</button>${vieja ? '' : '<span class="muted small">Recalcula con los costos de hoy, mantiene el margen y crea una revisión.</span>'}</div>`;
+  })() : ''}
   <div class="ed">
     <div class="stack">
       ${venta && !isNew ? '<section class="panel seg-venta" id="sec-seg"></section>' : ''}
@@ -3429,6 +3547,7 @@ function docEditor(v, D, isNew) {
       } catch (err) { if (err && err.name !== 'AbortError') { console.error(err); UI.toast('No se pudo generar el PDF: ' + err.message, 3500); } }
     }
     else if (act === 'desglose') desgloseModal(D);
+    else if (act === 'actprecios') { if (dirty && !save()) return; actualizarPreciosModal(Store.get('docs', D.id) || D, { antesDeCrear: () => { dirty = false; App.guard = null; window.onbeforeunload = null; } }); }
     else if (act === 'engen') { if (dirty && !save()) return; Cot.open({ abrir: D.numero }); }
     else if (act === 'contar') { D.historial = false; D.afectaStock = true; save(); App.render(); }
     else if (act === 'toNota') convert('nota');
