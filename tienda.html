@@ -5555,6 +5555,46 @@ document.getElementById('buscador').addEventListener('input', () => {
   }, 150);
 });
 document.getElementById('buscador').addEventListener('focus', renderSugerencias);
+/* ---------- Ejemplos animados en el buscador ----------
+   Mientras el buscador está vacío y sin tocar, el texto gris "escribe"
+   ejemplos reales del catálogo para que el cliente vea cómo buscar
+   (modelo, marca, potencia, amperaje). Se detiene al tocar el buscador,
+   cuando la pestaña no está visible, y no se anima si el teléfono tiene
+   activado "reducir movimiento". El aria-label queda fijo. */
+(function ejemplosBuscador(){
+  const input = document.getElementById('buscador');
+  if (!input) return;
+  const FIJO = input.getAttribute('placeholder') || 'Buscar modelo, marca o código';
+  // Probados contra el catálogo: todos devuelven resultados.
+  const EJEMPLOS = ['variador 3 HP', 'GD20 220V', 'LOGO V9', 'contactor 25 A',
+                    'guardamotor Siemens', 'arrancador suave', 'sensor inductivo', 'pantalla HMI'];
+  let reducir = false;
+  try { reducir = window.matchMedia('(prefers-reduced-motion: reduce)').matches; } catch (e) {}
+  if (reducir){ input.placeholder = 'Ej. ' + EJEMPLOS[0]; return; }
+
+  let i = 0, j = 0, borrando = false, timer = null;
+  const puedeAnimar = () => document.activeElement !== input && !input.value && !document.hidden;
+
+  function paso(){
+    timer = null;
+    if (!puedeAnimar()) return;
+    const txt = EJEMPLOS[i];
+    j += borrando ? -1 : 1;
+    input.placeholder = 'Ej. ' + txt.slice(0, j) + (borrando ? '' : '|');
+    let espera = borrando ? 35 : 85;
+    if (!borrando && j >= txt.length){ borrando = true; espera = 1800; input.placeholder = 'Ej. ' + txt; }
+    else if (borrando && j <= 0){ borrando = false; i = (i + 1) % EJEMPLOS.length; espera = 450; }
+    timer = setTimeout(paso, espera);
+  }
+  function iniciar(){ if (!timer && puedeAnimar()){ j = 0; borrando = false; timer = setTimeout(paso, 600); } }
+  function detener(){ clearTimeout(timer); timer = null; input.placeholder = FIJO; }
+
+  input.addEventListener('focus', detener);
+  input.addEventListener('input', () => { if (input.value) detener(); });
+  input.addEventListener('blur', () => setTimeout(iniciar, 300));
+  document.addEventListener('visibilitychange', () => document.hidden ? detener() : iniciar());
+  iniciar();
+})();
 // Enter: cierra las sugerencias y muestra los resultados; el texto se queda en el buscador.
 document.getElementById('buscador').addEventListener('keydown', (e) => {
   if (e.key !== 'Enter' || e.isComposing) return;
