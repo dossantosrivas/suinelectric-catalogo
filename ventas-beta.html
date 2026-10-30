@@ -8786,7 +8786,7 @@ const CuentaPapa = {
           const imp = round2(num(p.cant) * num(p.precio) * fd); if (!imp) return;
           const o = p.origen || 'libre', key = (p.id || 'i' + k);
           let regla, pct = 0, revisar = '';
-          if (o === 'dist') { regla = 'Distribuidor – comisión'; pct = C; }
+          if (o === 'dist') { const con = (ov.com || {})[key] != null ? (ov.com || {})[key] : !!ov.comision; if (con) { regla = 'Distribuidor – con comisión'; pct = C; } else regla = 'Distribuidor – sin comisión'; }
           else if (o === 'manuel' || o === 'papa') {
             if (!cobro) { regla = 'Falta quién cobró'; revisar = 'No se sabe quién cobró: el vendedor "' + (d.vendedor || 'sin vendedor') + '" no está asignado a nadie'; }
             else if (o === 'manuel' && cobro === 'papa') { regla = 'Equipo de ' + this.nombre('manuel') + ' – cobró ' + this.nombre('papa'); pct = R; }
@@ -8840,14 +8840,14 @@ Views.cuenta = (v) => {
   v.innerHTML = `<div class="vh"><h1>Cuenta con ${esc(P)}</h1><div class="act">
       <select class="inp" style="width:auto" data-per>${periodoOpts().map(([k, l]) => `<option value="${k}" ${F.per === k ? 'selected' : ''}>${l}</option>`).join('')}</select>
       <button class="btn" data-exp>${ico('list')} Exportar a Excel</button><button class="btn" data-aj>${ico('gear')} Ajustes</button><button class="btn pri" data-mov>${ico('plus')} Pago o ajuste</button></div>
-    <div class="sub">Se calcula sola con las ventas, notas y compras desde el ${esc(fmtFecha(A.inicio))}. Equipo de uno que cobra el otro: ${fmtNum(num(A.reparto), 1)} % para el dueño. Distribuidor: ${fmtNum(num(A.comision), 1)} % de comisión para ${esc(M)}. Toca una línea para corregirla.</div></div>
+    <div class="sub">Se calcula sola con las ventas, notas y compras desde el ${esc(fmtFecha(A.inicio))}. Equipo de uno que cobra el otro: ${fmtNum(num(A.reparto), 1)} % para el dueño. Distribuidor: sin comisión, salvo en las ventas donde la marques (${fmtNum(num(A.comision), 1)} %). Toca una línea para corregirla.</div></div>
     <div class="kpis k4">
       <div class="kpi"><div class="l">Saldo actual</div><div class="v" style="color:${saldo >= 0 ? 'var(--ok,#15803D)' : 'var(--bad,#B91C1C)'}">${fmtUSD(Math.abs(saldo))}</div><div class="d">${txtSaldo(saldo)}</div></div>
       <div class="kpi"><div class="l">Solo con lo ya cobrado</div><div class="v">${fmtUSD(Math.abs(saldoCobrado))}</div><div class="d">${txtSaldo(saldoCobrado)}</div></div>
       <div class="kpi"><div class="l">Movimiento de este mes</div><div class="v">${mes >= 0 ? '+' : '−'}${fmtUSD(Math.abs(mes))}</div><div class="d">para ${esc(M)}</div></div>
       <div class="kpi"><div class="l">Por revisar</div><div class="v">${rev.length}</div><div class="d">${rev.length ? 'líneas sin decidir' : 'todo claro'}</div></div></div>
     ${rev.length ? `<div class="banner" style="margin-bottom:12px"><b>Por revisar (${rev.length}):</b> ${[...new Set(rev.map(r => (r.numero || 'Movimiento') + ' — ' + r.revisar))].slice(0, 8).map(esc).join(' · ')}${rev.length > 8 ? ' · …' : ''}</div>` : ''}
-    <div class="row" style="gap:10px;margin-bottom:10px;flex-wrap:wrap;align-items:center"><input class="inp" style="max-width:320px" data-q placeholder="Buscar documento, cliente o código" value="${esc(F.q || '')}"><label class="small" style="display:flex;gap:6px;align-items:center"><input type="checkbox" data-todo ${F.todo ? 'checked' : ''}> Ver también las ventas que no mueven la cuenta</label></div>
+    <div class="row" style="gap:10px;margin-bottom:10px;flex-wrap:wrap;align-items:center"><input class="inp" style="max-width:320px" data-q placeholder="Buscar documento, cliente o código" value="${esc(F.q || '')}"><label class="small" style="display:flex;gap:6px;align-items:center"><input type="checkbox" data-todo ${F.todo ? 'checked' : ''}> Ver también las que no mueven la cuenta (ventas propias y de distribuidor sin comisión)</label></div>
     <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Fecha</th><th>Documento</th><th class="hm">Cliente / proveedor</th><th class="hm">Vendió</th><th>Producto</th><th class="r">Total</th><th class="hm">Regla</th><th class="r">%</th><th class="r">Para ${esc(M)}</th><th class="r">Saldo</th><th></th></tr></thead><tbody>
       <tr><td>${esc(fmtFecha(A.inicio))}</td><td colspan="7" class="muted">Saldo inicial</td><td></td><td class="num"><b>${fmtUSD(num(A.saldoInicial))}</b></td><td></td></tr>
       ${vis.slice().reverse().map(r => `<tr class="click" data-r="${esc(r.id)}"><td>${esc(fmtFecha(r.fecha))}</td><td>${r.doc ? esc(r.numero) : '<span class="muted">—</span>'}</td><td class="hm">${esc(r.quien)}</td><td class="hm">${esc(r.vend)}</td><td>${esc(r.codigo)}${r.cant !== 1 ? ` <span class="muted small">×${fmtNum(r.cant)}</span>` : ''}${r.cobrado ? '' : ' <span class="pill">no cobrado</span>'}</td><td class="num">${fmtUSD(r.total)}</td><td class="hm small">${esc(r.regla)}</td><td class="num">${fmtNum(r.pct * 100, 1)}%</td><td class="num" style="color:${r.monto > 0 ? 'var(--ok,#15803D)' : r.monto < 0 ? 'var(--bad,#B91C1C)' : 'inherit'}">${r.monto ? (r.monto > 0 ? '+' : '−') + fmtUSD(Math.abs(r.monto)) : '—'}</td><td class="num">${fmtUSD(r.saldo)}</td><td>${pill(r)}</td></tr>`).join('') || '<tr><td colspan="11" class="muted">No hay movimientos en este período.</td></tr>'}
@@ -8879,6 +8879,8 @@ function cuentaLineaModal(r) {
     <div class="stack" style="gap:12px">
       ${compra ? `<label class="fld"><span>¿Quién pagó esta compra? (todo el documento)</span><select class="inp" data-pago><option value="">Sin definir</option><option value="manuel" ${ov.pagoCompra === 'manuel' ? 'selected' : ''}>${esc(M)}</option><option value="papa" ${ov.pagoCompra === 'papa' ? 'selected' : ''}>${esc(P)}</option></select></label>`
         : `<label class="fld"><span>¿Quién cobró esta venta? (todo el documento)</span><select class="inp" data-cobro><option value="">Según el vendedor${r.vend ? ' (' + esc(r.vend) + ')' : ''}</option><option value="manuel" ${ov.cobro === 'manuel' ? 'selected' : ''}>${esc(M)}</option><option value="papa" ${ov.cobro === 'papa' ? 'selected' : ''}>${esc(P)}</option></select></label>`}
+      ${r.origen === 'dist' ? `<label class="small" style="display:flex;gap:6px;align-items:center"><input type="checkbox" data-coml ${r.pct ? 'checked' : ''}> Gano comisión en esta línea (${fmtNum(num(CP.ajustes().comision), 1)} %)</label>
+      <label class="small" style="display:flex;gap:6px;align-items:center"><input type="checkbox" data-comd ${ov.comision ? 'checked' : ''}> Gano comisión en todas las líneas de distribuidor de este documento</label>` : ''}
       <label class="fld"><span>% para ${esc(M)} en esta línea (vacío = según la regla; negativo = ${esc(M)} le debe a ${esc(P)})</span><input class="inp num" inputmode="decimal" data-pct value="${pctMano != null && pctMano !== '' ? esc(pctMano) : ''}" placeholder="${fmtNum(r.pct * 100, 1)}"></label>
       <label class="small" style="display:flex;gap:6px;align-items:center"><input type="checkbox" data-exc> No contar este documento en la cuenta (por ejemplo, si está duplicado)</label>
       <a class="btn sm" href="#/doc/${esc(d.id)}" style="align-self:flex-start">Abrir el documento</a>
@@ -8888,6 +8890,12 @@ function cuentaLineaModal(r) {
       const pv = $('[data-pct]', m.body).value.trim(); if (pv === '') delete o.pct[r.key]; else o.pct[r.key] = num(pv);
       if (compra) o.pagoCompra = $('[data-pago]', m.body).value || null; else o.cobro = $('[data-cobro]', m.body).value || null;
       if ($('[data-exc]', m.body).checked) o.excluir = true;
+      const cd = $('[data-comd]', m.body), cl = $('[data-coml]', m.body);
+      if (cd) {
+        o.comision = cd.checked; o.com = Object.assign({}, ov.com || {});
+        if (cd.checked !== !!ov.comision) o.com = {};                      // cambió todo el documento
+        else if (cl.checked === o.comision) delete o.com[r.key]; else o.com[r.key] = cl.checked;
+      }
       CP.guardarOv(d.id, o); c(); App.render(); UI.toast('Guardado');
     }]] });
 }
@@ -8910,7 +8918,7 @@ function cuentaAjustesModal() {
   const vends = [...new Set(Store.all('empleados').map(e => e.nombre).concat(Store.all('docs').filter(esVenta).map(d => d.vendedor)).filter(Boolean))].sort();
   const m = UI.modal({ title: 'Ajustes de la cuenta', body: `<div class="stack" style="gap:12px">
       <div class="row" style="gap:10px"><label class="fld" style="flex:1"><span>Empieza el</span><input class="inp" type="date" data-ini value="${esc(A.inicio)}"></label><label class="fld" style="flex:1"><span>Saldo inicial a favor de ${esc(M)} $</span><input class="inp num" inputmode="decimal" data-si value="${esc(A.saldoInicial)}"></label></div>
-      <div class="row" style="gap:10px"><label class="fld" style="flex:1"><span>% para el dueño del equipo</span><input class="inp num" inputmode="decimal" data-rep value="${esc(A.reparto)}"></label><label class="fld" style="flex:1"><span>Comisión distribuidor %</span><input class="inp num" inputmode="decimal" data-com value="${esc(A.comision)}"></label></div>
+      <div class="row" style="gap:10px"><label class="fld" style="flex:1"><span>% para el dueño del equipo</span><input class="inp num" inputmode="decimal" data-rep value="${esc(A.reparto)}"></label><label class="fld" style="flex:1"><span>Comisión cuando la marques %</span><input class="inp num" inputmode="decimal" data-com value="${esc(A.comision)}"></label></div>
       <div><div class="small" style="margin-bottom:6px"><b>¿Quién es cada vendedor?</b> Se usa para saber quién cobró.</div>
       ${vends.map(n => `<div class="row" style="gap:10px;align-items:center;margin-bottom:6px"><span style="flex:1">${esc(n)}</span><select class="inp" style="width:auto" data-vs="${esc(normKey(n))}"><option value="">Nadie (empleado)</option><option value="manuel" ${A.socios[normKey(n)] === 'manuel' ? 'selected' : ''}>${esc(M)}</option><option value="papa" ${A.socios[normKey(n)] === 'papa' ? 'selected' : ''}>${esc(P)}</option></select></div>`).join('')}</div></div>`,
     foot: [['Cancelar', '', (c) => c()], ['Guardar', 'pri', (c) => {
