@@ -420,6 +420,14 @@ body.solo .cot-frame{height:100vh;height:100dvh;border:0;border-radius:0}
   .extras .ex{grid-template-columns:100px minmax(0,1fr) 30px}
 }
 @media (max-width:520px){.g2,.g3,.g4{grid-template-columns:minmax(0,1fr)}.kpi .v{font-size:24px}}
+/* ===== Existencias: buscar en todos los distribuidores ===== */
+.lt-list{display:flex;flex-direction:column}
+.lt-row{padding:10px 2px;border-top:1px solid var(--line)}
+.lt-h{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
+.lt-n{margin-top:2px;overflow-wrap:anywhere}
+.lt-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
+.lt-chip{display:inline-flex;gap:4px;align-items:baseline;padding:4px 9px;border:1px solid var(--line);border-radius:999px;font-size:.86em;line-height:1.3;white-space:nowrap}
+@media (max-width:600px){.lt-chip{white-space:normal}}
 /* ===== Inventario (vista rápida de existencias) ===== */
 .inv-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:14px}
 .inv-kpi{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:14px 18px;text-align:left;display:flex;flex-direction:column;gap:1px;min-width:0;color:inherit;font:inherit}
@@ -1011,6 +1019,12 @@ const Store = {
     IDB.set('data', snap);
     IDB.set('pend', Array.from(Pend.values()));
   }, 350),
+  /* guarda ya (sin esperar): antes de mover el punto de sincronización, para que un celular que cierra
+     la pestaña no quede con el punto adelantado y sin los datos (pasaba con las listas de existencias) */
+  async flush() {
+    const snap = {}; COLS.forEach(c => snap[c] = Array.from(DB[c].values()));
+    await IDB.set('data', snap); await IDB.set('pend', Array.from(Pend.values()));
+  },
   all(col) { return Array.from(DB[col].values()); },
   get(col, id) { return DB[col].get(id); },
   put(col, rec, { quiet } = {}) {
@@ -1081,6 +1095,7 @@ const Sync = {
     try {
       await this.push();
       await this.pull();
+      if (!this.revisado) { this.revisado = true; try { await this.reconciliar(); } catch (e) { console.warn('reconciliar', e); this.revisado = false; } }
       this.pulledOnce = true;   // ya están todos los productos de la nube en este equipo
       ensureDistribuidores();
       this.set('ok', 'Sincronizado ' + new Date().toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' }));
@@ -1114,8 +1129,35 @@ const Sync = {
       if (!data || data.length < PAGE) break;
       from += PAGE;
     }
-    if (maxTs) { this.lastSync = maxTs; lsSet('suinadm_lastsync', maxTs); }
-    if (changed.size) { Store.persist(); changed.forEach(c => Bus.emit('data', c)); Bus.emit('remote'); }
+    if (changed.size) await Store.flush();      // primero queda guardado en el equipo…
+    if (maxTs) { this.lastSync = maxTs; lsSet('suinadm_lastsync', maxTs); }      // …y luego se marca como sincronizado
+    if (changed.size) { changed.forEach(c => Bus.emit('data', c)); Bus.emit('remote'); }
+  },
+  /* Una vez por sesión: compara lo que hay en la nube con lo de este equipo y trae lo que falte o esté
+     viejo (registros que se saltaron porque el equipo se cerró a mitad o tenía una versión vieja de la app). */
+  async reconciliar() {
+    const remoto = [], PAGE = 1000;
+    for (let from = 0; ; from += PAGE) {
+      const { data, error } = await this.sb.from('adm_registros').select('coleccion,id,mod:data->>mod').eq('borrado', false).order('coleccion').order('id').range(from, from + PAGE - 1);
+      if (error) throw error;
+      remoto.push(...(data || []));
+      if (!data || data.length < PAGE) break;
+    }
+    const falta = {};
+    remoto.forEach(r => {
+      if (!DB[r.coleccion] || Pend.has(r.coleccion + '|' + r.id)) return;
+      const cur = DB[r.coleccion].get(r.id);
+      if (!cur || (r.mod && (!cur.mod || r.mod > cur.mod))) (falta[r.coleccion] = falta[r.coleccion] || []).push(r.id);
+    });
+    const changed = new Set();
+    for (const [col, ids] of Object.entries(falta)) {
+      for (let i = 0; i < ids.length; i += 100) {
+        const { data, error } = await this.sb.from('adm_registros').select('coleccion,id,data,borrado').eq('coleccion', col).in('id', ids.slice(i, i + 100));
+        if (error) throw error;
+        (data || []).forEach(r => { if (Store.applyRemote(r.coleccion, r.id, r.data, r.borrado)) changed.add(r.coleccion); });
+      }
+    }
+    if (changed.size) { await Store.flush(); changed.forEach(c => Bus.emit('data', c)); Bus.emit('remote'); console.info('Recuperados de la nube:', Object.fromEntries(Object.entries(falta).map(([k, v]) => [k, v.length]))); }
   },
   listen() {
     if (!this.online() || this.channel) return;
@@ -5902,15 +5944,17 @@ Bus.on('data', (c) => { if ((c === 'listas' || c === 'proveedores') && lsRepinta
 Views.existencias = (v, sel) => {
   lsRepintar = () => { if (document.body.contains(v) && App.route && App.route.name === 'existencias') App.render(); else lsRepintar = null; };
   const ls = Listas.all().sort((a, b) => distNombre(a.dist).localeCompare(distNombre(b.dist)) || String(a.marca).localeCompare(String(b.marca)));
-  if (!sel && ls.length) sel = lsGet('suinadm_lista_sel', '') || ls[0].id;
-  let L = ls.find(l => l.id === sel) || ls[0] || null;
+  if (!sel) sel = lsGet('suinadm_lista_sel', '') || 'todos';
+  const todos = sel === 'todos';
+  let L = todos ? null : (ls.find(l => l.id === sel) || ls[0] || null);
   const F = Object.assign({ q: '', stock: '1', precio: '' }, lsGet('suinadm_f_lista', {}));
   v.innerHTML = `<div class="vh"><h1>Existencias de distribuidores</h1><div class="act"><button class="btn pri" data-up>${ico('plus')} Subir lista</button></div>
     <div class="sub">Las listas que te mandan los distribuidores. <b>Solo se consultan</b>: no cambian con tus ventas, se cambian cuando subes una lista nueva. En el cotizador salen como etiquetas moradas junto a tu inventario. El precio sale de la lista de precios del distribuidor; si no lo tiene, es el mismo de Grupos Eléctricos.</div></div>
-    ${ls.length ? `<div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:12px">${ls.map(l => `<a class="btn ${L && l.id === L.id ? 'pri' : ''}" href="#/existencias/${esc(l.id)}">${esc(distNombre(l.dist))}${l.marca ? ' · ' + esc(l.marca) : ''} <span class="muted small" style="margin-left:4px">${fmtQty(l.items.length)}</span></a>`).join('')}</div>` : ''}
+    ${ls.length ? `<div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:12px"><a class="btn ${todos ? 'pri' : ''}" href="#/existencias/todos">${ico('search')} Buscar en todos</a>${ls.map(l => `<a class="btn ${L && l.id === L.id ? 'pri' : ''}" href="#/existencias/${esc(l.id)}">${esc(distNombre(l.dist))}${l.marca ? ' · ' + esc(l.marca) : ''} <span class="muted small" style="margin-left:4px">${fmtQty(l.items.length)}</span></a>`).join('')}</div>` : ''}
     <div id="ls-body"></div>`;
   $('[data-up]', v).onclick = () => subirListaModal(L ? L.dist : 'dist_emi', L ? L.marca : '');
   const body = $('#ls-body', v);
+  if (todos) { lsSet('suinadm_lista_sel', 'todos'); buscarEnTodos(body); return; }
   if (!L) { body.innerHTML = `<div class="panel empty">Todavía no has subido ninguna lista.<br><br>Toca <b>Subir lista</b> y elige el Excel que te mandó el distribuidor (por ejemplo <i>SIEMENS-Existencias_al_15SEP26.xlsx</i> de EMI).</div>`; return; }
   lsSet('suinadm_lista_sel', L.id);
   const filas = L.items.map(it => { const pr = Listas.precioDe(L, it); return { it, q: num(it.q), pr, k: normTxt(it.m + ' ' + (it.n || '') + ' ' + (it.c || '')) }; });
@@ -5954,6 +5998,83 @@ Views.existencias = (v, sel) => {
   $('[data-del]', body).onclick = async () => { if (!(await UI.confirm(`¿Borrar la lista de ${distNombre(L.dist)}${L.marca ? ' ' + L.marca : ''}? Dejará de salir en el cotizador.`, { ok: 'Borrar', danger: true }))) return; Listas.borrar(L.id); lsSet('suinadm_lista_sel', ''); Route.nav('#/existencias', { replace: true }); };
   paint();
 };
+/* Buscar un producto en todos los distribuidores a la vez: tu inventario, el de tu papá,
+   Grupos Eléctricos (y demás catálogos de la tienda) y todas las listas de existencias.
+   Un resultado por referencia, con una etiqueta por cada lugar donde está. */
+const indiceTodos = (() => {
+  let firma = '', idx = null;
+  return () => {
+    const ls = Listas.all();
+    const f = ls.map(l => l.id + '@' + l.mod).join('|') + '#' + Catalog.items.length + '|' + (Catalog.sombra || []).length + '|' + ((Catalog.meta || {}).leido || '') + '#' + Store.all('productos').map(p => p.mod || '').join('').length + Store.all('productos').length + '#' + Store.all('docs').length;
+    if (idx && f === firma) return idx;
+    firma = f; const m = new Map();
+    const g = (cod, nombre) => { const k = normKey(cod); if (!k) return null; let e = m.get(k); if (!e) { e = { k, m: String(cod).trim(), n: '', fuentes: [], txt: '' }; m.set(k, e); } if (nombre && (!e.n || e.n === e.m)) e.n = String(nombre).trim(); e.txt += ' ' + normTxt(cod + ' ' + (nombre || '')); return e; };
+    // tu inventario y el de tu papá
+    Store.all('productos').forEach(p => { if (!p.codigo) return; const e = g(p.codigo, p.nombre); if (!e) return; const st = Calc.st(p.id); e.prod = p.id; e.txt += ' ' + normTxt((p.marca || '') + ' ' + [].concat(p.barras || []).join(' ')); e.fuentes.push({ t: 'inv', n: origenNombre('manuel'), q: st.manuel.cant }, { t: 'inv', n: origenNombre('papa'), q: st.papa.cant }); });
+    // catálogos de distribuidores (Grupos Eléctricos y listas de precios de la tienda)
+    Catalog.items.concat(Catalog.sombra || [], Catalog.tapados || []).forEach(c => {
+      if (c.pan || !c.m) return; const e = g(c.m, c.n); if (!e) return;
+      const d = distDeCat(c); const n = d ? d.nombre : (c.src === 's' ? 'Grupos Eléctricos' : 'Distribuidor');
+      if (e.fuentes.some(x => x.t === 'cat' && x.n === n)) return;
+      e.txt += ' ' + normTxt(c.marca + ' ' + c.sku + ' ' + c.desc.slice(0, 160));
+      e.fuentes.push({ t: 'cat', n, q: c.exist != null && c.exist !== '' ? num(c.exist) : (c.disp ? null : 0), precio: c.precio, dist: d ? d.id : '' });
+    });
+    // listas de existencias (EMI, Sirius Control, IMO, MOTASI…)
+    ls.forEach(l => l.items.forEach(it => {
+      const e = g(it.m, it.n); if (!e) return; const pr = Listas.precioDe(l, it);
+      e.txt += ' ' + normTxt((it.c || '') + ' ' + (it.mk || l.marca || ''));
+      e.fuentes.push({ t: 'lista', n: distNombre(l.dist) + (l.marca ? ' · ' + l.marca : ''), q: num(it.q), u: it.u || '', precio: pr.precio, fuentePrecio: pr.fuente, fecha: l.fecha, lista: l.id, dist: l.dist });
+    }));
+    idx = Array.from(m.values());
+    return idx;
+  };
+})();
+function buscarEnTodos(body) {
+  const F = Object.assign({ q: '', stock: '1' }, lsGet('suinadm_f_todos', {}));
+  const nLs = Listas.all().length;
+  body.innerHTML = `<section class="panel"><div class="ph"><h2>Buscar en todos los distribuidores</h2></div>
+    <p class="muted small" style="margin:-4px 0 10px">Busca a la vez en tu inventario, el de ${esc(origenNombre('papa'))}, Grupos Eléctricos y las ${fmtQty(nLs)} listas de existencias. Escribe la referencia, el código o parte del nombre.</p>
+    <div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:10px">
+      <input class="inp" type="search" data-q placeholder="Ej.: 6ES7 214, GD20 7.5, contactor 25A…" value="${esc(F.q)}" style="flex:1 1 260px" autocomplete="off" autocapitalize="off" spellcheck="false">
+      <select class="inp" data-stock style="flex:0 0 auto"><option value="1" ${F.stock === '1' ? 'selected' : ''}>Con existencia en algún lado</option><option value="" ${F.stock === '' ? 'selected' : ''}>Todos</option></select>
+    </div>
+    <div id="lt-res"></div></section>`;
+  const res = $('#lt-res', body);
+  const chip = (x) => {
+    const sinQ = x.q == null, hay = sinQ || x.q > 0;
+    const color = x.t === 'inv' ? 'background:#ECFDF5;border-color:#A7F3D0' : x.t === 'lista' ? 'background:#F5F3FF;border-color:#DDD6FE' : 'background:#EFF6FF;border-color:#BFDBFE';
+    const tit = x.t === 'lista' ? `Lista del ${fmtFecha(x.fecha)} (${Listas.haceTxt(x.fecha)})${x.fuentePrecio === 'ge' ? ' · precio igual a Grupos Eléctricos' : ''}` : '';
+    return `<span class="lt-chip" title="${esc(tit)}" style="${color};${hay ? '' : 'opacity:.55'}"><b>${esc(x.n)}</b> ${sinQ ? 'disp.' : fmtQty(x.q) + (x.u ? ' ' + esc(x.u) : '')}${x.precio > 0 ? ` · ${fmtUSD(x.precio)}` : ''}${x.t === 'lista' && Listas.edad(x.fecha) === 'vieja' ? ' <span title="Lista con más de 30 días">⏳</span>' : ''}</span>`;
+  };
+  const paint = () => {
+    const words = normTxt(F.q).split(/\s+/).filter(Boolean);
+    if (!words.length || normTxt(F.q).replace(/\s/g, '').length < 2) { res.innerHTML = `<div class="empty small">Escribe al menos 2 letras o números para buscar.</div>`; return; }
+    const kq = normKey(F.q);
+    let xs = indiceTodos().filter(e => words.every(w => e.txt.includes(w)) || (kq.length >= 3 && e.k.includes(kq)));
+    if (F.stock === '1') xs = xs.filter(e => e.fuentes.some(x => x.q == null || x.q > 0));
+    const tot = (e) => e.fuentes.reduce((a, x) => a + (x.q > 0 ? x.q : 0), 0);
+    xs.sort((a, b) => (b.k === kq) - (a.k === kq) || (b.k.startsWith(kq)) - (a.k.startsWith(kq)) || b.fuentes.filter(x => x.q == null || x.q > 0).length - a.fuentes.filter(x => x.q == null || x.q > 0).length || tot(b) - tot(a) || a.m.localeCompare(b.m));
+    const n = xs.length; xs = xs.slice(0, 150);
+    res.innerHTML = n ? `<p class="muted small" style="margin:0 0 8px">${fmtQty(n)} resultado${n === 1 ? '' : 's'}${n > xs.length ? ` · mostrando ${xs.length}, escribe más para afinar` : ''}</p>
+      <div class="lt-list">${xs.map(e => {
+        const orden = { inv: 0, cat: 1, lista: 2 };
+        const fs = e.fuentes.slice().sort((a, b) => orden[a.t] - orden[b.t] || ((b.q == null || b.q > 0) - (a.q == null || a.q > 0)) || num(b.q) - num(a.q));
+        const conPrecio = fs.filter(x => x.t !== 'inv' && x.precio > 0 && (x.q == null || x.q > 0));
+        const barato = conPrecio.length > 1 ? conPrecio.reduce((a, b) => (b.precio < a.precio ? b : a)) : null;
+        return `<div class="lt-row"><div class="lt-h"><span class="code">${esc(e.m)}</span>${e.prod ? ` <a href="javascript:void 0" class="small" data-prod="${esc(e.prod)}">ver ficha</a>` : ''}</div>
+          ${e.n && e.n !== e.m ? `<div class="small muted lt-n">${esc(e.n)}</div>` : ''}
+          <div class="lt-chips">${fs.map(chip).join('')}</div>
+          ${barato ? `<div class="small" style="margin-top:4px;color:#047857">Más barato con existencia: <b>${esc(barato.n)}</b> ${fmtUSD(barato.precio)}</div>` : ''}</div>`; }).join('')}</div>`
+      : `<div class="empty small">No está en ningún distribuidor${F.stock === '1' ? ' con existencia. Prueba con «Todos»' : ''}.</div>`;
+  };
+  res.addEventListener('click', (ev) => { const a = ev.target.closest('[data-prod]'); if (!a) return; ev.preventDefault(); const p = Store.get('productos', a.dataset.prod); if (p) productoModal(p); });
+  const guarda = () => { lsSet('suinadm_f_todos', F); paint(); };
+  const q = $('[data-q]', body);
+  q.oninput = debounce((e) => { F.q = e.target.value; guarda(); }, 180);
+  $('[data-stock]', body).onchange = (e) => { F.stock = e.target.value; guarda(); };
+  paint();
+  if (!matchMedia('(pointer: coarse)').matches) q.focus();
+}
 /* Subir la lista (Excel, CSV o tabla pegada). modo: 'todo' reemplaza las existencias · 'parte' solo cambia esas filas */
 function subirListaModal(distId, marca, modoIni) {
   const ds = Dists(); let leido = null, archivo = '';
