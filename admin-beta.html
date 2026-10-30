@@ -667,6 +667,11 @@
   .pleg-res{ white-space:normal; }
   .items .mono{ white-space:normal; overflow-wrap:anywhere; }
   .contacto-l{ display:block; white-space:nowrap; }
+  .cli-herr{ display:flex; gap:8px; flex-wrap:wrap; align-items:center; }
+  .cli-orden{ width:auto; height:40px; font-weight:600; font-size:13.5px; }
+  .cli-act{ white-space:nowrap; font-size:13.5px; }
+  .cli-act .contacto-l{ font-size:12.5px; }
+  .cli-int{ color:var(--ok); font-weight:600; }
   td{ overflow-wrap:break-word; }
   .aviso span{ white-space:normal; }
   @media (min-width:1600px){
@@ -1377,14 +1382,36 @@ function abrirPedido(id){
 }
 
 /* ---------- Clientes ---------- */
-let buscaCli = '', filtroCli = '';
+let buscaCli = '', filtroCli = '', ordenCli = 'ultima';
+// Actividad en la tienda por correo (26_lista_clientes_actividad.sql): última visita y lo que hizo en 30 días
+let actCli = null, actCliError = false;
+const DIAS_ACT_CLI = 30;
+const actDe = (c) => (actCli && actCli[c.email]) || null;
+const diasDesde = (d) => d ? (Date.now() - new Date(d)) / 86400000 : Infinity;
+async function cargarActCli(){
+  const { data, error } = await sb.rpc('lista_clientes_actividad', { dias: DIAS_ACT_CLI });
+  actCliError = !!error || !Array.isArray(data);
+  actCli = {}; (data || []).forEach(x => { actCli[x.email] = x; });
+}
 const FILTROS_CLI = [
   ['', 'Todos', () => true],
+  ['semana', 'Activos esta semana', c => !c.es_admin && diasDesde((actDe(c) || {}).ultima) <= 7],
+  ['inact', 'Inactivos +30 días', c => !c.es_admin && c.activo !== false && !!c.user_id && diasDesde((actDe(c) || {}).ultima) > 30],
   ['admin', 'Administradores', c => c.es_admin],
   ['stock', 'Ven existencias', c => !!motivoStock(c)],
   ['sin', 'Sin entrar', c => !c.user_id && c.activo !== false],
   ['bloq', 'Bloqueados', c => c.activo === false],
 ];
+const ORDEN_CLI = [
+  ['ultima', 'Última visita', (a, b) => diasDesde((actDe(a) || {}).ultima) - diasDesde((actDe(b) || {}).ultima)],
+  ['activos', 'Más activos', (a, b) => (((actDe(b) || {}).dias_activos || 0) - ((actDe(a) || {}).dias_activos || 0)) || diasDesde((actDe(a) || {}).ultima) - diasDesde((actDe(b) || {}).ultima)],
+  ['nombre', 'Nombre', (a, b) => (a.nombre || a.empresa || a.email).localeCompare(b.nombre || b.empresa || b.email, 'es', { sensitivity: 'base' })],
+  ['recientes', 'Creados recientemente', (a, b) => new Date(b.creado) - new Date(a.creado)],
+];
+function pintarChipsCli(){
+  $('c-chips').innerHTML = FILTROS_CLI.map(f => '<button class="chip' + (filtroCli === f[0] ? ' activo' : '') + '" data-f="' + f[0] + '">' + f[1] + ' <b>' + clientes.filter(f[2]).length + '</b></button>').join('');
+  document.querySelectorAll('#c-chips .chip').forEach(ch => ch.onclick = () => { filtroCli = ch.dataset.f; pintarChipsCli(); pintarClientes(); });
+}
 function vistaClientes(){
   $('main').innerHTML = cabecera('Clientes', 'Crea clientes antes de que entren: cuando entren con ese correo verán sus precios automáticamente.',
       '<button class="btn" id="c-bloquear-correo">' + ICO.bloquear + 'Bloquear un correo</button><a class="btn prim" id="c-nuevo" href="/ventas-beta/cliente-nuevo" title="Los clientes se crean en Gestión; con correo, también quedan en la tienda">' + ICO.mas + 'Nuevo cliente</a>') +
@@ -1392,12 +1419,15 @@ function vistaClientes(){
       clientes.length + ' en total · ' + clientes.filter(c => c.user_id && !c.es_admin).length + ' ya entraron' + (clientes.some(c => c.activo === false) ? ' · ' + clientes.filter(c => c.activo === false).length + ' bloqueado' + (clientes.filter(c => c.activo === false).length === 1 ? '' : 's') : ''),
     '<form id="c-form-bloq" class="fila" style="margin-bottom:16px" hidden><label class="campo" style="flex:1 1 260px">Correo a bloquear (aunque todavía no se haya registrado)<input name="email" type="email" required placeholder="correo@ejemplo.com"></label>' +
       '<button class="btn peligro">Bloquear</button><button type="button" class="btn" id="c-bloq-cancelar">Cancelar</button></form>' +
-    '<div class="caja-cab"><div class="chips" id="c-chips">' + FILTROS_CLI.map(f => '<button class="chip' + (filtroCli === f[0] ? ' activo' : '') + '" data-f="' + f[0] + '">' + f[1] + ' <b>' + clientes.filter(f[2]).length + '</b></button>').join('') + '</div>' +
-      '<div class="buscar">' + ICO.buscar + '<input id="c-busca" placeholder="Buscar nombre, correo, RIF…" value="' + esc(buscaCli) + '"></div></div>' +
-    '<div class="tabla-wrap" id="c-tabla"></div>') + '</div>';
+    '<div class="caja-cab"><div class="chips" id="c-chips"></div>' +
+      '<div class="cli-herr"><select id="c-orden" class="cli-orden" aria-label="Ordenar clientes">' + ORDEN_CLI.map(o => '<option value="' + o[0] + '"' + (ordenCli === o[0] ? ' selected' : '') + '>Ordenar: ' + o[1] + '</option>').join('') + '</select>' +
+      '<div class="buscar">' + ICO.buscar + '<input id="c-busca" placeholder="Buscar nombre, correo, RIF…" value="' + esc(buscaCli) + '"></div></div></div>' +
+    '<div class="tabla-wrap" id="c-tabla"></div>' +
+    '<p class="muted" style="font-size:12.5px;margin:10px 0 0">La última visita y la actividad solo cuentan lo que hace el cliente con su sesión iniciada en la tienda. Actividad: últimos ' + DIAS_ACT_CLI + ' días.</p>') + '</div>';
   activarPlegables('cli');
+  pintarChipsCli();
   $('c-busca').oninput = (e) => { buscaCli = e.target.value; pintarClientes(); };
-  document.querySelectorAll('#c-chips .chip').forEach(ch => ch.onclick = () => { filtroCli = ch.dataset.f; vistaClientes(); });
+  $('c-orden').onchange = (e) => { ordenCli = e.target.value; pintarClientes(); };
   $('c-bloquear-correo').onclick = () => { $('c-form-bloq').hidden = false; $('c-form-bloq').elements.email.focus(); };
   $('c-bloq-cancelar').onclick = () => { $('c-form-bloq').hidden = true; };
   $('c-form-bloq').onsubmit = async (e) => {
@@ -1411,23 +1441,53 @@ function vistaClientes(){
     await recargarBase(); toast(email + ' bloqueado'); vistaClientes();
   };
   pintarClientes();
+  cargarActCli().then(() => { if (tab === 'clientes' && $('c-tabla')){ pintarChipsCli(); pintarClientes(); } });
+}
+// Celda "Última visita": verde ≤7 días, amarillo ≤30, gris más de 30 o nunca
+function celdaUltima(c){
+  if (actCli === null) return '<span class="muted">…</span>';
+  if (actCliError) return '<span class="muted" title="Corre 26_lista_clientes_actividad.sql en Supabase">—</span>';
+  const a = actDe(c);
+  if (!a || !a.ultima) return '<span class="muted">' + (c.user_id ? 'Sin visitas registradas' : 'Nunca') + '</span>';
+  const d = diasDesde(a.ultima), cls = d <= 7 ? 'verde' : d <= 30 ? 'amar' : '';
+  return '<span class="pill ' + cls + '" title="' + esc(fecha(a.ultima)) + '"><span class="punto"></span>' + esc(haceCuanto(a.ultima)) + '</span>';
+}
+// Celda "Actividad (30 días)": días que entró y lo que hizo con intención de compra
+function celdaActividad(c){
+  if (actCli === null || actCliError) return '<span class="muted">—</span>';
+  const a = actDe(c);
+  if (!a || !a.dias_activos) return '<span class="muted">—</span>';
+  const intencion = [a.carrito ? a.carrito + ' al carrito' : '', a.whatsapp ? a.whatsapp + ' WhatsApp' : ''].filter(Boolean);
+  const detalle = intencion.length ? '<span class="cli-int">' + intencion.join(' · ') + '</span>'
+    : '<span class="muted">' + (a.busquedas || a.vistas ? 'Solo buscó o miró' : 'Solo entró') + '</span>';
+  return '<strong>' + a.dias_activos + ' día' + (a.dias_activos === 1 ? '' : 's') + '</strong><span class="contacto-l">' + detalle + '</span>';
+}
+// Celda "Cuenta": una sola etiqueta (antes eran "Acceso" y "Estado")
+function celdaCuenta(c){
+  if (c.activo === false) return '<span class="pill rojo"><span class="punto"></span>Bloqueado</span>';
+  if (c.es_admin) return '<span class="pill tinta">Admin</span>';
+  const ms = motivoStock(c);
+  const stock = ms ? '<span class="pill verde" title="' + esc(ms) + '">' + ICO.ojo.replace('<svg', '<svg width="13" height="13"') + 'Existencias</span>' : '';
+  if (!c.user_id) return stock + (stock ? ' ' : '') + '<span class="pill"><span class="punto"></span>Sin entrar</span>';
+  return stock || '<span class="muted">Estándar</span>';
 }
 function pintarClientes(){
   const q = buscaCli.toLowerCase();
   const f = (FILTROS_CLI.find(x => x[0] === filtroCli) || FILTROS_CLI[0])[2];
-  const lista = clientes.filter(c => f(c) && (!q || [c.email, c.nombre, c.empresa, c.rif, c.telefono].join(' ').toLowerCase().includes(q)));
+  const orden = (ORDEN_CLI.find(x => x[0] === ordenCli) || ORDEN_CLI[0])[2];
+  const lista = clientes.filter(c => f(c) && (!q || [c.email, c.nombre, c.empresa, c.rif, c.telefono].join(' ').toLowerCase().includes(q))).sort(orden);
   if (!lista.length){ $('c-tabla').innerHTML = '<div class="vacio">' + ICO.clientes + 'No hay clientes aquí.</div>'; return; }
-  $('c-tabla').innerHTML = '<table><thead><tr><th>Cliente</th><th>Tipo</th><th>Contacto</th><th>Acceso</th><th>Descuentos</th><th>Estado</th><th></th></tr></thead><tbody>' +
+  $('c-tabla').innerHTML = '<table><thead><tr><th>Cliente</th><th>Última visita</th><th>Actividad <small class="muted">(30 días)</small></th><th>Tipo</th><th>Contacto</th><th>Cuenta</th><th>Descuentos</th><th></th></tr></thead><tbody>' +
     lista.map(c => {
       const n = reglas.filter(r => r.cliente_email === c.email).length;
-      const ms = motivoStock(c);
       return '<tr class="' + (c.activo === false ? 'inactivo' : '') + '"><td><div class="persona"><div class="avatar' + (c.es_admin ? ' admin' : '') + '">' + esc(iniciales(c)) + '</div><div><strong>' + esc(c.nombre || '—') + '</strong>' +
           (c.empresa ? '<span>' + esc(c.empresa) + '</span><br>' : '') + '<span>' + esc(c.email) + '</span></div></div></td>' +
+        '<td>' + celdaUltima(c) + '</td>' +
+        '<td class="cli-act">' + celdaActividad(c) + '</td>' +
         '<td>' + (c.tipo_id ? '<span class="pill azul">' + esc(nombreTipo(c.tipo_id)) + '</span>' : '<span class="muted">—</span>') + '</td>' +
         '<td class="muted">' + ([c.rif, c.telefono].filter(Boolean).map(x => '<span class="contacto-l">' + esc(x) + '</span>').join('') || '—') + '</td>' +
-        '<td>' + (c.es_admin ? '<span class="pill tinta">Admin</span> ' : '') + (ms && !c.es_admin ? '<span class="pill verde" title="' + esc(ms) + '">' + ICO.ojo.replace('<svg', '<svg width="13" height="13"') + 'Existencias</span>' : '') + (!ms && !c.es_admin ? '<span class="muted">Estándar</span>' : '') + '</td>' +
+        '<td>' + celdaCuenta(c) + '</td>' +
         '<td>' + (n ? '<span class="pill amar">' + n + ' regla' + (n > 1 ? 's' : '') + '</span>' : '<span class="muted">—</span>') + '</td>' +
-        '<td>' + (c.activo === false ? '<span class="pill rojo"><span class="punto"></span>Bloqueado</span>' : c.user_id ? '<span class="pill verde"><span class="punto"></span>Ya entró</span>' : '<span class="pill"><span class="punto"></span>Sin entrar</span>') + '</td>' +
         '<td class="acciones">' + (c.es_admin ? '' : '<button class="btn chico fantasma" data-act="' + esc(c.email) + '" title="Qué busca, mira y cotiza">' + ICO.grafica + 'Actividad</button> ') + '<button class="btn chico" data-edit="' + esc(c.email) + '">Editar</button></td></tr>';
     }).join('') + '</tbody></table>';
   document.querySelectorAll('[data-edit]').forEach(b => b.onclick = () => abrirCliente(clientes.find(c => c.email === b.dataset.edit)));
