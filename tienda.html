@@ -2030,7 +2030,7 @@ let carrito = {};
 let descuentoPct = 60;
 
 // Condiciones que se muestran después de la descripción de TODOS los productos
-// (ficha del producto y "Copiar datos del producto").
+// (ficha del producto y "Copiar cotización").
 const CONDICIONES_VENTA = [
   '6 meses de garantía contra defecto de fábrica.',
   'T. Entrega 1-2 días hábiles después del pago.',
@@ -4952,31 +4952,68 @@ function irASubcategoriaDe(p){
 }
 
 /* ---------- Detalle ---------- */
-/** Arma un texto bien dividido (nombre, descripción, precio, etc.) y lo
- * copia al portapapeles — botón "Copiar datos del producto" del detalle. */
+/** Arma el texto de la COTIZACIÓN del producto, listo para mandarle al cliente
+ * por WhatsApp (mismo formato que la Oferta rápida del cotizador):
+ *   ficha (Modelo, Tipo, Potencia… o Modelo/Descripción/Marca)
+ *   Precio: $X
+ *   garantía · tiempo de entrega · Con Nota de entrega.
+ *   Ver en la tienda: link
+ * La existencia, el SKU y la categoría NO van en el texto. */
+const DOC_COTIZACION = 'Con Nota de entrega.';
+function fichaCotizacion(p){
+  const d = String(p.descripcion || '');
+  const coma = s => String(s).replace(/(\d)\.(\d)/g, '$1,$2');
+  const kwhp = /([\d.,/]+)\s*kW\s*\/\s*([\d.,/]+)\s*HP/i.exec(d);
+  const esVariador = kwhp && /corriente\s+entrada/i.test(d) && !/^(Tablero|Filtro|Resistencia|Unidad de frenado)/i.test(d);
+  if (esVariador){
+    const ent = /entrada\s+(monof|trif)ásica\s+(\d+V)/i.exec(d), sal = /salida\s+(monof|trif)ásica\s+(\d+V)/i.exec(d);
+    let tipo = '';
+    if (ent){
+      const eM = /monof/i.test(ent[1]);
+      if (eM && sal && /monof/i.test(sal[1])) tipo = 'Monofásica ' + ent[2] + ' / Salida Mono';
+      else if (eM) tipo = 'Monofásica ' + ent[2] + ' / Salida Trifásica ' + (sal ? sal[2] : '220V');
+      else tipo = 'Trifásica ' + ent[2];
+    }
+    const ci = /corriente\s+entrada\s+([\d.,/]+)\s*A/i.exec(d), co = /(?:corriente\s+)?salida\s+([\d.,/]+)\s*A/i.exec(d);
+    const dim = /Dimensiones:?\s*([\d.,×x\s]+mm)/i.exec(d);
+    return [
+      ['Modelo', p.modelo],
+      ['Marca', p.marca],
+      ['Tipo', tipo],
+      ['Potencia (kW)', coma(kwhp[1])],
+      ['Potencia (HP)', kwhp[2]],
+      ['Corriente Ent. (A)', ci ? ci[1] : ''],
+      ['Corriente Sal. (A)', co ? co[1] : ''],
+      ['Dimensiones', dim ? dim[1].replace(/×/g, 'x').replace(/\s+/g, '').replace(/mm$/, ' mm') : ''],
+    ];
+  }
+  return [
+    ['Modelo', p.modelo],
+    ['Descripción', d || (p.nombre && p.nombre !== p.modelo ? p.nombre : '')],
+    ['Marca', p.marca],
+  ];
+}
+function textoCotizacion(p){
+  const ficha = fichaCotizacion(p)
+    .filter(([, v]) => String(v == null ? '' : v).trim())
+    .map(([k, v]) => k + ': ' + String(v).trim());
+  const precio = precioMostrado(p);
+  return [
+    ficha.join('\n'),
+    precio == null ? 'Precio: a consultar' : 'Precio: ' + formatoMoneda(precio),
+    [...CONDICIONES_VENTA, DOC_COTIZACION].join('\n'),
+    'Ver en la tienda: ' + urlProducto(p.modelo),
+  ].join('\n\n');
+}
 async function copiarDatosProducto(modelo){
   const p = productos.find(x => x.modelo === modelo);
   if (!p) return;
-  const precioFinal = precioMostrado(p);
-  const estadoTexto = textoStock(p, 'No disponible');
-  const rutaCat = rutaDe(p).join(' > ');
-
-  const texto = [
-    'Nombre: ' + (p.modelo || 'S/N'),
-    'Marca: ' + (p.marca || '—'),
-    'Categoría: ' + (rutaCat || 'Sin categoría'),
-    'SKU: ' + (p.sku || '—'),
-    'Precio: ' + formatoMoneda(precioFinal),
-    'Estado: ' + estadoTexto,
-    'Descripción: ' + (p.descripcion || 'Sin descripción disponible.'),
-    ...CONDICIONES_VENTA.map(c => '• ' + c),
-    'Ver en la tienda: ' + urlProducto(p.modelo),
-  ].join('\n');
+  const texto = textoCotizacion(p);
 
   const btn = document.getElementById('btn-copiar-datos');
   try {
     await navigator.clipboard.writeText(texto);
-    mostrarToast('✓ Datos copiados al portapapeles');
+    mostrarToast('✓ Cotización copiada — lista para enviar al cliente');
     if (btn){
       const original = btn.textContent;
       btn.textContent = '✓ Copiado';
@@ -4990,7 +5027,7 @@ async function copiarDatosProducto(modelo){
     area.style.opacity = '0';
     document.body.appendChild(area);
     area.select();
-    try { document.execCommand('copy'); mostrarToast('✓ Datos copiados al portapapeles'); }
+    try { document.execCommand('copy'); mostrarToast('✓ Cotización copiada — lista para enviar al cliente'); }
     catch (e2) { mostrarToast('No se pudo copiar — copia manual desde el texto.'); }
     document.body.removeChild(area);
   }
@@ -5130,7 +5167,7 @@ function abrirDetalle(modelo){
         '</div>' +
         '<div class="det-compartir">' +
           '<button class="btn btn-copiar" id="btn-compartir-prod" onclick="compartir(urlProducto(\'' + modeloJs + '\'), \'' + modeloJs + ' | Suinelectric\')">🔗 Compartir producto</button>' +
-          '<button class="btn btn-copiar" id="btn-copiar-datos" onclick="copiarDatosProducto(\'' + modeloJs + '\')">Copiar datos del producto</button>' +
+          '<button class="btn btn-copiar" id="btn-copiar-datos" onclick="copiarDatosProducto(\'' + modeloJs + '\')">Copiar cotización</button>' +
         '</div>' +
       '</div>' +
     '</div>' +
