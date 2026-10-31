@@ -665,6 +665,7 @@
   #modal-detalle .det-condiciones li::before{ content:'•'; position:absolute; left:2px; color:var(--azul); font-weight:700; }
   #modal-detalle .det-compartir{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
   #modal-detalle .det-compartir .btn{ margin:0; }
+  #modal-detalle .det-compartir-admin #btn-compartir-prod{ grid-column:1 / -1; }
   @media (max-width:640px){ #modal-detalle .det-compartir{ grid-template-columns:1fr; } }
   #modal-detalle .det-categoria{ color:var(--texto-3); font-size:13.5px; margin:8px 0 18px; }
   .det-precio-bloque{ padding:16px 0; border-top:1px solid var(--linea-suave); border-bottom:1px solid var(--linea-suave); margin-bottom:16px; }
@@ -4993,27 +4994,51 @@ function fichaCotizacion(p){
     ['Marca', p.marca],
   ];
 }
-function textoCotizacion(p){
+/* MercadoLibre (solo administradores): cada dato en su renglón con •, sin link
+   (ML no deja poner enlaces) y con un espacio antes de cada salto: si ML quita
+   los saltos queda "dato • dato" y no se pegan — igual que la Oferta rápida. */
+const ML_MAX = 2000;
+const ML_HOLA = '¡Hola! Gracias por tu pregunta.', ML_CHAU = 'Quedamos atentos a cualquier duda. ¡Saludos!';
+function textoCotizacion(p, formato){
   const ficha = fichaCotizacion(p)
     .filter(([, v]) => String(v == null ? '' : v).trim())
-    .map(([k, v]) => k + ': ' + String(v).trim());
+    .map(([k, v]) => [k, String(v).trim()]);
   const precio = precioMostrado(p);
+  const condiciones = [...CONDICIONES_VENTA, DOC_COTIZACION];
+  if (formato === 'ml'){
+    const una = s => String(s).replace(/\s+/g, ' ').trim().replace(/[.\s]+$/, '');
+    const armar = f => [
+      ML_HOLA,
+      ...f.map(([k, v]) => '• ' + k + ': ' + una(v)),
+      '• PRECIO: ' + (precio == null ? 'a consultar' : formatoMoneda(precio)),
+      ...condiciones.map(c => '• ' + una(c)),
+      ML_CHAU,
+    ].join(' \n');
+    // Las respuestas de MercadoLibre admiten hasta 2000 caracteres: si no cabe, se acorta la descripción.
+    let texto = armar(ficha);
+    const sobra = texto.length - ML_MAX;
+    if (sobra > 0){
+      texto = armar(ficha.map(([k, v]) => k === 'Descripción'
+        ? [k, una(v).slice(0, Math.max(40, una(v).length - sobra - 1)).replace(/\s+\S*$/, '') + '…'] : [k, v]));
+    }
+    return texto;
+  }
   return [
-    ficha.join('\n'),
+    ficha.map(([k, v]) => k + ': ' + v).join('\n'),
     precio == null ? 'Precio: a consultar' : 'Precio: ' + formatoMoneda(precio),
-    [...CONDICIONES_VENTA, DOC_COTIZACION].join('\n'),
+    condiciones.join('\n'),
     'Ver en la tienda: ' + urlProducto(p.modelo),
   ].join('\n\n');
 }
-async function copiarDatosProducto(modelo){
+async function copiarDatosProducto(modelo, formato){
   const p = productos.find(x => x.modelo === modelo);
   if (!p) return;
-  const texto = textoCotizacion(p);
+  const texto = textoCotizacion(p, formato);
 
-  const btn = document.getElementById('btn-copiar-datos');
+  const btn = document.getElementById(formato === 'ml' ? 'btn-copiar-ml' : 'btn-copiar-datos');
   try {
     await navigator.clipboard.writeText(texto);
-    mostrarToast('✓ Cotización copiada — lista para enviar al cliente');
+    mostrarToast(formato === 'ml' ? '✓ Cotización copiada para MercadoLibre' : '✓ Cotización copiada — lista para enviar al cliente');
     if (btn){
       const original = btn.textContent;
       btn.textContent = '✓ Copiado';
@@ -5165,9 +5190,13 @@ function abrirDetalle(modelo){
           (p.disponible ? '<button class="btn btn-cart-add" onclick="agregarAlCarrito(\'' + modeloJs + '\', 1)">Agregar al pedido</button>'
                         : '<a class="btn btn-wa-lleno" href="' + l.prioritario + '" target="_blank" rel="noopener">' + ICONO_WA + ' Consultar</a>') +
         '</div>' +
-        '<div class="det-compartir">' +
+        '<div class="det-compartir' + (sesion.admin ? ' det-compartir-admin' : '') + '">' +
           '<button class="btn btn-copiar" id="btn-compartir-prod" onclick="compartir(urlProducto(\'' + modeloJs + '\'), \'' + modeloJs + ' | Suinelectric\')">🔗 Compartir producto</button>' +
-          '<button class="btn btn-copiar" id="btn-copiar-datos" onclick="copiarDatosProducto(\'' + modeloJs + '\')">Copiar cotización</button>' +
+          (sesion.admin
+            // Administradores: la cotización en formato WhatsApp o MercadoLibre.
+            ? '<button class="btn btn-copiar" id="btn-copiar-datos" onclick="copiarDatosProducto(\'' + modeloJs + '\', \'wa\')" title="Ficha, precio, condiciones y link de la tienda">Copiar para WhatsApp</button>' +
+              '<button class="btn btn-copiar" id="btn-copiar-ml" onclick="copiarDatosProducto(\'' + modeloJs + '\', \'ml\')" title="Un dato por renglón, con saludo y sin link (MercadoLibre no los permite)">Copiar para MercadoLibre</button>'
+            : '<button class="btn btn-copiar" id="btn-copiar-datos" onclick="copiarDatosProducto(\'' + modeloJs + '\')">Copiar cotización</button>') +
         '</div>' +
       '</div>' +
     '</div>' +
