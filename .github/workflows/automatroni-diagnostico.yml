@@ -1,13 +1,13 @@
-name: Automatroni (diagnóstico)
+name: Automatroni (prueba)
 on:
   push:
     branches: [automatroni-prueba]
 jobs:
-  diag:
+  prueba:
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v4
       - uses: actions/setup-node@v4
         with: { node-version: "20" }
       - run: npm install axios cheerio --no-save
-      - run: node scripts/automatroni-diagnostico.js
+      - run: node scraper-automatroni.js --paginas 3
