@@ -1,0 +1,70 @@
+name: Automatroni diario
+
+# Lista de precios y existencias de automatroni.com → Gestión (distribuidor Automatroni).
+# Corre de madrugada en Venezuela (06:23 UTC = 2:23 a. m.) y aparte del de Grupos Eléctricos.
+on:
+  schedule:
+    - cron: "23 6 * * *"
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: automatroni
+  cancel-in-progress: false
+
+jobs:
+  automatroni:
+    runs-on: ubuntu-latest
+    timeout-minutes: 60
+    steps:
+      - name: Descargar el repositorio
+        uses: actions/checkout@v4
+
+      - name: Configurar Node.js
+        uses: actions/setup-node@v4
+        with:
+          node-version: "20"
+
+      - name: Instalar dependencias
+        run: npm install axios cheerio --no-save
+
+      - name: Leer automatroni.com (con pausas, sin iniciar sesión)
+        run: node scraper-automatroni.js
+
+      - name: Subir a Gestión (distribuidor Automatroni → Existencias)
+        env:
+          SUPABASE_URL: ${{ secrets.SUPABASE_URL }}
+          SUPABASE_SECRET_KEY: ${{ secrets.SUPABASE_SECRET_KEY }}
+        run: node subir-automatroni.js
+
+      - name: Guardar la copia del día en el repo (historial de precios)
+        run: |
+          git config user.name "github-actions[bot]"
+          git config user.email "github-actions[bot]@users.noreply.github.com"
+          cp distribuidores/automatroni.json /tmp/automatroni.json
+          for intento in 1 2 3 4 5; do
+            git fetch origin main
+            git reset --hard origin/main
+            mkdir -p distribuidores
+            cp /tmp/automatroni.json distribuidores/automatroni.json
+            git add distribuidores/automatroni.json
+            if git diff --staged --quiet; then echo "Sin cambios."; break; fi
+            git commit -m "Automatroni $(date -u +'%Y-%m-%d')"
+            if git push origin HEAD:main; then break; fi
+            sleep 5
+          done
+
+      - name: Avisar por Telegram si algo falló
+        if: failure()
+        env:
+          TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+          TELEGRAM_CHAT_ID: ${{ secrets.TELEGRAM_CHAT_ID }}
+          ENLACE: ${{ github.server_url }}/${{ github.repository }}/actions/runs/${{ github.run_id }}
+        run: |
+          if [ -z "$TELEGRAM_TOKEN" ] || [ -z "$TELEGRAM_CHAT_ID" ]; then exit 0; fi
+          curl -sS -X POST "https://api.telegram.org/bot${TELEGRAM_TOKEN}/sendMessage" \
+            --data-urlencode "chat_id=${TELEGRAM_CHAT_ID}" \
+            --data-urlencode "text=⚠️ Falló la actualización diaria de Automatroni. Gestión sigue con la lista de ayer. Detalles: ${ENLACE}" \
+            -o /dev/null

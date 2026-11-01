@@ -60,6 +60,7 @@ async function pagina(n) {
   const r = await http.post(BASE + 'ajax/catalogo.php', form.toString(), {
     headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8', 'X-Requested-With': 'XMLHttpRequest', Referer: BASE + 'productos', Cookie: cookie },
   });
+  if (process.env.DEPURAR) console.log('  [depurar] página', n, r.status, String(r.data).length, String(r.data).slice(0, 1500).replace(/\s+/g, ' '));
   if (r.status !== 200) return null;
   const $ = cheerio.load(String(r.data));
   const out = [];
