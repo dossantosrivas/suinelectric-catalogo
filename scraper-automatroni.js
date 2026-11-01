@@ -1,8 +1,8 @@
 /**
  * scraper-automatroni.js — Lista de precios y existencias de automatroni.com
  * ---------------------------------------------------------------------------
- * Recorre el catálogo público (sin iniciar sesión) igual que la propia página:
- * POST https://automatroni.com/ajax/catalogo.php  page=1..N  (12 productos por página).
+ * Recorre el catálogo público (sin iniciar sesión), página por página:
+ * https://automatroni.com/productos?page=N&disponible=-1&descuento=-1&orden=0  (12 por página).
  * Va con calma: una página cada ~1,5 s, así no molesta al sitio.
  *
  * De cada producto guarda:
@@ -38,32 +38,38 @@ const precioVE = (s) => { const m = String(s || '').match(/[\d.]+,\d+|[\d.]+/); 
 let cookie = '';
 const http = axios.create({ timeout: 30000, headers: { 'User-Agent': UA, 'Accept-Language': 'es-VE,es;q=0.9' }, validateStatus: () => true });
 
+// Si el sitio responde 403/429 (su protección contra exceso de visitas), se espera un buen rato antes de volver.
+let frenado = false;
 async function conReintentos(fn, que) {
   for (let i = 0; i < 4; i++) {
+    frenado = false;
     try { const r = await fn(); if (r) return r; } catch (e) { console.log(`  ${que}: ${e.message}`); }
-    await sleep(PAUSA_MS * (i + 2) * 2);
+    await sleep(frenado ? 60000 * (i + 1) : PAUSA_MS * (i + 2) * 2);
   }
   throw new Error(`No se pudo leer ${que} después de 4 intentos`);
 }
 
-async function inicio() {
-  const r = await http.get(BASE + 'productos');
-  if (process.env.DEPURAR) console.log('  [depurar] inicio', r.status, String(r.data).length, String(r.data).slice(0, 300), JSON.stringify(r.headers).slice(0, 200));
+// Misma dirección que da su botón "Copiar filtros": todo el catálogo, sin filtros.
+const urlPagina = (n) => `${BASE}productos?page=${n}&disponible=-1&descuento=-1&orden=0`;
+
+async function leer(url) {
+  const r = await http.get(url, { headers: cookie ? { Cookie: cookie, Referer: BASE + 'productos' } : {} });
+  if (process.env.DEPURAR) console.log('  [depurar]', url, r.status, String(r.data).length);
+  if (r.status === 403 || r.status === 429) { frenado = true; console.log(`  el sitio pidió esperar (${r.status})`); return null; }
   if (r.status !== 200) return null;
-  cookie = (r.headers['set-cookie'] || []).map((c) => c.split(';')[0]).join('; ');
-  const $ = cheerio.load(r.data);
-  const total = entero($('a.filtros[data-cantidad]').first().attr('data-cantidad'));
+  if (!cookie) cookie = (r.headers['set-cookie'] || []).map((c) => c.split(';')[0]).join('; ');
+  return String(r.data);
+}
+
+async function inicio() {
+  const html = await leer(BASE + 'productos'); if (!html) return null;
+  const total = entero(cheerio.load(html)('a.filtros[data-cantidad]').first().attr('data-cantidad'));
   return total > 0 ? { total } : null;
 }
 
 async function pagina(n) {
-  const form = new URLSearchParams({ page: String(n), departamento: '0', categoria: '', descripcion: '', referencia: '', orden: '', id_almacen: '', m_schn: '' });
-  const r = await http.post(BASE + 'ajax/catalogo.php', form.toString(), {
-    headers: { 'Content-Type': 'application/x-www-form-urlencoded; charset=UTF-8', 'X-Requested-With': 'XMLHttpRequest', Referer: BASE + 'productos', Cookie: cookie },
-  });
-  if (process.env.DEPURAR) console.log('  [depurar] página', n, r.status, String(r.data).length, String(r.data).slice(0, 1500).replace(/\s+/g, ' '));
-  if (r.status !== 200) return null;
-  const $ = cheerio.load(String(r.data));
+  const html = await leer(urlPagina(n)); if (!html) return null;
+  const $ = cheerio.load(html);
   const out = [];
   $('.list_products--card').each((_, el) => {
     const c = $(el);
@@ -106,6 +112,7 @@ async function pagina(n) {
     let xs;
     try { xs = await conReintentos(() => pagina(n), `la página ${n}`); }
     catch (e) { vacias++; console.log('  ✗ ' + e.message); if (vacias > 5) throw new Error('Demasiadas páginas fallidas: se detiene para no guardar una lista incompleta'); continue; }
+    if (LIMITE) console.log(`  página ${n}: ${xs.length} productos, primero ${xs[0].ref}`);
     xs.forEach((p) => { const k = p.id || p.ref; if (k && !vistos.has(k)) { vistos.add(k); productos.push(p); } });
     if (n % 50 === 0) console.log(`  página ${n}/${hasta} · ${productos.length} productos`);
     await sleep(PAUSA_MS);

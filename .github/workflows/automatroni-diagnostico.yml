@@ -10,4 +10,4 @@ jobs:
       - uses: actions/setup-node@v4
         with: { node-version: "20" }
       - run: npm install axios cheerio --no-save
-      - run: DEPURAR=1 node scraper-automatroni.js --paginas 1
+      - run: node scraper-automatroni.js --paginas 3
