@@ -48,6 +48,7 @@ async function conReintentos(fn, que) {
 
 async function inicio() {
   const r = await http.get(BASE + 'productos');
+  if (process.env.DEPURAR) console.log('  [depurar] inicio', r.status, String(r.data).length, JSON.stringify(r.headers).slice(0, 400));
   if (r.status !== 200) return null;
   cookie = (r.headers['set-cookie'] || []).map((c) => c.split(';')[0]).join('; ');
   const $ = cheerio.load(r.data);
