@@ -144,7 +144,7 @@
     wa: 'WhatsApp', whatsapp: 'WhatsApp', estado: 'Estado de WhatsApp', ml: 'MercadoLibre',
     qr: 'Código QR', maps: 'Google Maps', gmaps: 'Google Maps', tg: 'Telegram', tt: 'TikTok',
     yt: 'YouTube', correo: 'Correo', firma: 'Firma de correo', tarjeta: 'Tarjeta de presentación',
-    volante: 'Volante impreso', factura: 'Factura / nota de entrega', oferta: 'Oferta enviada'
+    volante: 'Volante impreso', factura: 'Factura', oferta: 'Oferta enviada'
   };
   var ETIQUETA = (function(){
     try {

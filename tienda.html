@@ -1834,7 +1834,6 @@
       <h4>Al comprar</h4>
       <span>6 meses de garantía contra defecto de fábrica</span>
       <span>Entrega en 1 a 2 días hábiles después del pago</span>
-      <span>Con nota de entrega</span>
     </div>
     <div class="footer-contacto">
       <h4>Cotiza por WhatsApp</h4>
@@ -5003,10 +5002,9 @@ function irASubcategoriaDe(p){
  * por WhatsApp (mismo formato que la Oferta rápida del cotizador):
  *   ficha (Modelo, Tipo, Potencia… o Modelo/Descripción/Marca)
  *   Precio: $X
- *   garantía · tiempo de entrega · Con Nota de entrega.
+ *   garantía · tiempo de entrega
  *   Ver en la tienda: link
  * La existencia, el SKU y la categoría NO van en el texto. */
-const DOC_COTIZACION = 'Con Nota de entrega.';
 function fichaCotizacion(p){
   const d = String(p.descripcion || '');
   const coma = s => String(s).replace(/(\d)\.(\d)/g, '$1,$2');
@@ -5050,7 +5048,7 @@ function textoCotizacion(p, formato){
     .filter(([, v]) => String(v == null ? '' : v).trim())
     .map(([k, v]) => [k, String(v).trim()]);
   const precio = precioMostrado(p);
-  const condiciones = [...CONDICIONES_VENTA, DOC_COTIZACION];
+  const condiciones = [...CONDICIONES_VENTA];
   if (formato === 'ml'){
     const una = s => String(s).replace(/\s+/g, ' ').trim().replace(/[.\s]+$/, '');
     const armar = f => [
