@@ -1524,7 +1524,7 @@ function abrirCliente(c){
       '<div><h2>' + (nuevo ? 'Nuevo cliente' : esc(c.nombre || c.email)) + '</h2>' + (nuevo ? '' : '<div class="muted">' + esc(c.email) + '</div>') + '</div>' +
       '<button type="button" class="btn chico fantasma cerrar" id="c-cerrar" aria-label="Cerrar">' + ICO.cerrar + '</button></div>' +
     '<div class="panel-cuerpo">' +
-      (enGestion ? '<a class="enlace-gestion" href="' + fichaUrl + '">' + ICO.externo + '<span><strong>Ver ficha completa en Gestión</strong><small>Datos del cliente, compras, ofertas y lo que debe</small></span></a>' +
+      (enGestion ? '<a class="enlace-gestion" href="' + fichaUrl + '">' + ICO.externo + '<span><strong>Ver ficha completa en Gestión</strong><small>Datos del cliente, compras, ofertas, notas de entrega y lo que debe</small></span></a>' +
         '<div class="seccion"><h3>En la tienda</h3><div class="campos"><label class="campo ancho">Tipo de cliente' + selTipo + '</label></div></div>' +
         '<div class="seccion"><h3>Datos <small class="muted" style="font-weight:500;text-transform:none;letter-spacing:0">· se cambian en Gestión</small></h3><div class="det-datos">' +
           datoLeer('Correo', c.email) + datoLeer('Nombre', c.nombre) + datoLeer('Empresa', c.empresa) + datoLeer('RIF', c.rif) + datoLeer('Teléfono', c.telefono) + datoLeer('Dirección', c.direccion) +
@@ -2315,7 +2315,7 @@ const LINKS_ETIQ = [
   ['qr', 'Código QR', 'QR impreso (local, productos, camioneta)'],
   ['tarjeta', 'Tarjeta de presentación', 'Tarjetas impresas'],
   ['firma', 'Firma de correo', 'Firma de ventas@suinelectric.com'],
-  ['oferta', 'Oferta enviada', 'PDF de ofertas comerciales'],
+  ['oferta', 'Oferta enviada', 'PDF de ofertas y notas de entrega'],
 ];
 function linkEtiq(destino, etiq){ return 'https://suinelectric.com/' + destino + '?de=' + encodeURIComponent(etiq); }
 function linksEtiquetados(){
