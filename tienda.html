@@ -791,6 +791,51 @@
   .skeleton-card{ height:360px; border-radius:var(--radio); background:linear-gradient(90deg, #e8ecef 25%, #f5f7f8 50%, #e8ecef 75%); background-size:200% 100%; animation:brillo 1.4s ease-in-out infinite; }
   @keyframes brillo{ 0%{ background-position:200% 0; } 100%{ background-position:-200% 0; } }
 
+  /* ================= GUÍA "¿CÓMO COMPRAR?" ================= */
+  #btn-guia{
+    height:44px; padding:0 12px; border:1px solid var(--linea); border-radius:var(--radio); cursor:pointer;
+    background:#fff; color:var(--tinta); font-size:14px; font-weight:600; display:flex; align-items:center; gap:7px; white-space:nowrap;
+  }
+  #btn-guia svg{ width:19px; height:19px; flex:none; }
+  #btn-guia:hover{ border-color:var(--azul); color:var(--azul-texto); }
+  #empty .empty-guia{ background:none; border:0; padding:0; font:inherit; font-weight:700; color:var(--azul-texto); text-decoration:underline; cursor:pointer; }
+  #guia{ position:fixed; inset:0; z-index:120; background:rgba(9,24,34,.55); display:none; align-items:center; justify-content:center; padding:16px; }
+  #guia.abierta{ display:flex; }
+  #guia .guia-panel{ background:var(--fondo); color:var(--texto); width:100%; max-width:720px; max-height:calc(100dvh - 32px); overflow-y:auto; border-radius:12px; padding:26px; position:relative; }
+  #guia .guia-cerrar{ position:absolute; top:12px; right:12px; width:44px; height:44px; border-radius:50%; border:1px solid var(--linea); background:#fff; color:var(--tinta); font-size:24px; line-height:1; cursor:pointer; }
+  #guia h2{ margin:0 52px 4px 0; font-family:var(--display); font-size:32px; line-height:1.05; color:var(--tinta); }
+  #guia h2 span{ background:var(--amarillo); padding:0 8px; border-radius:4px; }
+  #guia .guia-sub{ margin:0 0 18px; color:var(--texto-2); font-size:15px; }
+  #guia .guia-pasos{ display:grid; grid-template-columns:repeat(2, minmax(0,1fr)); gap:12px; margin:0; padding:0; list-style:none; }
+  #guia .guia-pasos li{ background:#fff; border:1px solid var(--linea); border-radius:10px; padding:16px; }
+  #guia .guia-pasos h3{ display:flex; align-items:center; gap:10px; margin:0 0 6px; font-family:var(--display); font-size:21px; color:var(--tinta); }
+  #guia .guia-num{ width:32px; height:32px; flex:none; border-radius:50%; background:var(--tinta); color:#fff; display:flex; align-items:center; justify-content:center; font-size:16px; }
+  #guia .guia-pasos p{ margin:0; font-size:14.5px; line-height:1.45; color:var(--texto-2); }
+  #guia code{ white-space:nowrap; font-family:var(--sans); background:var(--linea-suave); color:var(--tinta); border-radius:4px; padding:1px 6px; font-size:13.5px; }
+  #guia .guia-pie{ margin-top:14px; background:var(--tinta); color:#fff; border-radius:10px; padding:14px 16px; display:flex; flex-wrap:wrap; align-items:center; justify-content:space-between; gap:12px; }
+  #guia .guia-pie b{ color:var(--amarillo); }
+  #guia .guia-pie small{ display:block; margin-top:3px; color:#c9d3e0; font-size:13px; }
+  #guia .guia-acciones{ display:flex; gap:8px; }
+  #guia .guia-acciones button{ height:44px; padding:0 18px; border-radius:var(--radio); font-weight:700; font-size:15px; cursor:pointer; }
+  #guia .guia-chat{ background:transparent; color:#fff; border:1px solid #fff; }
+  #guia .guia-empezar{ background:var(--amarillo); color:var(--tinta); border:none; }
+  #guia .guia-empezar:hover{ background:var(--amarillo-hover); }
+  #guia-aviso{ position:fixed; left:16px; bottom:16px; z-index:60; max-width:360px; background:var(--tinta); color:#fff; border-radius:10px; padding:10px 8px 10px 16px; display:none; align-items:center; gap:10px; font-size:14px; line-height:1.35; box-shadow:0 10px 28px rgba(9,24,34,.25); }
+  #guia-aviso.visible{ display:flex; }
+  #guia-aviso button{ border:none; cursor:pointer; font-weight:700; border-radius:var(--radio); }
+  #guia-aviso .aviso-ver{ background:var(--amarillo); color:var(--tinta); height:36px; padding:0 14px; white-space:nowrap; }
+  #guia-aviso .aviso-cerrar{ background:transparent; color:#fff; width:36px; height:36px; font-size:20px; }
+  @media (max-width: 860px){
+    #btn-guia{ width:44px; padding:0; justify-content:center; }
+    #btn-guia .guia-txt{ display:none; }
+    #guia-aviso{ right:88px; max-width:none; bottom:calc(84px + env(safe-area-inset-bottom, 0px)); }
+  }
+  @media (max-width: 560px){
+    #guia .guia-pasos{ grid-template-columns:1fr; }
+    #guia .guia-panel{ padding:20px 16px; }
+    #guia h2{ font-size:27px; }
+  }
+
   #barra-movil{ display:none; }
 
   /* ================= TABLET ================= */
@@ -1689,6 +1734,7 @@
       <div id="sugerencias"></div>
     </div>
     <div class="header-right">
+      <button id="btn-guia" type="button" aria-label="¿Cómo comprar?" aria-haspopup="dialog" onclick="abrirGuia()"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><circle cx="12" cy="12" r="9"/><path d="M9.5 9.2a2.6 2.6 0 0 1 5 .9c0 1.7-2.5 2.3-2.5 3.9"/><path d="M12 17.3h.01"/></svg><span class="guia-txt">¿Cómo comprar?</span></button>
       <button id="btn-mega" class="btn-mega" type="button" aria-expanded="false" aria-controls="mega"><svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2.2" stroke-linecap="round" aria-hidden="true"><path d="M4 6h16M4 12h16M4 18h16"/></svg><span>Categorías</span></button>
       <button id="btn-cuenta" type="button" aria-label="Mi cuenta" style="display:none">
         <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" aria-hidden="true"><circle cx="12" cy="8" r="4"/><path d="M4 21c1.5-4 4.5-6 8-6s6.5 2 8 6"/></svg>
@@ -1744,7 +1790,7 @@
         <div class="skeleton-card"></div><div class="skeleton-card"></div><div class="skeleton-card"></div>
       </div>
     </div>
-    <div id="empty" style="display:none;">No encontramos productos con ese criterio. Prueba con otro modelo o escríbenos por WhatsApp y te lo buscamos.</div>
+    <div id="empty" style="display:none;">No encontramos productos con ese criterio. Prueba con otro modelo o escríbenos por WhatsApp y te lo buscamos.<br><button type="button" class="empty-guia" onclick="abrirGuia('sin-resultados')">¿No lo encuentras? Mira cómo buscar</button></div>
   </main>
   <aside id="guia-sub" aria-label="Subcategorías de esta categoría" hidden>
     <p class="guia-tit" id="guia-tit">En esta categoría</p>
@@ -7026,5 +7072,60 @@ cargar();
 })();
 </script>
 
+<!-- Guía "¿Cómo comprar?": botón en la cabecera, aviso de primera visita y enlace sin resultados -->
+<div id="guia" role="dialog" aria-modal="true" aria-labelledby="guia-titulo">
+  <div class="guia-panel">
+    <button type="button" class="guia-cerrar" aria-label="Cerrar" onclick="cerrarGuia()">×</button>
+    <h2 id="guia-titulo">Encuentra tu equipo en <span>4 pasos</span></h2>
+    <p class="guia-sub">Así de rápido compras en la tienda de Suinelectric.</p>
+    <ol class="guia-pasos">
+      <li><h3><span class="guia-num">1</span>Busca</h3><p>Escribe el modelo de la placa (<code>GD20</code>, <code>6ED1052</code>) o lo que necesitas: <code>variador 5.5 kW</code>.</p></li>
+      <li><h3><span class="guia-num">2</span>Filtra</h3><p>Elige la categoría y usa los filtros de potencia, voltaje y marca para quedarte con los que te sirven.</p></li>
+      <li><h3><span class="guia-num">3</span>Compara</h3><p>Cambia a vista Lista para verlos lado a lado. Toca un producto para ver fotos, ficha y manual.</p></li>
+      <li><h3><span class="guia-num">4</span>Pide o pregunta</h3><p>Agrega al carrito y envíalo por WhatsApp, o escríbenos por el chat. ¿No lo ves? Pregunta: lo conseguimos.</p></li>
+    </ol>
+    <div class="guia-pie">
+      <div>Regístrate gratis y ve tu <b>precio de cliente registrado</b><small>Garantía 6 meses · Entrega 1–2 días hábiles después del pago</small></div>
+      <div class="guia-acciones">
+        <button type="button" class="guia-chat" onclick="cerrarGuia(); if (window.abrirChat) abrirChat();">Chat</button>
+        <button type="button" class="guia-empezar" onclick="cerrarGuia(); var b=document.getElementById('buscador'); if (b && window.innerWidth > 860) b.focus();">Empezar</button>
+      </div>
+    </div>
+  </div>
+</div>
+<div id="guia-aviso" role="status">
+  <span>¿Primera vez aquí? Mira cómo comprar en 4 pasos.</span>
+  <button type="button" class="aviso-ver" onclick="abrirGuia('aviso')">Ver</button>
+  <button type="button" class="aviso-cerrar" aria-label="Cerrar aviso" onclick="ocultarAvisoGuia()">×</button>
+</div>
+<script>
+(function(){
+  const CLAVE = 'suin_guia_vista';
+  const guia = document.getElementById('guia');
+  const aviso = document.getElementById('guia-aviso');
+  let focoPrevio = null;
+  function marcarVista(){ try { localStorage.setItem(CLAVE, '1'); } catch (e) {} }
+  function yaVista(){ try { return localStorage.getItem(CLAVE) === '1'; } catch (e) { return true; } }
+  window.ocultarAvisoGuia = function(){ aviso.classList.remove('visible'); marcarVista(); };
+  window.abrirGuia = function(origen){
+    focoPrevio = document.activeElement;
+    guia.classList.add('abierta');
+    ocultarAvisoGuia();
+    guia.querySelector('.guia-cerrar').focus();
+    try { if (typeof registrar === 'function') registrar('guia_abierta', { texto: origen || 'boton' }); } catch (e) {}
+  };
+  window.cerrarGuia = function(){
+    guia.classList.remove('abierta');
+    if (focoPrevio && focoPrevio.focus) focoPrevio.focus();
+  };
+  guia.addEventListener('click', e => { if (e.target === guia) cerrarGuia(); });
+  guia.addEventListener('keydown', e => { if (e.key === 'Escape') cerrarGuia(); });
+  // Aviso solo en la primera visita, a los 5 s, y nunca a los administradores
+  if (!yaVista()) setTimeout(() => {
+    try { if (typeof sesion !== 'undefined' && sesion && sesion.admin) return; } catch (e) {}
+    if (!guia.classList.contains('abierta')) aviso.classList.add('visible');
+  }, 5000);
+})();
+</script>
 </body>
 </html>
