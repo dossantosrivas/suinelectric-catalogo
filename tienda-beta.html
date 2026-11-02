@@ -1969,7 +1969,6 @@
       <div class="ca-sel" id="ca-sel"></div>
       <div class="ca-btns">
         <button type="button" class="btn ca-btn" id="ca-oferta">Crear oferta</button>
-        <button type="button" class="btn ca-btn" id="ca-nota">Crear nota de entrega</button>
         <button type="button" class="btn ca-btn ca-rap" id="ca-rapida">⚡ Oferta rápida · WhatsApp o M. Libre</button>
       </div>
       <div class="ca-ayuda">Se abre en Gestión con estos productos, cantidades y precios. La oferta rápida queda lista para copiar a MercadoLibre o enviar por WhatsApp al cliente.</div>
@@ -5971,7 +5970,7 @@ async function cargarSesionYReglas(){
   if (faltanDatos()) abrirCuenta();
 }
 /* =====================================================================
-   CARRITO → OFERTA O NOTA DE ENTREGA (solo administradores)
+   CARRITO → OFERTA (solo administradores)
    El administrador elige un cliente (los precios del carrito pasan a ser
    los de ese cliente) y abre Gestión con los productos ya cargados.
    Se pasan por localStorage (mismo dominio) con la clave suin_carrito_gestion.
@@ -6048,14 +6047,13 @@ function carritoAGestion(tipo){
   const url = (typeof URL_GESTION !== 'undefined' ? URL_GESTION : '/ventas') + '/desde-tienda/' + tipo;
   const w = window.open(url, '_blank');
   if (!w) location.href = url;
-  mostrarToast(tipo === 'nota' ? 'Abriendo la nota de entrega en Gestión…' : tipo === 'rapida' ? 'Abriendo la oferta rápida en Gestión…' : 'Abriendo la oferta en Gestión…');
+  mostrarToast(tipo === 'rapida' ? 'Abriendo la oferta rápida en Gestión…' : 'Abriendo la oferta en Gestión…');
 }
 (function(){
   const inp = document.getElementById('ca-cliente');
   if (inp){ inp.addEventListener('change', () => elegirClienteAdmin(inp.value)); inp.addEventListener('input', () => { if (/\[C\d+\]\s*$/i.test(inp.value)) elegirClienteAdmin(inp.value); }); }
-  const bo = document.getElementById('ca-oferta'), bn = document.getElementById('ca-nota');
+  const bo = document.getElementById('ca-oferta');
   if (bo) bo.addEventListener('click', () => carritoAGestion('oferta'));
-  if (bn) bn.addEventListener('click', () => carritoAGestion('nota'));
   const br = document.getElementById('ca-rapida');
   if (br) br.addEventListener('click', () => carritoAGestion('rapida'));
 })();
