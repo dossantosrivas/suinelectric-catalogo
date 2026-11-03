@@ -1,6 +1,6 @@
 {
   "fuente": "https://grupo-electricos.com",
-  "generado": "2026-11-02T21:01:23.204Z",
+  "generado": "2026-11-03T18:43:38.105Z",
   "total_categorias": 3982,
   "arbol": [
     {
@@ -23098,7 +23098,7 @@
       "url": "https://grupo-electricos.com/product-category/guardamotores/",
       "nivel": 1,
       "padre": null,
-      "productos": 130,
+      "productos": 131,
       "es_modelo": false,
       "hijos": [
         {
@@ -23108,7 +23108,7 @@
           "url": "https://grupo-electricos.com/product-category/guardamotores/accesorios-guardamotores/",
           "nivel": 2,
           "padre": "guardamotores",
-          "productos": 31,
+          "productos": 32,
           "es_modelo": false,
           "hijos": [
             {
@@ -23443,7 +23443,7 @@
               "url": "https://grupo-electricos.com/product-category/guardamotores/accesorios-guardamotores/3rv2-3rv6/",
               "nivel": 3,
               "padre": "guardamotores/accesorios-guardamotores",
-              "productos": 5,
+              "productos": 6,
               "es_modelo": false,
               "hijos": [
                 {
@@ -23487,7 +23487,7 @@
                   "url": "https://grupo-electricos.com/product-category/guardamotores/accesorios-guardamotores/3rv2-3rv6/contactos-auxiliares-3rv2-3rv6/",
                   "nivel": 4,
                   "padre": "guardamotores/accesorios-guardamotores/3rv2-3rv6",
-                  "productos": 3,
+                  "productos": 4,
                   "es_modelo": false,
                   "hijos": [
                     {
@@ -23508,7 +23508,7 @@
                       "url": "https://grupo-electricos.com/product-category/guardamotores/accesorios-guardamotores/3rv2-3rv6/contactos-auxiliares-3rv2-3rv6/3rv2901-1e/",
                       "nivel": 5,
                       "padre": "guardamotores/accesorios-guardamotores/3rv2-3rv6/contactos-auxiliares-3rv2-3rv6",
-                      "productos": 1,
+                      "productos": 2,
                       "es_modelo": true,
                       "hijos": []
                     },
@@ -65499,7 +65499,7 @@
       "url": "https://grupo-electricos.com/product-category/guardamotores/",
       "nivel": 1,
       "padre": null,
-      "productos": 130,
+      "productos": 131,
       "es_modelo": false
     },
     {
@@ -65509,7 +65509,7 @@
       "url": "https://grupo-electricos.com/product-category/guardamotores/accesorios-guardamotores/",
       "nivel": 2,
       "padre": "guardamotores",
-      "productos": 31,
+      "productos": 32,
       "es_modelo": false
     },
     {
@@ -65809,7 +65809,7 @@
       "url": "https://grupo-electricos.com/product-category/guardamotores/accesorios-guardamotores/3rv2-3rv6/",
       "nivel": 3,
       "padre": "guardamotores/accesorios-guardamotores",
-      "productos": 5,
+      "productos": 6,
       "es_modelo": false
     },
     {
@@ -65849,7 +65849,7 @@
       "url": "https://grupo-electricos.com/product-category/guardamotores/accesorios-guardamotores/3rv2-3rv6/contactos-auxiliares-3rv2-3rv6/",
       "nivel": 4,
       "padre": "guardamotores/accesorios-guardamotores/3rv2-3rv6",
-      "productos": 3,
+      "productos": 4,
       "es_modelo": false
     },
     {
@@ -65869,7 +65869,7 @@
       "url": "https://grupo-electricos.com/product-category/guardamotores/accesorios-guardamotores/3rv2-3rv6/contactos-auxiliares-3rv2-3rv6/3rv2901-1e/",
       "nivel": 5,
       "padre": "guardamotores/accesorios-guardamotores/3rv2-3rv6/contactos-auxiliares-3rv2-3rv6",
-      "productos": 1,
+      "productos": 2,
       "es_modelo": true
     },
     {
