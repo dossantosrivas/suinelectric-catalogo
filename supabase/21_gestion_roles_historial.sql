@@ -75,6 +75,7 @@ begin
   elsif p_col = 'proveedores' then d := d - 'descuento' - 'reglas';
   elsif p_col = 'config' then d := d - 'descCostoDist';
   elsif p_col = 'empleados' then d := d - 'comision';
+  elsif p_col = 'fletes' then return null;   -- facturas de envío del courier: solo administradores
   end if;
   return d;
 end $$;
