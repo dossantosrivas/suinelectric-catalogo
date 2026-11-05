@@ -102,6 +102,7 @@ textarea.inp{resize:vertical;min-height:60px;line-height:1.4}
 .seg{display:inline-flex;border:1px solid var(--line);border-radius:5px;overflow:hidden;background:#fff}
 .seg button,.seg a{border:none;background:none;padding:9px 15px;font-size:16px;border-right:1px solid var(--line-2);color:inherit;text-decoration:none;white-space:nowrap}
 .seg button:last-child,.seg a:last-child{border-right:none}
+.env-flete{margin-top:12px;padding:10px 12px;border:1px dashed var(--line-2);border-radius:6px;font-size:16px;line-height:1.5}
 .seg button.on,.seg a.on{background:var(--plate);color:#fff}.seg a.on .muted{color:#fff;opacity:.75}
 .seg.scroll{max-width:100%;overflow-x:auto}
 .chk{display:inline-flex;gap:9px;align-items:center;font-size:16.5px}
@@ -1001,7 +1002,7 @@ const IDB = (() => {
 })();
 
 /* ---------------- almacén ---------------- */
-const COLS = ['config', 'productos', 'clientes', 'proveedores', 'empleados', 'docs', 'rapidas', 'listas', 'cuenta'];
+const COLS = ['config', 'productos', 'clientes', 'proveedores', 'empleados', 'docs', 'rapidas', 'listas', 'cuenta', 'fletes'];
 const DB = {}; COLS.forEach(c => DB[c] = new Map());
 const Pend = new Map();   // "col|id" -> {col,id,data,borrado}
 const CFG = () => deepMerge(CONFIG_DEFAULT, DB.config.get('main') || {});
@@ -1172,6 +1173,31 @@ window.addEventListener('online', () => Sync.schedule());
 document.addEventListener('visibilitychange', () => { if (document.visibilityState === 'visible') Sync.schedule(); });
 setInterval(() => { if (document.visibilityState === 'visible') Sync.run(); }, 90000);
 
+/* ---------------- facturas de envío (courier) ----------------
+   Una factura del courier puede cubrir varias compras (reempaque). Su monto se reparte entre
+   las líneas de esas compras por valor, por peso o a mano, y se suma al costo de cada producto
+   (costo puesto en Venezuela). Mientras una compra internacional no tenga factura, se usa el
+   % estimado de "Traer mercancía de afuera" de su distribuidor. */
+const FLETE_METODOS = [['valor', 'Por valor'], ['peso', 'Por peso'], ['manual', 'A mano']];
+const fleteKey = (d, it) => d.id + '|' + it.id;
+const costoBaseLinea = (it) => num(it.costo !== '' && it.costo != null ? it.costo : it.precio);
+const lineasFlete = (f) => (f.compras || []).map(id => Store.get('docs', id)).filter(d => d && d.tipo === 'compra' && d.estado !== 'anulada')
+  .flatMap(d => (d.items || []).filter(it => num(it.cant) > 0).map(it => {
+    const key = fleteKey(d, it), p = it.productoId ? Store.get('productos', it.productoId) : null, pw = (f.pesos || {})[key];
+    const kgU = pw != null && pw !== '' ? num(pw) : num(p && p.peso);
+    return { d, it, key, cant: num(it.cant), valor: num(it.cant) * costoBaseLinea(it), kgU, kg: kgU * num(it.cant) };
+  }));
+/* monto de la factura que le toca a cada línea: Map "docId|itemId" -> $ (total de la línea) */
+const repartoFlete = (f, L = lineasFlete(f)) => {
+  const tot = num(f.monto), m = new Map();
+  if (f.metodo === 'manual') { L.forEach(l => m.set(l.key, num((f.manual || {})[l.key]))); return m; }
+  let b = f.metodo === 'peso' ? 'kg' : 'valor', s = L.reduce((a, l) => a + l[b], 0);
+  if (!(s > 0)) { b = 'valor'; s = L.reduce((a, l) => a + l.valor, 0); }
+  L.forEach(l => m.set(l.key, s > 0 ? tot * l[b] / s : 0));
+  return m;
+};
+const fletesDe = (docId) => Store.all('fletes').filter(f => !f.anulada && (f.compras || []).includes(docId));
+
 /* ---------------- cálculos derivados ---------------- */
 const Calc = {
   dirty: true, stock: new Map(), movs: new Map(),
@@ -1184,6 +1210,17 @@ const Calc = {
       ['manuel', 'papa'].forEach(inv => { const b = (p.inv || {})[inv]; s[inv] = { cant: b ? num(b.cant) : 0, costo: b ? num(b.costo) : 0, desde: b && b.desde || '', tiene: !!b }; });
       stock.set(p.id, s);
     });
+    // envío del courier repartido por línea de compra
+    const flete = new Map(), conFactura = new Set();
+    Store.all('fletes').forEach(f => { if (f.anulada) return; repartoFlete(f).forEach((m, k) => flete.set(k, (flete.get(k) || 0) + m)); (f.compras || []).forEach(id => conFactura.add(id)); });
+    this._extra = (d, it) => {
+      if (!d || d.tipo !== 'compra') return null;
+      const q = num(it.cant) || 1;
+      if (conFactura.has(d.id)) return { u: (flete.get(fleteKey(d, it)) || 0) / q, est: false };
+      const pv = d.proveedorId ? Store.get('proveedores', d.proveedorId) : null, pct = recargoInter(pv);
+      if (!pct || !(d.envio || esInter(pv))) return null;
+      return { u: costoBaseLinea(it) * pct / 100, est: true, pct };
+    };
     const docs = Store.all('docs').filter(d => d.estado !== 'anulada').sort((a, b) => (a.fecha || '').localeCompare(b.fecha || ''));
     docs.forEach(d => {
       const viaje = enCamino(d);
@@ -1201,7 +1238,7 @@ const Calc = {
         const s = stock.get(it.productoId); if (!s) return;
         const slot = s[inv]; slot.tiene = true;
         if (delta > 0 && d.tipo === 'compra' && (!slot.desde || (d.fecha || '') > slot.desde)) {
-          const c = num(it.costo); const prev = Math.max(slot.cant, 0);
+          const ex = this._extra(d, it); const c = num(it.costo) + (ex ? ex.u : 0); const prev = Math.max(slot.cant, 0);
           slot.costo = prev + delta > 0 ? (prev * slot.costo + delta * c) / (prev + delta) : c;
         }
         slot.cant += delta;
@@ -1209,6 +1246,8 @@ const Calc = {
     });
     this.stock = stock; this.movs = movs; this.camino = camino; this.dirty = false;
   },
+  /* envío que se suma a una línea de compra: { u: $ por unidad, est: true si es el % estimado } o null */
+  extra(d, it) { this.build(); return this._extra ? this._extra(d, it) : null; },
   /* lo que viene en camino de compras internacionales: { cant, manuel, papa, docs } o null */
   enCamino(pid) { this.build(); return (this.camino && this.camino.get(pid)) || null; },
   st(pid) { this.build(); return this.stock.get(pid) || { manuel: { cant: 0, costo: 0 }, papa: { cant: 0, costo: 0 } }; },
@@ -1232,7 +1271,7 @@ const Calc = {
     return { sub, desc, descPct, base, iva, ivaPct, total, pagado, saldo: round2(total - pagado), costo, gan: base - costo, sinCosto, porOrigen, tasa, bs: tasa ? total * tasa : 0 };
   }
 };
-Bus.on('data', (c) => { if (c === 'docs' || c === 'productos') Calc.invalidate(); });
+Bus.on('data', (c) => { if (c === 'docs' || c === 'productos' || c === 'fletes' || c === 'proveedores') Calc.invalidate(); });
 
 /* numeración: OF-AAAAMMDD-001, como en el cotizador */
 const nextNumero = (tipo, fecha) => {
@@ -2166,7 +2205,7 @@ const App = {
     if (this.guard && h !== this.lastRoute && !(await this.guard())) { Route.nav(this.lastRoute || 'resumen', { replace: true, silent: true }); return; }
     this.guard = null; this.lastRoute = h;
     this.route = { name: parts[0], args: parts.slice(1) };
-    const navId = { nuevo: parts[1] === 'oferta' ? 'ofertas' : parts[1] === 'compra' ? 'compras' : 'ventas', doc: null, cliente: 'clientes', 'cliente-web': 'clientes', 'cliente-nuevo': 'clientes', producto: 'inventario', cotizador: 'ofertas', 'producto-web': 'inventario', 'desde-tienda': parts[1] === 'nota' ? 'ventas' : 'ofertas', proveedor: 'distribuidores', proveedores: 'distribuidores', distribuidor: 'pedidos', empleado: 'empleados', rapida: 'ofertas' }[parts[0]];
+    const navId = { nuevo: parts[1] === 'oferta' ? 'ofertas' : parts[1] === 'compra' ? 'compras' : 'ventas', doc: null, cliente: 'clientes', 'cliente-web': 'clientes', 'cliente-nuevo': 'clientes', producto: 'inventario', cotizador: 'ofertas', 'producto-web': 'inventario', 'desde-tienda': parts[1] === 'nota' ? 'ventas' : 'ofertas', proveedor: 'distribuidores', proveedores: 'distribuidores', distribuidor: 'pedidos', empleado: 'empleados', rapida: 'ofertas', fletes: 'compras', flete: 'compras' }[parts[0]];
     let active = navId !== undefined ? navId : parts[0];
     if (parts[0] === 'doc') { const d = Store.get('docs', parts[1]); active = d ? (d.tipo === 'oferta' ? 'ofertas' : d.tipo === 'compra' ? 'compras' : 'ventas') : ''; }
     $$('[data-nav]').forEach(a => a.classList.toggle('on', a.dataset.nav === active));
@@ -2181,7 +2220,7 @@ const App = {
     try { fn(v, ...r.args); } catch (e) { console.error(e); v.innerHTML = `<div class="banner">Algo falló al mostrar esta pantalla: ${esc(e.message)}</div>`; }
   },
   refresh: debounce(() => { const r = App.route.name; if (!App.liveViews.includes(r)) return; const a = document.activeElement; if (a && a.closest && a.closest('#view') && /INPUT|TEXTAREA|SELECT/.test(a.tagName)) { App.refresh(); return; } if (document.querySelector('.ov')) { App.refresh(); return; } App.render(); }, 1500),
-  liveViews: ['resumen', 'ventas', 'compras', 'cuenta', 'clientes', 'inventario', 'pedidos', 'empleados', 'empleado', 'distribuidores']
+  liveViews: ['resumen', 'ventas', 'compras', 'fletes', 'cuenta', 'clientes', 'inventario', 'pedidos', 'empleados', 'empleado', 'distribuidores']
 };
 TablaOrden.prefijo = () => App.route.name;
 window.addEventListener('hashchange', () => { if (Route.base && /^#\//.test(location.hash)) { Route.nav(location.hash, { replace: true }); return; } if (!Route.base) App.go(); });
@@ -2462,7 +2501,7 @@ const enPeriodo = (fecha, p) => {
   return true;
 };
 
-function docListView(v, { titulo, tipos, nuevo, sub }) {
+function docListView(v, { titulo, tipos, nuevo, sub, extra }) {
   const key = 'suinadm_f_' + tipos.join('');
   const F = Object.assign({ q: '', per: 'todo', est: '', inv: '', vend: '' }, lsGet(key, {}));
   const compra = tipos.includes('compra');
@@ -2475,7 +2514,7 @@ function docListView(v, { titulo, tipos, nuevo, sub }) {
   const sel = new Set();
   let visibles = [];
   v.innerHTML = `
-    <div class="vh"><h1>${titulo}</h1><div class="act">${nuevo.map(([t, l]) => `<a class="btn ${t === nuevo[0][0] ? 'pri' : ''}" href="#/nuevo/${t}">${ico('plus')} ${l}</a>`).join('')}</div>${sub ? `<div class="sub">${sub}</div>` : ''}</div>
+    <div class="vh"><h1>${titulo}</h1><div class="act">${extra || ''}${nuevo.map(([t, l]) => `<a class="btn ${t === nuevo[0][0] ? 'pri' : ''}" href="#/nuevo/${t}">${ico('plus')} ${l}</a>`).join('')}</div>${sub ? `<div class="sub">${sub}</div>` : ''}</div>
     <div class="row" style="margin-bottom:12px">
       <input class="inp" style="flex:1 1 240px" type="search" placeholder="Buscar por número, ${party.toLowerCase()} o producto" data-f="q" value="${esc(F.q)}">
       <select class="inp" style="width:auto" data-f="per">${periodoOpts().map(([k, l]) => `<option value="${k}" ${F.per === k ? 'selected' : ''}>${l}</option>`).join('')}</select>
@@ -2617,7 +2656,118 @@ Views.ventas = (v, filtro) => {
   if (filtro) { const k = 'suinadm_f_notaventa'; lsSet(k, Object.assign(lsGet(k, {}), { est: filtro, per: 'todo' })); Route.nav('#/ventas', { replace: true, silent: true }); }
   docListView(v, { titulo: 'Ventas', tipos: ['nota', 'venta'], nuevo: [['nota', 'Nueva venta']], sub: 'Cada venta lleva su nota de entrega (se comparte o imprime cuando la pidan), su pago y su entrega o envío.' });
 };
-Views.compras = (v) => docListView(v, { titulo: 'Compras', tipos: ['compra', 'ajuste'], nuevo: [['compra', 'Nueva compra']], sub: 'Lo que entra a tu inventario o al de tu papá. Los ajustes son correcciones de existencia.' });
+/* compras internacionales (con seguimiento de envío) que todavía no tienen factura del courier */
+const comprasSinFactura = () => { const con = new Set(); Store.all('fletes').forEach(f => { if (!f.anulada) (f.compras || []).forEach(id => con.add(id)); }); return Store.all('docs').filter(d => d.tipo === 'compra' && d.envio && d.estado !== 'anulada' && !con.has(d.id)).sort((a, b) => (b.fecha || '').localeCompare(a.fecha || '')); };
+const fleteNombre = (f) => [f.empresa, f.numero ? 'N° ' + f.numero : ''].filter(Boolean).join(' · ') || 'Factura de envío';
+
+Views.fletes = (v) => {
+  const xs = Store.all('fletes').filter(f => !f.anulada).sort((a, b) => (b.fecha || '').localeCompare(a.fecha || ''));
+  const sin = comprasSinFactura();
+  v.innerHTML = `<div class="vh"><a class="btn ghost" href="#/compras" title="Volver a compras">${ico('back')}</a><h1>Facturas de envío</h1><div class="act"><a class="btn pri" href="#/flete/nuevo">${ico('plus')} Nueva factura de envío</a></div>
+    <div class="sub">La factura del courier (Miami → Venezuela) se reparte entre los productos de las compras que venían en ese paquete y se suma a su costo.</div></div>
+    ${sin.length ? `<section class="panel" style="margin-bottom:14px"><div class="ph"><h2>Compras internacionales sin factura de envío (${sin.length})</h2></div>
+      <p class="muted small" style="margin:-4px 0 8px">Su costo usa por ahora el % estimado del distribuidor. Toca una para registrar su factura, o crea una factura nueva y marca varias si vinieron reempacadas juntas.</p>
+      <div class="tbl-wrap"><table class="tbl"><thead><tr><th>Compra</th><th>Distribuidor</th><th class="hm">Fecha</th><th>Envío</th><th class="r">Total</th><th></th></tr></thead><tbody>
+      ${sin.map(d => `<tr><td class="mono"><a href="#/doc/${esc(d.id)}">${esc(d.numero || '')}</a></td><td>${esc(docParty(d))}</td><td class="hm">${esc(fmtFecha(d.fecha))}</td><td>${estadoPill(d)}</td><td class="num">${fmtUSD(Calc.totals(d).total)}</td><td class="r"><a class="btn sm" href="#/flete/nuevo/${esc(d.id)}">Registrar factura</a></td></tr>`).join('')}
+      </tbody></table></div></section>` : ''}
+    <section class="panel">${xs.length ? `<div class="tbl-wrap"><table class="tbl"><thead><tr><th>Fecha</th><th>Empresa</th><th>N° factura</th><th>Compras</th><th class="hm">Reparto</th><th class="r">Monto</th></tr></thead><tbody>
+      ${xs.map(f => `<tr class="click" data-id="${esc(f.id)}"><td>${esc(fmtFecha(f.fecha))}</td><td>${esc(f.empresa || '—')}</td><td class="mono">${esc(f.numero || '—')}</td><td class="small">${(f.compras || []).map(id => { const d = Store.get('docs', id); return d ? `${esc(d.numero)} <span class="muted">${esc(docParty(d))}</span>` : ''; }).filter(Boolean).join('<br>') || '<span class="muted">Ninguna</span>'}</td><td class="hm">${esc((FLETE_METODOS.find(m => m[0] === f.metodo) || FLETE_METODOS[0])[1])}</td><td class="num">${fmtUSD(num(f.monto))}</td></tr>`).join('')}
+      </tbody></table></div>` : '<div class="empty">Todavía no has registrado facturas de envío.</div>'}</section>`;
+  $$('tr[data-id]', v).forEach(tr => tr.onclick = () => Route.nav('#/flete/' + tr.dataset.id));
+};
+
+Views.flete = (v, id, compraId) => {
+  const isNew = !id || id === 'nuevo';
+  let F = isNew ? null : Store.get('fletes', id);
+  if (!isNew && !F) { v.innerHTML = '<div class="panel empty">Esta factura de envío no existe.<br><br><a class="btn" href="#/fletes">Ver facturas de envío</a></div>'; return; }
+  if (isNew) {
+    const c = compraId ? Store.get('docs', compraId) : null;
+    F = { id: uid('fl_'), empresa: (c && c.envio && c.envio.empresa) || '', numero: '', fecha: localStamp().slice(0, 10), monto: '', metodo: 'valor', compras: c ? [c.id] : [], pesos: {}, manual: {}, enlace: '', notas: '' };
+  } else F = clone(F);
+  F.pesos = F.pesos || {}; F.manual = F.manual || {}; F.compras = F.compras || [];
+  let dirty = isNew;
+  const setDirty = (x = true) => { dirty = x; const dd = $('#dirty', v); if (dd) dd.classList.toggle('hide', !dirty); };
+  App.guard = async () => !dirty || !(F.compras.length || num(F.monto)) || UI.confirm('Hay cambios sin guardar en esta factura. ¿Salir sin guardar?', { ok: 'Salir sin guardar', danger: true });
+  const empresas = Array.from(new Set(Store.all('fletes').map(f => f.empresa).concat(Store.all('docs').filter(d => d.envio && d.envio.empresa).map(d => d.envio.empresa)).filter(Boolean))).sort();
+  const F0 = { q: '' };
+  v.innerHTML = `<div class="vh"><a class="btn ghost" href="#/fletes" title="Volver">${ico('back')}</a><h1>${isNew ? 'Nueva factura de envío' : esc(fleteNombre(F))}</h1>
+      <span id="dirty" class="row small muted ${dirty ? '' : 'hide'}"><i class="dirty-dot"></i> Sin guardar</span>
+      <div class="act">${!isNew ? `<button class="btn ghost" data-del>Eliminar</button>` : ''}<button class="btn pri" data-save>${ico('save')} Guardar</button></div></div>
+    <section class="panel" style="margin-bottom:14px"><h2>Factura del courier</h2><div class="grid g3">
+      <label class="fld"><span>Empresa de envío</span><input class="inp" data-k="empresa" list="dl-courier" value="${esc(F.empresa)}" placeholder="Ej. Zoom, Tealca, courier de Miami"><datalist id="dl-courier">${empresas.map(e => `<option value="${esc(e)}">`).join('')}</datalist></label>
+      <label class="fld"><span>N° de factura</span><input class="inp mono" data-k="numero" value="${esc(F.numero)}"></label>
+      <label class="fld"><span>Fecha</span><input class="inp" type="date" data-k="fecha" value="${esc(F.fecha)}"></label>
+      <label class="fld"><span>Monto total ($)</span><input class="inp num" inputmode="decimal" data-k="monto" value="${F.monto === '' ? '' : esc(F.monto)}" placeholder="0.00"></label>
+      <label class="fld" style="grid-column:span 2"><span>Enlace a la factura (PDF en Drive, foto…)</span><input class="inp" data-k="enlace" value="${esc(F.enlace || '')}" placeholder="https://"></label>
+      <label class="fld" style="grid-column:1/-1"><span>Notas</span><input class="inp" data-k="notas" value="${esc(F.notas || '')}" placeholder="Ej. 3 cajas reempacadas, 18 kg"></label>
+    </div></section>
+    <section class="panel" style="margin-bottom:14px"><div class="ph"><h2>Compras que venían en este envío</h2></div>
+      <p class="muted small" style="margin:-4px 0 8px">Si reempacaste varias compras en un solo paquete, márcalas todas: el monto se reparte entre todos sus productos.</p>
+      <div id="sel"></div>
+      <input class="inp" type="search" data-q placeholder="Buscar compra por número, distribuidor o producto" style="margin:8px 0">
+      <div id="cand"></div></section>
+    <section class="panel"><div class="ph"><h2>Reparto entre los productos</h2><div class="act"><div class="seg" data-met>${FLETE_METODOS.map(([k, l]) => `<button type="button" data-v="${k}" class="${F.metodo === k ? 'on' : ''}">${l}</button>`).join('')}</div></div></div>
+      <div id="rep"></div></section>`;
+
+  const paintSel = () => {
+    const ds = F.compras.map(x => Store.get('docs', x)).filter(Boolean);
+    $('#sel', v).innerHTML = ds.length ? ds.map(d => `<span class="pill" style="margin:0 6px 6px 0;display:inline-flex;gap:6px;align-items:center"><a href="#/doc/${esc(d.id)}" class="mono">${esc(d.numero)}</a> ${esc(docParty(d))} · ${fmtUSD(Calc.totals(d).total)}<button type="button" class="btn sm ghost" style="padding:0 6px" data-quitar="${esc(d.id)}" title="Quitar">✕</button></span>`).join('') : '<p class="muted small" style="margin:0">Ninguna compra marcada todavía.</p>';
+    $$('[data-quitar]', v).forEach(b => b.onclick = () => { F.compras = F.compras.filter(x => x !== b.dataset.quitar); setDirty(); paintAll(); });
+  };
+  const paintCand = () => {
+    const q = normTxt(F0.q || '');
+    const otras = new Map(); Store.all('fletes').forEach(f => { if (f.id !== F.id && !f.anulada) (f.compras || []).forEach(x => otras.set(x, f)); });
+    let xs = Store.all('docs').filter(d => d.tipo === 'compra' && d.estado !== 'anulada' && !F.compras.includes(d.id));
+    if (q) xs = xs.filter(d => normTxt([d.numero, docParty(d)].concat((d.items || []).map(i => i.codigo + ' ' + i.desc)).join(' ')).includes(q));
+    else xs = xs.filter(d => d.envio && !otras.has(d.id));
+    xs.sort((a, b) => (b.fecha || '').localeCompare(a.fecha || '')); xs = xs.slice(0, 25);
+    $('#cand', v).innerHTML = xs.length ? `<div class="tbl-wrap"><table class="tbl"><thead><tr><th></th><th>Compra</th><th>Distribuidor</th><th class="hm">Fecha</th><th class="hm">Productos</th><th class="r">Total</th></tr></thead><tbody>
+      ${xs.map(d => { const o = otras.get(d.id); return `<tr class="click" data-add="${esc(d.id)}"><td><button type="button" class="btn sm">＋</button></td><td class="mono">${esc(d.numero)}</td><td>${esc(docParty(d))}${d.envio ? ' <span class="muted small">✈</span>' : ''}${o ? `<div class="small" style="color:var(--red)">Ya está en ${esc(fleteNombre(o))}</div>` : ''}</td><td class="hm">${esc(fmtFecha(d.fecha))}</td><td class="hm">${docItemsTxt(d)}</td><td class="num">${fmtUSD(Calc.totals(d).total)}</td></tr>`; }).join('')}
+      </tbody></table></div>` : `<p class="muted small" style="margin:0">${q ? 'No hay compras que coincidan.' : 'No quedan compras internacionales sin factura. Busca arriba para agregar cualquier otra compra.'}</p>`;
+    $$('[data-add]', v).forEach(tr => tr.onclick = () => { F.compras.push(tr.dataset.add); setDirty(); paintAll(); });
+  };
+  const paintRep = () => {
+    const L = lineasFlete(F), m = repartoFlete(F, L), tot = num(F.monto);
+    const peso = F.metodo === 'peso', manual = F.metodo === 'manual';
+    const sinPeso = peso ? L.filter(l => !(l.kgU > 0)).length : 0;
+    const sumM = L.reduce((a, l) => a + (m.get(l.key) || 0), 0);
+    const base = L.reduce((a, l) => a + l.valor, 0);
+    if (!L.length) { $('#rep', v).innerHTML = '<div class="empty">Marca arriba las compras de este envío para ver el reparto.</div>'; return; }
+    $('#rep', v).innerHTML = `
+      <p class="muted small" style="margin:-4px 0 8px">${peso ? 'Pon el peso por unidad (kg) de cada producto; se guarda en el producto para la próxima vez.' : manual ? 'Escribe cuánto del envío le toca a cada línea; la suma debe dar el monto de la factura.' : 'Cada producto absorbe el envío en proporción a lo que costó.'}</p>
+      ${peso && sinPeso && sinPeso < L.length ? `<div class="banner" style="margin-bottom:8px">${sinPeso} línea${sinPeso === 1 ? '' : 's'} sin peso: no ${sinPeso === 1 ? 'recibe' : 'reciben'} parte del envío.</div>` : ''}
+      ${peso && sinPeso === L.length ? '<div class="banner" style="margin-bottom:8px">Ningún producto tiene peso todavía: mientras tanto se reparte por valor.</div>' : ''}
+      <div class="tbl-wrap"><table class="tbl no-apilar"><thead><tr><th>Compra</th><th>Producto</th><th class="r">Cant.</th><th class="r">Costo unit.</th>${peso ? '<th class="r">Kg por unidad</th>' : ''}<th class="r">Envío de la línea</th><th class="r">Envío por unidad</th><th class="r">Puesto en Vzla. /u</th></tr></thead><tbody>
+      ${L.map(l => { const e = m.get(l.key) || 0, eu = l.cant ? e / l.cant : 0, cu = costoBaseLinea(l.it); return `<tr><td class="mono small">${esc(l.d.numero)}</td><td><span class="code">${esc(l.it.codigo || '')}</span> <span class="small">${esc(plainFirst(l.it.desc || '').slice(0, 60))}</span></td><td class="num">${fmtQty(l.cant)}</td><td class="num">${fmtUSD(cu)}</td>
+        ${peso ? `<td class="r"><input class="inp num" style="width:90px" inputmode="decimal" data-kg="${esc(l.key)}" value="${l.kgU ? esc(round2(l.kgU)) : ''}" placeholder="0"></td>` : ''}
+        <td class="r">${manual ? `<input class="inp num" style="width:100px" inputmode="decimal" data-man="${esc(l.key)}" value="${F.manual[l.key] != null && F.manual[l.key] !== '' ? esc(F.manual[l.key]) : ''}" placeholder="0">` : fmtUSD(e)}</td>
+        <td class="num">${fmtUSD(eu)}</td><td class="num"><b>${fmtUSD(cu + eu)}</b>${cu ? ` <span class="muted small">+${fmtNum(eu / cu * 100, 1)}%</span>` : ''}</td></tr>`; }).join('')}
+      </tbody><tfoot><tr><td colspan="${peso ? 5 : 4}" class="r"><b>Total</b></td><td class="num" data-sum><b style="${manual && Math.abs(sumM - tot) > 0.01 ? 'color:var(--red)' : ''}">${fmtUSD(sumM)}</b>${manual && Math.abs(sumM - tot) > 0.01 ? `<div class="small" style="color:var(--red)">Factura: ${fmtUSD(tot)}</div>` : ''}</td><td colspan="2" class="num muted small">${base ? `Envío = ${fmtNum(tot / base * 100, 1)}% de la mercancía (${fmtUSD(base)})` : ''}</td></tr></tfoot></table></div>`;
+    $$('[data-kg]', v).forEach(i => i.addEventListener('change', () => { F.pesos[i.dataset.kg] = i.value.trim() === '' ? '' : num(i.value); setDirty(); paintRep(); }));
+    $$('[data-man]', v).forEach(i => i.addEventListener('change', () => { F.manual[i.dataset.man] = i.value.trim() === '' ? '' : num(i.value); setDirty(); paintRep(); }));
+  };
+  const paintAll = () => { paintSel(); paintCand(); paintRep(); };
+  $$('[data-k]', v).forEach(i => i.addEventListener(i.type === 'date' ? 'change' : 'input', () => { F[i.dataset.k] = i.value.trim(); setDirty(); if (i.dataset.k === 'monto') paintRep(); }));
+  $('[data-q]', v).addEventListener('input', (e) => { F0.q = e.target.value; paintCand(); });
+  $('[data-met]', v).addEventListener('click', (e) => { const b = e.target.closest('[data-v]'); if (!b) return; F.metodo = b.dataset.v; $$('[data-met] button', v).forEach(x => x.classList.toggle('on', x === b)); setDirty(); paintRep(); });
+  $('[data-save]', v).onclick = () => {
+    F.monto = F.monto === '' ? '' : round2(num(F.monto));
+    if (!(num(F.monto) > 0)) { UI.toast('Escribe el monto de la factura', 2600); return; }
+    if (!F.compras.length) { UI.toast('Marca al menos una compra de este envío', 2600); return; }
+    const L = lineasFlete(F);
+    if (F.metodo === 'manual') { const s = L.reduce((a, l) => a + num(F.manual[l.key]), 0); if (Math.abs(s - num(F.monto)) > 0.01) { UI.toast(`El reparto a mano suma ${fmtUSD(s)} y la factura es ${fmtUSD(num(F.monto))}`, 3500); return; } }
+    // el peso escrito queda en el producto para la próxima vez
+    L.forEach(l => { const w = F.pesos[l.key]; if (w === '' || w == null || !l.it.productoId) return; const p = Store.get('productos', l.it.productoId); if (p && num(p.peso) !== num(w)) { const np = clone(p); np.peso = num(w); Store.put('productos', np, { quiet: true }); } });
+    // guarda solo lo de las líneas que siguen en la factura
+    const keys = new Set(L.map(l => l.key)); ['pesos', 'manual'].forEach(k => Object.keys(F[k]).forEach(x => { if (!keys.has(x)) delete F[k][x]; }));
+    Store.put('fletes', clone(F)); Bus.emit('data', 'productos');
+    setDirty(false); UI.toast('Factura de envío guardada: el costo de los productos ya la incluye', 3000);
+    if (isNew) { App.guard = null; Route.nav('#/flete/' + F.id, { replace: true }); }
+  };
+  const del = $('[data-del]', v); if (del) del.onclick = async () => { if (!(await UI.confirm('¿Eliminar esta factura de envío? Los productos de sus compras vuelven a su costo sin este envío.', { ok: 'Eliminar', danger: true }))) return; Store.del('fletes', F.id); App.guard = null; Route.nav('#/fletes'); };
+  paintAll();
+};
+Views.compras = (v) => { const sin = comprasSinFactura().length; docListView(v, { titulo: 'Compras', tipos: ['compra', 'ajuste'], nuevo: [['compra', 'Nueva compra']], extra: `<a class="btn" href="#/fletes" title="Facturas del courier: su costo se reparte entre los productos de las compras">✈ Facturas de envío${sin ? ` <span class="pill warn" style="margin-left:4px">${sin} sin factura</span>` : ''}</a>`, sub: 'Lo que entra a tu inventario o al de tu papá. Los ajustes son correcciones de existencia.' }); };
 
 /* ---------------- nuevo documento ---------------- */
 const newDoc = (tipo, extra = {}) => {
@@ -3222,7 +3372,18 @@ function docEditor(v, D, isNew) {
         <label class="fld"><span>Empresa de envío</span><input class="inp" data-env-k="empresa" value="${esc(E.empresa || '')}" placeholder="Ej. DHL, Zoom, MRW, courier"></label>
         <label class="fld"><span>N° de guía / tracking</span><input class="inp mono" data-env-k="guia" value="${esc(E.guia || '')}"></label>
         <label class="fld"><span>Llegada estimada</span><input class="inp" type="date" data-env-k="estimada" value="${esc(E.estimada || '')}"></label>
-      </div>`;
+      </div>
+      ${(() => {
+        const fs = isNew ? [] : fletesDe(D.id);
+        if (fs.length) {
+          let tot = 0; fs.forEach(f => repartoFlete(f).forEach((m, k) => { if (k.startsWith(D.id + '|')) tot += m; }));
+          const base = (D.items || []).reduce((a, it) => a + num(it.cant) * costoBaseLinea(it), 0);
+          return `<div class="env-flete"><b>Costo del envío:</b> a esta compra le tocan <b>${fmtUSD(tot)}</b>${base ? ` (${fmtNum(tot / base * 100, 1)}% sobre la mercancía)` : ''} de ${fs.map(f => `<a href="#/flete/${esc(f.id)}">${esc([f.empresa, f.numero ? 'N° ' + f.numero : ''].filter(Boolean).join(' · ') || 'factura')} (${fmtUSD(num(f.monto))})</a>`).join(', ')}. Ya está sumado al costo de cada producto.</div>`;
+        }
+        const pct = recargoInter(prov);
+        return `<div class="env-flete"><b>Costo del envío:</b> todavía no has registrado la factura del courier. ${pct ? `Mientras tanto el costo usa un <b>+${fmtNum(pct)}% estimado</b> (de la ficha de ${esc(prov.nombre)}).` : 'Mientras tanto el costo no incluye el envío.'}
+          ${isNew ? '<span class="muted">Guarda la compra para registrarla.</span>' : `<a class="btn sm" href="#/flete/nuevo/${esc(D.id)}" style="margin-left:6px">✈ Registrar factura del courier</a>`}</div>`;
+      })()}`;
     $$('[data-env]', box).forEach(b => b.onclick = () => {
       const k = b.dataset.env; if (k === E.etapa) return; delete E.auto;
       E.etapa = k; E.hist = (E.hist || []).concat([{ etapa: k, fecha: nowISO() }]);
@@ -3317,7 +3478,8 @@ function docEditor(v, D, isNew) {
       else if (it.origen !== 'libre') parts.push(`<span>Sin costo: no calcula ganancia</span>${it.origen === 'dist' ? '<button type="button" class="btn sm" data-distc style="padding:1px 8px;font-size:14px">＋ Distribuidor y costo</button>' : ''}`);
       if (venta && it.origen === 'dist') parts.push(`<label>Pedido: <select class="inp" style="width:auto;padding:2px 6px;font-size:15px" data-lk="pedido">${Object.entries(PEDIDO).map(([k, [l]]) => `<option value="${k}" ${(it.pedido || 'por pedir') === k ? 'selected' : ''}>${l}</option>`).join('')}</select></label>`);
     }
-    if (compra) { if (!it.productoId) parts.push(`<span class="warn">Producto nuevo: se agrega al inventario de ${esc(origenNombre(D.inventario))} al guardar</span>`); else { const s = Calc.st(it.productoId); parts.push(`<span>Existencia actual ${esc(origenNombre(D.inventario))}: ${fmtQty(s[D.inventario].cant)} · costo prom. ${fmtUSD(s[D.inventario].costo)}</span>`); } }
+    if (compra) { if (!it.productoId) parts.push(`<span class="warn">Producto nuevo: se agrega al inventario de ${esc(origenNombre(D.inventario))} al guardar</span>`); else { const s = Calc.st(it.productoId); parts.push(`<span>Existencia actual ${esc(origenNombre(D.inventario))}: ${fmtQty(s[D.inventario].cant)} · costo prom. ${fmtUSD(s[D.inventario].costo)}</span>`); }
+      const ex = Calc.extra(D, it); if (ex && ex.u > 0) parts.push(`<span title="${ex.est ? 'Estimado del distribuidor mientras no registres la factura del courier' : 'De la factura del courier'}">Envío ${fmtUSD(ex.u)}/u${ex.est ? ' (estimado)' : ''} → puesto en Venezuela ${fmtUSD(num(it.precio) + ex.u)}/u</span>`); }
     return parts.join('');
   };
   const paintLines = () => {
