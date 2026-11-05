@@ -163,11 +163,16 @@ begin
            group by texto order by min(id) limit 12) b;
 
   -- Secciones recorridas (las de búsqueda ya salen arriba) y tarjetas vistas
-  select string_agg(tg_esc(texto), ' › ' order by pid) into v_secc
-    from (select texto, min(id) pid from eventos
-           where visita = p_visita and tipo = 'ver_tarjetas' and creado > coalesce(p_desde, '-infinity')
-             and texto is not null and texto not ilike 'búsqueda:%'
-           group by texto order by min(id) limit 10) s;
+  -- Una línea por sección; sin las fichas de producto (salen en "Abrió") ni los niveles
+  -- intermedios de una ruta que luego siguió más adentro.
+  with t as (select texto, min(id) pid from eventos
+              where visita = p_visita and tipo = 'ver_tarjetas' and creado > coalesce(p_desde, '-infinity')
+                and texto is not null and texto not ilike 'búsqueda:%' and texto not ilike 'ficha de %'
+              group by texto)
+  select string_agg('  • ' || tg_esc(texto), nl order by pid) into v_secc
+    from (select * from t
+           where not exists (select 1 from t t2 where t2.texto like t.texto || ' › %')
+           order by pid limit 8) s;
   select count(distinct m) into v_ntarj
     from eventos, unnest(modelos) m
    where visita = p_visita and tipo = 'ver_tarjetas' and creado > coalesce(p_desde, '-infinity');
@@ -207,7 +212,7 @@ begin
                 else '' end;
 
   if v_busq  is not null then v_txt := v_txt || nl || nl || '🔎 <b>Buscó:</b>' || nl || v_busq; end if;
-  if v_secc  is not null then v_txt := v_txt || nl || nl || '📂 <b>Recorrió:</b> ' || v_secc; end if;
+  if v_secc  is not null then v_txt := v_txt || nl || nl || '📂 <b>Recorrió:</b>' || nl || v_secc; end if;
   if v_ntarj > 0         then v_txt := v_txt || nl || '🗂 Tuvo en pantalla ' || v_ntarj || ' producto' || case when v_ntarj = 1 then '' else 's' end; end if;
   if v_nprods > 0        then v_txt := v_txt || nl || nl || '👁 <b>Abrió ' || v_nprods || ' producto' || case when v_nprods = 1 then '' else 's' end || ':</b>' || nl || v_prods ||
                                   case when v_nprods > 12 then nl || '  … y ' || (v_nprods - 12) || ' más' else '' end; end if;
@@ -247,6 +252,7 @@ begin
      group by e.visita
     having max(e.creado) < now() - interval '5 minutes'
        and not coalesce(bool_or(cl.es_admin), false)
+       and not exists (select 1 from visitas_resumen v where v.visita = e.visita and v.resumido_hasta >= max(e.creado))
      order by max(e.creado)
      limit 20
   loop
