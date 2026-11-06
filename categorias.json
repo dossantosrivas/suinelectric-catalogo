@@ -1,7 +1,7 @@
 {
   "fuente": "https://grupo-electricos.com",
-  "generado": "2026-11-05T18:58:10.716Z",
-  "total_categorias": 3981,
+  "generado": "2026-11-06T18:26:26.957Z",
+  "total_categorias": 3982,
   "arbol": [
     {
       "clave": "allen-bradley",
@@ -10515,7 +10515,7 @@
       "url": "https://grupo-electricos.com/product-category/breakers-en-caja-moldeada/",
       "nivel": 1,
       "padre": null,
-      "productos": 265,
+      "productos": 266,
       "es_modelo": false,
       "hijos": [
         {
@@ -11522,7 +11522,7 @@
           "url": "https://grupo-electricos.com/product-category/breakers-en-caja-moldeada/3vm1-hasta-630-amp/",
           "nivel": 2,
           "padre": "breakers-en-caja-moldeada",
-          "productos": 78,
+          "productos": 79,
           "es_modelo": false,
           "hijos": [
             {
@@ -12345,7 +12345,7 @@
               "url": "https://grupo-electricos.com/product-category/breakers-en-caja-moldeada/3vm1-hasta-630-amp/capacidad-de-ruptura-55-36-ka-240-415-vac/",
               "nivel": 3,
               "padre": "breakers-en-caja-moldeada/3vm1-hasta-630-amp",
-              "productos": 11,
+              "productos": 12,
               "es_modelo": false,
               "hijos": [
                 {
@@ -12355,7 +12355,7 @@
                   "url": "https://grupo-electricos.com/product-category/breakers-en-caja-moldeada/3vm1-hasta-630-amp/capacidad-de-ruptura-55-36-ka-240-415-vac/dispardor-de-sobrecarga-regulable-capacidad-de-ruptura-55-36-ka-240-415-vac/",
                   "nivel": 4,
                   "padre": "breakers-en-caja-moldeada/3vm1-hasta-630-amp/capacidad-de-ruptura-55-36-ka-240-415-vac",
-                  "productos": 11,
+                  "productos": 12,
                   "es_modelo": false,
                   "hijos": [
                     {
@@ -12443,7 +12443,7 @@
                       "url": "https://grupo-electricos.com/product-category/breakers-en-caja-moldeada/3vm1-hasta-630-amp/capacidad-de-ruptura-55-36-ka-240-415-vac/dispardor-de-sobrecarga-regulable-capacidad-de-ruptura-55-36-ka-240-415-vac/3-polos-tm220-atfm/",
                       "nivel": 5,
                       "padre": "breakers-en-caja-moldeada/3vm1-hasta-630-amp/capacidad-de-ruptura-55-36-ka-240-415-vac/dispardor-de-sobrecarga-regulable-capacidad-de-ruptura-55-36-ka-240-415-vac",
-                      "productos": 5,
+                      "productos": 6,
                       "es_modelo": false,
                       "hijos": [
                         {
@@ -12451,6 +12451,17 @@
                           "nombre": "3VM1225-4EE32-0AA0",
                           "slug": "3vm1225-4ee32-0aa0",
                           "url": "https://grupo-electricos.com/product-category/breakers-en-caja-moldeada/3vm1-hasta-630-amp/capacidad-de-ruptura-55-36-ka-240-415-vac/dispardor-de-sobrecarga-regulable-capacidad-de-ruptura-55-36-ka-240-415-vac/3-polos-tm220-atfm/3vm1225-4ee32-0aa0/",
+                          "nivel": 6,
+                          "padre": "breakers-en-caja-moldeada/3vm1-hasta-630-amp/capacidad-de-ruptura-55-36-ka-240-415-vac/dispardor-de-sobrecarga-regulable-capacidad-de-ruptura-55-36-ka-240-415-vac/3-polos-tm220-atfm",
+                          "productos": 1,
+                          "es_modelo": true,
+                          "hijos": []
+                        },
+                        {
+                          "clave": "breakers-en-caja-moldeada/3vm1-hasta-630-amp/capacidad-de-ruptura-55-36-ka-240-415-vac/dispardor-de-sobrecarga-regulable-capacidad-de-ruptura-55-36-ka-240-415-vac/3-polos-tm220-atfm/3vm1225-4ee36-0aa0",
+                          "nombre": "3VM1225-4EE36-0AA0",
+                          "slug": "3vm1225-4ee36-0aa0",
+                          "url": "https://grupo-electricos.com/product-category/breakers-en-caja-moldeada/3vm1-hasta-630-amp/capacidad-de-ruptura-55-36-ka-240-415-vac/dispardor-de-sobrecarga-regulable-capacidad-de-ruptura-55-36-ka-240-415-vac/3-polos-tm220-atfm/3vm1225-4ee36-0aa0/",
                           "nivel": 6,
                           "padre": "breakers-en-caja-moldeada/3vm1-hasta-630-amp/capacidad-de-ruptura-55-36-ka-240-415-vac/dispardor-de-sobrecarga-regulable-capacidad-de-ruptura-55-36-ka-240-415-vac/3-polos-tm220-atfm",
                           "productos": 1,
@@ -54278,7 +54289,7 @@
       "url": "https://grupo-electricos.com/product-category/breakers-en-caja-moldeada/",
       "nivel": 1,
       "padre": null,
-      "productos": 265,
+      "productos": 266,
       "es_modelo": false
     },
     {
@@ -55168,7 +55179,7 @@
       "url": "https://grupo-electricos.com/product-category/breakers-en-caja-moldeada/3vm1-hasta-630-amp/",
       "nivel": 2,
       "padre": "breakers-en-caja-moldeada",
-      "productos": 78,
+      "productos": 79,
       "es_modelo": false
     },
     {
@@ -55908,7 +55919,7 @@
       "url": "https://grupo-electricos.com/product-category/breakers-en-caja-moldeada/3vm1-hasta-630-amp/capacidad-de-ruptura-55-36-ka-240-415-vac/",
       "nivel": 3,
       "padre": "breakers-en-caja-moldeada/3vm1-hasta-630-amp",
-      "productos": 11,
+      "productos": 12,
       "es_modelo": false
     },
     {
@@ -55918,7 +55929,7 @@
       "url": "https://grupo-electricos.com/product-category/breakers-en-caja-moldeada/3vm1-hasta-630-amp/capacidad-de-ruptura-55-36-ka-240-415-vac/dispardor-de-sobrecarga-regulable-capacidad-de-ruptura-55-36-ka-240-415-vac/",
       "nivel": 4,
       "padre": "breakers-en-caja-moldeada/3vm1-hasta-630-amp/capacidad-de-ruptura-55-36-ka-240-415-vac",
-      "productos": 11,
+      "productos": 12,
       "es_modelo": false
     },
     {
@@ -55998,7 +56009,7 @@
       "url": "https://grupo-electricos.com/product-category/breakers-en-caja-moldeada/3vm1-hasta-630-amp/capacidad-de-ruptura-55-36-ka-240-415-vac/dispardor-de-sobrecarga-regulable-capacidad-de-ruptura-55-36-ka-240-415-vac/3-polos-tm220-atfm/",
       "nivel": 5,
       "padre": "breakers-en-caja-moldeada/3vm1-hasta-630-amp/capacidad-de-ruptura-55-36-ka-240-415-vac/dispardor-de-sobrecarga-regulable-capacidad-de-ruptura-55-36-ka-240-415-vac",
-      "productos": 5,
+      "productos": 6,
       "es_modelo": false
     },
     {
@@ -56006,6 +56017,16 @@
       "nombre": "3VM1225-4EE32-0AA0",
       "slug": "3vm1225-4ee32-0aa0",
       "url": "https://grupo-electricos.com/product-category/breakers-en-caja-moldeada/3vm1-hasta-630-amp/capacidad-de-ruptura-55-36-ka-240-415-vac/dispardor-de-sobrecarga-regulable-capacidad-de-ruptura-55-36-ka-240-415-vac/3-polos-tm220-atfm/3vm1225-4ee32-0aa0/",
+      "nivel": 6,
+      "padre": "breakers-en-caja-moldeada/3vm1-hasta-630-amp/capacidad-de-ruptura-55-36-ka-240-415-vac/dispardor-de-sobrecarga-regulable-capacidad-de-ruptura-55-36-ka-240-415-vac/3-polos-tm220-atfm",
+      "productos": 1,
+      "es_modelo": true
+    },
+    {
+      "clave": "breakers-en-caja-moldeada/3vm1-hasta-630-amp/capacidad-de-ruptura-55-36-ka-240-415-vac/dispardor-de-sobrecarga-regulable-capacidad-de-ruptura-55-36-ka-240-415-vac/3-polos-tm220-atfm/3vm1225-4ee36-0aa0",
+      "nombre": "3VM1225-4EE36-0AA0",
+      "slug": "3vm1225-4ee36-0aa0",
+      "url": "https://grupo-electricos.com/product-category/breakers-en-caja-moldeada/3vm1-hasta-630-amp/capacidad-de-ruptura-55-36-ka-240-415-vac/dispardor-de-sobrecarga-regulable-capacidad-de-ruptura-55-36-ka-240-415-vac/3-polos-tm220-atfm/3vm1225-4ee36-0aa0/",
       "nivel": 6,
       "padre": "breakers-en-caja-moldeada/3vm1-hasta-630-amp/capacidad-de-ruptura-55-36-ka-240-415-vac/dispardor-de-sobrecarga-regulable-capacidad-de-ruptura-55-36-ka-240-415-vac/3-polos-tm220-atfm",
       "productos": 1,
