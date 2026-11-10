@@ -160,7 +160,7 @@ begin
   return jsonb_build_object('ok', true, 'id', v_id, 'valor', v_valor,
     'propia', p_tipo = 'ip' and v_valor = public.ip_clave(public.ip_peticion()));
 end $$;
-revoke all on function public.bloquear_visitante(text, text, text, text) from public;
+revoke all on function public.bloquear_visitante(text, text, text, text) from public, anon;
 grant execute on function public.bloquear_visitante(text, text, text, text) to authenticated;
 
 -- La IP desde la que está el administrador (para avisarle si va a bloquear la suya).
@@ -168,5 +168,5 @@ create or replace function public.mi_ip_clave() returns text
 language sql stable security definer set search_path = public as $$
   select case when public.es_admin() then public.ip_clave(public.ip_peticion()) end
 $$;
-revoke all on function public.mi_ip_clave() from public;
+revoke all on function public.mi_ip_clave() from public, anon;
 grant execute on function public.mi_ip_clave() to authenticated;
