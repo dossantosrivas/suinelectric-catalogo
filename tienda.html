@@ -7071,6 +7071,34 @@ cargar();
   burbuja.hidden = false;
   // Si ya había conversado, se cargan sus mensajes (y el aviso si hay respuestas nuevas).
   if (estado.activo){ traer(); programar(); }
+
+  /* Un asesor puede escribirle primero desde el panel (En vivo → Escribirle, 30_chat_iniciar.sql).
+     Cada pocos segundos se pregunta si hay un mensaje así para este navegador; si lo hay,
+     se abre la conversación (en el celular solo se avisa en la burbuja). */
+  let sinAviso = false, fallosAviso = 0;
+  async function revisarAviso(){
+    const vis = window.suinRastreo && window.suinRastreo.visitante;
+    if (!vis || sinAviso || document.hidden) return;
+    try {
+      const { data, error } = await sb.rpc('chat_aviso', { p_visitante: vis, p_token: estado.token || null });
+      if (error){ if (++fallosAviso >= 3) sinAviso = true; return; }   // p. ej. todavía no se corrió el SQL
+      fallosAviso = 0;
+      if (!data || !data.token || !(data.id > (estado.aviso || 0))) return;
+      if (estado.token !== data.token){ estado.token = data.token; mensajes = []; ultimoId = 0; }
+      estado.activo = true; estado.aviso = data.id; guardar();
+      await traer();
+      if (abierto){ pintar(); marcarNuevos(); }
+      else if (escritorio()) window.abrirChat();
+      else {
+        if (typeof mostrarToast === 'function') mostrarToast('💬 Un asesor de Suinelectric te escribió');
+        avisados = 99; marcarNuevos();
+      }
+      programar();
+    } catch (e) {}
+  }
+  setTimeout(revisarAviso, 2500);
+  setInterval(revisarAviso, 15000);
+  document.addEventListener('visibilitychange', () => { if (!document.hidden) revisarAviso(); });
 })();
 </script>
 

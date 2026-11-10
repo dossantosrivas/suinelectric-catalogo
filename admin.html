@@ -591,7 +591,14 @@
   .vc-der{ text-align:right; white-space:nowrap; font-variant-numeric:tabular-nums; }
   .vc-der strong{ display:block; color:var(--titulo); font-size:14px; }
   .vc-der small{ display:block; color:var(--texto-3); font-size:11.5px; }
-  .vc-der .vc-bloq{ margin-top:6px; }
+  .vc-der .vc-bloq{ margin-top:6px; display:block; margin-left:auto; }
+  .esc-sug{ display:flex; flex-wrap:wrap; gap:6px; margin-top:14px; }
+  .esc-sug .chip{ font-size:12.5px; text-align:left; }
+  .dialogo-caja textarea{ width:100%; resize:vertical; font:inherit; }
+  .esc-hist{ margin-top:12px; padding:10px 12px; border:1px solid var(--linea-suave); border-radius:10px; background:var(--superficie-2); max-height:170px; overflow:auto; font-size:13px; line-height:1.45; }
+  .esc-hist-tit{ font-weight:700; color:var(--titulo); margin-bottom:6px; font-size:12.5px; }
+  .esc-msj{ margin-top:4px; color:var(--texto-2); } .esc-msj.de-cliente{ color:var(--titulo); }
+  .esc-msj small{ color:var(--texto-3); }
   .vc-der .btn.vc-bloq{ padding:3px 9px; font-size:12px; }
   .bloq-fila{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 0; border-bottom:1px solid var(--linea-suave); }
   .bloq-fila small{ display:block; color:var(--texto-3); font-size:12.5px; margin-top:2px; line-height:1.45; }
@@ -2638,10 +2645,11 @@ async function abrirVisitante(id){
       '<div class="vis-modelos">' + data.tarjetas.map(x => '<span title="' + esc(descProd(x.modelo)) + '">' + linkProd(x.modelo) + (x.veces > 1 ? ' <b>×' + x.veces + '</b>' : '') + '</span>').join('') + '</div>') + '</div>' +
     '<div class="seccion"><h3>Paso a paso <small class="muted" style="text-transform:none;letter-spacing:0;font-weight:500">(lo más reciente primero)</small></h3>' + (linea ? '<ul class="act-linea">' + linea + '</ul>' : vacio('Sin actividad en este período.')) + '</div>' +
     '<p class="muted" style="font-size:12.5px">Si la persona borra los datos del navegador o entra desde otro equipo, aparece como un visitante nuevo. El lugar es aproximado.</p>';
-  cuerpo.insertAdjacentHTML('afterend', '<div class="panel-pie">' + (bloqueosDe(vivos[id] || { visitante: id }).length ? '<span class="pill rojo" style="align-self:center">Bloqueado</span>' : '<button class="btn peligro" id="v-bloquear">Bloquear</button>') + '<button class="btn prim" id="v-listo" style="margin-left:auto">Cerrar</button></div>');
+  cuerpo.insertAdjacentHTML('afterend', '<div class="panel-pie">' + (bloqueosDe(vivos[id] || { visitante: id }).length ? '<span class="pill rojo" style="align-self:center">Bloqueado</span>' : '<button class="btn peligro" id="v-bloquear">Bloquear</button>') + '<button class="btn" id="v-escribir">Escribirle</button><button class="btn prim" id="v-listo" style="margin-left:auto">Cerrar</button></div>');
   enlazar();
   $('v-listo').onclick = cerrarPanel;
   if ($('v-bloquear')) $('v-bloquear').onclick = () => bloquearVisitante(id, ult);
+  $('v-escribir').onclick = () => escribirVisitante(id, ult);
   cuerpo.querySelectorAll('[data-act-email]').forEach(a => a.onclick = (e) => { e.preventDefault(); abrirActividad(a.dataset.actEmail); });
 }
 
@@ -2740,12 +2748,15 @@ function pintarVivo(){
           '<div class="vc-pag">' + ICO.ojo + '<span>' + sitio + (r.titulo && !/^\/(tienda)?(\.html)?$/.test(r.pagina || '') ? '<small>' + esc(r.titulo.replace(/\s*\|\s*Suinelectric.*$/i, '')) + '</small>' : '') + '</span></div>' +
           (r.accion ? '<div class="vc-acc">↳ ' + esc(r.accion) + ' <span class="muted">· ' + haceSeg(r.accion_en) + '</span></div>' : '') + '</div>' +
         '<div class="vc-der"><strong>' + durVivo(r.entro) + '</strong><small>' + r.paginas + ' pág.</small><small>' + (r.activo ? haceSeg(r.visto) : 'segundo plano') + '</small>' +
+          '<button type="button" class="btn chico vc-bloq" data-escribir="' + esc(r.visitante) + '">Escribirle</button>' +
           (r.cliente_email ? '' : bloqueosDe(r).length ? '<span class="pill rojo vc-bloq">Bloqueado</span>' : '<button type="button" class="btn chico peligro vc-bloq" data-bloquear="' + esc(r.visitante) + '">Bloquear</button>') + '</div></div>';
     }).join('');
   $('vivo-lista').querySelectorAll('[data-vivo]').forEach(el => el.onclick = (e) => {
     if (e.target.closest('a')) return;
     const bq = e.target.closest('[data-bloquear]');
     if (bq) return bloquearVisitante(bq.dataset.bloquear);
+    const es = e.target.closest('[data-escribir]');
+    if (es) return escribirVisitante(es.dataset.escribir);
     if (el.dataset.email) abrirActividad(el.dataset.email); else abrirVisitante(el.dataset.vivo);
   });
   pintarFeed();
@@ -2795,6 +2806,72 @@ async function cargarAvisos(){
     if (error){ ch.checked = !ch.checked; return toast('Error: ' + mensajeError(error)); }
     toast((ch.checked ? 'Aviso activado: ' : 'Aviso apagado: ') + (avisos.find(a => a.clave === ch.dataset.aviso) || {}).nombre);
   });
+}
+
+/* ---------- Escribirle primero a un visitante (30_chat_iniciar.sql) ---------- */
+const SUGERIDOS_CHAT = [
+  '¡Hola! 👋 Soy de Suinelectric. ¿Buscas algún equipo en particular? Con gusto te ayudo.',
+  '¡Hola! Si necesitas precio, disponibilidad o ayuda para elegir un equipo, escríbeme por aquí.',
+  '¡Hola! ¿Encontraste lo que buscabas? Si no lo ves en la tienda, dime el modelo y te lo consigo.',
+];
+/* r: fila de en_linea (o al menos { visitante }) */
+async function dialogoEscribir(r){
+  const zona = zonaDe(r.pagina), enTienda = zona === 'tienda' || !r.pagina;
+  const nombre = r.cliente_email ? nombreCliente(r.cliente_email) : 'Visitante ' + codigoVis(r.visitante);
+  const d = document.createElement('div');
+  d.className = 'dialogo'; d.setAttribute('role', 'dialog'); d.setAttribute('aria-modal', 'true');
+  d.innerHTML = '<form class="dialogo-caja"><div class="d-icono">' + ICO.whatsapp + '</div>' +
+    '<h2>Escribirle a ' + esc(nombre) + '</h2>' +
+    '<p>' + esc([r.ciudad || r.pais ? lugarDe(r) : '', r.dispositivo ? equipoDe(r) : '', r.accion || ''].filter(Boolean).join(' · ')) + '</p>' +
+    '<p>Tu mensaje le aparece en el chat de la tienda como «Asesor Suinelectric». Lo que te responda te llega por SuinBot (Telegram), y desde ahí sigues la conversación.</p>' +
+    (enTienda ? '' : '<div class="aviso" style="margin:10px 0 0">' + ICO.info + '<div>Ahora está en ' + (zona === 'links' ? 'la página de enlaces' : 'una página de producto') + ', que no tiene chat: verá tu mensaje cuando entre a la tienda.</div></div>') +
+    '<div id="esc-hist"></div>' +
+    '<div class="esc-sug">' + SUGERIDOS_CHAT.map((t, i) => '<button type="button" class="chip" data-sug="' + i + '">' + esc(t.length > 46 ? t.slice(0, 44) + '…' : t) + '</button>').join('') + '</div>' +
+    '<label class="campo">Mensaje<textarea name="texto" rows="3" maxlength="1000" placeholder="Escribe tu mensaje"></textarea></label>' +
+    '<div class="dialogo-pie"><button type="button" class="btn" data-no>Cancelar</button><button class="btn prim" disabled>Enviar</button></div></form>';
+  document.body.appendChild(d);
+  const f = d.querySelector('form'), ok = f.querySelector('button.prim'), ta = f.elements.texto;
+  const fin = () => { document.removeEventListener('keydown', tecla, true); d.remove(); };
+  const tecla = (e) => { if (e.key === 'Escape'){ e.stopPropagation(); fin(); } };
+  document.addEventListener('keydown', tecla, true);
+  d.onclick = (e) => { if (e.target === d) fin(); };
+  f.querySelector('[data-no]').onclick = fin;
+  const revisar = () => { ok.disabled = !ta.value.trim(); };
+  ta.oninput = revisar;
+  d.querySelectorAll('[data-sug]').forEach(b => b.onclick = () => { ta.value = SUGERIDOS_CHAT[Number(b.dataset.sug)]; revisar(); ta.focus(); });
+  setTimeout(() => ta.focus(), 30);
+  f.onsubmit = async (e) => {
+    e.preventDefault();
+    const t = ta.value.trim(); if (!t) return;
+    ok.disabled = true;
+    const { error } = await sb.rpc('chat_iniciar', { p_visitante: r.visitante, p_texto: t });
+    if (error){
+      ok.disabled = false;
+      return toast(/chat_iniciar|PGRST202|schema cache/i.test((error.code || '') + ' ' + (error.message || '')) ? 'Falta correr 30_chat_iniciar.sql en Supabase' : 'Error: ' + mensajeError(error));
+    }
+    fin();
+    toast('Mensaje enviado a ' + nombre);
+  };
+  // Lo que ya se habló con este visitante (si hay).
+  try {
+    const c = await sb.from('chat_conversaciones').select('id,nombre,contacto').eq('visitante', r.visitante).order('ultimo', { ascending: false }).limit(1);
+    const conv = c.data && c.data[0];
+    if (!conv || !d.isConnected) return;
+    const m = await sb.from('chat_mensajes').select('autor,texto,creado').eq('conversacion_id', conv.id).order('id', { ascending: false }).limit(6);
+    const lista = (m.data || []).reverse();
+    if (!lista.length || !d.isConnected) return;
+    const quien = { cliente: conv.nombre || 'Visitante', suinelectric: 'Tú', asistente: 'Asistente (IA)' };
+    $('esc-hist').innerHTML = '<div class="esc-hist"><div class="esc-hist-tit">Chat #' + conv.id + (conv.nombre ? ' · ' + esc(conv.nombre) : '') + (conv.contacto ? ' · ' + esc(conv.contacto) : '') + '</div>' +
+      lista.map(x => '<div class="esc-msj' + (x.autor === 'cliente' ? ' de-cliente' : '') + '"><strong>' + esc(quien[x.autor] || x.autor) + ':</strong> ' + esc(x.texto.length > 220 ? x.texto.slice(0, 218) + '…' : x.texto) + ' <small>' + haceCuanto(x.creado) + '</small></div>').join('') + '</div>';
+  } catch (e) {}
+}
+async function escribirVisitante(id, extra){
+  let r = vivos[id];
+  if (!r){
+    const { data } = await sb.from('en_linea').select('*').eq('visitante', id).maybeSingle();
+    r = data || Object.assign({}, extra || {}, { visitante: id });
+  }
+  dialogoEscribir(r);
 }
 
 /* ---------- Bloqueo de visitantes (29_bloqueos.sql): por navegador y por IP ---------- */
