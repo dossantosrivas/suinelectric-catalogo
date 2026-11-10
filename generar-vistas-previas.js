@@ -26,7 +26,7 @@ const MOSTRAR_PRECIO = true;                           // false = no poner preci
 const MAX_EN_CATEGORIA = 120;                          // más de esto: se muestran subcategorías + una muestra
 // Súbelo cada vez que cambies publico.css o publico.js: el navegador los guarda un día
 // (ver _headers) y sin esto las páginas nuevas se ven con el estilo viejo.
-const VERSION_ESTILOS = 6;
+const VERSION_ESTILOS = 7;
 
 /* ---------- Cargar la organización de categorías desde tienda.html ----------
    Así hay una sola fuente: si cambias las familias en tienda.html, las páginas

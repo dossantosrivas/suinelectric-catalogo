@@ -2770,15 +2770,15 @@ const SUGERIDOS_CHAT = [
 ];
 /* r: fila de en_linea (o al menos { visitante }) */
 async function dialogoEscribir(r){
-  const zona = zonaDe(r.pagina), enTienda = zona === 'tienda' || !r.pagina;
+  const zona = zonaDe(r.pagina), enTienda = zona !== 'links';   // la tienda y las páginas de producto tienen chat; la de enlaces no
   const nombre = r.cliente_email ? nombreCliente(r.cliente_email) : 'Visitante ' + codigoVis(r.visitante);
   const d = document.createElement('div');
   d.className = 'dialogo'; d.setAttribute('role', 'dialog'); d.setAttribute('aria-modal', 'true');
   d.innerHTML = '<form class="dialogo-caja"><div class="d-icono">' + ICO.whatsapp + '</div>' +
     '<h2>Escribirle a ' + esc(nombre) + '</h2>' +
     '<p>' + esc([r.ciudad || r.pais ? lugarDe(r) : '', r.dispositivo ? equipoDe(r) : '', r.accion || ''].filter(Boolean).join(' · ')) + '</p>' +
-    '<p>Tu mensaje le aparece en el chat de la tienda como «Asesor Suinelectric». Lo que te responda te llega por SuinBot (Telegram), y desde ahí sigues la conversación.</p>' +
-    (enTienda ? '' : '<div class="aviso" style="margin:10px 0 0">' + ICO.info + '<div>Ahora está en ' + (zona === 'links' ? 'la página de enlaces' : 'una página de producto') + ', que no tiene chat: verá tu mensaje cuando entre a la tienda.</div></div>') +
+    '<p>Tu mensaje le aparece en el chat (tienda y páginas de producto) como «Asesor Suinelectric». Lo que te responda te llega por SuinBot (Telegram), y desde ahí sigues la conversación.</p>' +
+    (enTienda ? '' : '<div class="aviso" style="margin:10px 0 0">' + ICO.info + '<div>Ahora está en la página de enlaces, que no tiene chat: verá tu mensaje cuando entre a la tienda o a una página de producto.</div></div>') +
     '<div id="esc-hist"></div>' +
     '<div class="esc-sug">' + SUGERIDOS_CHAT.map((t, i) => '<button type="button" class="chip" data-sug="' + i + '">' + esc(t.length > 46 ? t.slice(0, 44) + '…' : t) + '</button>').join('') + '</div>' +
     '<label class="campo">Mensaje<textarea name="texto" rows="3" maxlength="1000" placeholder="Escribe tu mensaje"></textarea></label>' +
