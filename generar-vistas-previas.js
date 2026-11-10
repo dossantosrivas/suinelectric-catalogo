@@ -60,6 +60,9 @@ const FECHA = (fuenteScraper.generado || new Date().toISOString()).slice(0, 10);
 const esc = (s) => String(s == null ? '' : s).replace(/&/g, '&amp;').replace(/</g, '&lt;').replace(/>/g, '&gt;').replace(/"/g, '&quot;');
 const corto = (s, n) => { s = String(s || '').replace(/\s+/g, ' ').trim(); return s.length > n ? s.slice(0, n - 1).trimEnd() + '…' : s; };
 const dinero = (n) => '$' + Math.ceil(n).toLocaleString('en-US');
+// Precio de lista tachado junto al precio con descuento (igual que la tienda y que publico.js).
+const precioAntes = (p, precio, grande) => (precio != null && p.precio != null && Number(p.precio) > 0 && precio < Math.ceil(Number(p.precio)))
+  ? ' <s class="precio-antes' + (grande ? ' grande' : '') + '" title="Precio de lista, sin descuento">' + dinero(Number(p.precio)) + '</s>' : '';
 function precioVisitante(p){
   if (!MOSTRAR_PRECIO || p.precio == null || isNaN(Number(p.precio))) return null;
   return Math.ceil(p._manual ? Number(p.precio) : Number(p.precio) * (1 - DESCUENTO_GENERAL / 100));
@@ -267,7 +270,7 @@ function tarjeta(p){
     '<span class="t-marca">' + esc(p.marca || '') + '</span>' +
     '<strong>' + esc(p.modelo) + '</strong>' +
     '<span class="t-desc">' + esc(corto(p.descripcion || p.nombre, 90)) + '</span>' +
-    '<span class="t-pie"><b class="precio-cli"' + datosPrecio(p) + '>' + (precio != null ? dinero(precio) : 'Consultar') + '</b><em class="' + (p.disponible === false ? 'off' : 'ok') + '">' + esc(textoStock(p)) + '</em></span></a>';
+    '<span class="t-pie"><b class="precio-cli"' + datosPrecio(p) + '>' + (precio != null ? dinero(precio) + precioAntes(p, precio) : 'Consultar') + '</b><em class="' + (p.disponible === false ? 'off' : 'ok') + '">' + esc(textoStock(p)) + '</em></span></a>';
 }
 
 /* ---------- Limpiar lo generado antes ---------- */
@@ -345,7 +348,7 @@ for (const p of productos){
         (marca ? '<div class="p-marca">' + esc(marca) + '</div>' : '') +
         '<h1>' + esc(p.modelo) + '</h1>' +
         (sep.texto ? '<p class="p-desc">' + esc(sep.texto) + '</p>' : '') +
-        '<div class="p-precio precio-cli"' + datosPrecio(p) + '>' + (precio != null ? dinero(precio) + ' <small>USD</small>' : 'Consultar precio') + '</div>' +
+        '<div class="p-precio precio-cli"' + datosPrecio(p) + '>' + (precio != null ? dinero(precio) + ' <small>USD</small>' + precioAntes(p, precio, true) : 'Consultar precio') + '</div>' +
         '<div class="p-stock ' + (p.disponible === false ? 'off' : 'ok') + '">' + esc(textoStock(p)) + '</div>' +
         '<div class="p-botones">' +
           '<a class="btn wa" href="' + esc(waLink(textoWa)) + '" data-modelo="' + esc(p.modelo) + '" rel="noopener">Cotizar por WhatsApp</a>' +
@@ -362,7 +365,7 @@ for (const p of productos){
         '</dl>' +
         enlacesOficiales(p) +
         // celular: barra fija abajo con el modelo, el precio y Cotizar
-        '<div class="p-barra"><div class="p-barra-txt"><strong>' + esc(p.modelo) + '</strong><span class="precio-cli"' + datosPrecio(p) + '>' + (precio != null ? dinero(precio) : 'Consultar precio') + '</span></div>' +
+        '<div class="p-barra"><div class="p-barra-txt"><strong>' + esc(p.modelo) + '</strong><span class="precio-cli"' + datosPrecio(p) + '>' + (precio != null ? dinero(precio) + precioAntes(p, precio) : 'Consultar precio') + '</span></div>' +
           '<a class="btn wa" href="' + esc(waLink(textoWa)) + '" data-modelo="' + esc(p.modelo) + '" rel="noopener">' + ICONO_WA + 'Cotizar</a></div>' +
       '</div>' +
     '</article>' +

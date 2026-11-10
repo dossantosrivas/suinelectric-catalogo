@@ -43,7 +43,10 @@
 /* Precios del cliente: las páginas /p/ y /c/ traen el precio de visitante.
    Si en este navegador hay una sesión abierta de la tienda, se cargan sus reglas
    de descuento desde Supabase y se recalculan los precios con la misma lógica
-   que tienda.html (precioMostrado / reglaPara). Los visitantes no cargan nada. */
+   que tienda.html (precioMostrado / reglaPara). Los visitantes no cargan nada.
+   Cuando el precio que se muestra es menor que el de lista, al lado va el precio
+   de lista tachado (como en la tienda), para que se vea que el descuento ya está
+   aplicado. */
 (function(){
   var URL_SB = 'https://yqnlxhbjassrkudnhvpr.supabase.co';
   var CLAVE = 'sb_publishable_LOYjM5sqvQbBLIkH4KJTKQ_UfxrpTeC';
@@ -51,7 +54,7 @@
   var DESCUENTO_GENERAL = 60;
   var hay = null;
   try { hay = localStorage.getItem(LLAVE); } catch (e) {}
-  if (!hay || !document.querySelector('.precio-cli')) return;
+  if (!document.querySelector('.precio-cli')) return;
 
   // que: 0 modelo · 1 marca+categoría · 2 categoría · 3 marca · 4 todo   quien: 0 cliente · 1 tipo · 2 todos
   function rango(que, quien){ return que === 0 ? 1 + quien : 4 + quien * 4 + (que - 1); }
@@ -87,6 +90,31 @@
     return p.manual ? p.lista : p.lista * (1 - general / 100);
   }
   function dinero(n){ return '$' + Math.ceil(n).toLocaleString('en-US'); }
+  // Precio de lista tachado (solo si el precio mostrado es menor). El estilo va aquí mismo
+  // para no depender de la versión de publico.css que tenga guardada el navegador.
+  function tachado(lista, final, grande){
+    if (!(lista > 0) || final == null || !(Math.ceil(final) < Math.ceil(lista))) return '';
+    return ' <s class="precio-antes" title="Precio de lista, sin descuento" style="font-family:var(--sans);font-weight:500;color:var(--t3);' +
+           'text-decoration:line-through;white-space:nowrap;font-size:' + (grande ? '18px' : '.78em') + ';margin-left:' + (grande ? '8px' : '3px') + '">' + dinero(lista) + '</s>';
+  }
+  function datosDe(el){
+    var l = el.getAttribute('data-lista');
+    return { lista: (l === '' || l == null || isNaN(Number(l))) ? null : Number(l),
+             marca: el.getAttribute('data-marca'), modelo: el.getAttribute('data-modelo'),
+             manual: el.getAttribute('data-manual') === '1',
+             cats: String(el.getAttribute('data-cat') || '').split('|').filter(Boolean) };
+  }
+  // Visitantes: la página ya trae su precio; solo se le agrega el de lista tachado.
+  function tacharVisitante(){
+    var els = document.querySelectorAll('.precio-cli');
+    for (var i = 0; i < els.length; i++){
+      var el = els[i];
+      if (el.querySelector('.precio-antes')) continue;
+      var p = datosDe(el);
+      var t = tachado(p.lista, precioPara(p, null, DESCUENTO_GENERAL), el.classList.contains('p-precio'));
+      if (t) el.insertAdjacentHTML('beforeend', t);
+    }
+  }
 
   function aplicar(reglas, email, tipo){
     var g = null;
@@ -95,11 +123,7 @@
     var els = document.querySelectorAll('.precio-cli');
     for (var i = 0; i < els.length; i++){
       var el = els[i];
-      var l = el.getAttribute('data-lista');
-      var p = { lista: (l === '' || l == null || isNaN(Number(l))) ? null : Number(l),
-                marca: el.getAttribute('data-marca'), modelo: el.getAttribute('data-modelo'),
-                manual: el.getAttribute('data-manual') === '1',
-                cats: String(el.getAttribute('data-cat') || '').split('|').filter(Boolean) };
+      var p = datosDe(el);
       var r = reglaPara(p, reglas, email, tipo);
       var final = precioPara(p, r, general);
       if (final == null || isNaN(final)) continue;
@@ -112,7 +136,7 @@
         badge = '<span class="dto-badge" title="' + (fijo ? 'Precio especial para ti' : 'Tu descuento de cliente') + '">-' +
                 String(pct).replace('.', ',') + '%' + (fijo ? ' · especial' : '') + '</span>';
       }
-      el.innerHTML = dinero(final) + (grande ? ' <small>USD</small>' : '') + badge;
+      el.innerHTML = dinero(final) + (grande ? ' <small>USD</small>' : '') + tachado(p.lista, final, grande) + badge;
       if (grande && (propio || fijo)){
         var nota = el.parentNode.querySelector('.p-nota-cli');
         if (!nota){ nota = document.createElement('div'); nota.className = 'p-nota-cli'; el.parentNode.insertBefore(nota, el.nextSibling); }
@@ -120,6 +144,9 @@
       }
     }
   }
+
+  try { tacharVisitante(); } catch (e) {}
+  if (!hay) return;
 
   var s = document.createElement('script');
   s.src = 'https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2';
