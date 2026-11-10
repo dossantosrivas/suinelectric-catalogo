@@ -304,6 +304,12 @@
   .pd-num .abrir:hover strong{ color:var(--azul-texto); text-decoration-color:currentColor; }
   .items li.mas{ color:var(--azul-texto); cursor:pointer; border-bottom:none; font-weight:600; }
   .chip.sep{ margin-left:6px; }
+  /* Rango de fechas de Estadísticas */
+  .rango-ana{ display:flex; gap:6px 10px; align-items:center; flex-wrap:wrap; }
+  .rango-ana label{ display:inline-flex; align-items:center; gap:6px; font-size:12.5px; font-weight:600; color:var(--texto-3); }
+  .rango-ana input{ width:auto; height:32px; padding:0 9px; font-size:13px; border-radius:20px; }
+  .rango-ana.activo input{ border-color:var(--azul); color:var(--texto); }
+  .rango-ana .chip{ padding:6px 10px; }
   .nota-cli{ margin-top:10px; font-size:13px; color:var(--texto-2); background:var(--amarillo-suave); border-radius:8px; padding:8px 11px; line-height:1.5; }
   .nota-cli strong{ color:var(--amarillo-texto); }
 
@@ -831,12 +837,64 @@ const ANALISIS = [['estadisticas', 'Búsquedas y clientes', ICO.grafica], ['visi
 const grupoTab = (t) => ANALISIS.some(a => a[0] === t) ? 'estadisticas' : t;
 // Cabecera común de las tres pestañas de Estadísticas
 let diasAna = (() => { try { const n = Number(localStorage.getItem('suin_admin_dias')); return [1, 7, 30, 90].includes(n) ? n : 30; } catch (e) { return 30; } })();
-function chipsAna(){ return '<div class="chips">' + DIAS_VIS.map(([d, t]) => '<button class="chip' + (diasAna === d ? ' activo' : '') + '" data-dias-ana="' + d + '">' + t + '</button>').join('') + '</div>'; }
+// Rango de fechas elegido a mano (28_rango_fechas_estadisticas.sql): { desde, hasta } en AAAA-MM-DD (hasta '' = hasta hoy), o null si se usa un período fijo
+const DIA_MS = 86400000;
+const fechaAna = (s) => new Date(s + 'T12:00:00-04:00');   // mediodía de Venezuela
+const esFechaAna = (s) => /^\d{4}-\d{2}-\d{2}$/.test(s || '') && !isNaN(fechaAna(s));
+const claveDia = (f) => f.toLocaleDateString('en-CA', { timeZone: 'America/Caracas' });
+let rangoAna = (() => { try { const r = JSON.parse(localStorage.getItem('suin_admin_rango') || 'null'); return r && esFechaAna(r.desde) ? { desde: r.desde, hasta: esFechaAna(r.hasta) ? r.hasta : '' } : null; } catch (e) { return null; } })();
+const guardarRangoAna = () => { try { if (rangoAna) localStorage.setItem('suin_admin_rango', JSON.stringify(rangoAna)); else localStorage.removeItem('suin_admin_rango'); } catch (e) {} };
+// Lo que se le manda a las funciones resumen_… de Supabase
+const paramsAna = () => rangoAna ? { dias: diasAna, p_desde: rangoAna.desde, p_hasta: rangoAna.hasta || null } : { dias: diasAna };
+// Días que van en los gráficos por día (del más viejo al más nuevo)
+function diasGraficoAna(){
+  const lista = [];
+  if (rangoAna){
+    const fin = fechaAna(rangoAna.hasta || claveDia(new Date()));
+    for (let f = fechaAna(rangoAna.desde); f <= fin; f = new Date(f.getTime() + DIA_MS)) lista.push({ f, k: claveDia(f) });
+    return lista;
+  }
+  for (let i = Math.max(diasAna, 7) - 1; i >= 0; i--){ const f = new Date(Date.now() - i * DIA_MS); lista.push({ f, k: claveDia(f) }); }
+  return lista;
+}
+const cadaAna = (n) => n <= 7 ? 1 : n <= 31 ? 5 : n <= 92 ? 15 : 30;
+// Aviso cuando se pide un rango y la base todavía no lo entiende
+const faltaRangoAna = (err) => !rangoAna || !err || !(err.code === 'PGRST202' || /p_desde|p_hasta/.test(err.message || '')) ? '' :
+  '<div class="caja"><div class="tarjeta-sync"><div class="icono mal">' + ICO.alerta + '</div><div><strong>Falta activar el rango de fechas en Supabase</strong><div class="muted">Corre <span class="mono">28_rango_fechas_estadisticas.sql</span> en Supabase → SQL Editor para poder elegir desde qué fecha ver las estadísticas. Mientras tanto, los períodos fijos (24 horas, 7, 30 y 90 días) siguen funcionando.</div></div></div></div>';
+function chipsAna(){
+  const hoy = claveDia(new Date());
+  return '<div class="chips">' + DIAS_VIS.map(([d, t]) => '<button class="chip' + (!rangoAna && diasAna === d ? ' activo' : '') + '" data-dias-ana="' + d + '">' + t + '</button>').join('') + '</div>' +
+    '<div class="rango-ana' + (rangoAna ? ' activo' : '') + '">' +
+      '<label>Desde<input type="date" id="ana-desde" max="' + hoy + '" value="' + (rangoAna ? rangoAna.desde : '') + '"></label>' +
+      '<label>Hasta<input type="date" id="ana-hasta" max="' + hoy + '" value="' + (rangoAna ? rangoAna.hasta : '') + '"></label>' +
+      (rangoAna ? '<button class="chip" id="ana-quitar" title="Quitar las fechas y volver a los períodos fijos" aria-label="Quitar las fechas">✕</button>' : '') +
+    '</div>';
+}
 function cabAnalisis(titulo, sub){
   return '<nav class="subtabs" aria-label="Estadísticas">' + ANALISIS.map(([id, nom, ic]) => '<a href="' + urlDe(id) + '" data-sub="' + id + '" class="' + (tab === id ? 'activa' : '') + '"' + (tab === id ? ' aria-current="page"' : '') + '>' + ic + nom + '</a>').join('') + '</nav>' + cabecera(titulo, sub, chipsAna());
 }
 function activarAnalisis(fn){
-  document.querySelectorAll('[data-dias-ana]').forEach(b => b.onclick = () => { diasAna = Number(b.dataset.diasAna); try { localStorage.setItem('suin_admin_dias', diasAna); } catch (e) {} fn(); });
+  document.querySelectorAll('[data-dias-ana]').forEach(b => b.onclick = () => { diasAna = Number(b.dataset.diasAna); rangoAna = null; guardarRangoAna(); try { localStorage.setItem('suin_admin_dias', diasAna); } catch (e) {} fn(); });
+  // Rango de fechas a mano: se aplica al cambiar cualquiera de las dos fechas
+  const iDesde = $('ana-desde'), iHasta = $('ana-hasta'), quitar = $('ana-quitar');
+  const aplicar = () => {
+    const hoy = claveDia(new Date());
+    let d = iDesde.value, h = iHasta.value;
+    if (!esFechaAna(d)){
+      if (rangoAna && !d){ rangoAna = null; guardarRangoAna(); fn(); }
+      else if (h) toast('Elige también la fecha “Desde”');
+      return;
+    }
+    if (!esFechaAna(h)) h = '';
+    if (d > hoy) d = hoy;
+    if (h && h > hoy) h = '';
+    if (h && h < d) [d, h] = [h, d];
+    if ((fechaAna(h || hoy) - fechaAna(d)) / DIA_MS > 365){ d = claveDia(new Date(fechaAna(h || hoy).getTime() - 365 * DIA_MS)); toast('Se muestra como máximo un año'); }
+    rangoAna = { desde: d, hasta: h }; guardarRangoAna(); fn();
+  };
+  if (iDesde) iDesde.onchange = aplicar;
+  if (iHasta) iHasta.onchange = aplicar;
+  if (quitar) quitar.onclick = () => { rangoAna = null; guardarRangoAna(); fn(); };
   document.querySelectorAll('[data-sub]').forEach(a => a.onclick = (e) => { if (e.ctrlKey || e.metaKey || e.shiftKey || e.button === 1) return; e.preventDefault(); irA(a.dataset.sub); });
 }
 /* Orden del menú elegido por cada administrador (se guarda en este navegador) */
@@ -2029,13 +2087,13 @@ async function vistaEstadisticas(){
   $('main').innerHTML = cabAnalisis('Búsquedas y clientes', 'Qué buscan, qué miran y qué cotizan tus clientes. Abajo, cada cliente con cuenta por separado. No se cuenta lo que haces tú como administrador.') + '<div class="cargando">Cargando…</div>';
   activarAnalisis(vistaEstadisticas);
   const [{ data, error }, resCli] = await Promise.all([
-    sb.rpc('resumen_estadisticas', { dias: diasAna }),
-    sb.rpc('clientes_activos', { dias: diasAna }).then(r => r, e => ({ error: e })),
+    sb.rpc('resumen_estadisticas', paramsAna()),
+    sb.rpc('clientes_activos', paramsAna()).then(r => r, e => ({ error: e })),
   ]);
   if (tab !== 'estadisticas') return;
   const cont = document.querySelector('#main .cargando');
   if (error || !data){
-    cont.outerHTML = '<div class="caja"><div class="tarjeta-sync"><div class="icono mal">' + ICO.alerta + '</div><div><strong>Falta instalar las estadísticas en Supabase</strong><div class="muted">Corre <span class="mono">04_estadisticas.sql</span> en Supabase → SQL Editor. Desde ese momento la tienda empieza a anotar búsquedas, visitas y cotizaciones.</div></div></div></div>';
+    cont.outerHTML = faltaRangoAna(error) || '<div class="caja"><div class="tarjeta-sync"><div class="icono mal">' + ICO.alerta + '</div><div><strong>Falta instalar las estadísticas en Supabase</strong><div class="muted">Corre <span class="mono">04_estadisticas.sql</span> en Supabase → SQL Editor. Desde ese momento la tienda empieza a anotar búsquedas, visitas y cotizaciones.</div></div></div></div>';
     return;
   }
   sb.rpc('limpiar_eventos').then(() => {}, () => {});
@@ -2050,14 +2108,9 @@ async function vistaEstadisticas(){
 
   // Gráfico por día (completa los días sin datos)
   const porDia = {}; (data.por_dia || []).forEach(d => { porDia[d.dia] = d; });
-  const dias = [];
-  for (let i = Math.max(diasAna, 7) - 1; i >= 0; i--){
-    const f = new Date(Date.now() - i * 86400000);
-    const k = f.toLocaleDateString('en-CA', { timeZone: 'America/Caracas' });
-    dias.push({ k, f, v: (porDia[k] || {}).vistas || 0, c: (porDia[k] || {}).cotiza || 0 });
-  }
+  const dias = diasGraficoAna().map(({ f, k }) => ({ k, f, v: (porDia[k] || {}).vistas || 0, c: (porDia[k] || {}).cotiza || 0 }));
   const maxV = Math.max(1, ...dias.map(d => Math.max(d.v, d.c)));
-  const cada = diasAna <= 7 ? 1 : diasAna <= 30 ? 5 : 15;
+  const cada = cadaAna(dias.length);
   const grafico = '<div class="grafico">' + dias.map(d => '<div class="col" data-tip="' + d.f.toLocaleDateString('es-VE', { weekday: 'short', day: 'numeric', month: 'short' }) + ': ' + d.v + ' vistas · ' + d.c + ' cotiz.">' +
       '<div class="b1" style="height:' + (100 * d.v / maxV) + '%"></div><div class="b2" style="height:' + (100 * d.c / maxV) + '%"></div></div>').join('') + '</div>' +
     '<div class="grafico-ejes">' + dias.map((d, i) => '<span>' + ((dias.length - 1 - i) % cada === 0 ? d.f.getDate() : '') + '</span>').join('') + '</div>';
@@ -2364,10 +2417,10 @@ function activarPlegables(grupo){
 async function vistaVisitantes(){
   $('main').innerHTML = cabAnalisis('Visitantes', 'Quienes entran sin iniciar sesión: cuántos son, de dónde, cuándo, qué buscan y qué productos ven. Toca una visita para ver todo lo que hizo esa persona. No se cuenta lo que haces tú como administrador.') + '<div class="cargando">Cargando…</div>';
   activarAnalisis(vistaVisitantes);
-  const { data, error } = await sb.rpc('resumen_visitantes', { dias: diasAna });
+  const { data, error } = await sb.rpc('resumen_visitantes', paramsAna());
   if (tab !== 'visitantes') return;
   const cont = document.querySelector('#main .cargando');
-  if (error || !data){ cont.outerHTML = faltaVisitantes(error); return; }
+  if (error || !data){ cont.outerHTML = faltaRangoAna(error) || faltaVisitantes(error); return; }
   datosVis = data; cuantasVis = 25;
   const t = data.totales || {};
   const kpi = (icono, titulo, num, pie, extra) => '<div class="kpi' + (extra || '') + '"><div class="k-cab">' + titulo + icono + '</div><div class="k-num">' + (typeof num === 'string' ? num : Number(num || 0).toLocaleString('es-VE')) + '</div><div class="k-pie">' + pie + '</div></div>';
@@ -2380,15 +2433,9 @@ async function vistaVisitantes(){
 
   // Visitas por día (completa los días sin datos)
   const porDia = {}; (data.por_dia || []).forEach(d => { porDia[d.dia] = d; });
-  const dias = [];
-  const nDias = Math.max(diasAna, 7);
-  for (let i = nDias - 1; i >= 0; i--){
-    const f = new Date(Date.now() - i * 86400000);
-    const k = f.toLocaleDateString('en-CA', { timeZone: 'America/Caracas' });
-    dias.push({ f, v: (porDia[k] || {}).visitas || 0, p: (porDia[k] || {}).visitantes || 0 });
-  }
+  const dias = diasGraficoAna().map(({ f, k }) => ({ f, v: (porDia[k] || {}).visitas || 0, p: (porDia[k] || {}).visitantes || 0 }));
   const maxV = Math.max(1, ...dias.map(d => d.v));
-  const cada = nDias <= 7 ? 1 : nDias <= 30 ? 5 : 15;
+  const cada = cadaAna(dias.length);
   const grafico = '<div class="grafico">' + dias.map(d => '<div class="col" data-tip="' + d.f.toLocaleDateString('es-VE', { weekday: 'short', day: 'numeric', month: 'short' }) + ': ' + d.v + ' visitas · ' + d.p + ' personas">' +
       '<div class="b1" style="height:' + (100 * d.v / maxV) + '%"></div><div class="b2" style="height:' + (100 * d.p / maxV) + '%"></div></div>').join('') + '</div>' +
     '<div class="grafico-ejes">' + dias.map((d, i) => '<span>' + ((dias.length - 1 - i) % cada === 0 ? d.f.getDate() : '') + '</span>').join('') + '</div>';
@@ -2738,10 +2785,10 @@ const faltaEnlaces = (err) => '<div class="caja"><div class="tarjeta-sync"><div 
 async function vistaEnlaces(){
   $('main').innerHTML = cabAnalisis('Página de enlaces', 'Quién entra a <a href="/links" target="_blank" rel="noopener">suinelectric.com/links</a>, de dónde llega, qué botones toca y si sigue a la tienda. Toca una visita para ver todo lo que hizo esa persona.') + '<div class="cargando">Cargando…</div>';
   activarAnalisis(vistaEnlaces);
-  const { data, error } = await sb.rpc('resumen_links', { dias: diasAna });
+  const { data, error } = await sb.rpc('resumen_links', paramsAna());
   if (tab !== 'enlaces') return;
   const cont = document.querySelector('#main .cargando');
-  if (error || !data){ cont.outerHTML = faltaEnlaces(error); return; }
+  if (error || !data){ cont.outerHTML = faltaRangoAna(error) || faltaEnlaces(error); return; }
   datosLnk = data; cuantasLnk = 25;
   const t = data.totales || {};
   const n = (x) => Number(x || 0).toLocaleString('es-VE');
@@ -2754,14 +2801,9 @@ async function vistaEnlaces(){
 
   // Visitas y clics por día (completa los días sin datos)
   const porDia = {}; (data.por_dia || []).forEach(d => { porDia[d.dia] = d; });
-  const nDias = Math.max(diasAna, 7), dias = [];
-  for (let i = nDias - 1; i >= 0; i--){
-    const f = new Date(Date.now() - i * 86400000);
-    const k = f.toLocaleDateString('en-CA', { timeZone: 'America/Caracas' });
-    dias.push({ f, v: (porDia[k] || {}).visitas || 0, c: (porDia[k] || {}).clics || 0 });
-  }
+  const dias = diasGraficoAna().map(({ f, k }) => ({ f, v: (porDia[k] || {}).visitas || 0, c: (porDia[k] || {}).clics || 0 }));
   const maxV = Math.max(1, ...dias.map(d => Math.max(d.v, d.c)));
-  const cada = nDias <= 7 ? 1 : nDias <= 30 ? 5 : 15;
+  const cada = cadaAna(dias.length);
   const grafico = '<div class="grafico">' + dias.map(d => '<div class="col" data-tip="' + d.f.toLocaleDateString('es-VE', { weekday: 'short', day: 'numeric', month: 'short' }) + ': ' + d.v + ' visitas · ' + d.c + ' clics">' +
       '<div class="b1" style="height:' + (100 * d.v / maxV) + '%"></div><div class="b2" style="height:' + (100 * d.c / maxV) + '%"></div></div>').join('') + '</div>' +
     '<div class="grafico-ejes">' + dias.map((d, i) => '<span>' + ((dias.length - 1 - i) % cada === 0 ? d.f.getDate() : '') + '</span>').join('') + '</div>';
