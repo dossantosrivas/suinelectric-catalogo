@@ -600,6 +600,8 @@
   .sug-desc{ white-space:normal; display:-webkit-box; -webkit-line-clamp:2; -webkit-box-orient:vertical; }
   .sug-fila-datos{ display:flex; align-items:center; gap:10px; margin-top:4px; }
   .sug-precio{ font-size:16px; font-weight:700; color:var(--tinta); font-variant-numeric:tabular-nums; }
+  .sug-precio-antes{ font-size:13px; color:var(--texto-3); text-decoration:line-through; font-variant-numeric:tabular-nums; margin-left:-4px; }
+  .sug-fila-datos{ flex-wrap:wrap; row-gap:2px; }
   .sug-stock{ font-size:12.5px; font-weight:600; padding:1px 8px; border-radius:10px; }
   .sug-stock.ok{ color:var(--ok); background:var(--ok-suave); }
   .sug-stock.off{ color:var(--off); background:var(--off-suave); }
@@ -4954,7 +4956,9 @@ function renderSugerencias(){
         (p.descripcion ? '<div class="sug-desc">' + p.descripcion + '</div>' : '') +
         '<div class="sug-ruta">' + migasHTML(rutaNavDe(p)) + '</div>' +
         '<div class="sug-fila-datos">' +
-          '<span class="sug-precio">' + formatoMoneda(precioMostrado(p)) + '</span>' + badgeDescuento(p, 'dto-chico') +
+          '<span class="sug-precio">' + formatoMoneda(precioMostrado(p)) + '</span>' +
+          (descuentoDe(p) ? '<span class="sug-precio-antes" title="Precio de lista, sin descuento">' + formatoMoneda(p.precio) + '</span>' : '') +
+          badgeDescuento(p, 'dto-chico') +
           '<span class="sug-stock ' + (p.disponible ? 'ok' : 'off') + '">' +
             textoStock(p, 'Agotado') +
           '</span>' +
