@@ -585,6 +585,17 @@
   .vc-der{ text-align:right; white-space:nowrap; font-variant-numeric:tabular-nums; }
   .vc-der strong{ display:block; color:var(--titulo); font-size:14px; }
   .vc-der small{ display:block; color:var(--texto-3); font-size:11.5px; }
+  .vc-der .vc-bloq{ margin-top:6px; }
+  .vc-der .btn.vc-bloq{ padding:3px 9px; font-size:12px; }
+  .bloq-fila{ display:flex; align-items:center; justify-content:space-between; gap:12px; padding:10px 0; border-bottom:1px solid var(--linea-suave); }
+  .bloq-fila small{ display:block; color:var(--texto-3); font-size:12.5px; margin-top:2px; line-height:1.45; }
+  .bloq-fila .btn{ flex:none; }
+  .bloq-manual{ display:flex; gap:8px; margin-top:14px; flex-wrap:wrap; }
+  .bloq-manual input{ flex:1; min-width:220px; }
+  .bloq-op{ display:flex; gap:10px; align-items:flex-start; margin-top:12px; padding:11px 12px; border:1px solid var(--linea); border-radius:10px; cursor:pointer; }
+  .bloq-op input{ margin-top:3px; flex:none; }
+  .bloq-op strong{ display:block; color:var(--titulo); font-size:14px; }
+  .bloq-op small{ display:block; color:var(--texto-2); font-size:12.5px; line-height:1.45; margin-top:2px; }
   .feed{ list-style:none; margin:0; padding:0; max-height:620px; overflow-y:auto; }
   .feed li{ display:grid; grid-template-columns:18px minmax(0,1fr) auto; gap:10px; padding:9px 6px; margin:0 -6px; border-radius:8px; border-bottom:1px dashed var(--linea-suave); font-size:13.5px; cursor:pointer; }
   .feed li.vacio{ display:block; cursor:default; border:none; }
@@ -2581,9 +2592,10 @@ async function abrirVisitante(id){
       '<div class="vis-modelos">' + data.tarjetas.map(x => '<span title="' + esc(descProd(x.modelo)) + '">' + linkProd(x.modelo) + (x.veces > 1 ? ' <b>×' + x.veces + '</b>' : '') + '</span>').join('') + '</div>') + '</div>' +
     '<div class="seccion"><h3>Paso a paso <small class="muted" style="text-transform:none;letter-spacing:0;font-weight:500">(lo más reciente primero)</small></h3>' + (linea ? '<ul class="act-linea">' + linea + '</ul>' : vacio('Sin actividad en este período.')) + '</div>' +
     '<p class="muted" style="font-size:12.5px">Si la persona borra los datos del navegador o entra desde otro equipo, aparece como un visitante nuevo. El lugar es aproximado.</p>';
-  cuerpo.insertAdjacentHTML('afterend', '<div class="panel-pie"><button class="btn prim" id="v-listo" style="margin-left:auto">Cerrar</button></div>');
+  cuerpo.insertAdjacentHTML('afterend', '<div class="panel-pie">' + (bloqueosDe(vivos[id] || { visitante: id }).length ? '<span class="pill rojo" style="align-self:center">Bloqueado</span>' : '<button class="btn peligro" id="v-bloquear">Bloquear</button>') + '<button class="btn prim" id="v-listo" style="margin-left:auto">Cerrar</button></div>');
   enlazar();
   $('v-listo').onclick = cerrarPanel;
+  if ($('v-bloquear')) $('v-bloquear').onclick = () => bloquearVisitante(id, ult);
   cuerpo.querySelectorAll('[data-act-email]').forEach(a => a.onclick = (e) => { e.preventDefault(); abrirActividad(a.dataset.actEmail); });
 }
 
@@ -2608,6 +2620,7 @@ async function iniciarVivo(){
   if (a.error){ vivoEstado = 'falta'; vivoError = a.error; pintarVivoBadge(); if (tab === 'envivo') vistaEnVivo(); return; }
   (a.data || []).forEach(r => { vivos[r.visitante] = r; });
   feed = b.data || [];
+  cargarBloqueos().catch(() => {});
   vivoCanal = sb.channel('panel-en-vivo')
     .on('postgres_changes', { event: '*', schema: 'public', table: 'en_linea' }, (m) => {
       if (m.eventType === 'DELETE'){ if (m.old && m.old.visitante) delete vivos[m.old.visitante]; }
@@ -2649,9 +2662,11 @@ function vistaEnVivo(){
         '<p class="muted" style="margin:0 0 10px">En gris: dejó la pestaña en segundo plano</p><div id="vivo-lista"></div>') +
       plegable('viv', 'feed', ICO.grafica, 'Lo que va pasando', '<span id="vivo-res-feed">Última hora</span>', '<ol class="feed" id="vivo-feed"></ol>') +
       plegable('viv', 'avisos', ICO.whatsapp, 'Avisos a Telegram', 'Te llegan por SuinBot', '<div id="vivo-avisos"><div class="cargando">Cargando…</div></div>') +
+      plegable('viv', 'bloq', ICO.alerta, 'Bloqueados <small id="bloq-n">0</small>', '<span id="bloq-res">Nadie bloqueado</span>', '<div id="vivo-bloq"></div>') +
     '</div>';
   activarPlegables('viv');
   pintarVivo();
+  pintarBloqueos();
   cargarAvisos();
 }
 function pintarVivo(){
@@ -2678,10 +2693,13 @@ function pintarVivo(){
           '<div class="vc-lugar muted">' + esc([lugarDe(r), equipoDe(r), r.referencia ? 'llegó por ' + r.referencia : 'entró directo'].filter(Boolean).join(' · ')) + '</div>' +
           '<div class="vc-pag">' + ICO.ojo + '<span>' + sitio + (r.titulo && !/^\/(tienda)?(\.html)?$/.test(r.pagina || '') ? '<small>' + esc(r.titulo.replace(/\s*\|\s*Suinelectric.*$/i, '')) + '</small>' : '') + '</span></div>' +
           (r.accion ? '<div class="vc-acc">↳ ' + esc(r.accion) + ' <span class="muted">· ' + haceSeg(r.accion_en) + '</span></div>' : '') + '</div>' +
-        '<div class="vc-der"><strong>' + durVivo(r.entro) + '</strong><small>' + r.paginas + ' pág.</small><small>' + (r.activo ? haceSeg(r.visto) : 'segundo plano') + '</small></div></div>';
+        '<div class="vc-der"><strong>' + durVivo(r.entro) + '</strong><small>' + r.paginas + ' pág.</small><small>' + (r.activo ? haceSeg(r.visto) : 'segundo plano') + '</small>' +
+          (r.cliente_email ? '' : bloqueosDe(r).length ? '<span class="pill rojo vc-bloq">Bloqueado</span>' : '<button type="button" class="btn chico peligro vc-bloq" data-bloquear="' + esc(r.visitante) + '">Bloquear</button>') + '</div></div>';
     }).join('');
   $('vivo-lista').querySelectorAll('[data-vivo]').forEach(el => el.onclick = (e) => {
     if (e.target.closest('a')) return;
+    const bq = e.target.closest('[data-bloquear]');
+    if (bq) return bloquearVisitante(bq.dataset.bloquear);
     if (el.dataset.email) abrirActividad(el.dataset.email); else abrirVisitante(el.dataset.vivo);
   });
   pintarFeed();
@@ -2731,6 +2749,98 @@ async function cargarAvisos(){
     if (error){ ch.checked = !ch.checked; return toast('Error: ' + mensajeError(error)); }
     toast((ch.checked ? 'Aviso activado: ' : 'Aviso apagado: ') + (avisos.find(a => a.clave === ch.dataset.aviso) || {}).nombre);
   });
+}
+
+/* ---------- Bloqueo de visitantes (29_bloqueos.sql): por navegador y por IP ---------- */
+let bloqueos = [], bloqFalta = false, miIpRed = null;
+const bloqueosDe = (r) => !r ? [] : bloqueos.filter(b => (b.tipo === 'codigo' && b.valor === r.visitante) || (b.tipo === 'ip' && r.ip_red && b.valor === r.ip_red));
+const faltaBloqueos = () => toast('Falta correr 29_bloqueos.sql en Supabase para poder bloquear');
+async function cargarBloqueos(){
+  const [a, b] = await Promise.all([sb.from('bloqueos').select('*').order('creado', { ascending: false }), sb.rpc('mi_ip_clave')]);
+  bloqFalta = !!a.error; bloqueos = a.data || []; miIpRed = b.error ? null : b.data;
+  pintarBloqueos(); refrescarVivo();
+}
+function pintarBloqueos(){
+  const caja = $('vivo-bloq'); if (!caja) return;
+  if ($('bloq-n')) $('bloq-n').textContent = bloqueos.length;
+  if ($('bloq-res')) $('bloq-res').textContent = bloqFalta ? 'Falta instalar' : !bloqueos.length ? 'Nadie bloqueado' :
+    bloqueos.filter(b => b.tipo === 'codigo').length + ' por navegador · ' + bloqueos.filter(b => b.tipo === 'ip').length + ' por IP';
+  if (bloqFalta){ caja.innerHTML = '<p class="muted" style="margin:0">Se activa al correr <span class="mono">29_bloqueos.sql</span> en Supabase → SQL Editor (después de <span class="mono">13_en_vivo.sql</span>) y volver a abrir el panel.</p>'; return; }
+  caja.innerHTML = '<p class="sub" style="margin-top:-6px">A quien bloqueas le sale «página no disponible» en la tienda, las páginas de producto y la de enlaces. Para bloquear a alguien, toca <strong>Bloquear</strong> en su tarjeta de «Ahora en la web» o dentro de su recorrido.</p>' +
+    (!bloqueos.length ? '<div class="muted" style="padding:6px 0 12px">No hay nadie bloqueado.</div>' :
+      '<div class="bloq-lista">' + bloqueos.map(b => '<div class="bloq-fila"><div><strong class="mono">' + (b.tipo === 'ip' ? 'IP ' + esc(b.valor) : 'Visitante ' + esc(codigoVis(b.valor))) + '</strong> <span class="pill ' + (b.tipo === 'ip' ? 'amar' : 'azul') + '">' + (b.tipo === 'ip' ? 'Por IP' : 'Por navegador') + '</span>' +
+        '<small>' + [b.detalle ? esc(b.detalle) : '', b.nota ? '«' + esc(b.nota) + '»' : '', 'bloqueado ' + haceCuanto(b.creado),
+          b.intentos ? 'intentó entrar ' + b.intentos + (b.intentos === 1 ? ' vez' : ' veces') + (b.ultimo_intento ? ' (última ' + haceCuanto(b.ultimo_intento) + ')' : '') : 'no ha vuelto a entrar'].filter(Boolean).join(' · ') + '</small></div>' +
+        '<button type="button" class="btn chico" data-desbloquear="' + b.id + '">Desbloquear</button></div>').join('') + '</div>') +
+    '<form class="bloq-manual" id="bloq-manual"><input name="ip" autocomplete="off" placeholder="Bloquear una IP a mano (ej. 190.202.10.5)" aria-label="IP a bloquear"><button class="btn chico peligro">Bloquear IP</button></form>';
+  caja.querySelectorAll('[data-desbloquear]').forEach(bt => bt.onclick = async () => {
+    const b = bloqueos.find(x => String(x.id) === bt.dataset.desbloquear); if (!b) return;
+    if (!await confirmar({ titulo: 'Desbloquear', texto: (b.tipo === 'ip' ? 'La IP ' + b.valor : 'El visitante ' + codigoVis(b.valor)) + ' podrá volver a ver la web.', boton: 'Desbloquear' })) return;
+    const { error } = await sb.from('bloqueos').delete().eq('id', b.id);
+    if (error) return toast('Error: ' + mensajeError(error));
+    toast('Desbloqueado'); cargarBloqueos();
+  });
+  $('bloq-manual').onsubmit = async (e) => {
+    e.preventDefault();
+    const ip = e.target.elements.ip.value.trim(); if (!ip) return;
+    if (!await confirmar({ titulo: 'Bloquear la IP ' + ip, texto: 'Nadie que entre desde esa conexión (sin cuenta) podrá ver la web. Otras personas pueden compartir la misma IP.', boton: 'Bloquear IP', peligro: true })) return;
+    const { data, error } = await sb.rpc('bloquear_visitante', { p_tipo: 'ip', p_valor: ip, p_nota: 'Agregada a mano' });
+    if (error) return toast('Error: ' + mensajeError(error));
+    toast(data && data.propia ? 'Bloqueada. Ojo: es la misma IP desde la que estás tú' : 'IP bloqueada'); cargarBloqueos();
+  };
+}
+/* r: fila de en_linea (o al menos { visitante }) */
+function dialogoBloquear(r){
+  if (bloqFalta) return faltaBloqueos();
+  const ya = bloqueosDe(r), yaCod = ya.some(b => b.tipo === 'codigo'), yaIp = ya.some(b => b.tipo === 'ip');
+  const propia = r.ip_red && miIpRed && r.ip_red === miIpRed;
+  const d = document.createElement('div');
+  d.className = 'dialogo'; d.setAttribute('role', 'dialog'); d.setAttribute('aria-modal', 'true');
+  d.innerHTML = '<form class="dialogo-caja"><div class="d-icono peligro">' + ICO.alerta + '</div>' +
+    '<h2>Bloquear a Visitante ' + esc(codigoVis(r.visitante)) + '</h2>' +
+    '<p>' + esc([r.dispositivo || r.ciudad || r.pais ? lugarDe(r) : '', r.dispositivo ? equipoDe(r) : '', r.proveedor || ''].filter(Boolean).join(' · ')) + '</p>' +
+    '<p>Le saldrá «página no disponible» en la tienda, las páginas de producto y la de enlaces. Lo puedes desbloquear cuando quieras.</p>' +
+    '<label class="bloq-op"><input type="checkbox" name="cod"' + (yaCod ? ' checked disabled' : ' checked') + '><span><strong>Este navegador' + (yaCod ? ' (ya bloqueado)' : '') + '</strong>' +
+      '<small>Bloquea este equipo y navegador. Se lo salta con modo incógnito, borrando los datos o entrando desde otro equipo.</small></span></label>' +
+    '<label class="bloq-op"><input type="checkbox" name="ip"' + (yaIp ? ' checked disabled' : !r.ip ? ' disabled' : '') + '><span><strong>' + (r.ip ? 'Su IP · <span class="mono">' + esc(r.ip_red || r.ip) + '</span>' : 'Su IP') + (yaIp ? ' (ya bloqueada)' : '') + '</strong>' +
+      '<small>' + (r.ip ? 'Bloquea toda su conexión, aunque cambie de navegador. Cuidado: otras personas pueden compartir esa IP y a él le puede cambiar. No afecta a clientes con su cuenta abierta.' : 'Todavía no se conoce su IP: aparece la próxima vez que esté en la web.') + '</small></span></label>' +
+    (propia ? '<div class="aviso" style="margin:12px 0 0">' + ICO.alerta + '<div>Esa es la misma IP desde la que estás tú ahora. Si la bloqueas, no verás la tienda cuando entres sin tu cuenta de administrador.</div></div>' : '') +
+    '<label class="campo">Nota (opcional)<input name="nota" maxlength="200" autocomplete="off" placeholder="Por qué lo bloqueas"></label>' +
+    '<div class="dialogo-pie"><button type="button" class="btn" data-no>Cancelar</button><button class="btn peligro-lleno">Bloquear</button></div></form>';
+  document.body.appendChild(d);
+  const f = d.querySelector('form'), ok = f.querySelector('button:not([data-no])');
+  const fin = () => { document.removeEventListener('keydown', tecla, true); d.remove(); };
+  const tecla = (e) => { if (e.key === 'Escape'){ e.stopPropagation(); fin(); } };
+  document.addEventListener('keydown', tecla, true);
+  d.onclick = (e) => { if (e.target === d) fin(); };
+  f.querySelector('[data-no]').onclick = fin;
+  const quiere = () => [f.elements.cod.checked && !yaCod ? 'codigo' : null, f.elements.ip.checked && !yaIp && r.ip ? 'ip' : null].filter(Boolean);
+  const revisar = () => { ok.disabled = !quiere().length; };
+  f.elements.cod.onchange = f.elements.ip.onchange = revisar; revisar();
+  f.onsubmit = async (e) => {
+    e.preventDefault();
+    const tipos = quiere(); if (!tipos.length) return;
+    ok.disabled = true;
+    const detalle = [r.ciudad || r.pais ? lugarDe(r) : '', r.dispositivo ? equipoDe(r) : '', r.proveedor || ''].filter(Boolean).join(' · ');
+    let propiaIp = false;
+    for (const t of tipos){
+      const { data, error } = await sb.rpc('bloquear_visitante', { p_tipo: t, p_valor: t === 'ip' ? r.ip : r.visitante, p_nota: f.elements.nota.value, p_detalle: detalle });
+      if (error){ ok.disabled = false; return toast('Error: ' + mensajeError(error)); }
+      if (data && data.propia) propiaIp = true;
+    }
+    fin();
+    toast(propiaIp ? 'Bloqueado. Ojo: es la misma IP desde la que estás tú' : 'Visitante bloqueado');
+    cargarBloqueos();
+  };
+}
+async function bloquearVisitante(id, extra){
+  if (bloqFalta) return faltaBloqueos();
+  let r = vivos[id];
+  if (!r){
+    const { data } = await sb.from('en_linea').select('*').eq('visitante', id).maybeSingle();
+    r = data || Object.assign({}, extra || {}, { visitante: id });
+  }
+  dialogoBloquear(r);
 }
 
 /* ---------- Página de enlaces /links (12_enlaces.sql) ---------- */

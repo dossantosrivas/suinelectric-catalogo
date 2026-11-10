@@ -11,7 +11,8 @@
                       (al menos la mitad visible durante casi un segundo)
      · y lo que le pase la página (búsquedas, fichas, carrito, WhatsApp)
    Cada navegador lleva un código aleatorio (visitante). Una visita se
-   cierra tras 30 minutos sin actividad. No se guardan nombres ni la IP.
+   cierra tras 30 minutos sin actividad. No se guardan nombres; la IP solo
+   se anota en "En vivo" (2 días) para poder bloquear a un visitante.
    No se anota a los administradores (ni en este navegador después de
    que un administrador entró), ni a robots como Google.
    Clave pública de Supabase: es segura en la página.
@@ -19,6 +20,10 @@
    qué página está la persona y lo último que hizo, al cambiar de página y
    cada ~40 s mientras la pestaña está abierta (una sola fila por
    navegador, no se acumula).
+   BLOQUEOS (29_bloqueos.sql, panel → En vivo → Bloquear): al cargar pregunta
+   a Supabase si este navegador o su IP están bloqueados; si lo están, tapa
+   la página con "no disponible" y deja de anotar. Si la consulta falla, la
+   página se ve normal. No aplica a administradores ni a robots.
    ===================================================================== */
 (function(){
   if (window.suinRastreo) return;
@@ -44,7 +49,8 @@
       var r = Math.random() * 16 | 0; return (c === 'x' ? r : (r & 0x3 | 0x8)).toString(16);
     });
   }
-  function noContar(){ return ES_ROBOT || ls('suin_no_contar') === '1'; }
+  var bloqueado = false;
+  function noContar(){ return ES_ROBOT || bloqueado || ls('suin_no_contar') === '1'; }
 
   var visitante = ls('suin_visitante');
   if (!visitante || visitante.length > 40){ visitante = uuid(); ls('suin_visitante', visitante); }
@@ -340,6 +346,62 @@
   }
   document.addEventListener('visibilitychange', function(){ if (document.visibilityState === 'hidden') vaciar(); });
   window.addEventListener('pagehide', vaciar);
+
+  /* ---------- Bloqueo de visitantes (29_bloqueos.sql) ---------- */
+  var URL_BLOQ = BASE + '/rest/v1/rpc/acceso_bloqueado';
+  var sinBloqueos = false;
+  function taparPagina(){
+    if (bloqueado) return;
+    bloqueado = true; cola = []; buffer = [];
+    ls('suin_bq', '1');
+    try {
+      var css = document.createElement('style');
+      css.id = 'suin-bq-css';
+      css.textContent = 'html,body{background:#fff!important;overflow:hidden!important}' +
+        'body>*:not(#suin-bq){display:none!important}' +
+        '#suin-bq{position:fixed;inset:0;z-index:2147483647;display:flex;align-items:center;justify-content:center;padding:24px;' +
+        'background:#fff;color:#1f2937;font:16px/1.5 system-ui,-apple-system,"Segoe UI",Roboto,sans-serif;text-align:center}' +
+        '#suin-bq div{max-width:420px}#suin-bq h1{font-size:22px;margin:0 0 10px;color:#111827}#suin-bq p{margin:0 0 8px;color:#4b5563}' +
+        '#suin-bq a{color:#1d4ed8}';
+      (document.head || document.documentElement).appendChild(css);
+      var poner = function(){
+        if (!document.body || document.getElementById('suin-bq')) return;
+        var d = document.createElement('div');
+        d.id = 'suin-bq';
+        d.innerHTML = '<div><h1>Página no disponible</h1><p>No podemos mostrarte esta página en este momento.</p>' +
+          '<p>Si crees que es un error, escríbenos por <a href="https://wa.me/584124111319" rel="noopener">WhatsApp al 0412-4111319</a>.</p></div>';
+        document.body.appendChild(d);
+      };
+      if (document.body) poner(); else document.addEventListener('DOMContentLoaded', poner);
+    } catch (e) {}
+  }
+  function revisarBloqueo(contar){
+    if (sinBloqueos || ES_ROBOT || ls('suin_no_contar') === '1') return;
+    var t = token();
+    var pedir = function(conSesion){
+      var h = { 'Content-Type': 'application/json', apikey: CLAVE };
+      if (conSesion && t) h.Authorization = 'Bearer ' + t;
+      return fetch(URL_BLOQ, { method: 'POST', headers: h, body: JSON.stringify({ p_visitante: visitante, p_contar: !!contar }) })
+        .then(function(r){
+          if (r.status === 401 && conSesion && t) return pedir(false);     // sesión vencida: como visitante
+          if (r.status === 404){ sinBloqueos = true; return null; }        // todavía no se corrió 29_bloqueos.sql
+          return r.ok ? r.json() : null;
+        });
+    };
+    try {
+      pedir(true).then(function(b){
+        if (b === true) taparPagina();
+        else if (b === false && ls('suin_bq') === '1'){                    // lo desbloquearon: vuelve a ver la página
+          try { localStorage.removeItem('suin_bq'); } catch (e) {}
+          if (bloqueado) location.reload();
+        }
+      }).catch(function(){});
+    } catch (e) {}
+  }
+  // Si ya estaba bloqueado en este navegador, se tapa de una vez (y se confirma con Supabase).
+  if (!ES_ROBOT && ls('suin_no_contar') !== '1' && ls('suin_bq') === '1') taparPagina();
+  revisarBloqueo(true);
+  setInterval(function(){ if (document.visibilityState === 'visible') revisarBloqueo(false); }, 120000);
 
   window.suinRastreo = {
     visitante: visitante,
