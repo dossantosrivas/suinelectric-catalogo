@@ -1,7 +1,7 @@
 {
   "fuente": "https://grupo-electricos.com",
-  "generado": "2026-11-09T21:28:52.910Z",
-  "total_categorias": 3981,
+  "generado": "2026-11-10T18:45:05.844Z",
+  "total_categorias": 3982,
   "arbol": [
     {
       "clave": "allen-bradley",
@@ -31941,7 +31941,7 @@
       "url": "https://grupo-electricos.com/product-category/reles-de-sobrecarga/",
       "nivel": 1,
       "padre": null,
-      "productos": 141,
+      "productos": 142,
       "es_modelo": false,
       "hijos": [
         {
@@ -34248,7 +34248,7 @@
           "url": "https://grupo-electricos.com/product-category/reles-de-sobrecarga/reles-termicos-3ua/",
           "nivel": 2,
           "padre": "reles-de-sobrecarga",
-          "productos": 2,
+          "productos": 3,
           "es_modelo": false,
           "hijos": [
             {
@@ -34267,6 +34267,17 @@
               "nombre": "3UA5200-2C",
               "slug": "3ua5200-2c",
               "url": "https://grupo-electricos.com/product-category/reles-de-sobrecarga/reles-termicos-3ua/3ua5200-2c/",
+              "nivel": 3,
+              "padre": "reles-de-sobrecarga/reles-termicos-3ua",
+              "productos": 1,
+              "es_modelo": true,
+              "hijos": []
+            },
+            {
+              "clave": "reles-de-sobrecarga/reles-termicos-3ua/3ua5500-2c",
+              "nombre": "3UA5500-2C",
+              "slug": "3ua5500-2c",
+              "url": "https://grupo-electricos.com/product-category/reles-de-sobrecarga/reles-termicos-3ua/3ua5500-2c/",
               "nivel": 3,
               "padre": "reles-de-sobrecarga/reles-termicos-3ua",
               "productos": 1,
@@ -73338,7 +73349,7 @@
       "url": "https://grupo-electricos.com/product-category/reles-de-sobrecarga/",
       "nivel": 1,
       "padre": null,
-      "productos": 141,
+      "productos": 142,
       "es_modelo": false
     },
     {
@@ -75378,7 +75389,7 @@
       "url": "https://grupo-electricos.com/product-category/reles-de-sobrecarga/reles-termicos-3ua/",
       "nivel": 2,
       "padre": "reles-de-sobrecarga",
-      "productos": 2,
+      "productos": 3,
       "es_modelo": false
     },
     {
@@ -75396,6 +75407,16 @@
       "nombre": "3UA5200-2C",
       "slug": "3ua5200-2c",
       "url": "https://grupo-electricos.com/product-category/reles-de-sobrecarga/reles-termicos-3ua/3ua5200-2c/",
+      "nivel": 3,
+      "padre": "reles-de-sobrecarga/reles-termicos-3ua",
+      "productos": 1,
+      "es_modelo": true
+    },
+    {
+      "clave": "reles-de-sobrecarga/reles-termicos-3ua/3ua5500-2c",
+      "nombre": "3UA5500-2C",
+      "slug": "3ua5500-2c",
+      "url": "https://grupo-electricos.com/product-category/reles-de-sobrecarga/reles-termicos-3ua/3ua5500-2c/",
       "nivel": 3,
       "padre": "reles-de-sobrecarga/reles-termicos-3ua",
       "productos": 1,
