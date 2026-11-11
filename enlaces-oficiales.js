@@ -66,6 +66,12 @@ const REGLAS_HYUNDAI = [
   { re: /^UVC/,                        pagina: HY + 'contactor-media-tension-en-vacio', pdf: null },
 ];
 
+// NORDIC: arrancadores suaves serie 91-A (los modelos empiezan por 91, ej. 91CD32AFA).
+// El fabricante no tiene página por producto; el manual es el PDF del equipo.
+const REGLAS_NORDIC = [
+  { re: /^91[A-Z]/, pagina: null, pdf: 'https://drive.google.com/file/d/1MHV2fXmKvbZVOI-lTJW4loLmhqBqze8i/view', pdfTexto: 'Manual del producto (PDF)' },
+];
+
 const limpiar = (u) => {
   let s = String(u || '').trim().replace(/&amp;/gi, '&').replace(/&;+/g, '&').replace(/[.,;)]+$/, '');
   if (!/^https?:\/\//i.test(s) || /grupo-electricos\.com/i.test(s)) return null;   // nunca al proveedor
@@ -89,6 +95,10 @@ function porReglas(p){
     const s = REGLAS_HYUNDAI.find(x => x.re.test(modelo));
     return s ? { pagina: s.pagina, manual: s.pdf, manualTexto: s.pdfTexto } : {};
   }
+  if (/NORDIC/.test(marca)){
+    const s = REGLAS_NORDIC.find(x => x.re.test(modelo));
+    return s ? { pagina: s.pagina, manual: s.pdf, manualTexto: s.pdfTexto } : {};
+  }
   if (/SIEMENS/.test(marca) && /^[0-9][A-Z0-9]{2,}([- ][A-Z0-9]+)*$/.test(modelo))
     return { pagina: urlSiemens(p.modelo) };
   if (/SCHNEIDER|TELEMECANIQUE|SQUARE ?D/.test(marca) && /^[A-Z0-9][A-Z0-9-]{3,}$/.test(modelo))
@@ -106,5 +116,5 @@ function enlacesDe(p){
   };
 }
 
-return { enlacesDe, SERIES_INVT, REGLAS_HYUNDAI };
+return { enlacesDe, SERIES_INVT, REGLAS_HYUNDAI, REGLAS_NORDIC };
 });
