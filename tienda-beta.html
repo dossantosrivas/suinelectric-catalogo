@@ -6707,8 +6707,12 @@ function textoOferta(d){
   if (d.direccion) l.push('Dirección: ' + d.direccion);
   if (d.nota) l.push('Nota: ' + d.nota);
   l.push('');
-  items.forEach((i, n) => l.push((n + 1) + ') ' + i.p.modelo + (i.p.marca ? ' (' + i.p.marca + ')' : '') + ' x' + i.cantidad + ' — ' +
-    (i.unit != null ? usd(i.unit) + ' c/u = ' + usd(i.total) : 'Consultar')));
+  items.forEach((i, n) => {
+    const p = i.p, desc = String(p.descripcion || (p.nombre && p.nombre !== p.modelo ? p.nombre : '')).replace(/\s+/g, ' ').trim();
+    l.push((n + 1) + ') ' + p.modelo + (p.marca ? ' (' + p.marca + ')' : '') + ' x' + i.cantidad + ' — ' +
+      (i.unit != null ? usd(i.unit) + ' c/u = ' + usd(i.total) : 'Consultar'));
+    if (desc) l.push('   ' + desc);
+  });
   l.push('');
   if (t.descuento > 0) l.push('Precio de lista: ' + usd(t.lista) + ' · Descuento: -' + usd(t.descuento));
   l.push('*TOTAL: ' + usd(t.total) + '*');
