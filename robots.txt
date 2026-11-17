@@ -7,3 +7,4 @@ Disallow: /admin-beta
 Disallow: /ventas-beta
 
 Sitemap: https://suinelectric.com/sitemap.xml
+Sitemap: https://suinelectric.com/sitemap-bajo-pedido.xml

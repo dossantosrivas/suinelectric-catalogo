@@ -114,6 +114,10 @@ async function traerListas(){
   const salida = { generado: new Date().toISOString(), margen: MARGEN * 100, entrega: ENTREGA, total: productos.length, productos };
   const texto = JSON.stringify(salida);
   fs.writeFileSync(SALIDA, texto);
+  // Sitemap aparte para Google (robots.txt lo anuncia)
+  const hoy = salida.generado.slice(0, 10);
+  fs.writeFileSync(path.join(RAIZ, 'sitemap-bajo-pedido.xml'), '<?xml version="1.0" encoding="UTF-8"?>\n<urlset xmlns="http://www.sitemaps.org/schemas/sitemap/0.9">\n' +
+    productos.map(p => '<url><loc>https://suinelectric.com/d/' + p.s + '</loc><lastmod>' + hoy + '</lastmod></url>').join('\n') + '\n</urlset>\n');
   const conPrecio = productos.filter(p => p.pe != null).length;
   console.log(`distribuidores-tienda.json: ${productos.length} modelos de ${usadas} listas · ${conPrecio} con precio estimado · ` +
     `${productos.length - conPrecio} a consultar · ${(texto.length / 1048576).toFixed(2)} MB`);

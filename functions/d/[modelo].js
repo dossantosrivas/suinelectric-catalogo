@@ -8,10 +8,9 @@
      · "Precio estimado" (costo + 20 %) o "Precio a consultar"
      · Entrega 2-5 días hábiles después del pago
      · Cotizar por WhatsApp y agregar al pedido en la tienda
-   Mientras se prueba en tienda-beta las páginas llevan noindex (no salen en Google).
    ===================================================================== */
-const INDEXAR = false;                  // true cuando se pase a la tienda oficial
-const TIENDA = '/tienda-beta';          // '/tienda' cuando se pase a la oficial
+const INDEXAR = true;                   // sale en Google (sitemap-bajo-pedido.xml)
+const TIENDA = '/tienda';
 const WA = '584124111319';
 const DOMINIO = 'https://suinelectric.com';
 
