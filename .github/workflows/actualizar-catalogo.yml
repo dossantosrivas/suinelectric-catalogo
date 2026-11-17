@@ -90,11 +90,16 @@ jobs:
             # se haga el reset de arriba, porque aún no están en git).
             node generar-catalogo-tienda.js
 
+            # Modelos de las listas de distribuidores (Gestión → Listas de existencias)
+            # que no están en la tienda: se ofrecen al buscar como "Bajo pedido" con
+            # precio estimado (costo + 20 %) y tienen su página en /d/….
+            node generar-distribuidores-tienda.js || echo "No se pudo actualizar distribuidores-tienda.json (sigue el de ayer)."
+
             # Vistas previas para WhatsApp y redes (/p/… y /c/…), con la
             # tienda.html más reciente y los productos nuevos.
             node generar-vistas-previas.js
 
-            git add productos.json categorias.json catalogo-tienda.json imagenes/productos imagenes/familias imagenes/og p c sitemap.xml
+            git add productos.json categorias.json catalogo-tienda.json distribuidores-tienda.json imagenes/productos imagenes/familias imagenes/og p c sitemap.xml
 
             if git diff --staged --quiet; then
               echo "Sin cambios que subir."

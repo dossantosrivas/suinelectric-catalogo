@@ -23,6 +23,7 @@ const PUBLICAR = [
   'tienda-beta.html', 'admin-beta.html', 'ventas-beta.html',   // versiones beta para pruebas
   '_headers', '_redirects', 'robots.txt', 'sitemap.xml', 'publico.css', 'publico.js', 'rastreo.js', 'especificaciones.js', 'enlaces-oficiales.js',
   'catalogo-tienda.json', 'catalogo-beta.json',   // beta del catálogo único
+  'distribuidores-tienda.json',   // modelos de las listas de distribuidores (bajo pedido, /d/…)
   'imagenes',          // logos, fotos propias, fotos de productos y familias
   'p', 'c',            // vistas previas para WhatsApp/redes
 ];

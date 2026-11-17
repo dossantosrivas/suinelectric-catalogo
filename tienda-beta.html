@@ -346,6 +346,8 @@
   .dto-badge.dto-chico{ font-size:11px; padding:3px 5px; }
   .precio{ font-size:24px; font-weight:700; color:var(--tinta); line-height:1.15; font-variant-numeric:tabular-nums; }
   .precio-nota{ font-size:12px; color:var(--texto-3); font-style:italic; }
+  /* Bajo pedido (listas de distribuidores) */
+  .nota-dist{ margin:-4px 0 14px; padding:10px 14px; background:#fff8e1; border:1px solid #f3dc9a; border-radius:8px; font-size:13.5px; color:#6b5200; }
   /* Precio para clientes registrados (solo lo ven los visitantes sin sesión) */
   .precio-registro{ display:flex; flex-direction:column; align-items:flex-start; gap:1px; margin-top:6px; padding:5px 8px;
     background:var(--azul-suave); border:1px dashed var(--azul-texto); border-radius:var(--radio); cursor:pointer;
@@ -2161,6 +2163,8 @@ const CONDICIONES_VENTA = [
   '6 meses de garantía contra defecto de fábrica.',
   'T. Entrega 1-2 días hábiles después del pago.',
 ];
+// Los de bajo pedido (distribuidores) tardan más en llegar.
+const condicionesDe = (p) => p && p._dist ? CONDICIONES_VENTA.map(c => c.replace(/1-2 días/, '2-5 días')) : CONDICIONES_VENTA;
 // Selección = ruta de categoría (array). [] = todas; ["Cat"] = categoría; ["Cat","Sub1","Sub2"] = nodo profundo.
 let seleccion = [];
 
@@ -2213,6 +2217,7 @@ function badgeDescuento(p, extraCls){
          String(d.pct).replace('.', ',') + '%' + (d.fijo ? ' · especial' : '') + '</span>';
 }
 function precioMostrado(p, tipoSimulado){
+  if (p && p._dist) return p.precio == null ? null : Number(p.precio);   // bajo pedido: precio estimado, sin descuentos
   // Precio según las reglas de descuento de quien está viendo (ver CUENTAS DE CLIENTES).
   const r = (typeof reglaPara === 'function') ? reglaPara(p, tipoSimulado) : null;
   if (r && r.precio_fijo != null) return Number(r.precio_fijo);
@@ -2353,6 +2358,42 @@ function edadLista(f){
 }
 function fechaCorta(f){ const m = String(f || '').match(/^(\d{4})-(\d{2})-(\d{2})/); return m ? m[3] + '/' + m[2] + '/' + m[1] : ''; }
 let origenLista = new Map();       // modelo -> 'lista' (productos_manuales.json) o 'panel' (agregado en /admin)
+/* ---------- Bajo pedido: modelos de las listas de distribuidores ----------
+   distribuidores-tienda.json (generar-distribuidores-tienda.js) trae los modelos de las
+   listas de existencias de Gestión que NO están en la tienda. Solo salen al BUSCAR, en un
+   grupo aparte al final ("Bajo pedido"), con precio estimado (costo + 20 %) o "a consultar"
+   y entrega 2-5 días. No se les aplican descuentos. Su página es /d/<modelo>. */
+const RUTA_DIST = 'Bajo pedido · entrega 2-5 días';
+let productosDist = [];            // todos los del archivo
+let distVisibles = [];             // los que no están ya en la tienda
+let detallePendiente = null;       // #/?p=MODELO que llegó antes de cargar el archivo
+function formaTiendaDeDist(x){
+  return { modelo: x.m, sku: x.m, nombre: x.n || x.m, marca: x.mk || '', descripcion: x.n || '',
+    precio: x.pe != null ? Number(x.pe) : null, disponible: true, stock: 'dist',
+    imagen: x.img || null, imagenes: x.img ? [x.img] : [], ficha_tecnica: x.ficha || undefined,
+    _dist: true, _manual: true, _slug: x.s, _ruta: [RUTA_DIST], _specs: {} };
+}
+function actualizarDistVisibles(){
+  if (!productosDist.length){ distVisibles = []; return; }
+  const enTienda = new Set(productos.map(p => claveModelo(p.modelo)));
+  distVisibles = productosDist.filter(p => !enTienda.has(claveModelo(p.modelo)));
+}
+async function cargarDistribuidores(){
+  try {
+    const r = await fetch('/distribuidores-tienda.json');
+    if (!r.ok) return;
+    const d = await r.json();
+    productosDist = (d.productos || []).map(formaTiendaDeDist);
+    actualizarDistVisibles();
+    if (detallePendiente && buscarProducto(detallePendiente)){ const m = detallePendiente; detallePendiente = null; abrirDetalle(m); }
+    if (document.getElementById('buscador').value.trim()) aplicarFiltros();
+  } catch (e) { /* sin archivo: la tienda sigue igual */ }
+}
+// Tras cada carga del catálogo: la primera vez trae el archivo; después solo recalcula cuáles faltan en la tienda.
+let distPedido = false;
+function distTrasCargar(){ if (!distPedido){ distPedido = true; cargarDistribuidores(); } else actualizarDistVisibles(); }
+// Producto de la tienda o, si no está, de los de bajo pedido.
+function buscarProducto(m){ return productos.find(x => x.modelo === m) || distVisibles.find(x => x.modelo === m) || null; }
 function cantidadReal(p){
   if (p && p._inv && cantidadesInventario && cantidadesInventario.has(p._invClave)) return cantidadesInventario.get(p._invClave);
   if (!existenciasReales || !p || !p.modelo) return null;
@@ -2363,7 +2404,8 @@ function textoStock(p, siAgotado){
   if (!p.disponible) return siAgotado || 'Agotado';
   const real = cantidadReal(p);
   if (real != null && real > 0) return real + ' disponible' + (real === 1 ? '' : 's');
-  if (p.stock === 'pedido') return 'A pedido';   // tu producto sin existencia (16_inventario_a_pedido.sql)
+  if (p.stock === 'pedido') return 'A pedido';
+  if (p.stock === 'dist') return 'Bajo pedido · 2-5 días';   // tu producto sin existencia (16_inventario_a_pedido.sql)
   let rango = p.stock;
   if (!rango && p.existencias != null && !isNaN(Number(p.existencias)) && Number(p.existencias) > 0)
     rango = Number(p.existencias) > 10 ? '+10' : 'pocas';   // respaldo (catálogo viejo)
@@ -2772,7 +2814,8 @@ function aplicarHash(hash){
   for (let i = 1; i <= seleccion.length; i++) expandidos.add(seleccion.slice(0, i).join('|||'));
   renderSidebar();
   mostrarVista();
-  if (det && productos.some(p => p.modelo === det)) abrirDetalle(det);
+  if (det && buscarProducto(det)) abrirDetalle(det);
+  else if (det) detallePendiente = det;   // puede ser de bajo pedido (aún cargando)
 }
 // Navega a una categoría (la usan todos los links .enlace-cat de la página).
 function irARuta(ruta){
@@ -2854,7 +2897,7 @@ function nombreMarca(m){
 // Links para compartir: /p/modelo y /c/familia/categoria tienen su propia
 // vista previa (foto, título y descripción) en WhatsApp y redes. Las crea
 // generar-vistas-previas.js y llevan al cliente al lugar exacto de la tienda.
-function urlProducto(modelo){ return location.origin + '/p/' + slugDe(modelo); }
+function urlProducto(modelo){ const d = !productos.some(p => p.modelo === modelo) && distVisibles.find(p => p.modelo === modelo); return location.origin + (d ? '/d/' + d._slug : '/p/' + slugDe(modelo)); }
 function urlCategoria(ruta){ return location.origin + '/c/' + ruta.slice(0, MAX_NIVELES).map(slugDe).join('/'); }
 function urlParaCompartir(){
   const n = navActualBasica();
@@ -3586,7 +3629,7 @@ function tarjetaHTML(p){
           <div class="precio-box">
             ${precioTachado != null ? '<span class="precio-original">'+formatoMoneda(precioTachado)+'</span>' : ''}
             <span class="precio-linea"><span class="precio">${formatoMoneda(precioFinal)}</span>${badgeDescuento(p)}</span>
-            ${(esManual(p) && precioFinal != null) ? '<span class="precio-nota">precio de catálogo</span>' : ''}
+            ${p._dist ? '<span class="precio-nota">' + (precioFinal != null ? 'precio estimado' : 'precio a consultar') + '</span>' : (esManual(p) && precioFinal != null) ? '<span class="precio-nota">precio de catálogo</span>' : ''}
             ${bloquePrecioRegistro(p)}
             ${bloqueAdminPrecios(p)}
           </div>
@@ -3768,6 +3811,9 @@ function render(lista){
     const conInv = (c) => grupos[c].some(esDeInventario) ? 0 : 1;
     claves.sort((a, b) => conInv(a) - conInv(b));
   }
+  // Bajo pedido (distribuidores) siempre al final
+  const iDist = claves.indexOf(RUTA_DIST);
+  if (iDist >= 0) claves.push(claves.splice(iDist, 1)[0]);
 
   // Se pintan por tandas: primero lo que se ve y el resto a medida que se
   // baja. Así la búsqueda y "Ver todo" responden al instante aunque haya
@@ -3808,8 +3854,9 @@ function pintarTanda(n){
       seccion.className = 'grupo-categoria';
       seccion.dataset.gi = st.gi;
       seccion.innerHTML = '<h2>' + (partes.length ? '<span class="ruta-prev">' + migasHTML(partes) + '</span>' : '') +
-                          (rutaG.length <= MAX_NIVELES ? enlaceCat(rutaG, ultimo, 'grupo-titulo') : '<span>' + escHtml(ultimo) + '</span>') +
+                          (ultimo === RUTA_DIST ? '<span class="grupo-titulo">' + escHtml(ultimo) + '</span>' : rutaG.length <= MAX_NIVELES ? enlaceCat(rutaG, ultimo, 'grupo-titulo') : '<span>' + escHtml(ultimo) + '</span>') +
                           '<span class="conteo-badge">' + g.productos.length + (g.productos.length === 1 ? ' producto' : ' productos') + '</span></h2>' +
+                          (ultimo === RUTA_DIST ? '<p class="nota-dist">Los conseguimos con nuestros distribuidores. El precio es estimado y se confirma al cotizar; si dice <b>Consultar</b>, escríbenos y te lo damos al momento.</p>' : '') +
                           (esVistaTabla()
                             ? (g.cols = colsEspecDe(rutaG), '<div class="grid" style="' + estiloColsTabla(g.cols) + '">' + cabeceraTablaHTML(g.cols) + '</div>')
                             : '<div class="grid"></div>');
@@ -4994,7 +5041,21 @@ function aplicarFiltros(){
     if (panelVfdBase) panelVfdBase = panelVfdBase.filter(p => pasaFac(p));
     if (panelArrBase) panelArrBase = panelArrBase.filter(p => pasaFac(p));
   }
-  const lista = panelFacBase ? conTecnicos.filter(p => pasaFac(p)) : conTecnicos;
+  let lista = panelFacBase ? conTecnicos.filter(p => pasaFac(p)) : conTecnicos;
+  // Al buscar: también los modelos de los distribuidores (bajo pedido), al final.
+  if (hayBusqueda && distVisibles.length && disponibilidad !== 'no'){
+    const extra = [];
+    for (const p of distVisibles){
+      if (filtroMarca && (p.marca || '').toUpperCase() !== filtroMarca) continue;
+      if (!coincideBusqueda(p, palabras)) continue;
+      extra.push(p);
+      if (extra.length >= 200) break;
+    }
+    if (extra.length) lista = agruparVariantes(lista).concat(extra);
+    else lista = agruparVariantes(lista);
+    render(lista);
+    return;
+  }
   render(agruparVariantes(lista));
 }
 
@@ -5018,6 +5079,16 @@ function renderSugerencias(){
     } else if (resto.length < 8) resto.push(p);
   }
   const lista = mios.concat(enModelo, resto).slice(0, 8);
+  // Si faltan, completa con los de bajo pedido (primero los que coinciden en el modelo)
+  if (lista.length < 8 && distVisibles.length){
+    const dm = [], dr = [];
+    for (const p of distVisibles){
+      if (!coincideBusqueda(p, palabras)) continue;
+      (normalizarBusqueda(p.modelo).replace(/\s+/g, '').includes(textoModelo) ? dm : dr).push(p);
+      if (dm.length >= 8) break;
+    }
+    lista.push(...dm.concat(dr).slice(0, 8 - lista.length));
+  }
 
   if (lista.length === 0){ cont.style.display = 'none'; cont.innerHTML = ''; return; }
 
@@ -5032,7 +5103,7 @@ function renderSugerencias(){
           (logo ? '<img class="sug-marca-logo" src="' + logo + '" alt="' + p.marca + '">' : '') +
         '</div>' +
         (p.descripcion ? '<div class="sug-desc">' + p.descripcion + '</div>' : '') +
-        '<div class="sug-ruta">' + migasHTML(rutaNavDe(p)) + '</div>' +
+        '<div class="sug-ruta">' + (p._dist ? '<span>Bajo pedido · 2-5 días</span>' : migasHTML(rutaNavDe(p))) + '</div>' +
         '<div class="sug-fila-datos">' +
           '<span class="sug-precio">' + formatoMoneda(precioMostrado(p)) + '</span>' +
           (descuentoDe(p) ? '<span class="sug-precio-antes" title="Precio de lista, sin descuento">' + formatoMoneda(p.precio) + '</span>' : '') +
@@ -5051,6 +5122,7 @@ function renderSugerencias(){
     el.addEventListener('click', (e) => {
       e.stopPropagation();
       const p = lista[parseInt(el.getAttribute('data-ir-sub'), 10)];
+      if (p._dist){ cont.style.display = 'none'; abrirDetalle(p.modelo); return; }
       irASubcategoriaDe(p);
     });
   });
@@ -5130,7 +5202,7 @@ function textoCotizacion(p, formato){
     .filter(([, v]) => String(v == null ? '' : v).trim())
     .map(([k, v]) => [k, String(v).trim()]);
   const precio = precioMostrado(p);
-  const condiciones = [...CONDICIONES_VENTA];
+  const condiciones = [...condicionesDe(p)];
   if (formato === 'ml'){
     const una = s => String(s).replace(/\s+/g, ' ').trim().replace(/[.\s]+$/, '');
     const armar = f => [
@@ -5157,7 +5229,7 @@ function textoCotizacion(p, formato){
   ].join('\n\n');
 }
 async function copiarDatosProducto(modelo, formato){
-  const p = productos.find(x => x.modelo === modelo);
+  const p = buscarProducto(modelo);
   if (!p) return;
   const texto = textoCotizacion(p, formato);
 
@@ -5252,7 +5324,7 @@ document.addEventListener('click', (e) => {
 }, true);
 
 function abrirDetalle(modelo){
-  const p = productos.find(x => x.modelo === modelo);
+  const p = buscarProducto(modelo);
   if (!p) return;
   fichaAbierta = p.modelo;
   registrar('ver_producto', { modelo: String(p.modelo).slice(0, 80) });
@@ -5284,14 +5356,14 @@ function abrirDetalle(modelo){
           '</div>' +
           (logoMarca ? '<img class="det-marca-logo" src="' + logoMarca + '" alt="' + p.marca + '">' : '') +
         '</div>' +
-        '<nav class="det-categoria migas">' + (migasHTML(rutaDe(p)) || 'Sin categoría') + '</nav>' +
+        '<nav class="det-categoria migas">' + (p._dist ? '<span>' + RUTA_DIST + '</span>' : (migasHTML(rutaDe(p)) || 'Sin categoría')) + '</nav>' +
         fichaVariantesHTML(p) +
         '<div class="det-precio-bloque">' +
           '<div class="det-precio">' + formatoMoneda(precioFinal) +
             (muestraAntes ? '<span class="det-precio-antes">' + formatoMoneda(p.precio) + '</span>' : '') +
             badgeDescuento(p, 'dto-grande') +
           '</div>' +
-          (esManual(p) && precioFinal != null ? '<span class="precio-nota">precio de catálogo</span>' : '') +
+          (p._dist ? '<span class="precio-nota">' + (precioFinal != null ? 'precio estimado · se confirma al cotizar' : 'precio a consultar') + '</span>' : esManual(p) && precioFinal != null ? '<span class="precio-nota">precio de catálogo</span>' : '') +
           bloquePrecioRegistro(p, true) +
           bloqueAdminPrecios(p) +
           bloqueAdminExistencias(p) +
@@ -5302,7 +5374,7 @@ function abrirDetalle(modelo){
           enlacesOficialesHTML(p) +
         '</div>' +
         fichaEspecsHTML(p) +
-        '<ul class="det-condiciones">' + CONDICIONES_VENTA.map(c => '<li>' + c + '</li>').join('') + '</ul>' +
+        '<ul class="det-condiciones">' + condicionesDe(p).map(c => '<li>' + c + '</li>').join('') + '</ul>' +
         '<div class="det-grid">' +
           '<div><strong>SKU</strong>' + (p.sku || '—') + '</div>' +
           '<div><strong>Marca</strong>' + (p.marca || '—') + '</div>' +
@@ -5357,7 +5429,7 @@ function mostrarToast(texto){
 /* ---------- Carrito ---------- */
 function agregarAlCarrito(modelo, cantidad){
   cantidad = Math.max(1, parseInt(cantidad, 10) || 1);
-  const p = productos.find(x => x.modelo === modelo);
+  const p = buscarProducto(modelo);
   if (!p) return;
   if (!carrito[modelo]) carrito[modelo] = { producto: p, cantidad: 0 };
   carrito[modelo].cantidad += cantidad;
@@ -5674,6 +5746,7 @@ async function cargar(silencioso){
       if (silencioso && firmaBeta === ultimoEstado) return;
       ultimoEstado = firmaBeta;
       productos = prepararBeta(beta);
+      distTrasCargar();
       metaBar.textContent = productos.length + ' productos · catálogo único (beta) · ' + new Date(beta.generado).toLocaleString('es-VE');
       if (!cargaInicialHecha){
         cargaInicialHecha = true;
@@ -5713,6 +5786,7 @@ async function cargar(silencioso){
     const delScraper = (data.productos || []).filter(p => !modelosManuales.has(p.modelo));
     delScraper.forEach(p => { p._manual = false; });
     productos = ponerFotosExtra(unirInventario(manuales.concat(delScraper), panel.inventario, ocultos), fotosExtra);
+    distTrasCargar();
     prepararEspecsLocales(productos);
 
     let estado = productos.length + " productos";
@@ -6543,7 +6617,7 @@ async function renderMisPedidos(cuerpo){
     const pd = data.find(x => String(x.id) === b.getAttribute('data-repetir'));
     let n = 0, faltan = [];
     (pd.items || []).forEach(it => {
-      if (productos.some(p => p.modelo === it.modelo)){ agregarAlCarrito(it.modelo, it.cantidad); n++; }
+      if (buscarProducto(it.modelo)){ agregarAlCarrito(it.modelo, it.cantidad); n++; }
       else faltan.push(it.modelo);
     });
     document.getElementById('modal-cuenta').classList.remove('abierto');
@@ -6616,6 +6690,15 @@ const OFERTA_CONDICIONES = [
   ['Forma de pago', 'Divisas (efectivo o USDT). En bolívares, a la tasa del día.'],
   ['Validez de la oferta', '5 días.'],
 ];
+// Con productos bajo pedido (distribuidores) en el carrito: su entrega y que el precio es estimado.
+function ofertaCondiciones(){
+  const dist = Object.values(carrito).filter(({ producto }) => producto && producto._dist);
+  if (!dist.length) return OFERTA_CONDICIONES;
+  const todos = dist.length === Object.keys(carrito).length;
+  return OFERTA_CONDICIONES.map(([k, v]) => k === 'Tiempo de entrega'
+    ? [k, todos ? '2-5 días hábiles después del pago, sujeto a disponibilidad al confirmar.' : '1-2 días hábiles después del pago; productos bajo pedido, 2-5 días. Sujeto a disponibilidad al confirmar.']
+    : [k, v]).concat([['Productos bajo pedido', 'Su precio es estimado y se confirma antes del pago.']]);
+}
 const OFERTA_CAMPOS = ['nombre', 'rif', 'telefono', 'correo', 'direccion', 'nota'];
 const oferta = { control: '', fecha: null, guardada: null, idPedido: null };
 
@@ -6693,7 +6776,7 @@ function htmlOferta(d){
     '<p class="fin"><span>TOTAL (USD)</span><span>' + usd(t.total) + '</span></p>' +
     (t.sinPrecio ? '<p style="font-size:11px;color:#6b7a85">' + t.sinPrecio + ' producto(s) por consultar, no incluidos en el total.</p>' : '') +
   '</div></div>' +
-  '<div class="cond"><h4>Condiciones</h4>' + OFERTA_CONDICIONES.map(([k, v]) => '<p>• <b>' + k + ':</b> ' + v + '</p>').join('') + '</div>' +
+  '<div class="cond"><h4>Condiciones</h4>' + ofertaCondiciones().map(([k, v]) => '<p>• <b>' + k + ':</b> ' + v + '</p>').join('') + '</div>' +
   '<div class="pie">Oferta generada en suinelectric.com · Existencias y precios sujetos a confirmación de Suinelectric.<br>' +
     'Ventas@Suinelectric.com · WhatsApp 0412-4111319 / 0424-4561921 · Valencia, Carabobo, Venezuela</div>' +
   '</div></body></html>';
@@ -6717,7 +6800,7 @@ function textoOferta(d){
   if (t.descuento > 0) l.push('Precio de lista: ' + usd(t.lista) + ' · Descuento: -' + usd(t.descuento));
   l.push('*TOTAL: ' + usd(t.total) + '*');
   l.push('');
-  OFERTA_CONDICIONES.forEach(([k, v]) => l.push(k + ': ' + v));
+  ofertaCondiciones().forEach(([k, v]) => l.push(k + ': ' + v));
   return l.join('\n');
 }
 
