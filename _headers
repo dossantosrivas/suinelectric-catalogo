@@ -38,3 +38,7 @@
   X-Robots-Tag: noindex
 /ventas-beta/*
   X-Robots-Tag: noindex
+/mi-cuenta-beta
+  X-Robots-Tag: noindex
+/mi-cuenta-beta.html
+  X-Robots-Tag: noindex

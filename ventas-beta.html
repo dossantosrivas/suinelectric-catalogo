@@ -2814,9 +2814,14 @@ Views['desde-tienda'] = (v, tipo) => {
     const snap = c ? docClienteSnap(c) : datos.cliente ? { nombre: datos.cliente.empresa || datos.cliente.nombre || datos.cliente.email, rif: datos.cliente.rif || '', direccion: '', extras: [datos.cliente.telefono ? { l: 'Teléfono', v: datos.cliente.telefono } : null, datos.cliente.email ? { l: 'Correo', v: datos.cliente.email } : null].filter(Boolean) } : null;
     const extra = { items: datos.items.map(it => lineaDesdeTienda(it, tipo)), notas: 'Armada desde la tienda web' };
     if (snap) { extra.cliente = snap; extra.clienteId = c ? c.id : null; }
+    if (datos.pedidoWeb && datos.pedidoWeb.id && tipo === 'oferta') {
+      const w = datos.pedidoWeb;
+      extra.pedidoWeb = { id: w.id, numero: w.numero || '', token: w.token || '' };
+      extra.notas = ['Solicitud web ' + (w.numero || '#' + w.id), w.nota ? 'Cliente: ' + w.nota : '', ...(w.notas || [])].filter(Boolean).join('\n');
+    }
     App.pendingDoc = newDoc(tipo, extra); App.pendingEditor = true;
     Route.nav('#/nuevo/' + tipo, { replace: true });
-    UI.toast(`${datos.items.length} producto${datos.items.length === 1 ? '' : 's'} traídos de la tienda${c ? '' : datos.cliente ? ' · el cliente aún no tiene ficha en Gestión' : ' · elige el cliente'}`, 4500);
+    UI.toast(`${datos.items.length} producto${datos.items.length === 1 ? '' : 's'} traídos de la tienda${c ? '' : datos.cliente ? ' · el cliente aún no tiene ficha en Gestión' : ' · elige el cliente'}${extra.pedidoWeb ? ' · al guardar, el cliente la verá y podrá aceptarla en línea' : ''}`, 5500);
   };
   // espera a que cargue el catálogo del distribuidor (para costos y distribuidor de cada línea)
   if (Catalog.items.length) { armar(); return; }
@@ -9329,6 +9334,100 @@ const InvWeb = {
 Bus.on('data', (c) => { if (c === 'docs' || c === 'productos') InvWeb.programar(); });
 Bus.on('sync', () => { if (Sync.state === 'ok') InvWeb.programar(); });
 
+/* ---------------- Cotizaciones web (tienda → panel → Gestión → cliente) ----------------
+   · Una oferta que vino de una solicitud web (doc.pedidoWeb) se publica al cliente al guardarla
+     (sin costos) y se vuelve a publicar si cambian productos o precios mientras espera respuesta.
+   · Si se marca rechazada aquí, la solicitud se cancela.
+   · Cuando el cliente la acepta en línea, Gestión crea la venta sola (convertirOferta, sin preguntar;
+     entrega pendiente y sin pagos) y avisa con un toast.
+   · El avance de esa venta (pagada, enviada, entregada) se refleja en "Mi cuenta" del cliente. */
+const PedidosWeb = {
+  _t: null, _ocupado: false,
+  sb() { return Sync.online() ? Sync.sb : null; },
+  equipo() { let e = lsGet('suin_equipo_id', null); if (!e) { e = uid('eq'); lsSet('suin_equipo_id', e); } return e; },
+  lineas(d) {
+    const f = 1 - num(d.descPct) / 100;
+    return (d.items || []).map(it => ({
+      codigo: it.codigo || '',
+      descripcion: String(it.desc || '').replace(/^\*Ref \/ Modelo:[^\n]*\n?/, '').replace(/\*/g, '').replace(/\s+/g, ' ').trim().slice(0, 400),
+      cantidad: num(it.cant) || 1, precio_unit: round2(num(it.precio) * f),
+    }));
+  },
+  firma(d) { return JSON.stringify([this.lineas(d), round2(Calc.totals(d).total)]); },
+  estadoVenta(v) {
+    const e = entregaDe(v);
+    if (e.estado === 'entregado') return 'entregado';
+    if (e.estado === 'enviado') return 'despachado';
+    if (ventaPagada(v)) return 'pagado';
+    return 'aprobado';
+  },
+  guiaVenta(v) { const e = entregaDe(v); return [e.empresa, e.guia].filter(Boolean).join(' · '); },
+  async rpc(fn, args) { const sb = this.sb(); if (!sb) return { error: { message: 'sin conexión' } }; return sb.rpc(fn, args); },
+  programar() { clearTimeout(this._t); this._t = setTimeout(() => this.sincronizar(), 1500); },
+  async sincronizar() {
+    if (this._ocupado || !this.sb()) return;
+    this._ocupado = true;
+    try {
+      for (const d of Store.all('docs')) {
+        const w = d.pedidoWeb; if (!w || !w.id || d.estado === 'anulada') continue;
+        if (d.tipo === 'oferta') {
+          if (d.estado === 'rechazada') {
+            if (w.publicado !== 'cancelado') {
+              const { error } = await this.rpc('pedido_rechazar_admin', { p_id: w.id, p_motivo: 'Oferta ' + (d.numero || '') + ' rechazada en Gestión' });
+              if (!error) { w.publicado = 'cancelado'; Store.put('docs', d, { quiet: true }); }
+            }
+            continue;
+          }
+          if (d.convertidoA || (d.estado || 'abierta') !== 'abierta' || w.respondido) continue;
+          const f = this.firma(d);
+          if (w.firma === f) continue;
+          const { error } = await this.rpc('pedido_cotizar', { p_id: w.id, p_oferta_doc_id: d.id, p_oferta_numero: d.numero || '', p_items: this.lineas(d), p_total: round2(Calc.totals(d).total), p_dias_validez: 5 });
+          if (error) {
+            if (/respondida/i.test(error.message || '')) { w.respondido = true; Store.put('docs', d, { quiet: true }); }
+            else console.warn('pedido_cotizar', error);
+            continue;
+          }
+          w.firma = f; Store.put('docs', d, { quiet: true });
+          UI.toast(`Oferta ${d.numero || ''} publicada: el cliente ya puede verla y aceptarla en línea`, 4500);
+        } else if (esVenta(d)) {
+          const est = this.estadoVenta(d), guia = this.guiaVenta(d);
+          if (w.estado === est && (w.guia || '') === guia) continue;
+          const { error } = await this.rpc('pedido_estado_web', { p_id: w.id, p_estado: est, p_venta_doc_id: d.id, p_guia: guia || null });
+          if (!error) { w.estado = est; w.guia = guia; Store.put('docs', d, { quiet: true }); }
+        }
+      }
+      await this.convertirAceptadas();
+    } catch (e) { console.warn('PedidosWeb', e); }
+    finally { this._ocupado = false; }
+  },
+  async convertirAceptadas() {
+    const { data, error } = await this.rpc('ofertas_web_por_convertir', {});
+    if (error || !data || !data.length) return;
+    for (const r of data) {
+      const O = Store.get('docs', r.oferta_doc_id);
+      if (!O) continue;                                   // aún no bajó de la nube; se reintenta en la próxima sincronización
+      let venta = O.convertidoA && Store.get('docs', O.convertidoA);
+      if (!venta) {
+        const t = await this.rpc('pedido_tomar_conversion', { p_id: r.pedido_id, p_equipo: this.equipo() });
+        if (t.error || t.data !== true) continue;          // otro equipo la está convirtiendo
+        const dir = r.direccion && r.direccion.direccion;
+        venta = convertirOferta(O, { entrega: dir ? { modo: 'envio', estado: 'pendiente', destino: dir } : { modo: 'retira', estado: 'pendiente' }, pagos: [] });
+        UI.toast(`El cliente aceptó ${O.numero || 'la oferta'} en línea: venta ${venta.numero} creada`, 7000);
+      }
+      venta.pedidoWeb = Object.assign({}, O.pedidoWeb || { id: r.pedido_id, numero: r.numero }, { estado: 'aprobado', guia: '' });
+      Store.put('docs', venta);
+      const o2 = Store.get('docs', O.id); if (o2 && o2.pedidoWeb) { o2.pedidoWeb.respondido = true; Store.put('docs', o2, { quiet: true }); }
+      await this.rpc('pedido_estado_web', { p_id: r.pedido_id, p_estado: 'aprobado', p_venta_doc_id: venta.id, p_guia: null });
+    }
+  },
+  iniciar() {
+    Bus.on('data', (c) => { if (c === 'docs') this.programar(); });
+    Bus.on('sync', () => { if (Sync.state === 'ok' && Sync.pulledOnce) this.programar(); });
+    setInterval(() => { if (document.visibilityState === 'visible') this.programar(); }, 120000);
+    this.programar();
+  }
+};
+
 (async function boot() {
   await Store.load();
   App.shell();
@@ -9353,6 +9452,7 @@ Bus.on('sync', () => { if (Sync.state === 'ok') InvWeb.programar(); });
   if (Sync.sb && !Sync.user) showLogin();
   if (Sync.sb && typeof Sync.sb.auth.onAuthStateChange === 'function') Sync.sb.auth.onAuthStateChange((ev, ses) => { if (ev === 'SIGNED_IN' && ses && !Sync.online()) { Sync.user = ses.user; if (App.loginDone) App.loginDone(); } });
   Bus.on('data', (c) => { if (c === 'rapidas' && App.route.name !== 'rapida') Rapidas.toLocal(); });
+  PedidosWeb.iniciar();
 })();
 
 </script>

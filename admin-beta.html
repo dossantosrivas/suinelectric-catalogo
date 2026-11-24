@@ -258,6 +258,7 @@
   .embudo-ley button b{ color:var(--titulo); font-variant-numeric:tabular-nums; }
   .c-enviado{ background:var(--amarillo); } .c-cotizado{ background:var(--azul); } .c-aprobado{ background:#6d78e0; }
   .c-pagado{ background:#3b44a8; } .c-entregado{ background:var(--ok); } .c-cancelado{ background:var(--off); }
+  .c-revision{ background:#e8a200; } .c-preparando{ background:#2c3590; } .c-despachado{ background:#1f6f8b; } .c-vencido{ background:var(--texto-3); }
 
   /* Pedidos */
   .pedidos{ display:flex; flex-direction:column; gap:12px; }
@@ -268,6 +269,9 @@
   .pedido.e-pagado{ border-left-color:#3b44a8; }
   .pedido.e-entregado{ border-left-color:var(--ok); }
   .pedido.e-cancelado{ border-left-color:var(--off); }
+  .pedido.e-revision{ border-left-color:#e8a200; } .pedido.e-preparando{ border-left-color:#2c3590; } .pedido.e-despachado{ border-left-color:#1f6f8b; } .pedido.e-vencido{ border-left-color:var(--texto-3); }
+  .pd-web{ display:flex; flex-wrap:wrap; gap:6px 10px; align-items:center; padding:8px 18px; background:var(--superficie-2); border-bottom:1px solid var(--linea-suave); font-size:13px; color:var(--texto-2); }
+  .pd-web b{ color:var(--titulo); }
   .pd-cab{ display:flex; align-items:center; gap:14px; padding:14px 18px; border-bottom:1px solid var(--linea-suave); flex-wrap:wrap; }
   .pd-cab .persona{ min-width:0; flex:1 1 260px; }
   .pd-cab .persona > div:last-child{ min-width:0; }
@@ -291,6 +295,9 @@
   .estado-sel.e-aprobado, .estado-sel.e-pagado{ background-color:var(--indigo-suave); border-color:var(--indigo-borde); color:var(--indigo-texto); }
   .estado-sel.e-entregado{ background-color:var(--ok-suave); border-color:var(--ok-borde); color:var(--ok); }
   .estado-sel.e-cancelado{ background-color:var(--off-suave); border-color:var(--off-borde); color:var(--off); }
+  .estado-sel.e-revision{ background-color:var(--amarillo-suave); border-color:var(--amarillo-borde); color:var(--amarillo-texto); }
+  .estado-sel.e-preparando, .estado-sel.e-despachado{ background-color:var(--indigo-suave); border-color:var(--indigo-borde); color:var(--indigo-texto); }
+  .estado-sel.e-vencido{ background-color:var(--superficie-2); color:var(--texto-3); }
   .estado-sel option{ background:var(--superficie); color:var(--texto); }
   .nota-wrap{ display:flex; flex-direction:column; gap:8px; }
   .nota-wrap textarea{ min-height:62px; font-size:13.5px; }
@@ -839,7 +846,9 @@ function confirmar(o){
   });
 }
 
-const ESTADOS = [['enviado','Nuevo'],['cotizado','Cotizado'],['aprobado','Aprobado'],['pagado','Pagado'],['entregado','Entregado'],['cancelado','Cancelado']];
+const ESTADOS = [['enviado','Nuevo'],['revision','En revisión'],['cotizado','Oferta enviada'],['aprobado','Aprobado'],['pagado','Pagado'],['preparando','Preparando'],['despachado','Despachado'],['entregado','Entregado'],['cancelado','Cancelado'],['vencido','Vencido']];
+const URL_GESTION_ADM = /-beta(\/|$)/.test(location.pathname) ? '/ventas-beta' : '/ventas';
+const URL_MI_CUENTA_ADM = /-beta(\/|$)/.test(location.pathname) ? '/mi-cuenta-beta' : '/mi-cuenta';
 const nombreEstado = (e) => (ESTADOS.find(x => x[0] === e) || [e, e])[1];
 const VISTAS = [
   ['resumen', 'Resumen', ICO.resumen, 'Tienda'],
@@ -1201,7 +1210,7 @@ function embudoPedidos(){
     '<div class="embudo-ley">' + ESTADOS.map(e => '<button data-embudo="' + e[0] + '"><i class="c-' + e[0] + '"></i>' + e[1] + ' <b>' + n(e[0]) + '</b></button>').join('') + '</div>');
 }
 const pillEstado = (e) => {
-  const cls = { enviado: 'amar', cotizado: 'azul', aprobado: 'indigo', pagado: 'indigo', entregado: 'verde', cancelado: 'rojo' }[e] || '';
+  const cls = { enviado: 'amar', revision: 'amar', cotizado: 'azul', aprobado: 'indigo', pagado: 'indigo', preparando: 'indigo', despachado: 'indigo', entregado: 'verde', cancelado: 'rojo' }[e] || '';
   return '<span class="pill ' + cls + '"><span class="punto"></span>' + esc(nombreEstado(e)) + '</span>';
 };
 
@@ -1209,7 +1218,41 @@ const pillEstado = (e) => {
 let filtroEstado = '', buscaPed = '';
 const ARCH = 'archivados';
 const itemsDe = (pd) => Array.isArray(pd.items) ? pd.items : [];
-const clienteDe = (pd) => clientes.find(x => x.email === pd.cliente_email) || { email: pd.cliente_email };
+const clienteDe = (pd) => pd.cliente_email ? (clientes.find(x => x.email === pd.cliente_email) || { email: pd.cliente_email })
+  : Object.assign({ invitado: true }, pd.invitado || {}, { email: (pd.invitado && pd.invitado.email) || '' });
+const numPedido = (pd) => pd.numero || ('#' + pd.id);
+/* Franja de la cotización web: sin cuenta, oferta de Gestión, respuesta del cliente */
+function franjaWeb(pd){
+  const p = [];
+  if (!pd.cliente_email) p.push('<span class="pill amar">Sin cuenta</span>');
+  if (pd.oferta_numero) p.push('Oferta <b>' + esc(pd.oferta_numero) + '</b> · ' + money(pd.total_oferta) + (pd.estado === 'cotizado' && pd.vence ? ' · vence ' + esc(new Date(pd.vence + 'T12:00').toLocaleDateString('es-VE', { day: '2-digit', month: 'short' })) : ''));
+  if (pd.respondido_por === 'cliente') p.push('<b>' + (pd.estado === 'cancelado' ? 'Rechazó' : 'Aceptó') + ' en línea</b>');
+  if (pd.estado === 'cancelado' && pd.motivo) p.push('Motivo: ' + esc(pd.motivo));
+  if (pd.guia) p.push('Envío: ' + esc(pd.guia));
+  if (pd.direccion && pd.direccion.direccion) p.push('Entregar en: ' + esc(pd.direccion.direccion));
+  return p.length ? '<div class="pd-web">' + p.join(' · ') + '</div>' : '';
+}
+const puedeOfertar = (pd) => ['enviado', 'revision', 'vencido'].includes(pd.estado) || (pd.estado === 'cotizado' && !pd.respondido_por);
+/* Lleva la solicitud a Gestión (misma vía que el carrito del administrador): Gestión arma la oferta con costos y
+   reparto de stock, y al guardarla la publica al cliente para que la acepte en línea. */
+async function ofertarEnGestion(id){
+  const pd = pedidoPorId(id); if (!pd) return;
+  const c = clienteDe(pd);
+  if (pd.oferta_doc_id && pd.estado === 'cotizado'){ window.open(URL_GESTION_ADM + '/doc/' + encodeURIComponent(pd.oferta_doc_id), '_blank'); return; }
+  const datos = { tipo: 'oferta', creado: Date.now(),
+    items: itemsDe(pd).map(it => ({ modelo: it.modelo, marca: it.marca || '', nombre: '', descripcion: it.descripcion || '', cantidad: it.cantidad, precio_unit: it.precio_unit || 0 })),
+    cliente: { email: c.email || '', nombre: c.nombre || '', empresa: c.empresa || '', rif: c.rif || '', telefono: c.telefono || '' },
+    pedidoWeb: { id: pd.id, numero: numPedido(pd), token: pd.token, nota: pd.nota_cliente || '', notas: itemsDe(pd).filter(it => it.nota).map(it => it.modelo + ': ' + it.nota) } };
+  try { localStorage.setItem('suin_carrito_gestion', JSON.stringify(datos)); }
+  catch (e){ return toast('El navegador no dejó pasar la solicitud a Gestión'); }
+  const w = window.open(URL_GESTION_ADM + '/desde-tienda/oferta', '_blank'); if (!w) location.href = URL_GESTION_ADM + '/desde-tienda/oferta';
+  if (pd.estado === 'enviado') guardarEstado(pd.id, 'revision');
+}
+async function copiarEnlaceCliente(id){
+  const pd = pedidoPorId(id); if (!pd || !pd.token) return;
+  const u = location.origin + URL_MI_CUENTA_ADM + '?pedido=' + pd.token;
+  try { await navigator.clipboard.writeText(u); toast('Enlace del cliente copiado'); } catch (e){ toast('No se pudo copiar'); }
+}
 const productoDe = (modelo) => productos.find(p => p.modelo === modelo);
 const rutaImagen = (src) => !src ? '' : /^(https?:)?\/\//.test(src) || src.startsWith('/') ? src : '/' + src;
 const linkWhatsApp = (tel) => {
@@ -1223,7 +1266,7 @@ function vistaPedidos(){
   const activos = pedidos.filter(p => !p.archivado);
   const cuenta = (e) => activos.filter(p => !e || p.estado === e).length;
   const nArch = pedidos.length - activos.length;
-  $('main').innerHTML = cabecera('Pedidos', 'Los pedidos que los clientes con cuenta envían por WhatsApp. Ábrelos para ver el detalle, cambia el estado y deja un comentario: el cliente lo ve en "Mi cuenta".',
+  $('main').innerHTML = cabecera('Pedidos', 'Solicitudes de cotización de la tienda (con o sin cuenta) y pedidos por WhatsApp. Toca "Crear oferta en Gestión": al guardarla, el cliente la ve y la acepta en línea, y Gestión crea la venta sola. El estado y tu comentario los ve en "Mi cuenta".',
       '<button class="btn" id="p-recargar">' + ICO.sync + 'Actualizar</button>') +
     '<div class="plegables plegables-1">' + plegable('ped', 'lista', ICO.pedidos, 'Lista de pedidos <small>' + cuenta('') + '</small>',
       (cuenta('enviado') ? cuenta('enviado') + ' por atender · ' : '') + cuenta('') + ' activo' + (cuenta('') === 1 ? '' : 's') + (nArch ? ' · ' + nArch + ' archivado' + (nArch === 1 ? '' : 's') : ''),
@@ -1247,7 +1290,7 @@ function pintarPedidos(){
     if (!verArch && filtroEstado && pd.estado !== filtroEstado) return false;
     if (!q) return true;
     const c = clienteDe(pd);
-    return ['#' + pd.id, String(pd.id), pd.cliente_email, c.nombre, c.empresa, c.rif].concat(itemsDe(pd).map(it => it.modelo)).join(' ').toLowerCase().includes(q);
+    return ['#' + pd.id, String(pd.id), pd.numero, pd.oferta_numero, pd.cliente_email, c.email, c.telefono, c.nombre, c.empresa, c.rif].concat(itemsDe(pd).map(it => it.modelo)).join(' ').toLowerCase().includes(q);
   });
   if (!lista.length){
     $('p-lista').innerHTML = '<div class="vacio">' + (verArch ? ICO.archivar + 'No hay pedidos archivados.' : ICO.pedidos + (pedidos.length ? 'No hay pedidos con este filtro.' : 'Todavía no hay pedidos.')) + '</div>';
@@ -1260,19 +1303,21 @@ function pintarPedidos(){
     const unid = items.reduce((t, it) => t + Number(it.cantidad || 0), 0);
     const wa = linkWhatsApp(c.telefono);
     return '<article class="pedido e-' + pd.estado + (pd.archivado ? ' archivado' : '') + '">' +
-      '<div class="pd-cab"><div class="pd-num"><button class="abrir" data-ver-pedido="' + pd.id + '" title="Ver detalle"><strong>#' + pd.id + '</strong></button>' +
+      '<div class="pd-cab"><div class="pd-num"><button class="abrir" data-ver-pedido="' + pd.id + '" title="Ver detalle"><strong>' + esc(numPedido(pd)) + '</strong></button>' +
           '<select class="estado-sel e-' + pd.estado + '" data-estado="' + pd.id + '" aria-label="Estado del pedido">' +
           ESTADOS.map(e => '<option value="' + e[0] + '"' + (pd.estado === e[0] ? ' selected' : '') + '>' + e[1] + '</option>').join('') + '</select>' +
           (pd.archivado ? '<span class="pill">Archivado</span>' : '') + '</div>' +
         '<div class="persona"><div class="avatar">' + esc(iniciales(c)) + '</div><div><strong>' + esc(c.nombre || c.empresa || c.email) + (c.nombre && c.empresa ? ' <span class="muted" style="display:inline">· ' + esc(c.empresa) + '</span>' : '') + '</strong>' +
-          '<span>' + esc(pd.cliente_email) + (c.telefono ? ' · ' + esc(c.telefono) : '') + '</span></div></div>' +
-        '<div class="pd-total">' + money(pd.total) + '<small title="' + esc(fecha(pd.creado)) + '">' + haceCuanto(pd.creado) + ' · ' + unid + ' unid.</small></div></div>' +
+          '<span>' + esc(c.email || 'Sin cuenta') + (c.telefono ? ' · ' + esc(c.telefono) : '') + '</span></div></div>' +
+        '<div class="pd-total">' + money(pd.total_oferta != null ? pd.total_oferta : pd.total) + '<small title="' + esc(fecha(pd.creado)) + '">' + haceCuanto(pd.creado) + ' · ' + unid + ' unid.</small></div></div>' +
+      franjaWeb(pd) +
       '<div class="pd-cuerpo"><div><ul class="items">' + items.slice(0, MAX).map(it => '<li><span class="can">' + esc(it.cantidad) + '×</span><span class="mono">' + esc(it.modelo) + '</span><span class="pre">' + money(it.precio_unit) + '</span></li>').join('') +
           (items.length > MAX ? '<li class="mas" data-ver-pedido="' + pd.id + '">+ ' + (items.length - MAX) + ' producto' + (items.length - MAX > 1 ? 's' : '') + ' más · ver detalle</li>' : '') + '</ul>' +
           (pd.nota_cliente ? '<div class="nota-cli"><strong>Nota del cliente:</strong> ' + esc(pd.nota_cliente) + '</div>' : '') + '</div>' +
         '<div class="nota-wrap"><label class="campo">Comentario para el cliente<textarea rows="2" data-nota="' + pd.id + '" placeholder="Ej. Listo para retirar">' + esc(pd.nota_admin || '') + '</textarea></label>' +
           '<div class="nota-fila"><button class="btn chico" data-guardar-nota="' + pd.id + '">' + ICO.guardar + 'Guardar comentario</button><span class="muted">Lo ve en "Mi cuenta"</span></div></div></div>' +
       '<div class="pd-pie pd-acciones">' +
+        (puedeOfertar(pd) ? '<button class="btn chico prim" data-ofertar="' + pd.id + '">' + (pd.oferta_doc_id ? 'Ver / ajustar oferta en Gestión' : 'Crear oferta en Gestión') + '</button>' : '') +
         '<button class="btn chico" data-ver-pedido="' + pd.id + '">' + ICO.ojo + 'Ver detalle</button>' +
         (wa ? '<a class="btn chico" href="' + wa + '" target="_blank" rel="noopener">' + ICO.whatsapp + 'WhatsApp</a>' : '') +
         '<div class="der"><button class="btn chico" data-archivar="' + pd.id + '" title="' + (pd.archivado ? 'Desarchivar' : 'Archivar') + '">' + ICO.archivar + '<span class="txt">' + (pd.archivado ? 'Desarchivar' : 'Archivar') + '</span></button>' +
@@ -1286,6 +1331,7 @@ function pintarPedidos(){
   document.querySelectorAll('#p-lista [data-ver-pedido]').forEach(b => b.onclick = () => abrirPedido(b.dataset.verPedido));
   document.querySelectorAll('#p-lista [data-archivar]').forEach(b => b.onclick = () => archivarPedido(b.dataset.archivar));
   document.querySelectorAll('#p-lista [data-borrar]').forEach(b => b.onclick = () => eliminarPedido(b.dataset.borrar));
+  document.querySelectorAll('#p-lista [data-ofertar]').forEach(b => b.onclick = () => ofertarEnGestion(b.dataset.ofertar));
 }
 
 /* Acciones sobre un pedido (se usan desde la lista y desde el detalle) */
@@ -1366,13 +1412,13 @@ function abrirPedido(id){
   }).join('');
 
   abrirPanel(
-    '<div class="panel-cab"><h2>Pedido #' + pd.id + '</h2>' + pillEstado(pd.estado) + (pd.archivado ? '<span class="pill">Archivado</span>' : '') +
+    '<div class="panel-cab"><h2>' + esc(numPedido(pd)) + '</h2>' + pillEstado(pd.estado) + (pd.archivado ? '<span class="pill">Archivado</span>' : '') +
       '<button class="btn chico fantasma cerrar" id="d-cerrar" aria-label="Cerrar">' + ICO.cerrar + '</button></div>' +
     '<div class="panel-cuerpo">' +
       '<div class="seccion"><h3>Cliente</h3><div class="persona" style="margin-bottom:12px"><div class="avatar">' + esc(iniciales(c)) + '</div><div><strong>' + esc(c.nombre || c.empresa || c.email) + '</strong>' +
         (c.nombre && c.empresa ? '<span>' + esc(c.empresa) + '</span>' : '') + '</div></div>' +
         '<div class="det-datos">' +
-          dato('Correo', '<a href="mailto:' + esc(c.email) + '">' + esc(c.email) + '</a>') +
+          dato('Correo', c.email ? '<a href="mailto:' + esc(c.email) + '">' + esc(c.email) + '</a>' : (c.invitado ? 'Sin cuenta' : '')) +
           dato('Teléfono', c.telefono ? esc(c.telefono) + (wa ? ' · <a href="' + wa + '" target="_blank" rel="noopener">WhatsApp ↗</a>' : '') : '') +
           dato('RIF', c.rif ? esc(c.rif) : '') +
           dato('Tipo de cliente', c.tipo_id ? esc(nombreTipo(c.tipo_id)) : '') +
@@ -1383,7 +1429,8 @@ function abrirPedido(id){
         dato('Estado', '<select class="estado-sel e-' + pd.estado + '" data-estado="' + pd.id + '" id="d-estado">' + ESTADOS.map(e => '<option value="' + e[0] + '"' + (pd.estado === e[0] ? ' selected' : '') + '>' + e[1] + '</option>').join('') + '</select>') +
         dato('Contenido', items.length + ' producto' + (items.length === 1 ? '' : 's') + ' · ' + unidades + ' unid.') +
       '</div>' +
-      (pd.nota_cliente ? '<div class="ayuda" style="margin:14px 0 0"><strong>Nota del cliente:</strong> ' + esc(pd.nota_cliente) + '</div>' : '') + '</div>' +
+      (pd.nota_cliente ? '<div class="ayuda" style="margin:14px 0 0"><strong>Nota del cliente:</strong> ' + esc(pd.nota_cliente) + '</div>' : '') +
+      (franjaWeb(pd) ? '<div style="margin:14px -2px 0;border-radius:8px;overflow:hidden">' + franjaWeb(pd) + '</div>' : '') + '</div>' +
       '<div class="seccion"><h3>Productos</h3>' +
         (items.length ? '<ul class="det-items">' + filas + '</ul>' : '<div class="vacio">Este pedido no tiene productos.</div>') +
         '<div class="det-total"><span class="muted">Total' + (pd.total != null && Math.abs(Number(pd.total) - suma) > 1 ? ' (registrado; la suma da ' + money(suma) + ')' : '') + '</span><strong>' + money(pd.total != null ? pd.total : suma) + '</strong></div>' +
@@ -1392,6 +1439,8 @@ function abrirPedido(id){
         '<div><button class="btn chico" id="d-guardar-nota">Guardar comentario</button></div></div></div>' +
     '</div>' +
     '<div class="panel-pie">' +
+      (puedeOfertar(pd) ? '<button class="btn prim" id="d-ofertar">' + (pd.oferta_doc_id ? 'Ver oferta en Gestión' : 'Crear oferta en Gestión') + '</button>' : '') +
+      (pd.token ? '<button class="btn" id="d-enlace" title="Enlace para que el cliente vea y acepte su oferta sin cuenta">Enlace del cliente</button>' : '') +
       '<button class="btn" id="d-copiar">Copiar lista</button>' +
       '<button class="btn" id="d-archivar">' + ICO.archivar + (pd.archivado ? 'Desarchivar' : 'Archivar') + '</button>' +
       '<button class="btn peligro" id="d-borrar">' + ICO.borrar + 'Eliminar</button>' +
@@ -1404,8 +1453,10 @@ function abrirPedido(id){
   $('d-guardar-nota').onclick = () => guardarNota(pd.id, $('d-nota').value);
   $('d-archivar').onclick = () => archivarPedido(pd.id);
   $('d-borrar').onclick = () => eliminarPedido(pd.id);
+  if ($('d-ofertar')) $('d-ofertar').onclick = () => ofertarEnGestion(pd.id);
+  if ($('d-enlace')) $('d-enlace').onclick = () => copiarEnlaceCliente(pd.id);
   $('d-copiar').onclick = async () => {
-    const texto = 'Pedido #' + pd.id + ' · ' + (c.nombre || c.empresa || c.email) + '\n' +
+    const texto = 'Pedido ' + numPedido(pd) + ' · ' + (c.nombre || c.empresa || c.email || '') + (c.telefono ? ' · ' + c.telefono : '') + '\n' +
       items.map(it => it.cantidad + ' × ' + it.modelo + (it.descripcion ? ' — ' + it.descripcion : '') + ' — ' + money(it.precio_unit) + ' c/u').join('\n') +
       '\nTotal: ' + money(pd.total != null ? pd.total : suma);
     try { await navigator.clipboard.writeText(texto); toast('Lista copiada'); } catch (e) { toast('No se pudo copiar'); }
