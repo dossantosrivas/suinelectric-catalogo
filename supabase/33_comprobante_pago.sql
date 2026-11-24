@@ -86,11 +86,8 @@ language sql immutable set search_path = public as $$
 $$;
 
 -- 4. Actualizar pedido_responder (manteniendo compatibilidad con la firma anterior de 4 argumentos)
-drop function if exists public.pedido_responder(bigint, uuid, boolean, text);
-drop function if exists public.pedido_responder(bigint, uuid, boolean, text, jsonb);
-
 create or replace function public.pedido_responder(
-  p_id bigint, p_token uuid, p_acepta boolean, p_motivo text default null, p_pago jsonb default null
+  p_id bigint, p_token uuid, p_acepta boolean, p_motivo text, p_pago jsonb
 ) returns jsonb
 language plpgsql security definer set search_path = public as $$
 declare
@@ -129,6 +126,14 @@ begin
   return public.pedido_publico(r);
 end $$;
 grant execute on function public.pedido_responder(bigint, uuid, boolean, text, jsonb) to anon, authenticated;
+
+create or replace function public.pedido_responder(
+  p_id bigint, p_token uuid, p_acepta boolean, p_motivo text default null
+) returns jsonb
+language sql security definer set search_path = public as $$
+  select public.pedido_responder(p_id, p_token, p_acepta, p_motivo, null::jsonb);
+$$;
+grant execute on function public.pedido_responder(bigint, uuid, boolean, text) to anon, authenticated;
 
 -- 5. Adjuntar o actualizar comprobante luego de aceptar (mientras esté aprobado / pendiente de pago)
 create or replace function public.pedido_adjuntar_pago(p_id bigint, p_token uuid, p_pago jsonb)
@@ -171,9 +176,8 @@ begin
 end $$;
 grant execute on function public.pedido_adjuntar_pago(bigint, uuid, jsonb) to anon, authenticated;
 
--- 6. Incluir pago_cliente en ofertas_web_por_convertir para que Gestión lo muestre
-drop function if exists public.ofertas_web_por_convertir();
-create or replace function public.ofertas_web_por_convertir()
+-- 6. Incluir pago_cliente en ofertas_web_por_convertir_v2 para que Gestión lo muestre
+create or replace function public.ofertas_web_por_convertir_v2()
 returns table(pedido_id bigint, numero text, oferta_doc_id text, direccion jsonb, pago_cliente jsonb)
 language sql stable security definer set search_path = public as $$
   select p.id, p.numero, p.oferta_doc_id, p.direccion, p.pago_cliente from pedidos p
@@ -181,8 +185,8 @@ language sql stable security definer set search_path = public as $$
      and (p.venta_doc_id is null or (p.venta_doc_id like 'creando:%'
           and to_timestamp(split_part(p.venta_doc_id, ':', 3)::bigint) < now() - interval '10 minutes'))
 $$;
-revoke execute on function public.ofertas_web_por_convertir() from public, anon;
-grant execute on function public.ofertas_web_por_convertir() to authenticated;
+revoke execute on function public.ofertas_web_por_convertir_v2() from public, anon;
+grant execute on function public.ofertas_web_por_convertir_v2() to authenticated;
 
 -- 7. Actualizar aviso a Telegram al aceptar oferta para incluir datos de pago si los envió
 create or replace function public.avisar_pedido() returns trigger

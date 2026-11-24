@@ -9415,7 +9415,7 @@ const PedidosWeb = {
     finally { this._ocupado = false; }
   },
   async convertirAceptadas() {
-    const { data, error } = await this.rpc('ofertas_web_por_convertir', {});
+    const { data, error } = await this.rpc('ofertas_web_por_convertir_v2', {});
     if (error || !data || !data.length) return;
     for (const r of data) {
       const O = Store.get('docs', r.oferta_doc_id);
