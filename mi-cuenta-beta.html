@@ -210,12 +210,22 @@
   }
   function tarjetaPedido(p, alCambiar) {
     const e = ESTADOS[p.estado] || {};
+    const pg = p.pago_cliente;
     const acc = h('div', { class: 'acciones' });
     if (p.puede_responder) acc.append(
       h('button', { class: 'btn ok', onclick: () => responder(p, true, alCambiar) }, '✔ Aceptar oferta'),
       h('button', { class: 'btn peligro', onclick: () => responder(p, false, alCambiar) }, 'Rechazar'));
+    if (['aprobado', 'pagado', 'preparando'].includes(p.estado)) acc.append(
+      h('button', { class: 'btn sec', onclick: () => adjuntarPago(p, alCambiar) }, pg ? '🧾 Actualizar comprobante' : '🧾 Adjuntar comprobante'));
     acc.append(h('button', { class: 'btn sec', onclick: () => alCarrito(p.items) }, '↻ Volver a cotizar'));
     if (p.items_oferta) acc.append(h('button', { class: 'btn sec', onclick: () => imprimir(p) }, '🖨 Imprimir / PDF'));
+    const infoPago = pg ? [
+      pg.metodo,
+      pg.referencia ? 'Ref.: ' + pg.referencia : null,
+      pg.identificacion ? 'ID/RIF: ' + pg.identificacion : null,
+      pg.archivo_nombre ? '📎 ' + pg.archivo_nombre : null,
+      pg.nota
+    ].filter(Boolean).join(' · ') : '';
     return h('article', { class: 'tarjeta' },
       h('div', { class: 'ped-cab' },
         h('div', {}, h('h3', {}, 'Solicitud ' + (p.numero || '#' + p.id), p.oferta_numero ? h('span', { class: 'ayuda', style: { display: 'inline' } }, ' · Oferta ' + p.oferta_numero) : null),
@@ -224,28 +234,106 @@
       e.d ? h('p', { class: 'ayuda', style: { marginTop: '6px' } }, e.d) : null,
       p.estado === 'cancelado' && p.motivo ? h('p', { class: 'ayuda' }, p.motivo) : null,
       p.nota_admin ? h('div', { class: 'aviso' }, h('b', {}, 'Suinelectric: '), p.nota_admin) : null,
+      infoPago ? h('div', { class: 'aviso' }, h('b', {}, 'Pago reportado: '), infoPago) : null,
       pasos(p),
       p.guia ? h('p', { class: 'ayuda' }, 'Envío: ' + p.guia) : null,
       lineas(p),
       p.nota_cliente ? h('p', { class: 'ayuda', style: { marginTop: '8px' } }, 'Tu comentario: ' + p.nota_cliente) : null,
       acc, historial(p));
   }
+  function formularioPago(prev) {
+    const d = prev || {};
+    const met = h('select', {}, ['', 'Pago Móvil', 'Transferencia bancaria', 'Zelle', 'Efectivo / Divisas', 'Otro'].map(m => h('option', { value: m, selected: d.metodo === m }, m || 'Método de pago (opcional)')));
+    const ref = h('input', { type: 'text', placeholder: 'N.º de referencia (ej. 12345678)', value: d.referencia || '', maxlength: '100' });
+    const idn = h('input', { type: 'text', placeholder: 'Cédula / RIF / ID (ej. V-12345678)', value: d.identificacion || '', maxlength: '40' });
+    const nota = h('input', { type: 'text', placeholder: 'Banco o nota corta (opcional)', value: d.nota || '', maxlength: '300' });
+    const archInfo = h('div', { class: 'ayuda', style: { marginTop: '4px' } }, d.archivo_nombre ? 'Archivo actual: ' + d.archivo_nombre : 'Imagen (JPG, PNG, WebP) o PDF · máx. 8 MB');
+    const arch = h('input', { type: 'file', accept: 'image/jpeg,image/png,image/webp,application/pdf', onchange: () => {
+      const f = arch.files && arch.files[0];
+      archInfo.textContent = f ? 'Seleccionado: ' + f.name + ' (' + Math.max(1, Math.round(f.size / 1024)) + ' KB)' : (d.archivo_nombre ? 'Archivo actual: ' + d.archivo_nombre : 'Imagen (JPG, PNG, WebP) o PDF · máx. 8 MB');
+    } });
+    const bloque = h('div', { style: { display: 'grid', gap: '8px', marginTop: '10px', paddingTop: '10px', borderTop: '1px solid var(--linea-suave)' } },
+      h('p', { class: 'ayuda', style: { fontWeight: '600', color: 'var(--tinta)' } }, 'Datos del pago o identificación (opcional):'),
+      h('label', { class: 'campo' }, 'Método de pago', met),
+      h('label', { class: 'campo' }, 'N.º de referencia', ref),
+      h('label', { class: 'campo' }, 'N.º de identificación (Cédula / RIF)', idn),
+      h('label', { class: 'campo' }, 'Recibo / comprobante', arch, archInfo),
+      h('label', { class: 'campo' }, 'Nota adicional', nota));
+    async function obtenerPago(p) {
+      const f = arch.files && arch.files[0];
+      let archivo_ruta = d.archivo_ruta || null;
+      let archivo_nombre = d.archivo_nombre || null;
+      if (f) {
+        if (f.size > 8 * 1024 * 1024) throw new Error('El recibo supera los 8 MB permitidos');
+        const limpio = f.name.replace(/[^a-zA-Z0-9._-]/g, '_').slice(-80) || 'recibo';
+        const ruta = p.token + '/' + Date.now() + '-' + limpio;
+        const { error: upErr } = await sb.storage.from('comprobantes').upload(ruta, f, { contentType: f.type || 'application/octet-stream', upsert: false });
+        if (upErr) throw new Error('No se pudo subir el recibo: ' + (upErr.message || 'intenta de nuevo'));
+        archivo_ruta = ruta;
+        archivo_nombre = f.name;
+      }
+      const obj = {
+        metodo: met.value.trim() || null,
+        referencia: ref.value.trim() || null,
+        identificacion: idn.value.trim() || null,
+        nota: nota.value.trim() || null,
+        archivo_ruta,
+        archivo_nombre,
+      };
+      return Object.values(obj).some(Boolean) ? obj : null;
+    }
+    return { bloque, obtenerPago };
+  }
   function responder(p, acepta, alCambiar) {
     const motivo = h('select', {}, ['', 'Precio', 'Tiempo de entrega', 'Lo compré en otro lugar', 'Ya no lo necesito', 'Otro'].map(m => h('option', { value: m }, m || 'Elige un motivo (opcional)')));
-    modal(acepta ? 'Aceptar oferta' : 'Rechazar oferta',
-      acepta ? h('p', {}, 'Confirmas el pedido por ', h('b', {}, usd(p.total_oferta)), '. Te contactaremos para coordinar el pago y la entrega.')
-             : h('label', { class: 'campo' }, '¿Por qué no te sirve? Nos ayuda a mejorar.', motivo),
+    const fp = acepta ? formularioPago(p.pago_cliente) : null;
+    const cuerpo = acepta
+      ? h('div', {}, h('p', { style: { marginTop: 0 } }, 'Confirmas el pedido por ', h('b', {}, usd(p.total_oferta)), '. Si ya realizaste el pago puedes adjuntar el recibo o referencia aquí, o hacerlo más tarde.'), fp.bloque)
+      : h('label', { class: 'campo' }, '¿Por qué no te sirve? Nos ayuda a mejorar.', motivo);
+    modal(acepta ? 'Aceptar oferta' : 'Rechazar oferta', cuerpo,
       (cerrar) => [
         h('button', { class: 'btn sec', onclick: cerrar }, 'Cancelar'),
         h('button', { class: 'btn ' + (acepta ? 'ok' : 'peligro'), onclick: async (ev) => {
-          ev.currentTarget.disabled = true;
-          const { data, error } = await sb.rpc('pedido_responder', { p_id: p.id, p_token: p.token, p_acepta: acepta, p_motivo: acepta ? null : (motivo.value || null) });
-          cerrar();
-          if (error) return toast(errorTxt(error), 'error');
-          if (data && data.error) { toast(data.error, 'error'); return alCambiar(); }
-          toast(acepta ? '¡Pedido confirmado! Gracias por tu compra.' : 'Listo, registramos tu respuesta.');
-          alCambiar();
+          const btn = ev.currentTarget;
+          btn.disabled = true;
+          try {
+            const p_pago = acepta ? await fp.obtenerPago(p) : null;
+            const { data, error } = await sb.rpc('pedido_responder', { p_id: p.id, p_token: p.token, p_acepta: acepta, p_motivo: acepta ? null : (motivo.value || null), p_pago });
+            cerrar();
+            if (error) return toast(errorTxt(error), 'error');
+            if (data && data.error) { toast(data.error, 'error'); return alCambiar(); }
+            toast(acepta ? '¡Pedido confirmado! Gracias por tu compra.' : 'Listo, registramos tu respuesta.');
+            alCambiar();
+          } catch (err) {
+            btn.disabled = false;
+            toast(errorTxt(err), 'error');
+          }
         } }, acepta ? 'Sí, confirmar pedido' : 'Rechazar'),
+      ]);
+  }
+  function adjuntarPago(p, alCambiar) {
+    const fp = formularioPago(p.pago_cliente);
+    modal('Comprobante de pago · ' + (p.numero || '#' + p.id),
+      h('div', {}, h('p', { style: { marginTop: 0 } }, 'Adjunta tu recibo o ingresa la referencia e identificación para agilizar la verificación.'), fp.bloque),
+      (cerrar) => [
+        h('button', { class: 'btn sec', onclick: cerrar }, 'Cancelar'),
+        h('button', { class: 'btn ok', onclick: async (ev) => {
+          const btn = ev.currentTarget;
+          btn.disabled = true;
+          try {
+            const p_pago = await fp.obtenerPago(p);
+            if (!p_pago) { btn.disabled = false; return toast('Ingresa una referencia, identificación o adjunta el recibo', 'error'); }
+            const { data, error } = await sb.rpc('pedido_adjuntar_pago', { p_id: p.id, p_token: p.token, p_pago });
+            cerrar();
+            if (error) return toast(errorTxt(error), 'error');
+            if (data && data.error) return toast(data.error, 'error');
+            toast('¡Comprobante guardado! Muchas gracias.');
+            alCambiar();
+          } catch (err) {
+            btn.disabled = false;
+            toast(errorTxt(err), 'error');
+          }
+        } }, 'Guardar comprobante'),
       ]);
   }
   function imprimir(p) {

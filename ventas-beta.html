@@ -3060,6 +3060,12 @@ function seguimientoVenta(box, D, { guardar, repintar }) {
         ${paso(pagada, T.pagado > 0.005, pagada ? 'Pagada' : T.pagado > 0.005 ? 'Anticipo' : 'Pago pendiente', pagada ? (ultPago ? esc(ultPago.forma || '') + ' · ' + esc(fmtFecha(ultPago.fecha)) : 'Sin monto') : T.pagado > 0.005 ? `Pagó ${fmtUSD(T.pagado)} · debe ${fmtUSD(T.saldo)}` : `Debe ${fmtUSD(T.saldo)}`)}
         ${paso(hecha, false, hecha ? (e.estado === 'enviado' ? 'Enviada' : 'Entregada') : env ? 'Envío pendiente' : 'Entrega pendiente', pasoEntrega)}
       </div>
+      ${(() => {
+        const pg = D.pedidoWeb && D.pedidoWeb.pagoCliente;
+        if (!pg) return '';
+        const txt = [pg.metodo, pg.referencia ? 'Ref.: ' + pg.referencia : '', pg.identificacion ? 'ID/RIF: ' + pg.identificacion : '', pg.nota].filter(Boolean).map(esc).join(' · ');
+        return `<div class="banner" style="margin:10px 0;background:var(--steel-soft);border-color:#B9D4E4;color:var(--steel-2)"><div><b>Pago reportado en línea:</b> ${txt || 'Recibo adjunto'}</div>${pg.archivo_ruta ? `<button type="button" class="btn sm" data-sa="verrecibo">📎 Ver recibo${pg.archivo_nombre ? ' (' + esc(pg.archivo_nombre) + ')' : ''}</button>` : ''}</div>`;
+      })()}
       ${acc ? `<div class="row seg-acc">${acc}</div>` : ''}
       <div class="row seg-acc">${btn('compartir', 'Compartir nota por WhatsApp', '', 'pdf')}${btn('imprimir', 'Imprimir nota', '', 'pdf')}</div>
       <details class="seg-det"${!hecha ? ' open' : ''}><summary>Entrega${e.legado ? ' <span class="muted small">(venta anterior: se toma como entregada)</span>' : ''}</summary>
@@ -3085,6 +3091,7 @@ function seguimientoVenta(box, D, { guardar, repintar }) {
   const accion = async (a) => {
     const e = D.entrega; const env = e.modo === 'envio';
     const marcarHecha = (extra) => { e.estado = env ? 'enviado' : 'entregado'; e.fecha = localStamp(); delete e.legado; Object.assign(e, extra || {}); logDoc(D, e.estado, env ? { empresa: e.empresa, guia: e.guia } : null); };
+    if (a === 'verrecibo') return PedidosWeb.verComprobante(D.pedidoWeb && D.pedidoWeb.pagoCliente && D.pedidoWeb.pagoCliente.archivo_ruta);
     if (a === 'revisar') return revisarEntrega(D, (uds) => { logDoc(D, 'revisada', { uds }); if (guardar()) { paint(); repintar(false); UI.toast('Revisión guardada: todo completo', 2200); } });
     if (a === 'compartir') return compartirNota(D);
     if (a === 'imprimir') return imprimirNota(D);
@@ -9363,6 +9370,13 @@ const PedidosWeb = {
   },
   guiaVenta(v) { const e = entregaDe(v); return [e.empresa, e.guia].filter(Boolean).join(' · '); },
   async rpc(fn, args) { const sb = this.sb(); if (!sb) return { error: { message: 'sin conexión' } }; return sb.rpc(fn, args); },
+  async verComprobante(ruta) {
+    const sb = this.sb();
+    if (!sb || !ruta) return UI.toast('No hay recibo adjunto');
+    const { data, error } = await sb.storage.from('comprobantes').createSignedUrl(ruta, 3600);
+    if (error || !data || !data.signedUrl) return UI.toast('No se pudo abrir el recibo');
+    window.open(data.signedUrl, '_blank', 'noopener');
+  },
   programar() { clearTimeout(this._t); this._t = setTimeout(() => this.sincronizar(), 1500); },
   async sincronizar() {
     if (this._ocupado || !this.sb()) return;
@@ -9414,7 +9428,7 @@ const PedidosWeb = {
         venta = convertirOferta(O, { entrega: dir ? { modo: 'envio', estado: 'pendiente', destino: dir } : { modo: 'retira', estado: 'pendiente' }, pagos: [] });
         UI.toast(`El cliente aceptó ${O.numero || 'la oferta'} en línea: venta ${venta.numero} creada`, 7000);
       }
-      venta.pedidoWeb = Object.assign({}, O.pedidoWeb || { id: r.pedido_id, numero: r.numero }, { estado: 'aprobado', guia: '' });
+      venta.pedidoWeb = Object.assign({}, O.pedidoWeb || { id: r.pedido_id, numero: r.numero }, { estado: 'aprobado', guia: '', pagoCliente: r.pago_cliente || null });
       Store.put('docs', venta);
       const o2 = Store.get('docs', O.id); if (o2 && o2.pedidoWeb) { o2.pedidoWeb.respondido = true; Store.put('docs', o2, { quiet: true }); }
       await this.rpc('pedido_estado_web', { p_id: r.pedido_id, p_estado: 'aprobado', p_venta_doc_id: venta.id, p_guia: null });
