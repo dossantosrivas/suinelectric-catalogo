@@ -8,6 +8,9 @@
 # Panel web: cada sección tiene su propio link (suinelectric.com/admin/pedidos, /admin/clientes/correo…)
 /admin/*     /admin     200
 
+# Mi cuenta (portal de clientes)
+/mi-cuenta/*    /mi-cuenta    200
+
 # Versiones beta (pruebas): misma base de datos, links propios
 /ventas-beta/*    /ventas-beta    200
 /admin-beta/*     /admin-beta     200

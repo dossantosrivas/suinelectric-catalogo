@@ -529,6 +529,29 @@
   .sug-ruta{ font-size:12px; margin-top:3px; }
   .sug-ruta .miga-sep{ margin:0 4px; }
 
+  /* ---------- Lo más pedido (subcategorías destacadas) ---------- */
+  .dest-cards{ display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:14px; }
+  a.enlace-cat.dest-card{
+    background:#fff; border:1px solid var(--linea); border-radius:var(--radio); overflow:hidden; color:var(--texto);
+    display:flex; flex-direction:column; text-decoration:none; transition:border-color .15s, box-shadow .15s, transform .15s;
+  }
+  a.enlace-cat.dest-card:hover{ border-color:var(--azul); box-shadow:0 8px 22px rgba(14,42,59,0.10); transform:translateY(-2px); text-decoration:none; }
+  .dest-img{ height:150px; display:flex; align-items:center; justify-content:center; padding:14px; background:#fff; position:relative; }
+  .dest-img img{ max-width:100%; max-height:100%; object-fit:contain; }
+  .dest-img .cat-card-noimg{ font-size:42px; }
+  .dest-n{ position:absolute; top:10px; left:10px; background:var(--tinta); color:#fff; font:700 12px var(--sans); border-radius:12px; padding:3px 9px; }
+  .dest-cuerpo{ border-top:1px solid var(--linea-suave); padding:12px 14px 14px; display:flex; flex-direction:column; gap:8px; flex:1; }
+  .dest-tit{ font-family:var(--display); font-weight:700; font-size:20px; line-height:1.15; color:var(--tinta); display:flex; justify-content:space-between; gap:8px; align-items:flex-start; }
+  a.enlace-cat.dest-card:hover .dest-tit{ color:var(--azul-texto); }
+  a.enlace-cat.dest-card:hover .cat-card-flecha{ transform:translateX(3px); }
+  .dest-meta{ font-size:13px; color:var(--texto-3); }
+  .dest-meta b{ color:var(--ok); font-weight:600; }
+  .dest-marcas{ display:flex; flex-wrap:wrap; gap:6px; align-items:center; margin-top:auto; }
+  .dest-marcas span{ height:30px; min-width:30px; padding:4px 8px; border:1px solid var(--linea-suave); border-radius:5px; background:#fff; display:inline-flex; align-items:center; justify-content:center; font:600 11.5px var(--sans); color:var(--texto-2); }
+  .dest-marcas img{ max-height:20px; max-width:62px; object-fit:contain; }
+  @media (max-width:1100px){ .dest-cards{ grid-template-columns:repeat(2, minmax(0,1fr)); } }
+  @media (max-width:520px){ .dest-cards{ gap:10px; } .dest-img{ height:110px; padding:10px; } .dest-tit{ font-size:17px; } .dest-cuerpo{ padding:10px 10px 12px; } .dest-marcas span{ height:26px; padding:3px 6px; } .dest-marcas img{ max-height:16px; max-width:48px; } }
+
   /* ---------- Familias en Inicio ---------- */
   .fam-cards{ display:grid; grid-template-columns:repeat(auto-fill, minmax(250px,1fr)); gap:14px; }
   .fam-card{
@@ -766,6 +789,9 @@
   .of-acciones button{ font:inherit; font-size:14.5px; font-weight:600; padding:11px 10px; border-radius:var(--radio); cursor:pointer; border:1.5px solid var(--tinta); background:#fff; color:var(--tinta);
     display:flex; align-items:center; justify-content:center; gap:7px; }
   .of-acciones button:hover{ background:var(--fondo); }
+  .of-acciones .of-enviar{ background:var(--amarillo); border-color:var(--amarillo); color:var(--tinta); font-size:15.5px; padding:13px 10px; }
+  .of-acciones .of-enviar:hover{ background:var(--amarillo-hover); }
+  .of-acciones .of-enviar:disabled{ opacity:.6; cursor:default; }
   .of-acciones .of-pdf{ background:var(--tinta); color:#fff; } .of-acciones .of-pdf:hover{ background:var(--tinta-2); }
   .of-acciones .of-wa{ border-color:var(--wa); color:var(--wa); } .of-acciones .of-wa:hover{ background:var(--ok-suave); }
   .of-otras{ display:grid; grid-template-columns:1fr 1fr; gap:8px; }
@@ -1311,27 +1337,6 @@
   #chat-burbuja[hidden], #chat-datos[hidden]{ display:none; }
   body.chat-abierto{ overflow:hidden; }
   @media (min-width: 641px){ body.chat-abierto{ overflow:auto; } }
-  .dest-cards{ display:grid; grid-template-columns:repeat(4, minmax(0,1fr)); gap:14px; }
-  a.enlace-cat.dest-card{
-    background:#fff; border:1px solid var(--linea); border-radius:var(--radio); overflow:hidden; color:var(--texto);
-    display:flex; flex-direction:column; text-decoration:none; transition:border-color .15s, box-shadow .15s, transform .15s;
-  }
-  a.enlace-cat.dest-card:hover{ border-color:var(--azul); box-shadow:0 8px 22px rgba(14,42,59,0.10); transform:translateY(-2px); text-decoration:none; }
-  .dest-img{ height:150px; display:flex; align-items:center; justify-content:center; padding:14px; background:#fff; position:relative; }
-  .dest-img img{ max-width:100%; max-height:100%; object-fit:contain; }
-  .dest-img .cat-card-noimg{ font-size:42px; }
-  .dest-n{ position:absolute; top:10px; left:10px; background:var(--tinta); color:#fff; font:700 12px var(--sans); border-radius:12px; padding:3px 9px; }
-  .dest-cuerpo{ border-top:1px solid var(--linea-suave); padding:12px 14px 14px; display:flex; flex-direction:column; gap:8px; flex:1; }
-  .dest-tit{ font-family:var(--display); font-weight:700; font-size:20px; line-height:1.15; color:var(--tinta); display:flex; justify-content:space-between; gap:8px; align-items:flex-start; }
-  a.enlace-cat.dest-card:hover .dest-tit{ color:var(--azul-texto); }
-  a.enlace-cat.dest-card:hover .cat-card-flecha{ transform:translateX(3px); }
-  .dest-meta{ font-size:13px; color:var(--texto-3); }
-  .dest-meta b{ color:var(--ok); font-weight:600; }
-  .dest-marcas{ display:flex; flex-wrap:wrap; gap:6px; align-items:center; margin-top:auto; }
-  .dest-marcas span{ height:30px; min-width:30px; padding:4px 8px; border:1px solid var(--linea-suave); border-radius:5px; background:#fff; display:inline-flex; align-items:center; justify-content:center; font:600 11.5px var(--sans); color:var(--texto-2); }
-  .dest-marcas img{ max-height:20px; max-width:62px; object-fit:contain; }
-  @media (max-width:1100px){ .dest-cards{ grid-template-columns:repeat(2, minmax(0,1fr)); } }
-  @media (max-width:520px){ .dest-cards{ gap:10px; } .dest-img{ height:110px; padding:10px; } .dest-tit{ font-size:17px; } .dest-cuerpo{ padding:10px 10px 12px; } .dest-marcas span{ height:26px; padding:3px 6px; } .dest-marcas img{ max-height:16px; max-width:48px; } }
   /* ===== Guía de subcategorías: línea del tiempo a la derecha (oct. 2026) =====
      Pantalla ancha: riel a la derecha. Más angosta: tira deslizable arriba de los productos. */
   #guia-sub{ display:none; }
@@ -1624,7 +1629,8 @@
   #contenido.vista-lista .fila-xl .thumb{ width:34px; height:34px; }
 }
 
-  /* ================= Portada: franja delgada + LOGO! V9 + familia + variadores ================= */
+
+  /* ================= Portada (beta): franja delgada + LOGO! V9 + familia + variadores ================= */
   .pt-franja{ display:flex; align-items:center; justify-content:space-between; gap:12px 20px; flex-wrap:wrap;
     background:var(--tinta); color:#fff; border-radius:var(--radio); padding:10px 12px 10px 18px; margin-bottom:18px;
     border-bottom:3px solid var(--amarillo); }
@@ -2010,9 +2016,9 @@
       </div>
       <div class="ca-ayuda">Se abre en Gestión con estos productos, cantidades y precios. La oferta rápida queda lista para copiar a MercadoLibre o enviar por WhatsApp al cliente.</div>
     </div>
-    <button type="button" class="btn-oferta-formal" id="btn-oferta-formal" title="Tu oferta con tus datos: descárgala en PDF, envíala por WhatsApp o correo, o cópiala como texto">
+    <button type="button" class="btn-oferta-formal" id="btn-oferta-formal" title="Envíanos tu carrito para cotizar (con o sin cuenta) o descarga tu oferta en PDF">
       <svg viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true"><path d="M14 2H6a2 2 0 0 0-2 2v16a2 2 0 0 0 2 2h12a2 2 0 0 0 2-2V8z"/><path d="M14 2v6h6"/><path d="M8 13h8M8 17h5"/></svg>
-      Crear oferta formal (PDF)
+      Solicitar cotización · oferta formal
     </button>
     <div class="cart-o">o envía el pedido directo por WhatsApp</div>
     <a class="btn btn-wa" style="display:block;margin-bottom:8px;" id="btn-wa-carrito" href="#" target="_blank" rel="noopener">Enviar pedido por WhatsApp (0412)</a>
@@ -2026,18 +2032,19 @@
     <div class="of-cuerpo">
       <form class="of-lado" id="of-form" autocomplete="on" novalidate>
         <h3 id="of-titulo">Tu oferta formal</h3>
-        <p class="of-sub">Escribe a nombre de quién va y elige cómo la quieres: en PDF, por WhatsApp, por correo o como texto.</p>
+        <p class="of-sub">Escribe a nombre de quién va y envíanosla para cotizar: te respondemos con la oferta confirmada y la aceptas en línea. También puedes descargarla en PDF o enviarla por WhatsApp.</p>
         <label class="of-campo" id="of-c-nombre">Razón social o nombre *
           <input name="nombre" autocomplete="organization" placeholder="Ej.: Inversiones XYZ, C.A.">
         </label>
         <div class="of-dos">
           <label class="of-campo">RIF o C.I.<input name="rif" placeholder="J-12345678-9"></label>
-          <label class="of-campo">Teléfono<input name="telefono" type="tel" autocomplete="tel" placeholder="0412-0000000"></label>
+          <label class="of-campo" id="of-c-telefono">Teléfono<input name="telefono" type="tel" autocomplete="tel" placeholder="0412-0000000"></label>
         </div>
         <label class="of-campo">Correo<input name="correo" type="email" autocomplete="email" placeholder="tu@correo.com"></label>
         <label class="of-campo">Dirección<input name="direccion" autocomplete="street-address" placeholder="Ciudad, Estado"></label>
         <label class="of-campo">Atención / nota (opcional)<textarea name="nota" placeholder="Ej.: Atención Ing. Pérez · para el proyecto de bombeo"></textarea></label>
         <div class="of-acciones">
+          <button type="button" class="of-enviar" data-of="enviar">✔ Enviar a Suinelectric para cotizar</button>
           <button type="button" class="of-pdf" data-of="pdf">📄 Descargar PDF</button>
           <button type="button" class="of-wa" data-of="wa">Enviar por WhatsApp</button>
           <div class="of-otras">
@@ -2114,6 +2121,7 @@
 <script>window.SUIN_RASTREO_MANUAL = true; /* rastreo.js arranca cuando se sabe si es administrador */</script>
 <script src="/especificaciones.js?v=2"></script>
 <script src="/enlaces-oficiales.js?v=3"></script>
+<!-- Rastreo de visitantes y estadísticas (sin cookies, no cuenta administradores) -->
 <script src="/rastreo.js?v=5"></script>
 <script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
 <script>
@@ -3209,7 +3217,7 @@ function productosAleatorios(cantidad){
   return resultado;
 }
 
-/* ---------- Portada: LOGO! V9 protagonista, familia LOGO!, variadores ---------- */
+/* ---------- Portada (beta): LOGO! V9 protagonista, familia LOGO!, variadores ---------- */
 // Cambia aquí el modelo que sale en grande y el orden de la familia.
 const PORTADA = {
   protagonista: ['6ED1052-1FB08-0BA3', '6ED1052-1MD08-0BA3'],
@@ -5070,7 +5078,9 @@ function aplicarFiltros(){
       extra.push(p);
       if (extra.length >= 200) break;
     }
-    render(agruparVariantes(lista).concat(extra));
+    if (extra.length) lista = agruparVariantes(lista).concat(extra);
+    else lista = agruparVariantes(lista);
+    render(lista);
     return;
   }
   render(agruparVariantes(lista));
@@ -5784,6 +5794,7 @@ async function cargar(silencioso){
     delScraper.forEach(p => { p._manual = false; });
     productos = ponerFotosExtra(unirInventario(manuales.concat(delScraper), panel.inventario, ocultos), fotosExtra);
     distTrasCargar();
+    setTimeout(tomarCarritoPendiente, 300);
     prepararEspecsLocales(productos);
 
     let estado = productos.length + " productos";
@@ -6046,13 +6057,18 @@ let emailPendiente = '';      // correo al que se envió el código
 let accesoEnCurso = /access_token=/.test(location.hash); // se está entrando (enlace del correo o código)
 
 const ESTADOS_PEDIDO = {
-  enviado:   { txt: 'Enviado',   cls: 'est-enviado' },
-  cotizado:  { txt: 'Cotizado',  cls: 'est-cotizado' },
-  aprobado:  { txt: 'Aprobado',  cls: 'est-aprobado' },
-  pagado:    { txt: 'Pagado',    cls: 'est-pagado' },
-  entregado: { txt: 'Entregado', cls: 'est-entregado' },
-  cancelado: { txt: 'Cancelado', cls: 'est-cancelado' },
+  enviado:    { txt: 'Recibido',          cls: 'est-enviado' },
+  revision:   { txt: 'En revisión',       cls: 'est-enviado' },
+  cotizado:   { txt: 'Oferta lista',      cls: 'est-cotizado' },
+  aprobado:   { txt: 'Confirmado',        cls: 'est-aprobado' },
+  pagado:     { txt: 'Pago recibido',     cls: 'est-pagado' },
+  preparando: { txt: 'Preparando',        cls: 'est-pagado' },
+  despachado: { txt: 'Despachado',        cls: 'est-pagado' },
+  entregado:  { txt: 'Entregado',         cls: 'est-entregado' },
+  cancelado:  { txt: 'No concretado',     cls: 'est-cancelado' },
+  vencido:    { txt: 'Oferta vencida',    cls: 'est-cancelado' },
 };
+const URL_MI_CUENTA = ES_BETA ? '/mi-cuenta-beta' : '/mi-cuenta';
 
 /* ---------- Carga de sesión y reglas ---------- */
 async function cargarSesionYReglas(){
@@ -6207,6 +6223,20 @@ function carritoAGestion(tipo){
   const br = document.getElementById('ca-rapida');
   if (br) br.addEventListener('click', () => carritoAGestion('rapida'));
 })();
+/* Productos que manda "Mi cuenta" (volver a pedir, listas por obra) */
+function tomarCarritoPendiente(){
+  let l = null;
+  try { l = JSON.parse(localStorage.getItem('suin_carrito_pendiente') || 'null'); } catch (e){}
+  if (!l || !Array.isArray(l.items) || !productos.length) return;
+  try { localStorage.removeItem('suin_carrito_pendiente'); } catch (e){}
+  if (Date.now() - (l.creado || 0) > 3600 * 1000) return;
+  let n = 0; const faltan = [];
+  l.items.forEach(it => { if (it.modelo && buscarProducto(it.modelo)){ agregarAlCarrito(it.modelo, Math.max(1, Number(it.cantidad) || 1)); n++; } else if (it.modelo) faltan.push(it.modelo); });
+  document.getElementById('cart-drawer').classList.add('abierto');
+  mostrarToast(n + ' producto(s) agregados' + (faltan.length ? ' · no disponibles ahora: ' + faltan.join(', ') : ''));
+}
+// Desde "Mi cuenta" sin sesión: /tienda-beta?cuenta=1 abre la ventana para ingresar.
+if (new URLSearchParams(location.search).get('cuenta') === '1') setTimeout(() => { if (typeof abrirCuenta === 'function') abrirCuenta(); }, 900);
 function refrescarPrecios(){
   if (!productos.length) return;
   mostrarVista();
@@ -6590,23 +6620,39 @@ async function renderMisDatos(cuerpo){
 }
 
 async function renderMisPedidos(cuerpo){
-  const { data, error } = await sb.from('pedidos').select('*').eq('cliente_email', sesion.email).order('creado', { ascending: false }).limit(100);
-  if (error){ cuerpo.innerHTML = '<p class="cta-error">No se pudieron cargar tus pedidos.</p>'; return; }
+  // Con la función nueva (incluye ofertas, estado y lo pedido como invitado con el mismo correo); si no, la tabla.
+  let data = null;
+  const r = await sb.rpc('mis_pedidos');
+  if (!r.error) data = r.data || [];
+  else {
+    const q = await sb.from('pedidos').select('*').eq('cliente_email', sesion.email).order('creado', { ascending: false }).limit(100);
+    if (q.error){ cuerpo.innerHTML = '<p class="cta-error">No se pudieron cargar tus pedidos.</p>'; return; }
+    data = q.data || [];
+  }
+  const verTodo = '<p style="margin:0 0 12px"><a class="btn-enlace" href="' + URL_MI_CUENTA + '">Abrir mi historial completo →</a> ' +
+    '<span class="cta-sub" style="display:inline">pedidos, productos comprados, listas por obra y direcciones</span></p>';
   if (!data.length){
-    cuerpo.innerHTML = '<p class="cta-vacio">Todavía no tienes pedidos. Cuando envíes tu carrito por WhatsApp estando en tu cuenta, quedará guardado aquí.</p>';
+    cuerpo.innerHTML = verTodo + '<p class="cta-vacio">Todavía no tienes pedidos. Arma tu carrito y toca <b>Solicitar cotización</b>: te enviamos la oferta y la aceptas en línea.</p>';
     return;
   }
-  cuerpo.innerHTML = data.map(pd => {
+  const esperan = data.filter(pd => pd.puede_responder);
+  cuerpo.innerHTML = verTodo +
+    (esperan.length ? '<div class="pedido-nota" style="margin-bottom:12px"><strong>' + esperan.length + (esperan.length === 1 ? ' oferta espera' : ' ofertas esperan') + ' tu respuesta.</strong> Revísala y acéptala en línea para confirmar el pedido.</div>' : '') +
+    data.slice(0, 15).map(pd => {
     const est = ESTADOS_PEDIDO[pd.estado] || { txt: pd.estado, cls: '' };
-    const items = Array.isArray(pd.items) ? pd.items : [];
+    const conOferta = Array.isArray(pd.items_oferta) && pd.items_oferta.length;
+    const items = conOferta ? pd.items_oferta : (Array.isArray(pd.items) ? pd.items : []);
     const fecha = new Date(pd.creado).toLocaleDateString('es-VE', { day: '2-digit', month: 'short', year: 'numeric' });
+    const total = conOferta ? pd.total_oferta : pd.total;
     return '<div class="pedido-card">' +
-      '<div class="pedido-top"><strong>Pedido #' + pd.id + '</strong><span class="pedido-fecha">' + fecha + '</span>' +
+      '<div class="pedido-top"><strong>' + escHtml(pd.numero || ('Pedido #' + pd.id)) + '</strong><span class="pedido-fecha">' + fecha + '</span>' +
         '<span class="pedido-estado ' + est.cls + '">' + est.txt + '</span></div>' +
       '<ul class="pedido-items">' + items.map(it =>
-        '<li><span>' + escHtml(it.modelo) + ' × ' + it.cantidad + '</span><span>' + formatoMoneda((it.precio_unit || 0) * it.cantidad) + '</span></li>').join('') + '</ul>' +
+        '<li><span>' + escHtml(it.codigo || it.modelo) + ' × ' + it.cantidad + '</span><span>' + (it.precio_unit ? formatoMoneda(it.precio_unit * it.cantidad) : 'A consultar') + '</span></li>').join('') + '</ul>' +
       (pd.nota_admin ? '<div class="pedido-nota"><strong>Suinelectric:</strong> ' + escHtml(pd.nota_admin) + '</div>' : '') +
-      '<div class="pedido-pie"><span>Total: <strong>' + formatoMoneda(pd.total) + '</strong></span>' +
+      (pd.estado === 'cancelado' && pd.motivo ? '<div class="pedido-nota">' + escHtml(pd.motivo) + '</div>' : '') +
+      '<div class="pedido-pie"><span>' + (conOferta ? 'Oferta' : 'Total') + ': <strong>' + formatoMoneda(total) + '</strong></span>' +
+        (pd.puede_responder && pd.token ? '<a class="btn-enlace" href="' + URL_MI_CUENTA + '?pedido=' + encodeURIComponent(pd.token) + '"><b>Revisar y aceptar</b></a>' : '') +
         '<button type="button" class="btn-enlace" data-repetir="' + pd.id + '">Repetir pedido</button></div>' +
     '</div>';
   }).join('');
@@ -6818,8 +6864,8 @@ function abrirOfertaFormal(){
   OFERTA_CAMPOS.forEach(k => { f.elements[k].value = deCuenta[k] || guardados[k] || ''; });
   document.getElementById('of-c-nombre').classList.remove('error');
   document.getElementById('of-nota-cuenta').textContent = sesion.email
-    ? 'Queda guardada en tu cuenta, en "Mis pedidos", con el número ' + oferta.control + '.'
-    : '¿Tienes cuenta? Entra antes de crearla y queda guardada en tu historial (y con tu descuento de cliente registrado).';
+    ? 'Al enviarla queda en tu cuenta, en "Mis pedidos", y ahí aceptas la oferta cuando te la confirmemos.'
+    : 'No necesitas cuenta: con tu nombre y teléfono te enviamos la oferta. Si tienes cuenta, entra antes para ver tus precios de cliente.';
   pintarVistaOferta();
   document.getElementById('cart-drawer').classList.remove('abierto');
   document.getElementById('modal-oferta').classList.add('abierto');
@@ -6877,9 +6923,77 @@ function imprimirOferta(d){
   catch (e){ mostrarToast('Tu navegador bloqueó la ventana. Permite las ventanas emergentes para descargar el PDF.'); }
 }
 
-async function accionOferta(accion){
+/* ---------- Solicitud de cotización (con o sin cuenta) ----------
+   Crea el pedido con pedido_crear: llega al panel y a Telegram. Suinelectric
+   arma la oferta en Gestión y el cliente la acepta en línea (Mi cuenta o su enlace). */
+const CLAVE_SOLICITUDES = 'suin_mis_solicitudes';
+async function enviarSolicitud(d, btn){
+  if (!sb){ mostrarToast('No pudimos conectar. Envíala por WhatsApp, por favor.'); return; }
+  if (sesion.bloqueado){ mostrarToast('Tu cuenta está suspendida. Escríbenos por WhatsApp.'); return; }
+  if (oferta.idPedido){ mostrarSolicitudEnviada({ id: oferta.idPedido, numero: 'Pedido #' + oferta.idPedido }); return; }
+  const campoTel = document.getElementById('of-c-telefono');
+  if (!sesion.email && String(d.telefono || '').replace(/\D/g, '').length < 10){
+    campoTel.classList.add('error'); campoTel.querySelector('input').focus();
+    mostrarToast('Escribe tu teléfono para enviarte la oferta');
+    return;
+  }
+  campoTel.classList.remove('error');
+  try { const g = Object.assign({}, d); delete g.nota; localStorage.setItem('suin_oferta_datos', JSON.stringify(g)); } catch (e){}
+  const txt = btn.textContent; btn.disabled = true; btn.textContent = 'Enviando…';
+  const { data, error } = await sb.rpc('pedido_crear', {
+    p_items: itemsDelCarrito().map(it => Object.assign(it, { precio_unit: it.precio_unit || null })),
+    p_nota: d.nota || null,
+    p_invitado: sesion.email ? null : { nombre: d.nombre, telefono: d.telefono, email: d.correo || null, rif: d.rif || null },
+    p_direccion: d.direccion ? { direccion: d.direccion } : null,
+    p_visitante: (window.suinRastreo && window.suinRastreo.visitante) || null,
+  });
+  btn.disabled = false; btn.textContent = txt;
+  if (error){ mostrarToast(error.message || 'No se pudo enviar. Intenta de nuevo o escríbenos por WhatsApp.'); return; }
+  registrar('clic_enlace', { texto: 'Oferta formal: enviar a Suinelectric' });
+  oferta.guardada = true; oferta.idPedido = data.id;
+  if (!sesion.email){
+    try { const l = JSON.parse(localStorage.getItem(CLAVE_SOLICITUDES) || '[]'); l.unshift({ token: data.token, numero: data.numero, fecha: Date.now() }); localStorage.setItem(CLAVE_SOLICITUDES, JSON.stringify(l.slice(0, 30))); } catch (e){}
+  } else {
+    const c = sesion.cliente || {}, cambios = {};
+    if (!c.rif && d.rif) cambios.rif = normalizarRif(d.rif);
+    if (!c.telefono && d.telefono) cambios.telefono = d.telefono;
+    if (!c.direccion && d.direccion) cambios.direccion = d.direccion;
+    if (Object.keys(cambios).length){ sb.from('clientes').update(cambios).eq('email', sesion.email).select().maybeSingle().then(({ data: x }) => { if (x) sesion.cliente = x; }); }
+  }
+  carrito = {}; renderCarrito();
+  document.getElementById('modal-oferta').classList.remove('abierto');
+  mostrarSolicitudEnviada(data);
+}
+function mostrarSolicitudEnviada(r){
+  const url = URL_MI_CUENTA + (r.token && !sesion.email ? '?pedido=' + encodeURIComponent(r.token) : '');
+  const h = (tag, css, txt) => { const e = document.createElement(tag); if (css) e.style.cssText = css; if (txt != null) e.textContent = txt; return e; };
+  const fondo = h('div', 'position:fixed;inset:0;background:rgba(14,42,59,.55);z-index:3000;display:flex;align-items:center;justify-content:center;padding:16px');
+  const caja = h('div', 'background:#fff;border-radius:12px;max-width:440px;width:100%;padding:24px;font-family:var(--sans);color:var(--texto);box-shadow:0 12px 40px rgba(0,0,0,.25)');
+  const t = h('h3', 'margin:0 0 8px;font-family:var(--display);font-size:24px;color:var(--tinta)', '¡Solicitud enviada!');
+  const p1 = h('p', 'margin:0 0 8px'); p1.append('Tu número es ', h('b', '', r.numero || ''), '. Te enviaremos la oferta confirmada muy pronto y podrás aceptarla en línea.');
+  const p2 = h('p', 'margin:0 0 16px;color:var(--texto-2,#4a5a66);font-size:14px',
+    sesion.email ? 'La verás en "Mi cuenta", con su estado al día.' : 'Guarda el enlace para seguir tu solicitud sin cuenta. Si luego te registras con el mismo correo, aparecerá en "Mi cuenta".');
+  const fila = h('div', 'display:flex;gap:8px;flex-wrap:wrap;justify-content:flex-end');
+  const cerrar = () => fondo.remove();
+  if (!sesion.email && r.token){
+    const cp = h('button', 'font:inherit;font-weight:600;padding:10px 14px;border-radius:var(--radio);border:1.5px solid var(--tinta);background:#fff;color:var(--tinta);cursor:pointer', 'Copiar enlace');
+    cp.onclick = () => { const u = location.origin + url; (navigator.clipboard ? navigator.clipboard.writeText(u) : Promise.reject()).then(() => mostrarToast('✓ Enlace copiado'), () => copiaRespaldo(u, () => mostrarToast('✓ Enlace copiado'))); };
+    fila.append(cp);
+  }
+  const ver = h('a', 'font-weight:700;padding:10px 14px;border-radius:var(--radio);background:var(--amarillo);color:var(--tinta);text-decoration:none', 'Ver mi solicitud');
+  ver.href = url;
+  const ok = h('button', 'font:inherit;padding:10px 14px;border:0;background:none;color:var(--azul-texto);cursor:pointer', 'Seguir comprando');
+  ok.onclick = cerrar;
+  fila.append(ok, ver);
+  caja.append(t, p1, p2, fila); fondo.append(caja);
+  fondo.addEventListener('click', (e) => { if (e.target === fondo) cerrar(); });
+  document.body.append(fondo);
+}
+
+async function accionOferta(accion, btn){
   const d = validarOferta();
   if (!d) return;
+  if (accion === 'enviar'){ await enviarSolicitud(d, btn); return; }
   if (accion === 'pdf'){
     imprimirOferta(d);
     mostrarToast('Elige "Guardar como PDF" en la ventana de impresión');
@@ -6916,7 +7030,7 @@ function copiaRespaldo(texto, listo){
   if (!f) return;
   f.addEventListener('input', () => { if (ofertaDatos().nombre) document.getElementById('of-c-nombre').classList.remove('error'); clearTimeout(timerVistaOferta); timerVistaOferta = setTimeout(pintarVistaOferta, 250); });
   f.addEventListener('submit', (e) => e.preventDefault());
-  f.querySelectorAll('[data-of]').forEach(btn => btn.addEventListener('click', () => accionOferta(btn.getAttribute('data-of'))));
+  f.querySelectorAll('[data-of]').forEach(btn => btn.addEventListener('click', () => accionOferta(btn.getAttribute('data-of'), btn)));
 })();
 
 /* ---------- Aviso de registro ----------

@@ -1,0 +1,474 @@
+<!DOCTYPE html>
+<html lang="es">
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<title>Mi cuenta · Suinelectric</title>
+<meta name="robots" content="noindex">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+<link href="https://fonts.googleapis.com/css2?family=Barlow+Semi+Condensed:wght@500;600;700&family=IBM+Plex+Sans:wght@400;500;600;700&display=swap" rel="stylesheet">
+<style>
+  /* Mismos colores, letras y esquinas que la tienda */
+  :root{
+    --tinta:#0e2a3b; --tinta-2:#163a50; --azul:#0089af; --azul-texto:#006d8c; --azul-suave:#e6f4f8;
+    --amarillo:#ffc20e; --amarillo-hover:#ffb000; --amarillo-suave:#fff5d6;
+    --fondo:#f2f4f6; --superficie:#fff; --linea:#d9dfe4; --linea-suave:#eaeef1;
+    --texto:#16232d; --texto-2:#4a5a66; --ok:#1b7f3b; --ok-suave:#e5f4ea; --off:#b3261e; --off-suave:#fbe9e7;
+    --display:'Barlow Semi Condensed','Arial Narrow',Arial,sans-serif; --sans:'IBM Plex Sans','Segoe UI',Roboto,Arial,sans-serif; --radio:6px;
+  }
+  *{ box-sizing:border-box; }
+  body{ margin:0; font-family:var(--sans); font-size:16px; line-height:1.45; background:var(--fondo); color:var(--texto); }
+  a{ color:var(--azul-texto); }
+  .cab{ background:var(--tinta); color:#fff; }
+  .cab .in{ max-width:1080px; margin:0 auto; padding:14px 18px; display:flex; align-items:center; justify-content:space-between; gap:12px; flex-wrap:wrap; }
+  .cab a{ color:#fff; text-decoration:none; font-family:var(--display); font-weight:700; font-size:22px; letter-spacing:.5px; }
+  .cab .quien{ font-size:14px; opacity:.85; }
+  main{ max-width:1080px; margin:0 auto; padding:18px; }
+  h1{ font-family:var(--display); font-size:30px; margin:4px 0 14px; color:var(--tinta); }
+  h2{ font-family:var(--display); font-size:22px; color:var(--tinta); margin:22px 0 10px; }
+  h3{ margin:0 0 2px; font-size:17px; color:var(--tinta); }
+  .btn{ display:inline-flex; align-items:center; gap:6px; font:inherit; font-weight:600; font-size:15px; padding:10px 14px; border-radius:var(--radio); cursor:pointer;
+    border:1.5px solid var(--tinta); background:var(--tinta); color:#fff; text-decoration:none; }
+  .btn:hover{ background:var(--tinta-2); }
+  .btn:disabled{ opacity:.55; cursor:default; }
+  .btn.sec{ background:#fff; color:var(--tinta); } .btn.sec:hover{ background:var(--fondo); }
+  .btn.ok{ background:var(--amarillo); border-color:var(--amarillo); color:var(--tinta); } .btn.ok:hover{ background:var(--amarillo-hover); }
+  .btn.peligro{ background:#fff; color:var(--off); border-color:var(--off); }
+  .btn.chico{ font-size:13.5px; padding:6px 10px; }
+  .enlace{ background:none; border:0; padding:0; font:inherit; color:var(--azul-texto); cursor:pointer; text-decoration:underline; }
+  .ayuda{ color:var(--texto-2); font-size:14px; margin:0; }
+  .tarjeta{ background:var(--superficie); border:1px solid var(--linea); border-radius:10px; padding:16px 18px; margin-bottom:14px; }
+  .pestanas{ display:flex; gap:2px; border-bottom:2px solid var(--linea); margin-bottom:16px; overflow-x:auto; }
+  .pestanas button{ background:none; border:0; padding:10px 14px; font:inherit; font-weight:600; color:var(--texto-2); cursor:pointer; border-bottom:3px solid transparent; margin-bottom:-2px; white-space:nowrap; }
+  .pestanas button[aria-selected="true"]{ color:var(--tinta); border-bottom-color:var(--amarillo); }
+  .filtros{ display:flex; gap:8px; flex-wrap:wrap; margin-bottom:14px; }
+  .filtros button{ border:1px solid var(--linea); background:#fff; border-radius:99px; padding:6px 12px; font:inherit; font-size:14px; cursor:pointer; color:var(--texto); }
+  .filtros button.activo{ background:var(--tinta); color:#fff; border-color:var(--tinta); }
+  .chip{ display:inline-block; padding:3px 10px; border-radius:99px; font-size:13px; font-weight:600; white-space:nowrap; }
+  .chip.info{ background:var(--azul-suave); color:var(--azul-texto); } .chip.esp{ background:var(--amarillo-suave); color:#8a5a00; }
+  .chip.ok{ background:var(--ok-suave); color:var(--ok); } .chip.gris{ background:var(--linea-suave); color:var(--texto-2); }
+  .ped-cab{ display:flex; justify-content:space-between; align-items:flex-start; gap:10px; flex-wrap:wrap; }
+  .acciones{ display:flex; gap:8px; flex-wrap:wrap; margin-top:12px; }
+  .aviso{ background:var(--amarillo-suave); border-left:4px solid var(--amarillo); padding:10px 12px; border-radius:6px; margin:12px 0; }
+  table{ width:100%; border-collapse:collapse; font-size:15px; margin-top:10px; }
+  th, td{ text-align:left; padding:8px 6px; border-bottom:1px solid var(--linea-suave); vertical-align:top; }
+  th{ color:var(--texto-2); font-weight:600; font-size:12.5px; text-transform:uppercase; letter-spacing:.04em; }
+  td.num, th.num{ text-align:right; white-space:nowrap; }
+  .pasos{ display:flex; margin:14px 0 4px; }
+  .paso{ flex:1; text-align:center; font-size:12.5px; color:var(--texto-2); position:relative; padding-top:22px; }
+  .paso::before{ content:''; position:absolute; top:4px; left:50%; width:14px; height:14px; margin-left:-7px; border-radius:50%; background:#fff; border:2px solid var(--linea); z-index:1; }
+  .paso::after{ content:''; position:absolute; top:10px; left:-50%; width:100%; height:2px; background:var(--linea); }
+  .paso:first-child::after{ display:none; }
+  .paso.hecho{ color:var(--ok); font-weight:600; } .paso.hecho::before{ background:var(--ok); border-color:var(--ok); } .paso.hecho::after{ background:var(--ok); }
+  details summary{ cursor:pointer; color:var(--azul-texto); font-size:14px; margin-top:10px; }
+  .historial{ list-style:none; padding:0; margin:6px 0 0; font-size:14px; color:var(--texto-2); }
+  .campo{ display:flex; flex-direction:column; gap:4px; margin-bottom:12px; font-size:14px; }
+  .campo input, .campo select, .campo textarea{ font:inherit; font-size:16px; padding:9px 10px; border:1px solid var(--linea); border-radius:var(--radio); background:#fff; color:var(--texto); }
+  .dos{ display:grid; grid-template-columns:1fr 1fr; gap:12px; }
+  .buscar{ width:100%; max-width:380px; font:inherit; padding:9px 12px; border:1px solid var(--linea); border-radius:var(--radio); margin-bottom:12px; }
+  .vacio{ text-align:center; color:var(--texto-2); padding:36px 14px; }
+  .modal-fondo{ position:fixed; inset:0; background:rgba(14,42,59,.55); z-index:50; display:flex; align-items:center; justify-content:center; padding:16px; }
+  .modal{ background:#fff; border-radius:12px; width:min(560px,100%); max-height:90vh; display:flex; flex-direction:column; }
+  .modal-cab{ display:flex; justify-content:space-between; align-items:center; padding:14px 18px; border-bottom:1px solid var(--linea); }
+  .modal-cab h3{ font-family:var(--display); font-size:22px; }
+  .modal-cuerpo{ padding:16px 18px; overflow:auto; }
+  .modal-pie{ padding:12px 18px; border-top:1px solid var(--linea); display:flex; gap:8px; justify-content:flex-end; flex-wrap:wrap; }
+  .x{ background:none; border:0; font-size:28px; line-height:1; cursor:pointer; color:var(--texto-2); }
+  .toast{ position:fixed; left:50%; bottom:22px; transform:translate(-50%,20px); opacity:0; transition:.25s; z-index:60; background:var(--tinta); color:#fff; padding:11px 16px; border-radius:8px; max-width:90vw; }
+  .toast.ver{ transform:translate(-50%,0); opacity:1; } .toast.error{ background:var(--off); }
+  @media (max-width:640px){ .ocultar-movil{ display:none; } .dos{ grid-template-columns:1fr; } h1{ font-size:26px; } }
+</style>
+</head>
+<body>
+<header class="cab"><div class="in">
+  <a href="/tienda" id="ir-tienda">SUINELECTRIC · Tienda</a>
+  <span class="quien" id="quien"></span>
+</div></header>
+<main id="app" aria-live="polite"><p>Cargando…</p></main>
+
+<script src="https://cdn.jsdelivr.net/npm/@supabase/supabase-js@2"></script>
+<script>
+/* =====================================================================
+   MI CUENTA (cliente) · historial de pedidos y cotizaciones, productos
+   comprados, listas por obra, direcciones de envío y datos.
+   - Con cuenta: misma sesión que la tienda (mismo dominio).
+   - Sin cuenta: ?pedido=<enlace> muestra esa solicitud y deja aceptarla.
+   - Nunca muestra costos ni menciona la nota de entrega.
+   ===================================================================== */
+(function () {
+  'use strict';
+  const ES_BETA = /-beta(\/|$|\.html)/.test(location.pathname);
+  const URL_TIENDA = ES_BETA ? '/tienda-beta' : '/tienda';
+  const URL_YO = ES_BETA ? '/mi-cuenta-beta' : '/mi-cuenta';
+  const SUPABASE_URL = 'https://yqnlxhbjassrkudnhvpr.supabase.co';
+  const SUPABASE_KEY = 'sb_publishable_LOYjM5sqvQbBLIkH4KJTKQ_UfxrpTeC'; // clave pública (es segura en la página)
+  document.getElementById('ir-tienda').href = URL_TIENDA;
+
+  const app = document.getElementById('app');
+  if (!window.supabase || !window.supabase.createClient) { app.textContent = 'No se pudo conectar. Revisa tu conexión y recarga la página.'; return; }
+  const sb = window.supabase.createClient(SUPABASE_URL, SUPABASE_KEY, { auth: { persistSession: true, autoRefreshToken: true, detectSessionInUrl: true, flowType: 'implicit' } });
+  const params = new URLSearchParams(location.search);
+  let usuario = null;
+  let pestana = params.get('ver') || 'pedidos';
+
+  /* ---------- utilidades (DOM con createElement) ---------- */
+  function h(tag, attrs, ...hijos) {
+    const el = document.createElement(tag);
+    for (const [k, v] of Object.entries(attrs || {})) {
+      if (v == null || v === false) continue;
+      if (k === 'class') el.className = v;
+      else if (k === 'style' && typeof v === 'object') Object.assign(el.style, v);
+      else if (k.startsWith('on') && typeof v === 'function') el.addEventListener(k.slice(2), v);
+      else if (typeof v === 'boolean') el[k] = v;
+      else el.setAttribute(k, v);
+    }
+    for (const c of hijos.flat(Infinity)) { if (c == null || c === false) continue; el.append(c instanceof Node ? c : document.createTextNode(String(c))); }
+    return el;
+  }
+  const usd = (n) => n == null || isNaN(n) ? '—' : '$' + Number(n).toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 });
+  const fecha = (t, conHora) => {
+    if (!t) return '';
+    const m = typeof t === 'string' && /^(\d{4})-(\d{2})-(\d{2})$/.exec(t);   // fecha sola = día local
+    const d = m ? new Date(+m[1], +m[2] - 1, +m[3]) : new Date(t);
+    return d.toLocaleDateString('es-VE', { day: '2-digit', month: 'short', year: 'numeric' }) + (conHora ? ' · ' + d.toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' }) : '');
+  };
+  const errorTxt = (e) => (e && e.message) || 'Ocurrió un error. Intenta de nuevo.';
+  function toast(msg, tipo) {
+    const t = h('div', { class: 'toast ' + (tipo || ''), role: 'status' }, msg);
+    document.body.append(t); setTimeout(() => t.classList.add('ver'), 10);
+    setTimeout(() => { t.classList.remove('ver'); setTimeout(() => t.remove(), 300); }, 3800);
+  }
+  function modal(titulo, cuerpo, acciones) {
+    const cerrar = () => fondo.remove();
+    const fondo = h('div', { class: 'modal-fondo', onclick: (e) => { if (e.target === fondo) cerrar(); } },
+      h('div', { class: 'modal', role: 'dialog', 'aria-modal': 'true', 'aria-label': titulo },
+        h('div', { class: 'modal-cab' }, h('h3', {}, titulo), h('button', { class: 'x', 'aria-label': 'Cerrar', onclick: cerrar }, '×')),
+        h('div', { class: 'modal-cuerpo' }, cuerpo),
+        acciones ? h('div', { class: 'modal-pie' }, acciones(cerrar)) : null));
+    document.body.append(fondo);
+  }
+  function copiar(texto, msg) {
+    const ok = () => toast(msg || 'Copiado');
+    if (navigator.clipboard && window.isSecureContext) { navigator.clipboard.writeText(texto).then(ok, () => toast('No se pudo copiar', 'error')); return; }
+    const ta = h('textarea', { style: { position: 'fixed', opacity: '0' } }); ta.value = texto; document.body.append(ta); ta.select();
+    try { document.execCommand('copy'); ok(); } catch (e) { toast('No se pudo copiar', 'error'); } ta.remove();
+  }
+  /* Manda productos al carrito de la tienda (la tienda los toma al abrirse) */
+  function alCarrito(items) {
+    const lista = (items || []).map(i => ({ modelo: i.modelo || i.codigo, cantidad: Math.max(1, Number(i.cantidad) || 1) })).filter(i => i.modelo);
+    if (!lista.length) return toast('No hay productos para agregar', 'error');
+    try { localStorage.setItem('suin_carrito_pendiente', JSON.stringify({ creado: Date.now(), items: lista })); }
+    catch (e) { return toast('Tu navegador no dejó guardar el carrito', 'error'); }
+    location.href = URL_TIENDA;
+  }
+
+  /* ---------- estados que ve el cliente ---------- */
+  const ESTADOS = {
+    enviado:    { t: 'Recibida',          c: 'info',  d: 'Recibimos tu solicitud. Te enviaremos la oferta confirmada muy pronto.' },
+    revision:   { t: 'En revisión',       c: 'info',  d: 'Estamos confirmando disponibilidad y precios.' },
+    cotizado:   { t: 'Oferta lista',      c: 'esp',   d: 'Revisa la oferta y acéptala en línea para confirmar tu pedido.' },
+    aprobado:   { t: 'Confirmado',        c: 'ok',    d: 'Gracias. Te contactaremos para coordinar el pago y la entrega.' },
+    pagado:     { t: 'Pago recibido',     c: 'ok',    d: 'Recibimos tu pago. Estamos preparando tu pedido.' },
+    preparando: { t: 'Preparando',        c: 'ok',    d: 'Estamos preparando tu pedido.' },
+    despachado: { t: 'Despachado',        c: 'ok',    d: 'Tu pedido va en camino.' },
+    entregado:  { t: 'Entregado',         c: 'ok',    d: '¡Gracias por tu compra! Garantía de 6 meses contra defecto de fábrica.' },
+    cancelado:  { t: 'No concretada',     c: 'gris',  d: '' },
+    vencido:    { t: 'Oferta vencida',    c: 'gris',  d: 'Pídenos una actualización de precios con "Volver a cotizar".' },
+  };
+  const PASOS = [['aprobado', 'Confirmado'], ['pagado', 'Pago recibido'], ['preparando', 'Preparando'], ['despachado', 'Despachado'], ['entregado', 'Entregado']];
+  const chip = (e) => { const x = ESTADOS[e] || { t: e, c: 'gris' }; return h('span', { class: 'chip ' + x.c }, x.t); };
+
+  /* ======================= tarjeta de solicitud / pedido ======================= */
+  function lineas(p) {
+    const conOferta = Array.isArray(p.items_oferta) && p.items_oferta.length;
+    const its = conOferta ? p.items_oferta : (p.items || []);
+    return h('table', {},
+      h('thead', {}, h('tr', {}, h('th', {}, 'Producto'), h('th', { class: 'num' }, 'Cant.'),
+        h('th', { class: 'num' }, conOferta ? 'Precio' : 'Ref.'), h('th', { class: 'num ocultar-movil' }, 'Subtotal'))),
+      h('tbody', {}, its.map(i => h('tr', {},
+        h('td', {}, h('b', {}, i.codigo || i.modelo || ''), i.marca ? ' · ' + i.marca : '',
+          i.descripcion ? h('div', { class: 'ayuda' }, i.descripcion.length > 160 ? i.descripcion.slice(0, 157) + '…' : i.descripcion) : null,
+          i.nota ? h('div', { class: 'ayuda' }, '📝 ' + i.nota) : null),
+        h('td', { class: 'num' }, i.cantidad),
+        h('td', { class: 'num' }, i.precio_unit ? usd(i.precio_unit) : 'A consultar'),
+        h('td', { class: 'num ocultar-movil' }, i.precio_unit ? usd(i.precio_unit * i.cantidad) : '')))),
+      h('tfoot', {}, h('tr', {}, h('td', { colspan: '3', class: 'num' }, h('b', {}, conOferta ? 'Total de la oferta' : 'Total referencial')),
+        h('td', { class: 'num' }, h('b', {}, usd(conOferta ? p.total_oferta : p.total))))));
+  }
+  function pasos(p) {
+    const idx = PASOS.findIndex(([k]) => k === p.estado);
+    if (idx < 0) return null;
+    return h('div', { class: 'pasos', 'aria-label': 'Avance del pedido' }, PASOS.map(([, t], i) => h('div', { class: 'paso' + (i <= idx ? ' hecho' : '') }, t)));
+  }
+  function historial(p) {
+    const hs = p.historial || [];
+    if (!hs.length) return null;
+    return h('details', {}, h('summary', {}, 'Ver historial'),
+      h('ul', { class: 'historial' }, hs.map(x => h('li', {}, fecha(x.creado, true) + ' — ' + ((ESTADOS[x.estado] || {}).t || x.estado) +
+        (x.detalle && x.estado !== 'enviado' ? ' (' + x.detalle + ')' : '')))));
+  }
+  function tarjetaPedido(p, alCambiar) {
+    const e = ESTADOS[p.estado] || {};
+    const acc = h('div', { class: 'acciones' });
+    if (p.puede_responder) acc.append(
+      h('button', { class: 'btn ok', onclick: () => responder(p, true, alCambiar) }, '✔ Aceptar oferta'),
+      h('button', { class: 'btn peligro', onclick: () => responder(p, false, alCambiar) }, 'Rechazar'));
+    acc.append(h('button', { class: 'btn sec', onclick: () => alCarrito(p.items) }, '↻ Volver a cotizar'));
+    if (p.items_oferta) acc.append(h('button', { class: 'btn sec', onclick: () => imprimir(p) }, '🖨 Imprimir / PDF'));
+    return h('article', { class: 'tarjeta' },
+      h('div', { class: 'ped-cab' },
+        h('div', {}, h('h3', {}, 'Solicitud ' + (p.numero || '#' + p.id), p.oferta_numero ? h('span', { class: 'ayuda', style: { display: 'inline' } }, ' · Oferta ' + p.oferta_numero) : null),
+          h('div', { class: 'ayuda' }, fecha(p.creado, true), p.vence && p.estado === 'cotizado' ? ' · Válida hasta el ' + fecha(p.vence) : '')),
+        chip(p.estado)),
+      e.d ? h('p', { class: 'ayuda', style: { marginTop: '6px' } }, e.d) : null,
+      p.estado === 'cancelado' && p.motivo ? h('p', { class: 'ayuda' }, p.motivo) : null,
+      p.nota_admin ? h('div', { class: 'aviso' }, h('b', {}, 'Suinelectric: '), p.nota_admin) : null,
+      pasos(p),
+      p.guia ? h('p', { class: 'ayuda' }, 'Envío: ' + p.guia) : null,
+      lineas(p),
+      p.nota_cliente ? h('p', { class: 'ayuda', style: { marginTop: '8px' } }, 'Tu comentario: ' + p.nota_cliente) : null,
+      acc, historial(p));
+  }
+  function responder(p, acepta, alCambiar) {
+    const motivo = h('select', {}, ['', 'Precio', 'Tiempo de entrega', 'Lo compré en otro lugar', 'Ya no lo necesito', 'Otro'].map(m => h('option', { value: m }, m || 'Elige un motivo (opcional)')));
+    modal(acepta ? 'Aceptar oferta' : 'Rechazar oferta',
+      acepta ? h('p', {}, 'Confirmas el pedido por ', h('b', {}, usd(p.total_oferta)), '. Te contactaremos para coordinar el pago y la entrega.')
+             : h('label', { class: 'campo' }, '¿Por qué no te sirve? Nos ayuda a mejorar.', motivo),
+      (cerrar) => [
+        h('button', { class: 'btn sec', onclick: cerrar }, 'Cancelar'),
+        h('button', { class: 'btn ' + (acepta ? 'ok' : 'peligro'), onclick: async (ev) => {
+          ev.currentTarget.disabled = true;
+          const { data, error } = await sb.rpc('pedido_responder', { p_id: p.id, p_token: p.token, p_acepta: acepta, p_motivo: acepta ? null : (motivo.value || null) });
+          cerrar();
+          if (error) return toast(errorTxt(error), 'error');
+          if (data && data.error) { toast(data.error, 'error'); return alCambiar(); }
+          toast(acepta ? '¡Pedido confirmado! Gracias por tu compra.' : 'Listo, registramos tu respuesta.');
+          alCambiar();
+        } }, acepta ? 'Sí, confirmar pedido' : 'Rechazar'),
+      ]);
+  }
+  function imprimir(p) {
+    const w = window.open('', '_blank');
+    if (!w) return toast('Permite las ventanas emergentes para imprimir', 'error');
+    const d = w.document;
+    d.title = 'Oferta ' + (p.oferta_numero || p.numero) + ' - Suinelectric';
+    const st = d.createElement('style');
+    st.textContent = '@page{size:letter;margin:14mm 12mm}body{font-family:"Segoe UI",Roboto,Arial,sans-serif;color:#1d2a33;font-size:13px;padding:10px}' +
+      'h2{color:#0e2a3b;margin:0 0 4px}table{width:100%;border-collapse:collapse;margin-top:10px}th{background:#0e2a3b;color:#fff;text-align:left;padding:6px;font-size:11.5px;text-transform:uppercase}' +
+      'td{padding:6px;border-bottom:1px solid #dde3e8;vertical-align:top}td.num,th.num{text-align:right}.ayuda{color:#4a5a66;font-size:11.5px}.pie{margin-top:16px;font-size:11px;color:#6b7a85}';
+    d.head.append(st);
+    const t = d.createElement('h2'); t.textContent = 'SUINELECTRIC · Oferta ' + (p.oferta_numero || p.numero);
+    const s = d.createElement('p'); s.textContent = 'RIF J-29756387-3 · Fecha: ' + fecha(p.actualizado) + (p.vence ? ' · Válida hasta el ' + fecha(p.vence) : '');
+    const pie = d.createElement('p'); pie.className = 'pie';
+    pie.textContent = 'Garantía: 6 meses contra defecto de fábrica. Entrega: 1-2 días hábiles después del pago, sujeto a disponibilidad. Ventas@Suinelectric.com · WhatsApp 0412-4111319 / 0424-4561921 · Valencia, Carabobo.';
+    d.body.append(t, s, d.importNode(lineas(p), true), pie);
+    setTimeout(() => w.print(), 300);
+  }
+
+  /* ======================= solicitud por enlace (sin cuenta) ======================= */
+  async function vistaToken(token) {
+    app.replaceChildren(h('p', {}, 'Cargando…'));
+    const { data, error } = await sb.rpc('pedido_por_token', { p_token: token });
+    if (error || !data) { app.replaceChildren(h('div', { class: 'tarjeta' }, 'No encontramos esta solicitud. Revisa el enlace o escríbenos por WhatsApp.')); return; }
+    app.replaceChildren(h('h1', {}, 'Tu solicitud'), tarjetaPedido(data, () => vistaToken(token)),
+      usuario ? h('p', {}, h('a', { href: URL_YO }, 'Ver todas mis solicitudes →'))
+              : h('p', { class: 'ayuda' }, '¿Quieres ver todas tus solicitudes en un solo lugar? ',
+                  h('a', { href: URL_TIENDA + '?cuenta=1' }, 'Crea tu cuenta o entra'), ' con el mismo correo que usaste.'));
+  }
+
+  /* ======================= sin sesión ======================= */
+  async function vistaSinSesion() {
+    let locales = [];
+    try { locales = JSON.parse(localStorage.getItem('suin_mis_solicitudes') || '[]'); } catch (e) {}
+    const cont = h('div', {},
+      h('h1', {}, 'Mi cuenta'),
+      h('div', { class: 'tarjeta' },
+        h('p', { style: { marginTop: 0 } }, 'Entra con tu correo para ver tu historial de pedidos, tus productos comprados, tus listas por obra y tus direcciones de envío.'),
+        h('a', { class: 'btn ok', href: URL_TIENDA + '?cuenta=1' }, 'Entrar o crear mi cuenta'),
+        h('p', { class: 'ayuda', style: { marginTop: '10px' } }, 'No necesitas cuenta para cotizar: arma tu carrito en la tienda y toca "Solicitar cotización".')));
+    if (locales.length) {
+      const lista = h('div', {}, h('h2', {}, 'Solicitudes enviadas desde este equipo'));
+      cont.append(lista);
+      app.replaceChildren(cont);
+      for (const s of locales.slice(0, 10)) {
+        const { data } = await sb.rpc('pedido_por_token', { p_token: s.token });
+        if (data) lista.append(tarjetaPedido(data, render));
+      }
+      return;
+    }
+    app.replaceChildren(cont);
+  }
+
+  /* ======================= con sesión: pestañas ======================= */
+  const PESTANAS = [['pedidos', 'Pedidos y cotizaciones'], ['comprados', 'Productos comprados'], ['listas', 'Listas por obra'], ['direcciones', 'Direcciones de envío'], ['datos', 'Mis datos']];
+  function vistaCuenta() {
+    const cuerpo = h('section', {});
+    const barra = h('div', { class: 'pestanas', role: 'tablist' }, PESTANAS.map(([k, t]) => h('button', {
+      role: 'tab', 'aria-selected': String(k === pestana), onclick: () => { pestana = k; history.replaceState(null, '', '?ver=' + k); vistaCuenta(); } }, t)));
+    app.replaceChildren(h('h1', {}, 'Mi cuenta'), barra, cuerpo);
+    ({ pedidos: tabPedidos, comprados: tabComprados, listas: tabListas, direcciones: tabDirecciones, datos: tabDatos }[pestana] || tabPedidos)(cuerpo);
+  }
+
+  async function tabPedidos(c) {
+    c.replaceChildren(h('p', {}, 'Cargando…'));
+    const { data, error } = await sb.rpc('mis_pedidos');
+    if (error) return c.replaceChildren(h('p', {}, errorTxt(error)));
+    const GRUPOS = {
+      todos: () => true,
+      espera: (p) => p.puede_responder,
+      curso: (p) => ['enviado', 'revision', 'aprobado', 'pagado', 'preparando', 'despachado'].includes(p.estado),
+      cerrados: (p) => ['entregado', 'cancelado', 'vencido'].includes(p.estado),
+    };
+    let filtro = data.some(GRUPOS.espera) ? 'espera' : 'todos';
+    const lista = h('div', {}), fil = h('div', { class: 'filtros' });
+    const pintar = () => {
+      fil.replaceChildren(...[['todos', 'Todas'], ['espera', 'Esperan tu respuesta'], ['curso', 'En curso'], ['cerrados', 'Cerradas']].map(([k, t]) =>
+        h('button', { class: k === filtro ? 'activo' : '', onclick: () => { filtro = k; pintar(); } }, t + ' (' + data.filter(GRUPOS[k]).length + ')')));
+      const vis = data.filter(GRUPOS[filtro]);
+      lista.replaceChildren(...(vis.length ? vis.map(p => tarjetaPedido(p, () => tabPedidos(c)))
+        : [h('div', { class: 'vacio' }, 'No hay solicitudes aquí. ', h('a', { href: URL_TIENDA }, 'Ir a la tienda'))]));
+    };
+    c.replaceChildren(fil, lista); pintar();
+  }
+
+  async function tabComprados(c) {
+    c.replaceChildren(h('p', {}, 'Cargando…'));
+    const { data, error } = await sb.rpc('mis_productos_comprados');
+    if (error) return c.replaceChildren(h('p', {}, errorTxt(error)));
+    if (!data.length) return c.replaceChildren(h('div', { class: 'vacio' }, 'Aquí aparecerán los productos que nos compres, para pedirlos de nuevo en un clic.'));
+    const marcados = new Set();
+    const buscar = h('input', { class: 'buscar', type: 'search', placeholder: 'Buscar código o descripción…', 'aria-label': 'Buscar' });
+    const tbody = h('tbody');
+    const pintar = () => {
+      const q = buscar.value.trim().toLowerCase();
+      tbody.replaceChildren(...data.filter(p => !q || (p.modelo + ' ' + (p.descripcion || '')).toLowerCase().includes(q)).map(p => h('tr', {},
+        h('td', {}, h('input', { type: 'checkbox', 'aria-label': 'Elegir ' + p.modelo, checked: marcados.has(p.modelo),
+          onchange: (e) => { if (e.target.checked) marcados.add(p.modelo); else marcados.delete(p.modelo); } })),
+        h('td', {}, h('b', {}, p.modelo), p.descripcion ? h('div', { class: 'ayuda' }, p.descripcion) : null),
+        h('td', { class: 'num ocultar-movil' }, p.cantidad_total), h('td', { class: 'num ocultar-movil' }, fecha(p.ultima)),
+        h('td', { class: 'num' }, usd(p.ultimo_precio)),
+        h('td', {}, h('button', { class: 'btn chico', onclick: () => alCarrito([{ modelo: p.modelo, cantidad: 1 }]) }, 'Pedir')))));
+    };
+    buscar.addEventListener('input', pintar);
+    c.replaceChildren(buscar, h('div', { class: 'tarjeta' },
+      h('table', {}, h('thead', {}, h('tr', {}, h('th'), h('th', {}, 'Producto'), h('th', { class: 'num ocultar-movil' }, 'Comprado'),
+        h('th', { class: 'num ocultar-movil' }, 'Última vez'), h('th', { class: 'num' }, 'Último precio'), h('th'))), tbody),
+      h('div', { class: 'acciones' }, h('button', { class: 'btn', onclick: () => {
+        if (!marcados.size) return toast('Marca los productos que quieres volver a pedir');
+        alCarrito([...marcados].map(m => ({ modelo: m, cantidad: 1 })));
+      } }, 'Llevar los marcados al carrito')),
+      h('p', { class: 'ayuda', style: { marginTop: '8px' } }, 'El último precio es referencial; la oferta nueva usa el precio vigente.')));
+    pintar();
+  }
+
+  async function tabListas(c) {
+    const { data, error } = await sb.from('listas_cliente').select('*').order('actualizado', { ascending: false });
+    if (error) return c.replaceChildren(h('p', {}, errorTxt(error)));
+    const editar = (l) => {
+      l = l || { nombre: '', descripcion: '', items: [] };
+      const nombre = h('input', { value: l.nombre, placeholder: 'Ej.: Tablero galpón 2, Obra Maracay' });
+      const desc = h('input', { value: l.descripcion || '', placeholder: 'Opcional' });
+      const prods = h('textarea', { rows: '6', placeholder: 'Un producto por línea: cantidad × código\nEj.: 3 × 3RT2016-1AP01' });
+      prods.value = (l.items || []).map(i => (i.cantidad || 1) + ' × ' + i.modelo).join('\n');
+      modal(l.id ? 'Editar lista' : 'Nueva lista por obra', h('div', {},
+        h('label', { class: 'campo' }, 'Nombre de la obra o proyecto *', nombre), h('label', { class: 'campo' }, 'Descripción', desc),
+        h('label', { class: 'campo' }, 'Productos', prods),
+        h('p', { class: 'ayuda' }, 'Consejo: desde "Productos comprados" o tus pedidos puedes llevar productos al carrito y volver a cotizarlos.')),
+      (cerrar) => [h('button', { class: 'btn sec', onclick: cerrar }, 'Cancelar'), h('button', { class: 'btn', onclick: async () => {
+        if (!nombre.value.trim()) return toast('Escribe el nombre de la lista', 'error');
+        const items = prods.value.split('\n').map(x => x.trim()).filter(Boolean).map(x => {
+          const m = /^(\d+)\s*[x×*]\s*(.+)$/i.exec(x); return m ? { cantidad: Number(m[1]), modelo: m[2].trim() } : { cantidad: 1, modelo: x };
+        });
+        const fila = { nombre: nombre.value.trim().slice(0, 120), descripcion: desc.value.trim() || null, items };
+        const q = l.id ? sb.from('listas_cliente').update(fila).eq('id', l.id) : sb.from('listas_cliente').insert(Object.assign({ cliente_email: usuario.email.toLowerCase() }, fila));
+        const { error } = await q; if (error) return toast(errorTxt(error), 'error');
+        cerrar(); tabListas(c);
+      } }, 'Guardar')]);
+    };
+    c.replaceChildren(h('div', { class: 'acciones', style: { margin: '0 0 14px' } }, h('button', { class: 'btn', onclick: () => editar() }, '+ Nueva lista')),
+      ...(data.length ? data.map(l => h('article', { class: 'tarjeta' },
+        h('div', { class: 'ped-cab' },
+          h('div', {}, h('h3', {}, l.nombre), h('div', { class: 'ayuda' }, [l.descripcion, (l.items || []).length + ' productos', 'actualizada ' + fecha(l.actualizado)].filter(Boolean).join(' · '))),
+          h('div', { class: 'acciones', style: { marginTop: 0 } },
+            h('button', { class: 'btn ok chico', onclick: () => alCarrito(l.items) }, 'Cotizar esta lista'),
+            h('button', { class: 'btn sec chico', onclick: () => editar(l) }, 'Editar'),
+            h('button', { class: 'btn peligro chico', onclick: async () => {
+              if (!confirm('¿Borrar la lista "' + l.nombre + '"?')) return;
+              const { error } = await sb.from('listas_cliente').delete().eq('id', l.id); if (error) return toast(errorTxt(error), 'error'); tabListas(c);
+            } }, 'Borrar'))),
+        h('details', {}, h('summary', {}, 'Ver productos'),
+          h('ul', { class: 'historial' }, (l.items || []).map(i => h('li', {}, (i.cantidad || 1) + ' × ' + i.modelo + (i.nota ? ' (' + i.nota + ')' : '')))))))
+        : [h('div', { class: 'vacio' }, 'Guarda listas por obra o tablero para cotizarlas de nuevo cuando quieras.')]));
+  }
+
+  async function tabDirecciones(c) {
+    const { data, error } = await sb.from('clientes_direcciones').select('*').order('predeterminada', { ascending: false }).order('id');
+    if (error) return c.replaceChildren(h('p', {}, errorTxt(error)));
+    const form = (d) => {
+      d = d || {};
+      const f = {};
+      const cmp = (k, t, a) => h('label', { class: 'campo' }, t, f[k] = h('input', Object.assign({ value: d[k] || '' }, a)));
+      const pred = h('input', { type: 'checkbox', checked: !!d.predeterminada || !data.length });
+      modal(d.id ? 'Editar dirección' : 'Nueva dirección', h('div', {},
+        h('div', { class: 'dos' }, cmp('alias', 'Nombre *', { placeholder: 'Oficina, Obra Valencia…' }), cmp('agencia_envio', 'Agencia o retiro', { placeholder: 'MRW, Zoom, Tealca, retiro…' })),
+        cmp('direccion', 'Dirección *', {}),
+        h('div', { class: 'dos' }, cmp('ciudad', 'Ciudad', {}), cmp('estado_region', 'Estado', {})),
+        h('div', { class: 'dos' }, cmp('contacto', 'Persona que recibe', {}), cmp('telefono', 'Teléfono', { type: 'tel' })),
+        cmp('referencia', 'Punto de referencia', {}),
+        h('label', {}, pred, ' Usar como predeterminada')),
+      (cerrar) => [h('button', { class: 'btn sec', onclick: cerrar }, 'Cancelar'), h('button', { class: 'btn', onclick: async () => {
+        const v = Object.fromEntries(Object.entries(f).map(([k, el]) => [k, el.value.trim() || null]));
+        if (!v.alias || !v.direccion) return toast('El nombre y la dirección son obligatorios', 'error');
+        v.predeterminada = pred.checked; v.cliente_email = usuario.email.toLowerCase();
+        const q = d.id ? sb.from('clientes_direcciones').update(v).eq('id', d.id) : sb.from('clientes_direcciones').insert(v);
+        const { error } = await q; if (error) return toast(errorTxt(error), 'error');
+        cerrar(); tabDirecciones(c);
+      } }, 'Guardar')]);
+    };
+    c.replaceChildren(h('div', { class: 'acciones', style: { margin: '0 0 14px' } }, h('button', { class: 'btn', onclick: () => form() }, '+ Agregar dirección')),
+      ...(data.length ? data.map(d => h('article', { class: 'tarjeta' },
+        h('div', { class: 'ped-cab' },
+          h('div', {}, h('h3', {}, d.alias, d.predeterminada ? h('span', { class: 'chip ok', style: { marginLeft: '8px' } }, 'Predeterminada') : null),
+            h('div', {}, d.direccion), h('div', { class: 'ayuda' }, [d.ciudad, d.estado_region].filter(Boolean).join(', ')),
+            h('div', { class: 'ayuda' }, [d.contacto, d.telefono, d.agencia_envio, d.referencia].filter(Boolean).join(' · '))),
+          h('div', { class: 'acciones', style: { marginTop: 0 } },
+            h('button', { class: 'btn sec chico', onclick: () => form(d) }, 'Editar'),
+            h('button', { class: 'btn peligro chico', onclick: async () => { if (!confirm('¿Borrar esta dirección?')) return;
+              const { error } = await sb.from('clientes_direcciones').delete().eq('id', d.id); if (error) return toast(errorTxt(error), 'error'); tabDirecciones(c); } }, 'Borrar')))))
+        : [h('div', { class: 'vacio' }, 'Guarda tus direcciones de envío para indicarlas al cotizar.')]));
+  }
+
+  async function tabDatos(c) {
+    const { data, error } = await sb.from('clientes').select('nombre, empresa, rif, telefono, direccion').eq('email', usuario.email.toLowerCase()).maybeSingle();
+    if (error) return c.replaceChildren(h('p', {}, errorTxt(error)));
+    const d = data || {}; const f = {};
+    const cmp = (k, t, a) => h('label', { class: 'campo' }, t, f[k] = h('input', Object.assign({ value: d[k] || '' }, a)));
+    c.replaceChildren(h('div', { class: 'tarjeta', style: { maxWidth: '660px' } },
+      h('p', { class: 'ayuda', style: { marginTop: 0 } }, 'Correo: ' + usuario.email),
+      h('div', { class: 'dos' }, cmp('nombre', 'Nombre', { autocomplete: 'name' }), cmp('telefono', 'Teléfono', { type: 'tel', autocomplete: 'tel' })),
+      h('div', { class: 'dos' }, cmp('empresa', 'Empresa', { autocomplete: 'organization' }), cmp('rif', 'RIF o C.I.', {})),
+      cmp('direccion', 'Dirección fiscal', {}),
+      h('div', { class: 'acciones' },
+        h('button', { class: 'btn', onclick: async () => {
+          const v = Object.fromEntries(Object.entries(f).map(([k, el]) => [k, el.value.trim() || null]));
+          if (!v.nombre) return toast('Escribe tu nombre', 'error');
+          const { error } = await sb.from('clientes').update(v).eq('email', usuario.email.toLowerCase());
+          toast(error ? errorTxt(error) : '✓ Datos guardados', error ? 'error' : '');
+        } }, 'Guardar'),
+        h('button', { class: 'btn sec', onclick: async () => { await sb.auth.signOut({ scope: 'local' }); toast('Sesión cerrada'); } }, 'Cerrar sesión'))));
+  }
+
+  /* ======================= arranque ======================= */
+  function render() {
+    document.getElementById('quien').textContent = usuario ? usuario.email : '';
+    const token = params.get('pedido');
+    if (token) return vistaToken(token);
+    return usuario ? vistaCuenta() : vistaSinSesion();
+  }
+  sb.auth.getSession().then(({ data }) => { usuario = (data.session && data.session.user) || null; render(); });
+  sb.auth.onAuthStateChange((_e, s) => { const u = (s && s.user) || null; if ((u && u.id) !== (usuario && usuario.id)) { usuario = u; render(); } });
+})();
+</script>
+</body>
+</html>

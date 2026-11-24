@@ -421,14 +421,6 @@ body.solo .cot-frame{height:100vh;height:100dvh;border:0;border-radius:0}
   .extras .ex{grid-template-columns:100px minmax(0,1fr) 30px}
 }
 @media (max-width:520px){.g2,.g3,.g4{grid-template-columns:minmax(0,1fr)}.kpi .v{font-size:24px}}
-/* ===== Existencias: buscar en todos los distribuidores ===== */
-.lt-list{display:flex;flex-direction:column}
-.lt-row{padding:10px 2px;border-top:1px solid var(--line)}
-.lt-h{display:flex;gap:8px;align-items:baseline;flex-wrap:wrap}
-.lt-n{margin-top:2px;overflow-wrap:anywhere}
-.lt-chips{display:flex;flex-wrap:wrap;gap:6px;margin-top:6px}
-.lt-chip{display:inline-flex;gap:4px;align-items:baseline;padding:4px 9px;border:1px solid var(--line);border-radius:999px;font-size:.86em;line-height:1.3;white-space:nowrap}
-@media (max-width:600px){.lt-chip{white-space:normal}}
 /* ===== Inventario (vista rápida de existencias) ===== */
 .inv-kpis{display:grid;grid-template-columns:repeat(4,minmax(0,1fr));gap:14px;margin-bottom:14px}
 .inv-kpi{background:var(--panel);border:1px solid var(--line);border-radius:var(--r);padding:14px 18px;text-align:left;display:flex;flex-direction:column;gap:1px;min-width:0;color:inherit;font:inherit}
@@ -1020,12 +1012,6 @@ const Store = {
     IDB.set('data', snap);
     IDB.set('pend', Array.from(Pend.values()));
   }, 350),
-  /* guarda ya (sin esperar): antes de mover el punto de sincronización, para que un celular que cierra
-     la pestaña no quede con el punto adelantado y sin los datos (pasaba con las listas de existencias) */
-  async flush() {
-    const snap = {}; COLS.forEach(c => snap[c] = Array.from(DB[c].values()));
-    await IDB.set('data', snap); await IDB.set('pend', Array.from(Pend.values()));
-  },
   all(col) { return Array.from(DB[col].values()); },
   get(col, id) { return DB[col].get(id); },
   put(col, rec, { quiet } = {}) {
@@ -1096,7 +1082,6 @@ const Sync = {
     try {
       await this.push();
       await this.pull();
-      if (!this.revisado) { this.revisado = true; try { await this.reconciliar(); } catch (e) { console.warn('reconciliar', e); this.revisado = false; } }
       this.pulledOnce = true;   // ya están todos los productos de la nube en este equipo
       ensureDistribuidores();
       this.set('ok', 'Sincronizado ' + new Date().toLocaleTimeString('es-VE', { hour: '2-digit', minute: '2-digit' }));
@@ -1130,35 +1115,8 @@ const Sync = {
       if (!data || data.length < PAGE) break;
       from += PAGE;
     }
-    if (changed.size) await Store.flush();      // primero queda guardado en el equipo…
-    if (maxTs) { this.lastSync = maxTs; lsSet('suinadm_lastsync', maxTs); }      // …y luego se marca como sincronizado
-    if (changed.size) { changed.forEach(c => Bus.emit('data', c)); Bus.emit('remote'); }
-  },
-  /* Una vez por sesión: compara lo que hay en la nube con lo de este equipo y trae lo que falte o esté
-     viejo (registros que se saltaron porque el equipo se cerró a mitad o tenía una versión vieja de la app). */
-  async reconciliar() {
-    const remoto = [], PAGE = 1000;
-    for (let from = 0; ; from += PAGE) {
-      const { data, error } = await this.sb.from('adm_registros').select('coleccion,id,mod:data->>mod').eq('borrado', false).order('coleccion').order('id').range(from, from + PAGE - 1);
-      if (error) throw error;
-      remoto.push(...(data || []));
-      if (!data || data.length < PAGE) break;
-    }
-    const falta = {};
-    remoto.forEach(r => {
-      if (!DB[r.coleccion] || Pend.has(r.coleccion + '|' + r.id)) return;
-      const cur = DB[r.coleccion].get(r.id);
-      if (!cur || (r.mod && (!cur.mod || r.mod > cur.mod))) (falta[r.coleccion] = falta[r.coleccion] || []).push(r.id);
-    });
-    const changed = new Set();
-    for (const [col, ids] of Object.entries(falta)) {
-      for (let i = 0; i < ids.length; i += 100) {
-        const { data, error } = await this.sb.from('adm_registros').select('coleccion,id,data,borrado').eq('coleccion', col).in('id', ids.slice(i, i + 100));
-        if (error) throw error;
-        (data || []).forEach(r => { if (Store.applyRemote(r.coleccion, r.id, r.data, r.borrado)) changed.add(r.coleccion); });
-      }
-    }
-    if (changed.size) { await Store.flush(); changed.forEach(c => Bus.emit('data', c)); Bus.emit('remote'); console.info('Recuperados de la nube:', Object.fromEntries(Object.entries(falta).map(([k, v]) => [k, v.length]))); }
+    if (maxTs) { this.lastSync = maxTs; lsSet('suinadm_lastsync', maxTs); }
+    if (changed.size) { Store.persist(); changed.forEach(c => Bus.emit('data', c)); Bus.emit('remote'); }
   },
   listen() {
     if (!this.online() || this.channel) return;
@@ -2855,9 +2813,14 @@ Views['desde-tienda'] = (v, tipo) => {
     const snap = c ? docClienteSnap(c) : datos.cliente ? { nombre: datos.cliente.empresa || datos.cliente.nombre || datos.cliente.email, rif: datos.cliente.rif || '', direccion: '', extras: [datos.cliente.telefono ? { l: 'Teléfono', v: datos.cliente.telefono } : null, datos.cliente.email ? { l: 'Correo', v: datos.cliente.email } : null].filter(Boolean) } : null;
     const extra = { items: datos.items.map(it => lineaDesdeTienda(it, tipo)), notas: 'Armada desde la tienda web' };
     if (snap) { extra.cliente = snap; extra.clienteId = c ? c.id : null; }
+    if (datos.pedidoWeb && datos.pedidoWeb.id && tipo === 'oferta') {
+      const w = datos.pedidoWeb;
+      extra.pedidoWeb = { id: w.id, numero: w.numero || '', token: w.token || '' };
+      extra.notas = ['Solicitud web ' + (w.numero || '#' + w.id), w.nota ? 'Cliente: ' + w.nota : '', ...(w.notas || [])].filter(Boolean).join('\n');
+    }
     App.pendingDoc = newDoc(tipo, extra); App.pendingEditor = true;
     Route.nav('#/nuevo/' + tipo, { replace: true });
-    UI.toast(`${datos.items.length} producto${datos.items.length === 1 ? '' : 's'} traídos de la tienda${c ? '' : datos.cliente ? ' · el cliente aún no tiene ficha en Gestión' : ' · elige el cliente'}`, 4500);
+    UI.toast(`${datos.items.length} producto${datos.items.length === 1 ? '' : 's'} traídos de la tienda${c ? '' : datos.cliente ? ' · el cliente aún no tiene ficha en Gestión' : ' · elige el cliente'}${extra.pedidoWeb ? ' · al guardar, el cliente la verá y podrá aceptarla en línea' : ''}`, 5500);
   };
   // espera a que cargue el catálogo del distribuidor (para costos y distribuidor de cada línea)
   if (Catalog.items.length) { armar(); return; }
@@ -5333,7 +5296,7 @@ const Escaner = (() => {
         <div class="small" style="margin:4px 0 8px">${ok ? '<span class="pill ok">EAN/UPC</span> Es un código de modelo: sirve para todas las cajas iguales.' : '<span class="pill warn">Revisa</span> No es un EAN/UPC. Si es el <b>número de serie (S/N)</b> o un lote, no lo guardes: cambia en cada equipo.'}</div>
         <label class="fld"><span>¿De qué producto es?</span><input class="inp" data-qp placeholder="Busca por código, nombre o marca" autocomplete="off" spellcheck="false"></label>
         <div data-lp class="esc-lp"></div>
-        <div class="row" style="margin-top:8px"><button type="button" class="btn sm" data-crear>${ico('plus')} Crear producto con este código</button><button type="button" class="btn sm ghost" data-ignorar>No guardar</button></div>
+        <div class="row" style="margin-top:8px"><button type="button" class="btn sm pri" data-crearweb>${ico('search')} Buscar en la web y crear</button><button type="button" class="btn sm" data-crear>${ico('plus')} Crear producto con este código</button><button type="button" class="btn sm ghost" data-ignorar>No guardar</button></div>
       </div>`;
       const qp = $('[data-qp]', res), lp = $('[data-lp]', res);
       const listar = () => {
@@ -5347,6 +5310,7 @@ const Escaner = (() => {
       };
       qp.addEventListener('input', debounce(listar, 150));
       if (!matchMedia('(pointer:coarse)').matches) setTimeout(() => qp.focus(), 30);
+      $('[data-crearweb]', res).onclick = () => { pendiente = null; res.innerHTML = `<div class="small muted">Revisa la ficha que se abre y guárdala. Después, al escanear este código, ya lo reconoce.</div>`; productoModal(null, { barras: [code], web: code }); };
       $('[data-crear]', res).onclick = () => { pendiente = null; res.innerHTML = `<div class="small muted">Completa el producto y guárdalo; luego vuelve a escanear el código.</div>`; productoModal(null, { barras: [code] }); };
       $('[data-ignorar]', res).onclick = () => { pendiente = null; res.innerHTML = ''; pan.focus(); };
     };
@@ -5423,6 +5387,24 @@ const Escaner = (() => {
   };
   return { abrir, capturar };
 })();
+
+/* ---------- Datos del producto desde la web oficial (vía /api/ficha-web, con Gemini + Google) ---------- */
+const FichaWeb = {
+  cache: new Map(),
+  async buscar(q, marca) {
+    const key = (q + '|' + (marca || '')).toUpperCase();
+    if (this.cache.has(key)) return this.cache.get(key);
+    if (!Sync.sb) throw new Error('Gestión no está conectada a Supabase.');
+    const { data } = await Sync.sb.auth.getSession();
+    const tok = data && data.session && data.session.access_token;
+    if (!tok) throw new Error('Inicia sesión en Gestión para buscar en la web.');
+    const r = await fetch(`/api/ficha-web?q=${encodeURIComponent(q)}&marca=${encodeURIComponent(marca || '')}`, { headers: { Authorization: 'Bearer ' + tok, apikey: Sync.conf().key } });
+    const txt = await r.text(); let j = null; try { j = JSON.parse(txt); } catch (e) { /* no es JSON */ }
+    if (!r.ok || !j) throw new Error(j && j.error ? j.error + (j.detalle ? ' — Detalle: ' + j.detalle : '') : r.status === 404 ? 'La búsqueda en la web aún no está publicada (functions/api/ficha-web.js).' : 'Error ' + r.status + (txt ? ': ' + txt.replace(/<[^>]+>/g, ' ').replace(/\s+/g, ' ').trim().slice(0, 200) : ''));
+    if (j.encontrado) this.cache.set(key, j);
+    return j;
+  }
+};
 
 /* ---------- Código que no está en tu inventario pero sí en el catálogo del distribuidor ---------- */
 function tarjetaCat(c, code) {
@@ -5610,6 +5592,9 @@ function productoModal(p, extra) {
       <label class="fld"><span>&nbsp;</span><label class="chk"><input type="checkbox" data-k="activo" ${p.activo !== false ? 'checked' : ''}> Activo</label></label>
       <div class="small muted" data-pt-info style="grid-column:1/-1;margin-top:-4px"></div>
       <div class="fld" style="grid-column:1/-1"><span>Códigos de barras</span><div class="row" style="gap:6px;flex-wrap:nowrap"><input class="inp mono" style="flex:1;min-width:0" data-barras value="${esc((p.barras || []).join(', '))}" placeholder="Escanéalos o escríbelos separados por coma" autocomplete="off" spellcheck="false"><button type="button" class="btn sm" data-esc-barra>${ico('scan')} Escanear</button></div><span class="small muted" style="font-weight:400">El del modelo (EAN/UPC), no el número de serie. El código/modelo del producto ya sirve para tus etiquetas propias.</span></div>
+      <div class="fld" style="grid-column:1/-1"><div class="row" style="justify-content:space-between;gap:8px;flex-wrap:wrap;align-items:center"><span class="small muted" style="font-weight:400">¿No tienes los datos? Búscalos en la web oficial del fabricante con el modelo o el código de barras.</span><button type="button" class="btn sm" data-web>${ico('search')} Buscar en la web</button></div><div data-web-res></div></div>
+      <label class="fld" style="grid-column:span 2"><span>Página oficial del fabricante</span><input class="inp" data-k="paginaOficial" value="${esc(p.paginaOficial || '')}" placeholder="https://…" autocomplete="off"></label>
+      <label class="fld"><span>Manual (PDF)</span><input class="inp" data-k="manualUrl" value="${esc(p.manualUrl || '')}" placeholder="https://…" autocomplete="off"></label>
     </div>
     <datalist id="dl-cat">${cats.map(c => `<option value="${esc(c)}">`).join('')}</datalist>
     <datalist id="dl-marcas">${marcasL.map(c => `<option value="${esc(c)}">`).join('')}</datalist>
@@ -5635,7 +5620,8 @@ function productoModal(p, extra) {
     foot: [].concat(isNew ? [] : [['Eliminar', 'red', async (close) => { if (movs.length) { UI.toast('Tiene movimientos: márcalo como inactivo en vez de eliminarlo', 3200); return; } if (await UI.confirm('¿Eliminar este producto?', { ok: 'Eliminar', danger: true })) { Store.del('productos', p.id); close(); } }]])
       .concat([['Cancelar', '', c => c()], ['Guardar', 'pri', (close) => {
         $$('[data-k]', m.body).forEach(i => { const k = i.dataset.k; p[k] = i.type === 'checkbox' ? i.checked : k === 'precio' || k === 'precioTienda' ? num(i.value) : i.value.trim(); });
-        if (!(num(p.precioTienda) > 0)) delete p.precioTienda;   // vacío = la tienda usa el precio del distribuidor (o tu precio si no lo trae)
+        if (!(num(p.precioTienda) > 0)) delete p.precioTienda;
+        ['paginaOficial', 'manualUrl'].forEach(k => { if (!/^https?:\/\//i.test(p[k] || '')) delete p[k]; });   // vacío = la tienda usa el precio del distribuidor (o tu precio si no lo trae)
         if (!p.codigo) { UI.toast('Escribe el código'); return; }
         const partes = $('[data-ruta]', m.body).value.split(/\s*[›>]\s*/).map(x => x.trim()).filter(Boolean);
         p.webCat = partes[0] || ''; p.webSubs = partes.slice(1); p.imagenes = fotos.slice(0, 8); if (p.webCat) p.catAuto = 'ok';
@@ -5698,6 +5684,7 @@ function productoModal(p, extra) {
     if (!xs.includes(k)) xs.push(k); inp.value = xs.join(', ');
     const cat = isNew && Barras.catalogo(k);
     if (cat) { llenarDesdeCat(cat); UI.toast(`Es el ${cat.m} del catálogo del distribuidor: revisa los datos y guarda`, 3500); return; }
+    if (isNew && !$('[data-k="codigo"]', m.body).value.trim() && Barras.gtin(k)) { buscarWeb(k); return; }
     UI.toast(Barras.gtin(k) ? 'Código agregado: guarda para que quede' : 'Agregado. Ojo: no es un EAN/UPC; revisa que no sea el número de serie', 3200);
     if (isNew && !$('[data-k="codigo"]', m.body).value.trim()) $('[data-k="codigo"]', m.body).focus();
   };
@@ -5753,6 +5740,41 @@ function productoModal(p, extra) {
     if (!raw.length) intentar(); else pintar();
     return { set };
   })();
+  /* ---- buscar los datos en la web oficial del fabricante (/api/ficha-web) ---- */
+  const webRes = $('[data-web-res]', m.body);
+  async function buscarWeb(q) {
+    const val = (k) => ($(`[data-k="${k}"]`, m.body) || {}).value || '';
+    q = String(q || val('codigo').trim() || ($('[data-barras]', m.body).value.split(/[,;\n]+/).map(Barras.norm).filter(Boolean)[0] || '')).trim();
+    if (q.length < 3) { UI.toast('Escribe el código / modelo o escanea el código de barras', 3000); return; }
+    webRes.innerHTML = `<div class="esc-card small" style="margin-top:8px">Buscando <b class="mono">${esc(q)}</b> en la web… (puede tardar unos segundos)</div>`;
+    let d;
+    try { d = await FichaWeb.buscar(q, val('marca').trim()); } catch (e) { webRes.innerHTML = `<div class="esc-card esc-nuevo small" style="margin-top:8px;user-select:text;word-break:break-word">${esc(e.message || e)}</div>`; return; }
+    if (!webRes.isConnected) return;
+    const fuentes = (d.fuentes || []).map(f => `<a href="${esc(f.url)}" target="_blank" rel="noopener">${esc(f.titulo || 'fuente')}</a>`).join(' · ');
+    if (!d.encontrado) { webRes.innerHTML = `<div class="esc-card esc-nuevo small" style="margin-top:8px"><b>No lo encontré en la web.</b> ${esc(d.nota || (d.porCodigo ? 'Prueba con el modelo, que suele venir en la misma etiqueta.' : ''))}${fuentes ? `<div class="muted" style="margin-top:4px">Revisé: ${fuentes}</div>` : ''}</div>`; return; }
+    const conf = { alta: ['ok', 'Ficha oficial'], media: ['warn', 'Revisa: fuentes no oficiales'], baja: ['bad', 'Poco seguro: revisa bien'] }[d.confianza] || ['warn', d.confianza];
+    webRes.innerHTML = `<div class="esc-card" style="margin-top:8px">
+      <div class="row" style="justify-content:space-between;gap:8px;align-items:flex-start"><div><div class="mono" style="font-weight:700;font-size:17px">${esc(d.modelo)}</div><div>${esc(d.nombre)}</div><div class="small muted">${esc(d.marca)}${d.tipo ? ' · ' + esc(d.tipo) : ''}</div></div><span class="pill ${conf[0]}">${esc(conf[1])}</span></div>
+      ${d.descripcion ? `<div class="small" style="margin-top:6px">${esc(d.descripcion)}</div>` : ''}
+      ${(d.caracteristicas || []).length ? `<ul class="small" style="margin:6px 0 0;padding-left:18px">${d.caracteristicas.map(x => `<li>${esc(x)}</li>`).join('')}</ul>` : ''}
+      <div class="small" style="margin-top:6px">${d.pagina_oficial ? `<a href="${esc(d.pagina_oficial)}" target="_blank" rel="noopener">Página oficial ↗</a>` : ''}${d.manual ? ` · <a href="${esc(d.manual)}" target="_blank" rel="noopener">Manual ↗</a>` : ''}</div>
+      ${fuentes ? `<div class="small muted" style="margin-top:4px">Fuentes: ${fuentes}</div>` : ''}
+      ${d.nota ? `<div class="small muted" style="margin-top:4px">${esc(d.nota)}</div>` : ''}
+      <div class="row" style="margin-top:10px;gap:6px;flex-wrap:wrap"><button type="button" class="btn sm pri" data-wusar="vacio">Rellenar lo que está vacío</button><button type="button" class="btn sm" data-wusar="todo">Usar todo (reemplaza)</button><button type="button" class="btn sm ghost" data-wcerrar>Descartar</button></div>
+    </div>`;
+    $('[data-wcerrar]', webRes).onclick = () => { webRes.innerHTML = ''; };
+    $$('[data-wusar]', webRes).forEach(b => b.onclick = () => {
+      const todo = b.dataset.wusar === 'todo';
+      const set = (k, v) => { const el = $(`[data-k="${k}"]`, m.body); if (!el || !v) return; if (todo || !el.value.trim()) el.value = v; };
+      const desc = [d.descripcion].concat((d.caracteristicas || []).map(x => '• ' + x)).filter(Boolean).join('\n');
+      const cod = $('[data-k="codigo"]', m.body); if (cod && (!cod.value.trim() || (todo && isNew))) { cod.value = d.modelo; ponerDist(); }
+      set('nombre', d.nombre); set('descripcion', desc); set('marca', d.marca); set('paginaOficial', d.pagina_oficial); set('manualUrl', d.manual);
+      webRes.innerHTML = ''; UI.toast('Datos de la web puestos en la ficha: revisa y guarda', 3000);
+    });
+  }
+  $('[data-web]', m.body).onclick = () => buscarWeb();
+  if (isNew && extra && extra.web) setTimeout(() => buscarWeb(extra.web), 50);
+
   /* rellenar la ficha nueva con los datos del catálogo del distribuidor (al escanear su código de barras) */
   function llenarDesdeCat(c) {
     const set = (k, v) => { const el = $(`[data-k="${k}"]`, m.body); if (el && v != null && v !== '' && !el.value.trim()) el.value = v; };
@@ -6106,17 +6128,15 @@ Bus.on('data', (c) => { if ((c === 'listas' || c === 'proveedores') && lsRepinta
 Views.existencias = (v, sel) => {
   lsRepintar = () => { if (document.body.contains(v) && App.route && App.route.name === 'existencias') App.render(); else lsRepintar = null; };
   const ls = Listas.all().sort((a, b) => distNombre(a.dist).localeCompare(distNombre(b.dist)) || String(a.marca).localeCompare(String(b.marca)));
-  if (!sel) sel = lsGet('suinadm_lista_sel', '') || 'todos';
-  const todos = sel === 'todos';
-  let L = todos ? null : (ls.find(l => l.id === sel) || ls[0] || null);
+  if (!sel && ls.length) sel = lsGet('suinadm_lista_sel', '') || ls[0].id;
+  let L = ls.find(l => l.id === sel) || ls[0] || null;
   const F = Object.assign({ q: '', stock: '1', precio: '' }, lsGet('suinadm_f_lista', {}));
   v.innerHTML = `<div class="vh"><h1>Existencias de distribuidores</h1><div class="act"><button class="btn pri" data-up>${ico('plus')} Subir lista</button></div>
     <div class="sub">Las listas que te mandan los distribuidores. <b>Solo se consultan</b>: no cambian con tus ventas, se cambian cuando subes una lista nueva. En el cotizador salen como etiquetas moradas junto a tu inventario. El precio sale de la lista de precios del distribuidor; si no lo tiene, es el mismo de Grupos Eléctricos.</div></div>
-    ${ls.length ? `<div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:12px"><a class="btn ${todos ? 'pri' : ''}" href="#/existencias/todos">${ico('search')} Buscar en todos</a>${ls.map(l => `<a class="btn ${L && l.id === L.id ? 'pri' : ''}" href="#/existencias/${esc(l.id)}">${esc(distNombre(l.dist))}${l.marca ? ' · ' + esc(l.marca) : ''} <span class="muted small" style="margin-left:4px">${fmtQty(l.items.length)}</span></a>`).join('')}</div>` : ''}
+    ${ls.length ? `<div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:12px">${ls.map(l => `<a class="btn ${L && l.id === L.id ? 'pri' : ''}" href="#/existencias/${esc(l.id)}">${esc(distNombre(l.dist))}${l.marca ? ' · ' + esc(l.marca) : ''} <span class="muted small" style="margin-left:4px">${fmtQty(l.items.length)}</span></a>`).join('')}</div>` : ''}
     <div id="ls-body"></div>`;
   $('[data-up]', v).onclick = () => subirListaModal(L ? L.dist : 'dist_emi', L ? L.marca : '');
   const body = $('#ls-body', v);
-  if (todos) { lsSet('suinadm_lista_sel', 'todos'); buscarEnTodos(body); return; }
   if (!L) { body.innerHTML = `<div class="panel empty">Todavía no has subido ninguna lista.<br><br>Toca <b>Subir lista</b> y elige el Excel que te mandó el distribuidor (por ejemplo <i>SIEMENS-Existencias_al_15SEP26.xlsx</i> de EMI).</div>`; return; }
   lsSet('suinadm_lista_sel', L.id);
   const filas = L.items.map(it => { const pr = Listas.precioDe(L, it); return { it, q: num(it.q), pr, k: normTxt(it.m + ' ' + (it.n || '') + ' ' + (it.c || '')) }; });
@@ -6160,83 +6180,6 @@ Views.existencias = (v, sel) => {
   $('[data-del]', body).onclick = async () => { if (!(await UI.confirm(`¿Borrar la lista de ${distNombre(L.dist)}${L.marca ? ' ' + L.marca : ''}? Dejará de salir en el cotizador.`, { ok: 'Borrar', danger: true }))) return; Listas.borrar(L.id); lsSet('suinadm_lista_sel', ''); Route.nav('#/existencias', { replace: true }); };
   paint();
 };
-/* Buscar un producto en todos los distribuidores a la vez: tu inventario, el de tu papá,
-   Grupos Eléctricos (y demás catálogos de la tienda) y todas las listas de existencias.
-   Un resultado por referencia, con una etiqueta por cada lugar donde está. */
-const indiceTodos = (() => {
-  let firma = '', idx = null;
-  return () => {
-    const ls = Listas.all();
-    const f = ls.map(l => l.id + '@' + l.mod).join('|') + '#' + Catalog.items.length + '|' + (Catalog.sombra || []).length + '|' + ((Catalog.meta || {}).leido || '') + '#' + Store.all('productos').map(p => p.mod || '').join('').length + Store.all('productos').length + '#' + Store.all('docs').length;
-    if (idx && f === firma) return idx;
-    firma = f; const m = new Map();
-    const g = (cod, nombre) => { const k = normKey(cod); if (!k) return null; let e = m.get(k); if (!e) { e = { k, m: String(cod).trim(), n: '', fuentes: [], txt: '' }; m.set(k, e); } if (nombre && (!e.n || e.n === e.m)) e.n = String(nombre).trim(); e.txt += ' ' + normTxt(cod + ' ' + (nombre || '')); return e; };
-    // tu inventario y el de tu papá
-    Store.all('productos').forEach(p => { if (!p.codigo) return; const e = g(p.codigo, p.nombre); if (!e) return; const st = Calc.st(p.id); e.prod = p.id; e.txt += ' ' + normTxt((p.marca || '') + ' ' + [].concat(p.barras || []).join(' ')); e.fuentes.push({ t: 'inv', n: origenNombre('manuel'), q: st.manuel.cant }, { t: 'inv', n: origenNombre('papa'), q: st.papa.cant }); });
-    // catálogos de distribuidores (Grupos Eléctricos y listas de precios de la tienda)
-    Catalog.items.concat(Catalog.sombra || [], Catalog.tapados || []).forEach(c => {
-      if (c.pan || !c.m) return; const e = g(c.m, c.n); if (!e) return;
-      const d = distDeCat(c); const n = d ? d.nombre : (c.src === 's' ? 'Grupos Eléctricos' : 'Distribuidor');
-      if (e.fuentes.some(x => x.t === 'cat' && x.n === n)) return;
-      e.txt += ' ' + normTxt(c.marca + ' ' + c.sku + ' ' + c.desc.slice(0, 160));
-      e.fuentes.push({ t: 'cat', n, q: c.exist != null && c.exist !== '' ? num(c.exist) : (c.disp ? null : 0), precio: c.precio, dist: d ? d.id : '' });
-    });
-    // listas de existencias (EMI, Sirius Control, IMO, MOTASI…)
-    ls.forEach(l => l.items.forEach(it => {
-      const e = g(it.m, it.n); if (!e) return; const pr = Listas.precioDe(l, it);
-      e.txt += ' ' + normTxt((it.c || '') + ' ' + (it.mk || l.marca || ''));
-      e.fuentes.push({ t: 'lista', n: distNombre(l.dist) + (l.marca ? ' · ' + l.marca : ''), q: num(it.q), u: it.u || '', precio: pr.precio, fuentePrecio: pr.fuente, fecha: l.fecha, lista: l.id, dist: l.dist });
-    }));
-    idx = Array.from(m.values());
-    return idx;
-  };
-})();
-function buscarEnTodos(body) {
-  const F = Object.assign({ q: '', stock: '1' }, lsGet('suinadm_f_todos', {}));
-  const nLs = Listas.all().length;
-  body.innerHTML = `<section class="panel"><div class="ph"><h2>Buscar en todos los distribuidores</h2></div>
-    <p class="muted small" style="margin:-4px 0 10px">Busca a la vez en tu inventario, el de ${esc(origenNombre('papa'))}, Grupos Eléctricos y las ${fmtQty(nLs)} listas de existencias. Escribe la referencia, el código o parte del nombre.</p>
-    <div class="row" style="gap:8px;flex-wrap:wrap;margin-bottom:10px">
-      <input class="inp" type="search" data-q placeholder="Ej.: 6ES7 214, GD20 7.5, contactor 25A…" value="${esc(F.q)}" style="flex:1 1 260px" autocomplete="off" autocapitalize="off" spellcheck="false">
-      <select class="inp" data-stock style="flex:0 0 auto"><option value="1" ${F.stock === '1' ? 'selected' : ''}>Con existencia en algún lado</option><option value="" ${F.stock === '' ? 'selected' : ''}>Todos</option></select>
-    </div>
-    <div id="lt-res"></div></section>`;
-  const res = $('#lt-res', body);
-  const chip = (x) => {
-    const sinQ = x.q == null, hay = sinQ || x.q > 0;
-    const color = x.t === 'inv' ? 'background:#ECFDF5;border-color:#A7F3D0' : x.t === 'lista' ? 'background:#F5F3FF;border-color:#DDD6FE' : 'background:#EFF6FF;border-color:#BFDBFE';
-    const tit = x.t === 'lista' ? `Lista del ${fmtFecha(x.fecha)} (${Listas.haceTxt(x.fecha)})${x.fuentePrecio === 'ge' ? ' · precio igual a Grupos Eléctricos' : ''}` : '';
-    return `<span class="lt-chip" title="${esc(tit)}" style="${color};${hay ? '' : 'opacity:.55'}"><b>${esc(x.n)}</b> ${sinQ ? 'disp.' : fmtQty(x.q) + (x.u ? ' ' + esc(x.u) : '')}${x.precio > 0 ? ` · ${fmtUSD(x.precio)}` : ''}${x.t === 'lista' && Listas.edad(x.fecha) === 'vieja' ? ' <span title="Lista con más de 30 días">⏳</span>' : ''}</span>`;
-  };
-  const paint = () => {
-    const words = normTxt(F.q).split(/\s+/).filter(Boolean);
-    if (!words.length || normTxt(F.q).replace(/\s/g, '').length < 2) { res.innerHTML = `<div class="empty small">Escribe al menos 2 letras o números para buscar.</div>`; return; }
-    const kq = normKey(F.q);
-    let xs = indiceTodos().filter(e => words.every(w => e.txt.includes(w)) || (kq.length >= 3 && e.k.includes(kq)));
-    if (F.stock === '1') xs = xs.filter(e => e.fuentes.some(x => x.q == null || x.q > 0));
-    const tot = (e) => e.fuentes.reduce((a, x) => a + (x.q > 0 ? x.q : 0), 0);
-    xs.sort((a, b) => (b.k === kq) - (a.k === kq) || (b.k.startsWith(kq)) - (a.k.startsWith(kq)) || b.fuentes.filter(x => x.q == null || x.q > 0).length - a.fuentes.filter(x => x.q == null || x.q > 0).length || tot(b) - tot(a) || a.m.localeCompare(b.m));
-    const n = xs.length; xs = xs.slice(0, 150);
-    res.innerHTML = n ? `<p class="muted small" style="margin:0 0 8px">${fmtQty(n)} resultado${n === 1 ? '' : 's'}${n > xs.length ? ` · mostrando ${xs.length}, escribe más para afinar` : ''}</p>
-      <div class="lt-list">${xs.map(e => {
-        const orden = { inv: 0, cat: 1, lista: 2 };
-        const fs = e.fuentes.slice().sort((a, b) => orden[a.t] - orden[b.t] || ((b.q == null || b.q > 0) - (a.q == null || a.q > 0)) || num(b.q) - num(a.q));
-        const conPrecio = fs.filter(x => x.t !== 'inv' && x.precio > 0 && (x.q == null || x.q > 0));
-        const barato = conPrecio.length > 1 ? conPrecio.reduce((a, b) => (b.precio < a.precio ? b : a)) : null;
-        return `<div class="lt-row"><div class="lt-h"><span class="code">${esc(e.m)}</span>${e.prod ? ` <a href="javascript:void 0" class="small" data-prod="${esc(e.prod)}">ver ficha</a>` : ''}</div>
-          ${e.n && e.n !== e.m ? `<div class="small muted lt-n">${esc(e.n)}</div>` : ''}
-          <div class="lt-chips">${fs.map(chip).join('')}</div>
-          ${barato ? `<div class="small" style="margin-top:4px;color:#047857">Más barato con existencia: <b>${esc(barato.n)}</b> ${fmtUSD(barato.precio)}</div>` : ''}</div>`; }).join('')}</div>`
-      : `<div class="empty small">No está en ningún distribuidor${F.stock === '1' ? ' con existencia. Prueba con «Todos»' : ''}.</div>`;
-  };
-  res.addEventListener('click', (ev) => { const a = ev.target.closest('[data-prod]'); if (!a) return; ev.preventDefault(); const p = Store.get('productos', a.dataset.prod); if (p) productoModal(p); });
-  const guarda = () => { lsSet('suinadm_f_todos', F); paint(); };
-  const q = $('[data-q]', body);
-  q.oninput = debounce((e) => { F.q = e.target.value; guarda(); }, 180);
-  $('[data-stock]', body).onchange = (e) => { F.stock = e.target.value; guarda(); };
-  paint();
-  if (!matchMedia('(pointer: coarse)').matches) q.focus();
-}
 /* Subir la lista (Excel, CSV o tabla pegada). modo: 'todo' reemplaza las existencias · 'parte' solo cambia esas filas */
 function subirListaModal(distId, marca, modoIni) {
   const ds = Dists(); let leido = null, archivo = '';
@@ -9390,6 +9333,100 @@ const InvWeb = {
 Bus.on('data', (c) => { if (c === 'docs' || c === 'productos') InvWeb.programar(); });
 Bus.on('sync', () => { if (Sync.state === 'ok') InvWeb.programar(); });
 
+/* ---------------- Cotizaciones web (tienda → panel → Gestión → cliente) ----------------
+   · Una oferta que vino de una solicitud web (doc.pedidoWeb) se publica al cliente al guardarla
+     (sin costos) y se vuelve a publicar si cambian productos o precios mientras espera respuesta.
+   · Si se marca rechazada aquí, la solicitud se cancela.
+   · Cuando el cliente la acepta en línea, Gestión crea la venta sola (convertirOferta, sin preguntar;
+     entrega pendiente y sin pagos) y avisa con un toast.
+   · El avance de esa venta (pagada, enviada, entregada) se refleja en "Mi cuenta" del cliente. */
+const PedidosWeb = {
+  _t: null, _ocupado: false,
+  sb() { return Sync.online() ? Sync.sb : null; },
+  equipo() { let e = lsGet('suin_equipo_id', null); if (!e) { e = uid('eq'); lsSet('suin_equipo_id', e); } return e; },
+  lineas(d) {
+    const f = 1 - num(d.descPct) / 100;
+    return (d.items || []).map(it => ({
+      codigo: it.codigo || '',
+      descripcion: String(it.desc || '').replace(/^\*Ref \/ Modelo:[^\n]*\n?/, '').replace(/\*/g, '').replace(/\s+/g, ' ').trim().slice(0, 400),
+      cantidad: num(it.cant) || 1, precio_unit: round2(num(it.precio) * f),
+    }));
+  },
+  firma(d) { return JSON.stringify([this.lineas(d), round2(Calc.totals(d).total)]); },
+  estadoVenta(v) {
+    const e = entregaDe(v);
+    if (e.estado === 'entregado') return 'entregado';
+    if (e.estado === 'enviado') return 'despachado';
+    if (ventaPagada(v)) return 'pagado';
+    return 'aprobado';
+  },
+  guiaVenta(v) { const e = entregaDe(v); return [e.empresa, e.guia].filter(Boolean).join(' · '); },
+  async rpc(fn, args) { const sb = this.sb(); if (!sb) return { error: { message: 'sin conexión' } }; return sb.rpc(fn, args); },
+  programar() { clearTimeout(this._t); this._t = setTimeout(() => this.sincronizar(), 1500); },
+  async sincronizar() {
+    if (this._ocupado || !this.sb()) return;
+    this._ocupado = true;
+    try {
+      for (const d of Store.all('docs')) {
+        const w = d.pedidoWeb; if (!w || !w.id || d.estado === 'anulada') continue;
+        if (d.tipo === 'oferta') {
+          if (d.estado === 'rechazada') {
+            if (w.publicado !== 'cancelado') {
+              const { error } = await this.rpc('pedido_rechazar_admin', { p_id: w.id, p_motivo: 'Oferta ' + (d.numero || '') + ' rechazada en Gestión' });
+              if (!error) { w.publicado = 'cancelado'; Store.put('docs', d, { quiet: true }); }
+            }
+            continue;
+          }
+          if (d.convertidoA || (d.estado || 'abierta') !== 'abierta' || w.respondido) continue;
+          const f = this.firma(d);
+          if (w.firma === f) continue;
+          const { error } = await this.rpc('pedido_cotizar', { p_id: w.id, p_oferta_doc_id: d.id, p_oferta_numero: d.numero || '', p_items: this.lineas(d), p_total: round2(Calc.totals(d).total), p_dias_validez: 5 });
+          if (error) {
+            if (/respondida/i.test(error.message || '')) { w.respondido = true; Store.put('docs', d, { quiet: true }); }
+            else console.warn('pedido_cotizar', error);
+            continue;
+          }
+          w.firma = f; Store.put('docs', d, { quiet: true });
+          UI.toast(`Oferta ${d.numero || ''} publicada: el cliente ya puede verla y aceptarla en línea`, 4500);
+        } else if (esVenta(d)) {
+          const est = this.estadoVenta(d), guia = this.guiaVenta(d);
+          if (w.estado === est && (w.guia || '') === guia) continue;
+          const { error } = await this.rpc('pedido_estado_web', { p_id: w.id, p_estado: est, p_venta_doc_id: d.id, p_guia: guia || null });
+          if (!error) { w.estado = est; w.guia = guia; Store.put('docs', d, { quiet: true }); }
+        }
+      }
+      await this.convertirAceptadas();
+    } catch (e) { console.warn('PedidosWeb', e); }
+    finally { this._ocupado = false; }
+  },
+  async convertirAceptadas() {
+    const { data, error } = await this.rpc('ofertas_web_por_convertir', {});
+    if (error || !data || !data.length) return;
+    for (const r of data) {
+      const O = Store.get('docs', r.oferta_doc_id);
+      if (!O) continue;                                   // aún no bajó de la nube; se reintenta en la próxima sincronización
+      let venta = O.convertidoA && Store.get('docs', O.convertidoA);
+      if (!venta) {
+        const t = await this.rpc('pedido_tomar_conversion', { p_id: r.pedido_id, p_equipo: this.equipo() });
+        if (t.error || t.data !== true) continue;          // otro equipo la está convirtiendo
+        const dir = r.direccion && r.direccion.direccion;
+        venta = convertirOferta(O, { entrega: dir ? { modo: 'envio', estado: 'pendiente', destino: dir } : { modo: 'retira', estado: 'pendiente' }, pagos: [] });
+        UI.toast(`El cliente aceptó ${O.numero || 'la oferta'} en línea: venta ${venta.numero} creada`, 7000);
+      }
+      venta.pedidoWeb = Object.assign({}, O.pedidoWeb || { id: r.pedido_id, numero: r.numero }, { estado: 'aprobado', guia: '' });
+      Store.put('docs', venta);
+      const o2 = Store.get('docs', O.id); if (o2 && o2.pedidoWeb) { o2.pedidoWeb.respondido = true; Store.put('docs', o2, { quiet: true }); }
+      await this.rpc('pedido_estado_web', { p_id: r.pedido_id, p_estado: 'aprobado', p_venta_doc_id: venta.id, p_guia: null });
+    }
+  },
+  iniciar() {
+    Bus.on('data', (c) => { if (c === 'docs') this.programar(); });
+    Bus.on('sync', () => { if (Sync.state === 'ok' && Sync.pulledOnce) this.programar(); });
+    setInterval(() => { if (document.visibilityState === 'visible') this.programar(); }, 120000);
+    this.programar();
+  }
+};
+
 (async function boot() {
   await Store.load();
   App.shell();
@@ -9414,6 +9451,7 @@ Bus.on('sync', () => { if (Sync.state === 'ok') InvWeb.programar(); });
   if (Sync.sb && !Sync.user) showLogin();
   if (Sync.sb && typeof Sync.sb.auth.onAuthStateChange === 'function') Sync.sb.auth.onAuthStateChange((ev, ses) => { if (ev === 'SIGNED_IN' && ses && !Sync.online()) { Sync.user = ses.user; if (App.loginDone) App.loginDone(); } });
   Bus.on('data', (c) => { if (c === 'rapidas' && App.route.name !== 'rapida') Rapidas.toLocal(); });
+  PedidosWeb.iniciar();
 })();
 
 </script>

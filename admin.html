@@ -258,6 +258,7 @@
   .embudo-ley button b{ color:var(--titulo); font-variant-numeric:tabular-nums; }
   .c-enviado{ background:var(--amarillo); } .c-cotizado{ background:var(--azul); } .c-aprobado{ background:#6d78e0; }
   .c-pagado{ background:#3b44a8; } .c-entregado{ background:var(--ok); } .c-cancelado{ background:var(--off); }
+  .c-revision{ background:#e8a200; } .c-preparando{ background:#2c3590; } .c-despachado{ background:#1f6f8b; } .c-vencido{ background:var(--texto-3); }
 
   /* Pedidos */
   .pedidos{ display:flex; flex-direction:column; gap:12px; }
@@ -268,6 +269,9 @@
   .pedido.e-pagado{ border-left-color:#3b44a8; }
   .pedido.e-entregado{ border-left-color:var(--ok); }
   .pedido.e-cancelado{ border-left-color:var(--off); }
+  .pedido.e-revision{ border-left-color:#e8a200; } .pedido.e-preparando{ border-left-color:#2c3590; } .pedido.e-despachado{ border-left-color:#1f6f8b; } .pedido.e-vencido{ border-left-color:var(--texto-3); }
+  .pd-web{ display:flex; flex-wrap:wrap; gap:6px 10px; align-items:center; padding:8px 18px; background:var(--superficie-2); border-bottom:1px solid var(--linea-suave); font-size:13px; color:var(--texto-2); }
+  .pd-web b{ color:var(--titulo); }
   .pd-cab{ display:flex; align-items:center; gap:14px; padding:14px 18px; border-bottom:1px solid var(--linea-suave); flex-wrap:wrap; }
   .pd-cab .persona{ min-width:0; flex:1 1 260px; }
   .pd-cab .persona > div:last-child{ min-width:0; }
@@ -291,6 +295,9 @@
   .estado-sel.e-aprobado, .estado-sel.e-pagado{ background-color:var(--indigo-suave); border-color:var(--indigo-borde); color:var(--indigo-texto); }
   .estado-sel.e-entregado{ background-color:var(--ok-suave); border-color:var(--ok-borde); color:var(--ok); }
   .estado-sel.e-cancelado{ background-color:var(--off-suave); border-color:var(--off-borde); color:var(--off); }
+  .estado-sel.e-revision{ background-color:var(--amarillo-suave); border-color:var(--amarillo-borde); color:var(--amarillo-texto); }
+  .estado-sel.e-preparando, .estado-sel.e-despachado{ background-color:var(--indigo-suave); border-color:var(--indigo-borde); color:var(--indigo-texto); }
+  .estado-sel.e-vencido{ background-color:var(--superficie-2); color:var(--texto-3); }
   .estado-sel option{ background:var(--superficie); color:var(--texto); }
   .nota-wrap{ display:flex; flex-direction:column; gap:8px; }
   .nota-wrap textarea{ min-height:62px; font-size:13.5px; }
@@ -304,12 +311,6 @@
   .pd-num .abrir:hover strong{ color:var(--azul-texto); text-decoration-color:currentColor; }
   .items li.mas{ color:var(--azul-texto); cursor:pointer; border-bottom:none; font-weight:600; }
   .chip.sep{ margin-left:6px; }
-  /* Rango de fechas de Estadísticas */
-  .rango-ana{ display:flex; gap:6px 10px; align-items:center; flex-wrap:wrap; }
-  .rango-ana label{ display:inline-flex; align-items:center; gap:6px; font-size:12.5px; font-weight:600; color:var(--texto-3); }
-  .rango-ana input{ width:auto; height:32px; padding:0 9px; font-size:13px; border-radius:20px; }
-  .rango-ana.activo input{ border-color:var(--azul); color:var(--texto); }
-  .rango-ana .chip{ padding:6px 10px; }
   .nota-cli{ margin-top:10px; font-size:13px; color:var(--texto-2); background:var(--amarillo-suave); border-radius:8px; padding:8px 11px; line-height:1.5; }
   .nota-cli strong{ color:var(--amarillo-texto); }
 
@@ -592,6 +593,20 @@
   .vc-der strong{ display:block; color:var(--titulo); font-size:14px; }
   .vc-der small{ display:block; color:var(--texto-3); font-size:11.5px; }
   .vc-der .vc-bloq{ margin-top:6px; display:block; margin-left:auto; }
+  .nota-bots{ margin:-4px 0 14px; font-size:13.5px; color:var(--texto-2); }
+  /* En vivo por país: Venezuela primero, otros países aparte, bots al final */
+  .vivo-grupo{ margin:4px 0 14px; }
+  .vivo-grupo:last-child{ margin-bottom:0; }
+  .vivo-grupo-cab{ display:flex; align-items:center; gap:8px; padding:10px 12px; margin:0 -12px 4px; border-radius:10px; background:var(--superficie-2); font-weight:700; color:var(--titulo); font-size:15px; }
+  .vivo-grupo-cab .pill{ margin-left:auto; }
+  .vivo-grupo.ve .vivo-grupo-cab{ border-left:4px solid #f5c400; }
+  .vivo-grupo.otros .vivo-grupo-cab{ border-left:4px solid var(--azul-texto); }
+  .vivo-pais{ margin:6px 0 2px; font-size:13px; font-weight:700; color:var(--texto-2); }
+  details.vivo-grupo > summary{ list-style:none; cursor:pointer; }
+  details.vivo-grupo > summary::-webkit-details-marker{ display:none; }
+  details.vivo-grupo.bots .vivo-grupo-cab{ border-left:4px solid var(--texto-3); color:var(--texto-2); }
+  details.vivo-grupo.bots .vivo-card{ opacity:.6; }
+  .vivo-grupo .vacio-chico{ padding:6px 0 10px; color:var(--texto-3); font-size:13px; }
   .esc-sug{ display:flex; flex-wrap:wrap; gap:6px; margin-top:14px; }
   .esc-sug .chip{ font-size:12.5px; text-align:left; }
   .dialogo-caja textarea{ width:100%; resize:vertical; font:inherit; }
@@ -832,7 +847,9 @@ function confirmar(o){
   });
 }
 
-const ESTADOS = [['enviado','Nuevo'],['cotizado','Cotizado'],['aprobado','Aprobado'],['pagado','Pagado'],['entregado','Entregado'],['cancelado','Cancelado']];
+const ESTADOS = [['enviado','Nuevo'],['revision','En revisión'],['cotizado','Oferta enviada'],['aprobado','Aprobado'],['pagado','Pagado'],['preparando','Preparando'],['despachado','Despachado'],['entregado','Entregado'],['cancelado','Cancelado'],['vencido','Vencido']];
+const URL_GESTION_ADM = /-beta(\/|$)/.test(location.pathname) ? '/ventas' : '/ventas';
+const URL_MI_CUENTA_ADM = /-beta(\/|$)/.test(location.pathname) ? '/mi-cuenta-beta' : '/mi-cuenta';
 const nombreEstado = (e) => (ESTADOS.find(x => x[0] === e) || [e, e])[1];
 const VISTAS = [
   ['resumen', 'Resumen', ICO.resumen, 'Tienda'],
@@ -855,64 +872,20 @@ const ANALISIS = [['estadisticas', 'Búsquedas y clientes', ICO.grafica], ['visi
 const grupoTab = (t) => ANALISIS.some(a => a[0] === t) ? 'estadisticas' : t;
 // Cabecera común de las tres pestañas de Estadísticas
 let diasAna = (() => { try { const n = Number(localStorage.getItem('suin_admin_dias')); return [1, 7, 30, 90].includes(n) ? n : 30; } catch (e) { return 30; } })();
-// Rango de fechas elegido a mano (28_rango_fechas_estadisticas.sql): { desde, hasta } en AAAA-MM-DD (hasta '' = hasta hoy), o null si se usa un período fijo
-const DIA_MS = 86400000;
-const fechaAna = (s) => new Date(s + 'T12:00:00-04:00');   // mediodía de Venezuela
-const esFechaAna = (s) => /^\d{4}-\d{2}-\d{2}$/.test(s || '') && !isNaN(fechaAna(s));
-const claveDia = (f) => f.toLocaleDateString('en-CA', { timeZone: 'America/Caracas' });
-let rangoAna = (() => { try { const r = JSON.parse(localStorage.getItem('suin_admin_rango') || 'null'); return r && esFechaAna(r.desde) ? { desde: r.desde, hasta: esFechaAna(r.hasta) ? r.hasta : '' } : null; } catch (e) { return null; } })();
-const guardarRangoAna = () => { try { if (rangoAna) localStorage.setItem('suin_admin_rango', JSON.stringify(rangoAna)); else localStorage.removeItem('suin_admin_rango'); } catch (e) {} };
-// Lo que se le manda a las funciones resumen_… de Supabase
-const paramsAna = () => rangoAna ? { dias: diasAna, p_desde: rangoAna.desde, p_hasta: rangoAna.hasta || null } : { dias: diasAna };
-// Días que van en los gráficos por día (del más viejo al más nuevo)
-function diasGraficoAna(){
-  const lista = [];
-  if (rangoAna){
-    const fin = fechaAna(rangoAna.hasta || claveDia(new Date()));
-    for (let f = fechaAna(rangoAna.desde); f <= fin; f = new Date(f.getTime() + DIA_MS)) lista.push({ f, k: claveDia(f) });
-    return lista;
-  }
-  for (let i = Math.max(diasAna, 7) - 1; i >= 0; i--){ const f = new Date(Date.now() - i * DIA_MS); lista.push({ f, k: claveDia(f) }); }
-  return lista;
-}
-const cadaAna = (n) => n <= 7 ? 1 : n <= 31 ? 5 : n <= 92 ? 15 : 30;
-// Aviso cuando se pide un rango y la base todavía no lo entiende
-const faltaRangoAna = (err) => !rangoAna || !err || !(err.code === 'PGRST202' || /p_desde|p_hasta/.test(err.message || '')) ? '' :
-  '<div class="caja"><div class="tarjeta-sync"><div class="icono mal">' + ICO.alerta + '</div><div><strong>Falta activar el rango de fechas en Supabase</strong><div class="muted">Corre <span class="mono">28_rango_fechas_estadisticas.sql</span> en Supabase → SQL Editor para poder elegir desde qué fecha ver las estadísticas. Mientras tanto, los períodos fijos (24 horas, 7, 30 y 90 días) siguen funcionando.</div></div></div></div>';
-function chipsAna(){
-  const hoy = claveDia(new Date());
-  return '<div class="chips">' + DIAS_VIS.map(([d, t]) => '<button class="chip' + (!rangoAna && diasAna === d ? ' activo' : '') + '" data-dias-ana="' + d + '">' + t + '</button>').join('') + '</div>' +
-    '<div class="rango-ana' + (rangoAna ? ' activo' : '') + '">' +
-      '<label>Desde<input type="date" id="ana-desde" max="' + hoy + '" value="' + (rangoAna ? rangoAna.desde : '') + '"></label>' +
-      '<label>Hasta<input type="date" id="ana-hasta" max="' + hoy + '" value="' + (rangoAna ? rangoAna.hasta : '') + '"></label>' +
-      (rangoAna ? '<button class="chip" id="ana-quitar" title="Quitar las fechas y volver a los períodos fijos" aria-label="Quitar las fechas">✕</button>' : '') +
-    '</div>';
-}
+function chipsAna(){ return '<div class="chips">' + DIAS_VIS.map(([d, t]) => '<button class="chip' + (diasAna === d ? ' activo' : '') + '" data-dias-ana="' + d + '">' + t + '</button>').join('') + '</div>'; }
 function cabAnalisis(titulo, sub){
   return '<nav class="subtabs" aria-label="Estadísticas">' + ANALISIS.map(([id, nom, ic]) => '<a href="' + urlDe(id) + '" data-sub="' + id + '" class="' + (tab === id ? 'activa' : '') + '"' + (tab === id ? ' aria-current="page"' : '') + '>' + ic + nom + '</a>').join('') + '</nav>' + cabecera(titulo, sub, chipsAna());
 }
+/* Estadísticas sin bots (32_estadisticas_sin_bots.sql): aviso de cuántas visitas de bots se dejaron fuera
+   y reparto Venezuela / otros países a partir de la lista de países. */
+function notaBots(n, conNumero){
+  if (!n) return '';
+  return '<p class="nota-bots">🤖 Sin contar ' + (conNumero === false ? 'las visitas de bots' : Number(n).toLocaleString('es-VE') + ' visita' + (n === 1 ? '' : 's') + ' de bots') +
+    ' <span class="muted">(fuera de Venezuela, sin cuenta, 1 página y se fueron en segundos)</span></p>';
+}
+const repartoVE = (paises, total) => { const ve = ((paises || []).find(x => x.pais === 'VE') || {}).visitas || 0; return '🇻🇪 ' + Number(ve).toLocaleString('es-VE') + ' de Venezuela · ' + Number(Math.max(0, (total || 0) - ve)).toLocaleString('es-VE') + ' de otros países'; };
 function activarAnalisis(fn){
-  document.querySelectorAll('[data-dias-ana]').forEach(b => b.onclick = () => { diasAna = Number(b.dataset.diasAna); rangoAna = null; guardarRangoAna(); try { localStorage.setItem('suin_admin_dias', diasAna); } catch (e) {} fn(); });
-  // Rango de fechas a mano: se aplica al cambiar cualquiera de las dos fechas
-  const iDesde = $('ana-desde'), iHasta = $('ana-hasta'), quitar = $('ana-quitar');
-  const aplicar = () => {
-    const hoy = claveDia(new Date());
-    let d = iDesde.value, h = iHasta.value;
-    if (!esFechaAna(d)){
-      if (rangoAna && !d){ rangoAna = null; guardarRangoAna(); fn(); }
-      else if (h) toast('Elige también la fecha “Desde”');
-      return;
-    }
-    if (!esFechaAna(h)) h = '';
-    if (d > hoy) d = hoy;
-    if (h && h > hoy) h = '';
-    if (h && h < d) [d, h] = [h, d];
-    if ((fechaAna(h || hoy) - fechaAna(d)) / DIA_MS > 365){ d = claveDia(new Date(fechaAna(h || hoy).getTime() - 365 * DIA_MS)); toast('Se muestra como máximo un año'); }
-    rangoAna = { desde: d, hasta: h }; guardarRangoAna(); fn();
-  };
-  if (iDesde) iDesde.onchange = aplicar;
-  if (iHasta) iHasta.onchange = aplicar;
-  if (quitar) quitar.onclick = () => { rangoAna = null; guardarRangoAna(); fn(); };
+  document.querySelectorAll('[data-dias-ana]').forEach(b => b.onclick = () => { diasAna = Number(b.dataset.diasAna); try { localStorage.setItem('suin_admin_dias', diasAna); } catch (e) {} fn(); });
   document.querySelectorAll('[data-sub]').forEach(a => a.onclick = (e) => { if (e.ctrlKey || e.metaKey || e.shiftKey || e.button === 1) return; e.preventDefault(); irA(a.dataset.sub); });
 }
 /* Orden del menú elegido por cada administrador (se guarda en este navegador) */
@@ -957,7 +930,8 @@ function editarMenu(){
    /admin                     → Resumen
    /admin/<sección>           → pedidos, clientes, descuentos, productos, envivo, estadisticas…
    /admin/pedidos/<número>    → abre ese pedido
-   /admin/clientes/<correo>   → abre la ficha de ese cliente                                  */
+   /admin/clientes/<correo>   → abre la ficha de ese cliente
+   /admin/productos/<modelo>  → abre ese producto para editarlo (link desde la tienda)        */
 const BASE = '/admin';
 const urlDe = (t, det) => BASE + (t && t !== 'resumen' ? '/' + t : '') + (det != null && det !== '' ? '/' + encodeURIComponent(det) : '');
 function leerRuta(){
@@ -1245,7 +1219,7 @@ function embudoPedidos(){
     '<div class="embudo-ley">' + ESTADOS.map(e => '<button data-embudo="' + e[0] + '"><i class="c-' + e[0] + '"></i>' + e[1] + ' <b>' + n(e[0]) + '</b></button>').join('') + '</div>');
 }
 const pillEstado = (e) => {
-  const cls = { enviado: 'amar', cotizado: 'azul', aprobado: 'indigo', pagado: 'indigo', entregado: 'verde', cancelado: 'rojo' }[e] || '';
+  const cls = { enviado: 'amar', revision: 'amar', cotizado: 'azul', aprobado: 'indigo', pagado: 'indigo', preparando: 'indigo', despachado: 'indigo', entregado: 'verde', cancelado: 'rojo' }[e] || '';
   return '<span class="pill ' + cls + '"><span class="punto"></span>' + esc(nombreEstado(e)) + '</span>';
 };
 
@@ -1253,7 +1227,41 @@ const pillEstado = (e) => {
 let filtroEstado = '', buscaPed = '';
 const ARCH = 'archivados';
 const itemsDe = (pd) => Array.isArray(pd.items) ? pd.items : [];
-const clienteDe = (pd) => clientes.find(x => x.email === pd.cliente_email) || { email: pd.cliente_email };
+const clienteDe = (pd) => pd.cliente_email ? (clientes.find(x => x.email === pd.cliente_email) || { email: pd.cliente_email })
+  : Object.assign({ invitado: true }, pd.invitado || {}, { email: (pd.invitado && pd.invitado.email) || '' });
+const numPedido = (pd) => pd.numero || ('#' + pd.id);
+/* Franja de la cotización web: sin cuenta, oferta de Gestión, respuesta del cliente */
+function franjaWeb(pd){
+  const p = [];
+  if (!pd.cliente_email) p.push('<span class="pill amar">Sin cuenta</span>');
+  if (pd.oferta_numero) p.push('Oferta <b>' + esc(pd.oferta_numero) + '</b> · ' + money(pd.total_oferta) + (pd.estado === 'cotizado' && pd.vence ? ' · vence ' + esc(new Date(pd.vence + 'T12:00').toLocaleDateString('es-VE', { day: '2-digit', month: 'short' })) : ''));
+  if (pd.respondido_por === 'cliente') p.push('<b>' + (pd.estado === 'cancelado' ? 'Rechazó' : 'Aceptó') + ' en línea</b>');
+  if (pd.estado === 'cancelado' && pd.motivo) p.push('Motivo: ' + esc(pd.motivo));
+  if (pd.guia) p.push('Envío: ' + esc(pd.guia));
+  if (pd.direccion && pd.direccion.direccion) p.push('Entregar en: ' + esc(pd.direccion.direccion));
+  return p.length ? '<div class="pd-web">' + p.join(' · ') + '</div>' : '';
+}
+const puedeOfertar = (pd) => ['enviado', 'revision', 'vencido'].includes(pd.estado) || (pd.estado === 'cotizado' && !pd.respondido_por);
+/* Lleva la solicitud a Gestión (misma vía que el carrito del administrador): Gestión arma la oferta con costos y
+   reparto de stock, y al guardarla la publica al cliente para que la acepte en línea. */
+async function ofertarEnGestion(id){
+  const pd = pedidoPorId(id); if (!pd) return;
+  const c = clienteDe(pd);
+  if (pd.oferta_doc_id && pd.estado === 'cotizado'){ window.open(URL_GESTION_ADM + '/doc/' + encodeURIComponent(pd.oferta_doc_id), '_blank'); return; }
+  const datos = { tipo: 'oferta', creado: Date.now(),
+    items: itemsDe(pd).map(it => ({ modelo: it.modelo, marca: it.marca || '', nombre: '', descripcion: it.descripcion || '', cantidad: it.cantidad, precio_unit: it.precio_unit || 0 })),
+    cliente: { email: c.email || '', nombre: c.nombre || '', empresa: c.empresa || '', rif: c.rif || '', telefono: c.telefono || '' },
+    pedidoWeb: { id: pd.id, numero: numPedido(pd), token: pd.token, nota: pd.nota_cliente || '', notas: itemsDe(pd).filter(it => it.nota).map(it => it.modelo + ': ' + it.nota) } };
+  try { localStorage.setItem('suin_carrito_gestion', JSON.stringify(datos)); }
+  catch (e){ return toast('El navegador no dejó pasar la solicitud a Gestión'); }
+  const w = window.open(URL_GESTION_ADM + '/desde-tienda/oferta', '_blank'); if (!w) location.href = URL_GESTION_ADM + '/desde-tienda/oferta';
+  if (pd.estado === 'enviado') guardarEstado(pd.id, 'revision');
+}
+async function copiarEnlaceCliente(id){
+  const pd = pedidoPorId(id); if (!pd || !pd.token) return;
+  const u = location.origin + URL_MI_CUENTA_ADM + '?pedido=' + pd.token;
+  try { await navigator.clipboard.writeText(u); toast('Enlace del cliente copiado'); } catch (e){ toast('No se pudo copiar'); }
+}
 const productoDe = (modelo) => productos.find(p => p.modelo === modelo);
 const rutaImagen = (src) => !src ? '' : /^(https?:)?\/\//.test(src) || src.startsWith('/') ? src : '/' + src;
 const linkWhatsApp = (tel) => {
@@ -1267,7 +1275,7 @@ function vistaPedidos(){
   const activos = pedidos.filter(p => !p.archivado);
   const cuenta = (e) => activos.filter(p => !e || p.estado === e).length;
   const nArch = pedidos.length - activos.length;
-  $('main').innerHTML = cabecera('Pedidos', 'Los pedidos que los clientes con cuenta envían por WhatsApp. Ábrelos para ver el detalle, cambia el estado y deja un comentario: el cliente lo ve en "Mi cuenta".',
+  $('main').innerHTML = cabecera('Pedidos', 'Solicitudes de cotización de la tienda (con o sin cuenta) y pedidos por WhatsApp. Toca "Crear oferta en Gestión": al guardarla, el cliente la ve y la acepta en línea, y Gestión crea la venta sola. El estado y tu comentario los ve en "Mi cuenta".',
       '<button class="btn" id="p-recargar">' + ICO.sync + 'Actualizar</button>') +
     '<div class="plegables plegables-1">' + plegable('ped', 'lista', ICO.pedidos, 'Lista de pedidos <small>' + cuenta('') + '</small>',
       (cuenta('enviado') ? cuenta('enviado') + ' por atender · ' : '') + cuenta('') + ' activo' + (cuenta('') === 1 ? '' : 's') + (nArch ? ' · ' + nArch + ' archivado' + (nArch === 1 ? '' : 's') : ''),
@@ -1291,7 +1299,7 @@ function pintarPedidos(){
     if (!verArch && filtroEstado && pd.estado !== filtroEstado) return false;
     if (!q) return true;
     const c = clienteDe(pd);
-    return ['#' + pd.id, String(pd.id), pd.cliente_email, c.nombre, c.empresa, c.rif].concat(itemsDe(pd).map(it => it.modelo)).join(' ').toLowerCase().includes(q);
+    return ['#' + pd.id, String(pd.id), pd.numero, pd.oferta_numero, pd.cliente_email, c.email, c.telefono, c.nombre, c.empresa, c.rif].concat(itemsDe(pd).map(it => it.modelo)).join(' ').toLowerCase().includes(q);
   });
   if (!lista.length){
     $('p-lista').innerHTML = '<div class="vacio">' + (verArch ? ICO.archivar + 'No hay pedidos archivados.' : ICO.pedidos + (pedidos.length ? 'No hay pedidos con este filtro.' : 'Todavía no hay pedidos.')) + '</div>';
@@ -1304,19 +1312,21 @@ function pintarPedidos(){
     const unid = items.reduce((t, it) => t + Number(it.cantidad || 0), 0);
     const wa = linkWhatsApp(c.telefono);
     return '<article class="pedido e-' + pd.estado + (pd.archivado ? ' archivado' : '') + '">' +
-      '<div class="pd-cab"><div class="pd-num"><button class="abrir" data-ver-pedido="' + pd.id + '" title="Ver detalle"><strong>#' + pd.id + '</strong></button>' +
+      '<div class="pd-cab"><div class="pd-num"><button class="abrir" data-ver-pedido="' + pd.id + '" title="Ver detalle"><strong>' + esc(numPedido(pd)) + '</strong></button>' +
           '<select class="estado-sel e-' + pd.estado + '" data-estado="' + pd.id + '" aria-label="Estado del pedido">' +
           ESTADOS.map(e => '<option value="' + e[0] + '"' + (pd.estado === e[0] ? ' selected' : '') + '>' + e[1] + '</option>').join('') + '</select>' +
           (pd.archivado ? '<span class="pill">Archivado</span>' : '') + '</div>' +
         '<div class="persona"><div class="avatar">' + esc(iniciales(c)) + '</div><div><strong>' + esc(c.nombre || c.empresa || c.email) + (c.nombre && c.empresa ? ' <span class="muted" style="display:inline">· ' + esc(c.empresa) + '</span>' : '') + '</strong>' +
-          '<span>' + esc(pd.cliente_email) + (c.telefono ? ' · ' + esc(c.telefono) : '') + '</span></div></div>' +
-        '<div class="pd-total">' + money(pd.total) + '<small title="' + esc(fecha(pd.creado)) + '">' + haceCuanto(pd.creado) + ' · ' + unid + ' unid.</small></div></div>' +
+          '<span>' + esc(c.email || 'Sin cuenta') + (c.telefono ? ' · ' + esc(c.telefono) : '') + '</span></div></div>' +
+        '<div class="pd-total">' + money(pd.total_oferta != null ? pd.total_oferta : pd.total) + '<small title="' + esc(fecha(pd.creado)) + '">' + haceCuanto(pd.creado) + ' · ' + unid + ' unid.</small></div></div>' +
+      franjaWeb(pd) +
       '<div class="pd-cuerpo"><div><ul class="items">' + items.slice(0, MAX).map(it => '<li><span class="can">' + esc(it.cantidad) + '×</span><span class="mono">' + esc(it.modelo) + '</span><span class="pre">' + money(it.precio_unit) + '</span></li>').join('') +
           (items.length > MAX ? '<li class="mas" data-ver-pedido="' + pd.id + '">+ ' + (items.length - MAX) + ' producto' + (items.length - MAX > 1 ? 's' : '') + ' más · ver detalle</li>' : '') + '</ul>' +
           (pd.nota_cliente ? '<div class="nota-cli"><strong>Nota del cliente:</strong> ' + esc(pd.nota_cliente) + '</div>' : '') + '</div>' +
         '<div class="nota-wrap"><label class="campo">Comentario para el cliente<textarea rows="2" data-nota="' + pd.id + '" placeholder="Ej. Listo para retirar">' + esc(pd.nota_admin || '') + '</textarea></label>' +
           '<div class="nota-fila"><button class="btn chico" data-guardar-nota="' + pd.id + '">' + ICO.guardar + 'Guardar comentario</button><span class="muted">Lo ve en "Mi cuenta"</span></div></div></div>' +
       '<div class="pd-pie pd-acciones">' +
+        (puedeOfertar(pd) ? '<button class="btn chico prim" data-ofertar="' + pd.id + '">' + (pd.oferta_doc_id ? 'Ver / ajustar oferta en Gestión' : 'Crear oferta en Gestión') + '</button>' : '') +
         '<button class="btn chico" data-ver-pedido="' + pd.id + '">' + ICO.ojo + 'Ver detalle</button>' +
         (wa ? '<a class="btn chico" href="' + wa + '" target="_blank" rel="noopener">' + ICO.whatsapp + 'WhatsApp</a>' : '') +
         '<div class="der"><button class="btn chico" data-archivar="' + pd.id + '" title="' + (pd.archivado ? 'Desarchivar' : 'Archivar') + '">' + ICO.archivar + '<span class="txt">' + (pd.archivado ? 'Desarchivar' : 'Archivar') + '</span></button>' +
@@ -1330,6 +1340,7 @@ function pintarPedidos(){
   document.querySelectorAll('#p-lista [data-ver-pedido]').forEach(b => b.onclick = () => abrirPedido(b.dataset.verPedido));
   document.querySelectorAll('#p-lista [data-archivar]').forEach(b => b.onclick = () => archivarPedido(b.dataset.archivar));
   document.querySelectorAll('#p-lista [data-borrar]').forEach(b => b.onclick = () => eliminarPedido(b.dataset.borrar));
+  document.querySelectorAll('#p-lista [data-ofertar]').forEach(b => b.onclick = () => ofertarEnGestion(b.dataset.ofertar));
 }
 
 /* Acciones sobre un pedido (se usan desde la lista y desde el detalle) */
@@ -1410,13 +1421,13 @@ function abrirPedido(id){
   }).join('');
 
   abrirPanel(
-    '<div class="panel-cab"><h2>Pedido #' + pd.id + '</h2>' + pillEstado(pd.estado) + (pd.archivado ? '<span class="pill">Archivado</span>' : '') +
+    '<div class="panel-cab"><h2>' + esc(numPedido(pd)) + '</h2>' + pillEstado(pd.estado) + (pd.archivado ? '<span class="pill">Archivado</span>' : '') +
       '<button class="btn chico fantasma cerrar" id="d-cerrar" aria-label="Cerrar">' + ICO.cerrar + '</button></div>' +
     '<div class="panel-cuerpo">' +
       '<div class="seccion"><h3>Cliente</h3><div class="persona" style="margin-bottom:12px"><div class="avatar">' + esc(iniciales(c)) + '</div><div><strong>' + esc(c.nombre || c.empresa || c.email) + '</strong>' +
         (c.nombre && c.empresa ? '<span>' + esc(c.empresa) + '</span>' : '') + '</div></div>' +
         '<div class="det-datos">' +
-          dato('Correo', '<a href="mailto:' + esc(c.email) + '">' + esc(c.email) + '</a>') +
+          dato('Correo', c.email ? '<a href="mailto:' + esc(c.email) + '">' + esc(c.email) + '</a>' : (c.invitado ? 'Sin cuenta' : '')) +
           dato('Teléfono', c.telefono ? esc(c.telefono) + (wa ? ' · <a href="' + wa + '" target="_blank" rel="noopener">WhatsApp ↗</a>' : '') : '') +
           dato('RIF', c.rif ? esc(c.rif) : '') +
           dato('Tipo de cliente', c.tipo_id ? esc(nombreTipo(c.tipo_id)) : '') +
@@ -1427,7 +1438,8 @@ function abrirPedido(id){
         dato('Estado', '<select class="estado-sel e-' + pd.estado + '" data-estado="' + pd.id + '" id="d-estado">' + ESTADOS.map(e => '<option value="' + e[0] + '"' + (pd.estado === e[0] ? ' selected' : '') + '>' + e[1] + '</option>').join('') + '</select>') +
         dato('Contenido', items.length + ' producto' + (items.length === 1 ? '' : 's') + ' · ' + unidades + ' unid.') +
       '</div>' +
-      (pd.nota_cliente ? '<div class="ayuda" style="margin:14px 0 0"><strong>Nota del cliente:</strong> ' + esc(pd.nota_cliente) + '</div>' : '') + '</div>' +
+      (pd.nota_cliente ? '<div class="ayuda" style="margin:14px 0 0"><strong>Nota del cliente:</strong> ' + esc(pd.nota_cliente) + '</div>' : '') +
+      (franjaWeb(pd) ? '<div style="margin:14px -2px 0;border-radius:8px;overflow:hidden">' + franjaWeb(pd) + '</div>' : '') + '</div>' +
       '<div class="seccion"><h3>Productos</h3>' +
         (items.length ? '<ul class="det-items">' + filas + '</ul>' : '<div class="vacio">Este pedido no tiene productos.</div>') +
         '<div class="det-total"><span class="muted">Total' + (pd.total != null && Math.abs(Number(pd.total) - suma) > 1 ? ' (registrado; la suma da ' + money(suma) + ')' : '') + '</span><strong>' + money(pd.total != null ? pd.total : suma) + '</strong></div>' +
@@ -1436,6 +1448,8 @@ function abrirPedido(id){
         '<div><button class="btn chico" id="d-guardar-nota">Guardar comentario</button></div></div></div>' +
     '</div>' +
     '<div class="panel-pie">' +
+      (puedeOfertar(pd) ? '<button class="btn prim" id="d-ofertar">' + (pd.oferta_doc_id ? 'Ver oferta en Gestión' : 'Crear oferta en Gestión') + '</button>' : '') +
+      (pd.token ? '<button class="btn" id="d-enlace" title="Enlace para que el cliente vea y acepte su oferta sin cuenta">Enlace del cliente</button>' : '') +
       '<button class="btn" id="d-copiar">Copiar lista</button>' +
       '<button class="btn" id="d-archivar">' + ICO.archivar + (pd.archivado ? 'Desarchivar' : 'Archivar') + '</button>' +
       '<button class="btn peligro" id="d-borrar">' + ICO.borrar + 'Eliminar</button>' +
@@ -1448,8 +1462,10 @@ function abrirPedido(id){
   $('d-guardar-nota').onclick = () => guardarNota(pd.id, $('d-nota').value);
   $('d-archivar').onclick = () => archivarPedido(pd.id);
   $('d-borrar').onclick = () => eliminarPedido(pd.id);
+  if ($('d-ofertar')) $('d-ofertar').onclick = () => ofertarEnGestion(pd.id);
+  if ($('d-enlace')) $('d-enlace').onclick = () => copiarEnlaceCliente(pd.id);
   $('d-copiar').onclick = async () => {
-    const texto = 'Pedido #' + pd.id + ' · ' + (c.nombre || c.empresa || c.email) + '\n' +
+    const texto = 'Pedido ' + numPedido(pd) + ' · ' + (c.nombre || c.empresa || c.email || '') + (c.telefono ? ' · ' + c.telefono : '') + '\n' +
       items.map(it => it.cantidad + ' × ' + it.modelo + (it.descripcion ? ' — ' + it.descripcion : '') + ' — ' + money(it.precio_unit) + ' c/u').join('\n') +
       '\nTotal: ' + money(pd.total != null ? pd.total : suma);
     try { await navigator.clipboard.writeText(texto); toast('Lista copiada'); } catch (e) { toast('No se pudo copiar'); }
@@ -2105,13 +2121,13 @@ async function vistaEstadisticas(){
   $('main').innerHTML = cabAnalisis('Búsquedas y clientes', 'Qué buscan, qué miran y qué cotizan tus clientes. Abajo, cada cliente con cuenta por separado. No se cuenta lo que haces tú como administrador.') + '<div class="cargando">Cargando…</div>';
   activarAnalisis(vistaEstadisticas);
   const [{ data, error }, resCli] = await Promise.all([
-    sb.rpc('resumen_estadisticas', paramsAna()),
-    sb.rpc('clientes_activos', paramsAna()).then(r => r, e => ({ error: e })),
+    sb.rpc('resumen_estadisticas', { dias: diasAna, p_sin_bots: true }),
+    sb.rpc('clientes_activos', { dias: diasAna }).then(r => r, e => ({ error: e })),
   ]);
   if (tab !== 'estadisticas') return;
   const cont = document.querySelector('#main .cargando');
   if (error || !data){
-    cont.outerHTML = faltaRangoAna(error) || '<div class="caja"><div class="tarjeta-sync"><div class="icono mal">' + ICO.alerta + '</div><div><strong>Falta instalar las estadísticas en Supabase</strong><div class="muted">Corre <span class="mono">04_estadisticas.sql</span> en Supabase → SQL Editor. Desde ese momento la tienda empieza a anotar búsquedas, visitas y cotizaciones.</div></div></div></div>';
+    cont.outerHTML = '<div class="caja"><div class="tarjeta-sync"><div class="icono mal">' + ICO.alerta + '</div><div><strong>Falta instalar las estadísticas en Supabase</strong><div class="muted">Corre <span class="mono">04_estadisticas.sql</span> en Supabase → SQL Editor. Desde ese momento la tienda empieza a anotar búsquedas, visitas y cotizaciones.</div></div></div></div>';
     return;
   }
   sb.rpc('limpiar_eventos').then(() => {}, () => {});
@@ -2126,9 +2142,14 @@ async function vistaEstadisticas(){
 
   // Gráfico por día (completa los días sin datos)
   const porDia = {}; (data.por_dia || []).forEach(d => { porDia[d.dia] = d; });
-  const dias = diasGraficoAna().map(({ f, k }) => ({ k, f, v: (porDia[k] || {}).vistas || 0, c: (porDia[k] || {}).cotiza || 0 }));
+  const dias = [];
+  for (let i = Math.max(diasAna, 7) - 1; i >= 0; i--){
+    const f = new Date(Date.now() - i * 86400000);
+    const k = f.toLocaleDateString('en-CA', { timeZone: 'America/Caracas' });
+    dias.push({ k, f, v: (porDia[k] || {}).vistas || 0, c: (porDia[k] || {}).cotiza || 0 });
+  }
   const maxV = Math.max(1, ...dias.map(d => Math.max(d.v, d.c)));
-  const cada = cadaAna(dias.length);
+  const cada = diasAna <= 7 ? 1 : diasAna <= 30 ? 5 : 15;
   const grafico = '<div class="grafico">' + dias.map(d => '<div class="col" data-tip="' + d.f.toLocaleDateString('es-VE', { weekday: 'short', day: 'numeric', month: 'short' }) + ': ' + d.v + ' vistas · ' + d.c + ' cotiz.">' +
       '<div class="b1" style="height:' + (100 * d.v / maxV) + '%"></div><div class="b2" style="height:' + (100 * d.c / maxV) + '%"></div></div>').join('') + '</div>' +
     '<div class="grafico-ejes">' + dias.map((d, i) => '<span>' + ((dias.length - 1 - i) % cada === 0 ? d.f.getDate() : '') + '</span>').join('') + '</div>';
@@ -2145,7 +2166,7 @@ async function vistaEstadisticas(){
       kpi(ICO.ojo, 'Productos vistos', t.ver_producto, 'fichas de producto abiertas') +
       kpi(ICO.tienda, 'Agregados al pedido', t.agregar_carrito, 'productos puestos en el carrito') +
       kpi(ICO.pedidos, 'Cotizaciones por WhatsApp', cotiza, (t.pedido_whatsapp || 0) + ' desde el carrito · ' + (t.cotizar_whatsapp || 0) + ' de un producto') +
-    '</div>' +
+    '</div>' + notaBots(data.bots) +
     plegBarra() +
     '<div class="plegables" id="est-plegables">' +
       plegable('est', 'dia', ICO.grafica, 'Actividad por día', Number(t.ver_producto || 0).toLocaleString('es-VE') + ' productos vistos · ' + Number(cotiza).toLocaleString('es-VE') + ' cotizaciones',
@@ -2435,10 +2456,10 @@ function activarPlegables(grupo){
 async function vistaVisitantes(){
   $('main').innerHTML = cabAnalisis('Visitantes', 'Quienes entran sin iniciar sesión: cuántos son, de dónde, cuándo, qué buscan y qué productos ven. Toca una visita para ver todo lo que hizo esa persona. No se cuenta lo que haces tú como administrador.') + '<div class="cargando">Cargando…</div>';
   activarAnalisis(vistaVisitantes);
-  const { data, error } = await sb.rpc('resumen_visitantes', paramsAna());
+  const { data, error } = await sb.rpc('resumen_visitantes', { dias: diasAna, p_sin_bots: true });
   if (tab !== 'visitantes') return;
   const cont = document.querySelector('#main .cargando');
-  if (error || !data){ cont.outerHTML = faltaRangoAna(error) || faltaVisitantes(error); return; }
+  if (error || !data){ cont.outerHTML = faltaVisitantes(error); return; }
   datosVis = data; cuantasVis = 25;
   const t = data.totales || {};
   const kpi = (icono, titulo, num, pie, extra) => '<div class="kpi' + (extra || '') + '"><div class="k-cab">' + titulo + icono + '</div><div class="k-num">' + (typeof num === 'string' ? num : Number(num || 0).toLocaleString('es-VE')) + '</div><div class="k-pie">' + pie + '</div></div>';
@@ -2451,9 +2472,15 @@ async function vistaVisitantes(){
 
   // Visitas por día (completa los días sin datos)
   const porDia = {}; (data.por_dia || []).forEach(d => { porDia[d.dia] = d; });
-  const dias = diasGraficoAna().map(({ f, k }) => ({ f, v: (porDia[k] || {}).visitas || 0, p: (porDia[k] || {}).visitantes || 0 }));
+  const dias = [];
+  const nDias = Math.max(diasAna, 7);
+  for (let i = nDias - 1; i >= 0; i--){
+    const f = new Date(Date.now() - i * 86400000);
+    const k = f.toLocaleDateString('en-CA', { timeZone: 'America/Caracas' });
+    dias.push({ f, v: (porDia[k] || {}).visitas || 0, p: (porDia[k] || {}).visitantes || 0 });
+  }
   const maxV = Math.max(1, ...dias.map(d => d.v));
-  const cada = cadaAna(dias.length);
+  const cada = nDias <= 7 ? 1 : nDias <= 30 ? 5 : 15;
   const grafico = '<div class="grafico">' + dias.map(d => '<div class="col" data-tip="' + d.f.toLocaleDateString('es-VE', { weekday: 'short', day: 'numeric', month: 'short' }) + ': ' + d.v + ' visitas · ' + d.p + ' personas">' +
       '<div class="b1" style="height:' + (100 * d.v / maxV) + '%"></div><div class="b2" style="height:' + (100 * d.p / maxV) + '%"></div></div>').join('') + '</div>' +
     '<div class="grafico-ejes">' + dias.map((d, i) => '<span>' + ((dias.length - 1 - i) % cada === 0 ? d.f.getDate() : '') + '</span>').join('') + '</div>';
@@ -2492,13 +2519,13 @@ async function vistaVisitantes(){
 
   cont.outerHTML =
     '<div class="kpis">' +
-      kpi(ICO.clientes, 'Visitas', t.visitas, Number(t.visitantes || 0).toLocaleString('es-VE') + ' personas distintas · ' + (t.nuevos || 0) + ' nuevas') +
+      kpi(ICO.clientes, 'Visitas', t.visitas, repartoVE(data.paises, t.visitas) + '<br>' + Number(t.visitantes || 0).toLocaleString('es-VE') + ' personas distintas · ' + (t.nuevos || 0) + ' nuevas') +
       kpi(ICO.ojo, 'En la tienda ahora', data.ahora, 'activos en los últimos 15 minutos', data.ahora ? ' destacado' : '') +
       kpi(ICO.buscar, 'Búsquedas', t.busquedas, 'veces que usaron el buscador') +
       kpi(ICO.tienda, 'Tarjetas vistas', t.tarjetas, (t.fichas || 0) + ' fichas de producto abiertas') +
       kpi(ICO.whatsapp, 'Visitas con interés', t.con_interes, pct(t.con_interes, t.visitas) + ' agregó al pedido o escribió por WhatsApp') +
       kpi(ICO.sync, 'Tiempo promedio', t.duracion_media ? duracion(t.duracion_media) : '—', 'de las visitas que hicieron algo') +
-    '</div>' +
+    '</div>' + notaBots(data.bots) +
     '<div class="pleg-barra"><span class="muted">Toca una ventana para abrirla completa</span><button class="btn chico fantasma" data-pleg-todo="1">Abrir todas</button><button class="btn chico fantasma" data-pleg-todo="0">Cerrar todas</button></div>' +
     '<div class="plegables" id="vis-plegables">' +
       plegable('vis', 'recientes', ICO.clientes, 'Visitas recientes <small>' + (data.visitas || []).length + (t.visitas > (data.visitas || []).length ? ' de ' + t.visitas : '') + '</small>', res.recientes,
@@ -2662,6 +2689,17 @@ const segs = (d) => Math.max(0, Math.round((Date.now() - new Date(d)) / 1000));
 const haceSeg = (d) => { const s = segs(d); return s < 10 ? 'ahora' : s < 60 ? 'hace ' + s + ' s' : haceCuanto(d); };
 const durVivo = (d) => { const m = Math.floor(segs(d) / 60); return m < 1 ? 'recién llegó' : m < 60 ? m + ' min' : Math.floor(m / 60) + ' h ' + (m % 60) + ' min'; };
 const nombreVivo = (r) => r.cliente_email ? nombreCliente(r.cliente_email) : 'Visitante ' + codigoVis(r.visitante);
+/* Grupo de cada visitante: 've' (Venezuela, va primero), 'otros' (otro país) o 'bot'.
+   Bot = fuera de Venezuela, sin cuenta, 1 página y se fue en <=10 s (o sin país / navegador desconocido).
+   Mismo criterio que la vista en_linea_clasificada y el filtro de SuinBot en Supabase. */
+const grupoVivo = (r) => {
+  if (r.pais === 'VE') return 've';
+  if (r.cliente_email) return 'otros';
+  if (!r.pais || r.navegador === 'Otro' || r.sistema === 'Otro') return 'bot';
+  const dur = (new Date(r.visto) - new Date(r.entro)) / 1000;
+  if ((r.paginas || 1) <= 1 && dur <= 10 && segs(r.entro) > 15) return 'bot';
+  return 'otros';
+};
 const zonaDe = (p) => !p ? 'otro' : /^\/links/.test(p) ? 'links' : /^\/(p|c)\//.test(p) || /[?&]p=/.test(p) ? 'producto' : /^\/tienda/.test(p) ? 'tienda' : 'otro';
 
 async function iniciarVivo(){
@@ -2697,7 +2735,7 @@ function refrescarVivo(){
   tRefVivo = setTimeout(() => { pintarVivoBadge(); if (tab === 'envivo' && $('vivo-lista')) pintarVivo(); }, 120);
 }
 function pintarVivoBadge(){
-  const n = listaVivos().filter(r => r.activo).length;
+  const n = listaVivos().filter(r => r.activo && grupoVivo(r) !== 'bot').length;
   const b = document.querySelector('[data-badge=envivo]');
   if (b){ b.textContent = n; b.hidden = !n; b.classList.add('verde'); }
 }
@@ -2723,34 +2761,50 @@ function vistaEnVivo(){
   pintarBloqueos();
   cargarAvisos();
 }
+let vivoBotsAbierto = false;   // el grupo de bots se repinta cada 5 s: recordamos si lo dejaste abierto
+function tarjetaVivo(r){
+  const c = r.cliente_email ? clientes.find(x => x.email === r.cliente_email) : null;
+  const sitio = linkPagina(r.pagina);
+  return '<div class="vivo-card' + (r.activo ? '' : ' segundo-plano') + '" data-vivo="' + esc(r.visitante) + '"' + (r.cliente_email ? ' data-email="' + esc(r.cliente_email) + '"' : '') + '>' +
+    '<div class="avatar' + (c ? '' : ' anon') + '">' + esc(c ? iniciales(c) : codigoVis(r.visitante).slice(0, 2)) + '<i class="' + (r.activo ? 'on' : 'off') + '"></i></div>' +
+    '<div class="vc-cuerpo"><div class="vc-nom"><strong>' + esc(nombreVivo(r)) + '</strong>' + (c && c.empresa ? ' <span class="muted">· ' + esc(c.empresa) + '</span>' : '') + (r.cliente_email ? ' <span class="pill azul">Con cuenta</span>' : '') + '</div>' +
+      '<div class="vc-lugar muted">' + esc([lugarDe(r), equipoDe(r), r.referencia ? 'llegó por ' + r.referencia : 'entró directo'].filter(Boolean).join(' · ')) + '</div>' +
+      '<div class="vc-pag">' + ICO.ojo + '<span>' + sitio + (r.titulo && !/^\/(tienda)?(\.html)?$/.test(r.pagina || '') ? '<small>' + esc(r.titulo.replace(/\s*\|\s*Suinelectric.*$/i, '')) + '</small>' : '') + '</span></div>' +
+      (r.accion ? '<div class="vc-acc">↳ ' + esc(r.accion) + ' <span class="muted">· ' + haceSeg(r.accion_en) + '</span></div>' : '') + '</div>' +
+    '<div class="vc-der"><strong>' + durVivo(r.entro) + '</strong><small>' + r.paginas + ' pág.</small><small>' + (r.activo ? haceSeg(r.visto) : 'segundo plano') + '</small>' +
+      '<button type="button" class="btn chico vc-bloq" data-escribir="' + esc(r.visitante) + '">Escribirle</button>' +
+      (r.cliente_email ? '' : bloqueosDe(r).length ? '<span class="pill rojo vc-bloq">Bloqueado</span>' : '<button type="button" class="btn chico peligro vc-bloq" data-bloquear="' + esc(r.visitante) + '">Bloquear</button>') + '</div></div>';
+}
 function pintarVivo(){
   if ($('vivo-estado')) $('vivo-estado').innerHTML = estadoVivoHTML();
-  const l = listaVivos(), act = l.filter(r => r.activo);
+  const todos = listaVivos();
+  const ve = todos.filter(r => grupoVivo(r) === 've'), otros = todos.filter(r => grupoVivo(r) === 'otros'), bots = todos.filter(r => grupoVivo(r) === 'bot');
+  const l = ve.concat(otros), act = l.filter(r => r.activo);   // personas (sin bots)
   const n = (z) => act.filter(r => zonaDe(r.pagina) === z).length;
   const kpi = (icono, titulo, num, pie, extra) => '<div class="kpi' + (extra || '') + '"><div class="k-cab">' + titulo + icono + '</div><div class="k-num">' + num + '</div><div class="k-pie">' + pie + '</div></div>';
   const enHora = feed.filter(e => Date.now() - new Date(e.creado) < 3600000);
+  const actVe = act.filter(r => grupoVivo(r) === 've').length;
   $('vivo-kpis').innerHTML =
-    kpi(ICO.clientes, 'En línea ahora', act.length, l.length > act.length ? (l.length - act.length) + ' en segundo plano' : 'personas con la web abierta', act.length ? ' destacado' : '') +
+    kpi(ICO.clientes, 'En línea ahora', act.length, act.length ? '🇻🇪 ' + actVe + ' de Venezuela · ' + (act.length - actVe) + ' de otros países' : (l.length ? (l.length - act.length) + ' en segundo plano' : 'personas con la web abierta'), act.length ? ' destacado' : '') +
     kpi(ICO.tienda, 'En la tienda', n('tienda'), 'buscando o viendo la lista') +
     kpi(ICO.ojo, 'En un producto', n('producto'), 'páginas /p/ y /c/') +
     kpi(ICO.enlace, 'En enlaces', n('links'), 'suinelectric.com/links') +
     kpi(ICO.grafica, 'Acciones', enHora.filter(e => e.tipo !== 'visita').length, enHora.filter(e => e.tipo === 'visita').length + ' visitas en la última hora');
   $('vivo-n').textContent = act.length;
-  if ($('vivo-res-ahora')) $('vivo-res-ahora').textContent = act.length ? act.length + (act.length === 1 ? ' persona en línea' : ' personas en línea') + (l.length > act.length ? ' · ' + (l.length - act.length) + ' en segundo plano' : '') : 'Nadie en la web en este momento';
-  $('vivo-lista').innerHTML = !l.length ? '<div class="vacio">' + ICO.globo + (vivoEstado === 'falta' ? 'Esperando la instalación.' : 'Nadie en la web en este momento.<br><small>Aparecerán aquí apenas entren.</small>') + '</div>' :
-    l.map(r => {
-      const c = r.cliente_email ? clientes.find(x => x.email === r.cliente_email) : null;
-      const sitio = linkPagina(r.pagina);
-      return '<div class="vivo-card' + (r.activo ? '' : ' segundo-plano') + '" data-vivo="' + esc(r.visitante) + '"' + (r.cliente_email ? ' data-email="' + esc(r.cliente_email) + '"' : '') + '>' +
-        '<div class="avatar' + (c ? '' : ' anon') + '">' + esc(c ? iniciales(c) : codigoVis(r.visitante).slice(0, 2)) + '<i class="' + (r.activo ? 'on' : 'off') + '"></i></div>' +
-        '<div class="vc-cuerpo"><div class="vc-nom"><strong>' + esc(nombreVivo(r)) + '</strong>' + (c && c.empresa ? ' <span class="muted">· ' + esc(c.empresa) + '</span>' : '') + (r.cliente_email ? ' <span class="pill azul">Con cuenta</span>' : '') + '</div>' +
-          '<div class="vc-lugar muted">' + esc([lugarDe(r), equipoDe(r), r.referencia ? 'llegó por ' + r.referencia : 'entró directo'].filter(Boolean).join(' · ')) + '</div>' +
-          '<div class="vc-pag">' + ICO.ojo + '<span>' + sitio + (r.titulo && !/^\/(tienda)?(\.html)?$/.test(r.pagina || '') ? '<small>' + esc(r.titulo.replace(/\s*\|\s*Suinelectric.*$/i, '')) + '</small>' : '') + '</span></div>' +
-          (r.accion ? '<div class="vc-acc">↳ ' + esc(r.accion) + ' <span class="muted">· ' + haceSeg(r.accion_en) + '</span></div>' : '') + '</div>' +
-        '<div class="vc-der"><strong>' + durVivo(r.entro) + '</strong><small>' + r.paginas + ' pág.</small><small>' + (r.activo ? haceSeg(r.visto) : 'segundo plano') + '</small>' +
-          '<button type="button" class="btn chico vc-bloq" data-escribir="' + esc(r.visitante) + '">Escribirle</button>' +
-          (r.cliente_email ? '' : bloqueosDe(r).length ? '<span class="pill rojo vc-bloq">Bloqueado</span>' : '<button type="button" class="btn chico peligro vc-bloq" data-bloquear="' + esc(r.visitante) + '">Bloquear</button>') + '</div></div>';
-    }).join('');
+  if ($('vivo-res-ahora')) $('vivo-res-ahora').textContent = act.length ? act.length + (act.length === 1 ? ' persona en línea' : ' personas en línea') + ' · ' + actVe + ' de Venezuela' + (bots.length ? ' · ' + bots.length + ' bot' + (bots.length === 1 ? '' : 's') : '') : 'Nadie en la web en este momento' + (bots.length ? ' · ' + bots.length + ' bot' + (bots.length === 1 ? '' : 's') : '');
+  const cuenta = (x) => '<span class="pill">' + x + '</span>';
+  // Otros países: agrupados por país, el que más gente tenga primero
+  const porPais = {}; otros.forEach(r => { (porPais[r.pais || '??'] = porPais[r.pais || '??'] || []).push(r); });
+  const paises = Object.keys(porPais).sort((a, b) => porPais[b].length - porPais[a].length || nomPais(a).localeCompare(nomPais(b)));
+  $('vivo-lista').innerHTML = !todos.length ? '<div class="vacio">' + ICO.globo + (vivoEstado === 'falta' ? 'Esperando la instalación.' : 'Nadie en la web en este momento.<br><small>Aparecerán aquí apenas entren.</small>') + '</div>' :
+    '<div class="vivo-grupo ve"><div class="vivo-grupo-cab">🇻🇪 Venezuela' + cuenta(ve.length) + '</div>' +
+      (ve.length ? ve.map(tarjetaVivo).join('') : '<div class="vacio-chico">Nadie de Venezuela en este momento.</div>') + '</div>' +
+    '<div class="vivo-grupo otros"><div class="vivo-grupo-cab">🌎 Otros países' + cuenta(otros.length) + '</div>' +
+      (otros.length ? paises.map(p => '<div class="vivo-pais">' + bandera(p) + esc(p === '??' ? 'País desconocido' : nomPais(p)) + ' · ' + porPais[p].length + '</div>' + porPais[p].map(tarjetaVivo).join('')).join('') : '<div class="vacio-chico">Nadie de otros países en este momento.</div>') + '</div>' +
+    (bots.length ? '<details class="vivo-grupo bots" id="vivo-bots"' + (vivoBotsAbierto ? ' open' : '') + '><summary class="vivo-grupo-cab">🤖 Posibles bots' + cuenta(bots.length) + '</summary>' +
+      '<p class="muted" style="margin:4px 0 8px;font-size:13px">Fuera de Venezuela, sin cuenta, 1 página y se fueron en segundos. No cuentan en los números de arriba ni le llegan a SuinBot.</p>' +
+      bots.map(tarjetaVivo).join('') + '</details>' : '');
+  const db = $('vivo-bots'); if (db) db.ontoggle = () => { vivoBotsAbierto = db.open; };
   $('vivo-lista').querySelectorAll('[data-vivo]').forEach(el => el.onclick = (e) => {
     if (e.target.closest('a')) return;
     const bq = e.target.closest('[data-bloquear]');
@@ -2778,7 +2832,8 @@ function pintarFeed(){
   const el = $('vivo-feed'); if (!el) return;
   const ICO_F = { visita: ICO.globo, busqueda: ICO.buscar, ver_producto: ICO.ojo, agregar_carrito: ICO.tienda, cotizar_whatsapp: ICO.whatsapp, pedido_whatsapp: ICO.whatsapp, clic_enlace: ICO.enlace };
   const lugares = {}; feed.forEach(e => { if (e.tipo === 'visita' && e.visita) lugares[e.visita] = e; });
-  const lista = feed.filter(e => Date.now() - new Date(e.creado) < 3600000).slice(0, 60);
+  const esBot = (e) => !e.cliente_email && vivos[e.visitante] && grupoVivo(vivos[e.visitante]) === 'bot';   // bots ya identificados no ensucian el feed
+  const lista = feed.filter(e => Date.now() - new Date(e.creado) < 3600000 && !esBot(e)).slice(0, 60);
   if ($('vivo-res-feed')) $('vivo-res-feed').textContent = lista.length ? lista.length + (lista.length === 1 ? ' movimiento' : ' movimientos') + ' en la última hora' : 'Sin movimiento en la última hora';
   el.innerHTML = !lista.length ? '<li class="vacio">' + ICO.grafica + 'Sin movimiento en la última hora.</li>' : lista.map(e => {
     const r = vivos[e.visitante], v = lugares[e.visita] || r || {};
@@ -2972,10 +3027,10 @@ const faltaEnlaces = (err) => '<div class="caja"><div class="tarjeta-sync"><div 
 async function vistaEnlaces(){
   $('main').innerHTML = cabAnalisis('Página de enlaces', 'Quién entra a <a href="/links" target="_blank" rel="noopener">suinelectric.com/links</a>, de dónde llega, qué botones toca y si sigue a la tienda. Toca una visita para ver todo lo que hizo esa persona.') + '<div class="cargando">Cargando…</div>';
   activarAnalisis(vistaEnlaces);
-  const { data, error } = await sb.rpc('resumen_links', paramsAna());
+  const { data, error } = await sb.rpc('resumen_links', { dias: diasAna, p_sin_bots: true });
   if (tab !== 'enlaces') return;
   const cont = document.querySelector('#main .cargando');
-  if (error || !data){ cont.outerHTML = faltaRangoAna(error) || faltaEnlaces(error); return; }
+  if (error || !data){ cont.outerHTML = faltaEnlaces(error); return; }
   datosLnk = data; cuantasLnk = 25;
   const t = data.totales || {};
   const n = (x) => Number(x || 0).toLocaleString('es-VE');
@@ -2988,9 +3043,14 @@ async function vistaEnlaces(){
 
   // Visitas y clics por día (completa los días sin datos)
   const porDia = {}; (data.por_dia || []).forEach(d => { porDia[d.dia] = d; });
-  const dias = diasGraficoAna().map(({ f, k }) => ({ f, v: (porDia[k] || {}).visitas || 0, c: (porDia[k] || {}).clics || 0 }));
+  const nDias = Math.max(diasAna, 7), dias = [];
+  for (let i = nDias - 1; i >= 0; i--){
+    const f = new Date(Date.now() - i * 86400000);
+    const k = f.toLocaleDateString('en-CA', { timeZone: 'America/Caracas' });
+    dias.push({ f, v: (porDia[k] || {}).visitas || 0, c: (porDia[k] || {}).clics || 0 });
+  }
   const maxV = Math.max(1, ...dias.map(d => Math.max(d.v, d.c)));
-  const cada = cadaAna(dias.length);
+  const cada = nDias <= 7 ? 1 : nDias <= 30 ? 5 : 15;
   const grafico = '<div class="grafico">' + dias.map(d => '<div class="col" data-tip="' + d.f.toLocaleDateString('es-VE', { weekday: 'short', day: 'numeric', month: 'short' }) + ': ' + d.v + ' visitas · ' + d.c + ' clics">' +
       '<div class="b1" style="height:' + (100 * d.v / maxV) + '%"></div><div class="b2" style="height:' + (100 * d.c / maxV) + '%"></div></div>').join('') + '</div>' +
     '<div class="grafico-ejes">' + dias.map((d, i) => '<span>' + ((dias.length - 1 - i) % cada === 0 ? d.f.getDate() : '') + '</span>').join('') + '</div>';
@@ -3004,12 +3064,12 @@ async function vistaEnlaces(){
 
   cont.outerHTML =
     '<div class="kpis">' +
-      kpi(ICO.clientes, 'Visitas', n(t.visitas), n(t.visitantes) + ' personas · ' + n(t.nuevos) + ' nuevas') +
+      kpi(ICO.clientes, 'Visitas', n(t.visitas), repartoVE(data.paises, t.visitas) + '<br>' + n(t.visitantes) + ' personas · ' + n(t.nuevos) + ' nuevas') +
       kpi(ICO.ojo, 'Ahora mismo', n(data.ahora), 'en los últimos 15 minutos', data.ahora ? ' destacado' : '') +
       kpi(ICO.enlace, 'Clics en botones', n(t.clics), pct(t.con_clic, t.visitas) + ' de las visitas tocó algo') +
       kpi(ICO.whatsapp, 'Fueron a WhatsApp', n(t.whatsapp), pct(t.whatsapp, t.visitas) + ' de las visitas') +
       kpi(ICO.tienda, 'Siguieron a la tienda', n(t.a_tienda), pct(t.a_tienda, t.visitas) + ' de las visitas') +
-    '</div>' +
+    '</div>' + notaBots(data.bots, false) +
     plegBarra() +
     '<div class="plegables" id="lnk-plegables">' +
       plegable('lnk', 'botones', ICO.enlace, 'Botones más tocados', (data.botones || [])[0] ? esc(data.botones[0].texto) + ' · ' + data.botones[0].clics + ' clics' : 'Todavía nadie ha tocado un botón',
