@@ -586,6 +586,19 @@
   .vc-der strong{ display:block; color:var(--titulo); font-size:14px; }
   .vc-der small{ display:block; color:var(--texto-3); font-size:11.5px; }
   .vc-der .vc-bloq{ margin-top:6px; display:block; margin-left:auto; }
+  /* En vivo por país: Venezuela primero, otros países aparte, bots al final */
+  .vivo-grupo{ margin:4px 0 14px; }
+  .vivo-grupo:last-child{ margin-bottom:0; }
+  .vivo-grupo-cab{ display:flex; align-items:center; gap:8px; padding:10px 12px; margin:0 -12px 4px; border-radius:10px; background:var(--superficie-2); font-weight:700; color:var(--titulo); font-size:15px; }
+  .vivo-grupo-cab .pill{ margin-left:auto; }
+  .vivo-grupo.ve .vivo-grupo-cab{ border-left:4px solid #f5c400; }
+  .vivo-grupo.otros .vivo-grupo-cab{ border-left:4px solid var(--azul-texto); }
+  .vivo-pais{ margin:6px 0 2px; font-size:13px; font-weight:700; color:var(--texto-2); }
+  details.vivo-grupo > summary{ list-style:none; cursor:pointer; }
+  details.vivo-grupo > summary::-webkit-details-marker{ display:none; }
+  details.vivo-grupo.bots .vivo-grupo-cab{ border-left:4px solid var(--texto-3); color:var(--texto-2); }
+  details.vivo-grupo.bots .vivo-card{ opacity:.6; }
+  .vivo-grupo .vacio-chico{ padding:6px 0 10px; color:var(--texto-3); font-size:13px; }
   .esc-sug{ display:flex; flex-wrap:wrap; gap:6px; margin-top:14px; }
   .esc-sug .chip{ font-size:12.5px; text-align:left; }
   .dialogo-caja textarea{ width:100%; resize:vertical; font:inherit; }
@@ -2616,6 +2629,17 @@ const segs = (d) => Math.max(0, Math.round((Date.now() - new Date(d)) / 1000));
 const haceSeg = (d) => { const s = segs(d); return s < 10 ? 'ahora' : s < 60 ? 'hace ' + s + ' s' : haceCuanto(d); };
 const durVivo = (d) => { const m = Math.floor(segs(d) / 60); return m < 1 ? 'recién llegó' : m < 60 ? m + ' min' : Math.floor(m / 60) + ' h ' + (m % 60) + ' min'; };
 const nombreVivo = (r) => r.cliente_email ? nombreCliente(r.cliente_email) : 'Visitante ' + codigoVis(r.visitante);
+/* Grupo de cada visitante: 've' (Venezuela, va primero), 'otros' (otro país) o 'bot'.
+   Bot = fuera de Venezuela, sin cuenta, 1 página y se fue en <=10 s (o sin país / navegador desconocido).
+   Mismo criterio que la vista en_linea_clasificada y el filtro de SuinBot en Supabase. */
+const grupoVivo = (r) => {
+  if (r.pais === 'VE') return 've';
+  if (r.cliente_email) return 'otros';
+  if (!r.pais || r.navegador === 'Otro' || r.sistema === 'Otro') return 'bot';
+  const dur = (new Date(r.visto) - new Date(r.entro)) / 1000;
+  if ((r.paginas || 1) <= 1 && dur <= 10 && segs(r.entro) > 15) return 'bot';
+  return 'otros';
+};
 const zonaDe = (p) => !p ? 'otro' : /^\/links/.test(p) ? 'links' : /^\/(p|c)\//.test(p) || /[?&]p=/.test(p) ? 'producto' : /^\/tienda/.test(p) ? 'tienda' : 'otro';
 
 async function iniciarVivo(){
@@ -2651,7 +2675,7 @@ function refrescarVivo(){
   tRefVivo = setTimeout(() => { pintarVivoBadge(); if (tab === 'envivo' && $('vivo-lista')) pintarVivo(); }, 120);
 }
 function pintarVivoBadge(){
-  const n = listaVivos().filter(r => r.activo).length;
+  const n = listaVivos().filter(r => r.activo && grupoVivo(r) !== 'bot').length;
   const b = document.querySelector('[data-badge=envivo]');
   if (b){ b.textContent = n; b.hidden = !n; b.classList.add('verde'); }
 }
@@ -2677,34 +2701,50 @@ function vistaEnVivo(){
   pintarBloqueos();
   cargarAvisos();
 }
+let vivoBotsAbierto = false;   // el grupo de bots se repinta cada 5 s: recordamos si lo dejaste abierto
+function tarjetaVivo(r){
+  const c = r.cliente_email ? clientes.find(x => x.email === r.cliente_email) : null;
+  const sitio = linkPagina(r.pagina);
+  return '<div class="vivo-card' + (r.activo ? '' : ' segundo-plano') + '" data-vivo="' + esc(r.visitante) + '"' + (r.cliente_email ? ' data-email="' + esc(r.cliente_email) + '"' : '') + '>' +
+    '<div class="avatar' + (c ? '' : ' anon') + '">' + esc(c ? iniciales(c) : codigoVis(r.visitante).slice(0, 2)) + '<i class="' + (r.activo ? 'on' : 'off') + '"></i></div>' +
+    '<div class="vc-cuerpo"><div class="vc-nom"><strong>' + esc(nombreVivo(r)) + '</strong>' + (c && c.empresa ? ' <span class="muted">· ' + esc(c.empresa) + '</span>' : '') + (r.cliente_email ? ' <span class="pill azul">Con cuenta</span>' : '') + '</div>' +
+      '<div class="vc-lugar muted">' + esc([lugarDe(r), equipoDe(r), r.referencia ? 'llegó por ' + r.referencia : 'entró directo'].filter(Boolean).join(' · ')) + '</div>' +
+      '<div class="vc-pag">' + ICO.ojo + '<span>' + sitio + (r.titulo && !/^\/(tienda)?(\.html)?$/.test(r.pagina || '') ? '<small>' + esc(r.titulo.replace(/\s*\|\s*Suinelectric.*$/i, '')) + '</small>' : '') + '</span></div>' +
+      (r.accion ? '<div class="vc-acc">↳ ' + esc(r.accion) + ' <span class="muted">· ' + haceSeg(r.accion_en) + '</span></div>' : '') + '</div>' +
+    '<div class="vc-der"><strong>' + durVivo(r.entro) + '</strong><small>' + r.paginas + ' pág.</small><small>' + (r.activo ? haceSeg(r.visto) : 'segundo plano') + '</small>' +
+      '<button type="button" class="btn chico vc-bloq" data-escribir="' + esc(r.visitante) + '">Escribirle</button>' +
+      (r.cliente_email ? '' : bloqueosDe(r).length ? '<span class="pill rojo vc-bloq">Bloqueado</span>' : '<button type="button" class="btn chico peligro vc-bloq" data-bloquear="' + esc(r.visitante) + '">Bloquear</button>') + '</div></div>';
+}
 function pintarVivo(){
   if ($('vivo-estado')) $('vivo-estado').innerHTML = estadoVivoHTML();
-  const l = listaVivos(), act = l.filter(r => r.activo);
+  const todos = listaVivos();
+  const ve = todos.filter(r => grupoVivo(r) === 've'), otros = todos.filter(r => grupoVivo(r) === 'otros'), bots = todos.filter(r => grupoVivo(r) === 'bot');
+  const l = ve.concat(otros), act = l.filter(r => r.activo);   // personas (sin bots)
   const n = (z) => act.filter(r => zonaDe(r.pagina) === z).length;
   const kpi = (icono, titulo, num, pie, extra) => '<div class="kpi' + (extra || '') + '"><div class="k-cab">' + titulo + icono + '</div><div class="k-num">' + num + '</div><div class="k-pie">' + pie + '</div></div>';
   const enHora = feed.filter(e => Date.now() - new Date(e.creado) < 3600000);
+  const actVe = act.filter(r => grupoVivo(r) === 've').length;
   $('vivo-kpis').innerHTML =
-    kpi(ICO.clientes, 'En línea ahora', act.length, l.length > act.length ? (l.length - act.length) + ' en segundo plano' : 'personas con la web abierta', act.length ? ' destacado' : '') +
+    kpi(ICO.clientes, 'En línea ahora', act.length, act.length ? '🇻🇪 ' + actVe + ' de Venezuela · ' + (act.length - actVe) + ' de otros países' : (l.length ? (l.length - act.length) + ' en segundo plano' : 'personas con la web abierta'), act.length ? ' destacado' : '') +
     kpi(ICO.tienda, 'En la tienda', n('tienda'), 'buscando o viendo la lista') +
     kpi(ICO.ojo, 'En un producto', n('producto'), 'páginas /p/ y /c/') +
     kpi(ICO.enlace, 'En enlaces', n('links'), 'suinelectric.com/links') +
     kpi(ICO.grafica, 'Acciones', enHora.filter(e => e.tipo !== 'visita').length, enHora.filter(e => e.tipo === 'visita').length + ' visitas en la última hora');
   $('vivo-n').textContent = act.length;
-  if ($('vivo-res-ahora')) $('vivo-res-ahora').textContent = act.length ? act.length + (act.length === 1 ? ' persona en línea' : ' personas en línea') + (l.length > act.length ? ' · ' + (l.length - act.length) + ' en segundo plano' : '') : 'Nadie en la web en este momento';
-  $('vivo-lista').innerHTML = !l.length ? '<div class="vacio">' + ICO.globo + (vivoEstado === 'falta' ? 'Esperando la instalación.' : 'Nadie en la web en este momento.<br><small>Aparecerán aquí apenas entren.</small>') + '</div>' :
-    l.map(r => {
-      const c = r.cliente_email ? clientes.find(x => x.email === r.cliente_email) : null;
-      const sitio = linkPagina(r.pagina);
-      return '<div class="vivo-card' + (r.activo ? '' : ' segundo-plano') + '" data-vivo="' + esc(r.visitante) + '"' + (r.cliente_email ? ' data-email="' + esc(r.cliente_email) + '"' : '') + '>' +
-        '<div class="avatar' + (c ? '' : ' anon') + '">' + esc(c ? iniciales(c) : codigoVis(r.visitante).slice(0, 2)) + '<i class="' + (r.activo ? 'on' : 'off') + '"></i></div>' +
-        '<div class="vc-cuerpo"><div class="vc-nom"><strong>' + esc(nombreVivo(r)) + '</strong>' + (c && c.empresa ? ' <span class="muted">· ' + esc(c.empresa) + '</span>' : '') + (r.cliente_email ? ' <span class="pill azul">Con cuenta</span>' : '') + '</div>' +
-          '<div class="vc-lugar muted">' + esc([lugarDe(r), equipoDe(r), r.referencia ? 'llegó por ' + r.referencia : 'entró directo'].filter(Boolean).join(' · ')) + '</div>' +
-          '<div class="vc-pag">' + ICO.ojo + '<span>' + sitio + (r.titulo && !/^\/(tienda)?(\.html)?$/.test(r.pagina || '') ? '<small>' + esc(r.titulo.replace(/\s*\|\s*Suinelectric.*$/i, '')) + '</small>' : '') + '</span></div>' +
-          (r.accion ? '<div class="vc-acc">↳ ' + esc(r.accion) + ' <span class="muted">· ' + haceSeg(r.accion_en) + '</span></div>' : '') + '</div>' +
-        '<div class="vc-der"><strong>' + durVivo(r.entro) + '</strong><small>' + r.paginas + ' pág.</small><small>' + (r.activo ? haceSeg(r.visto) : 'segundo plano') + '</small>' +
-          '<button type="button" class="btn chico vc-bloq" data-escribir="' + esc(r.visitante) + '">Escribirle</button>' +
-          (r.cliente_email ? '' : bloqueosDe(r).length ? '<span class="pill rojo vc-bloq">Bloqueado</span>' : '<button type="button" class="btn chico peligro vc-bloq" data-bloquear="' + esc(r.visitante) + '">Bloquear</button>') + '</div></div>';
-    }).join('');
+  if ($('vivo-res-ahora')) $('vivo-res-ahora').textContent = act.length ? act.length + (act.length === 1 ? ' persona en línea' : ' personas en línea') + ' · ' + actVe + ' de Venezuela' + (bots.length ? ' · ' + bots.length + ' bot' + (bots.length === 1 ? '' : 's') : '') : 'Nadie en la web en este momento' + (bots.length ? ' · ' + bots.length + ' bot' + (bots.length === 1 ? '' : 's') : '');
+  const cuenta = (x) => '<span class="pill">' + x + '</span>';
+  // Otros países: agrupados por país, el que más gente tenga primero
+  const porPais = {}; otros.forEach(r => { (porPais[r.pais || '??'] = porPais[r.pais || '??'] || []).push(r); });
+  const paises = Object.keys(porPais).sort((a, b) => porPais[b].length - porPais[a].length || nomPais(a).localeCompare(nomPais(b)));
+  $('vivo-lista').innerHTML = !todos.length ? '<div class="vacio">' + ICO.globo + (vivoEstado === 'falta' ? 'Esperando la instalación.' : 'Nadie en la web en este momento.<br><small>Aparecerán aquí apenas entren.</small>') + '</div>' :
+    '<div class="vivo-grupo ve"><div class="vivo-grupo-cab">🇻🇪 Venezuela' + cuenta(ve.length) + '</div>' +
+      (ve.length ? ve.map(tarjetaVivo).join('') : '<div class="vacio-chico">Nadie de Venezuela en este momento.</div>') + '</div>' +
+    '<div class="vivo-grupo otros"><div class="vivo-grupo-cab">🌎 Otros países' + cuenta(otros.length) + '</div>' +
+      (otros.length ? paises.map(p => '<div class="vivo-pais">' + bandera(p) + esc(p === '??' ? 'País desconocido' : nomPais(p)) + ' · ' + porPais[p].length + '</div>' + porPais[p].map(tarjetaVivo).join('')).join('') : '<div class="vacio-chico">Nadie de otros países en este momento.</div>') + '</div>' +
+    (bots.length ? '<details class="vivo-grupo bots" id="vivo-bots"' + (vivoBotsAbierto ? ' open' : '') + '><summary class="vivo-grupo-cab">🤖 Posibles bots' + cuenta(bots.length) + '</summary>' +
+      '<p class="muted" style="margin:4px 0 8px;font-size:13px">Fuera de Venezuela, sin cuenta, 1 página y se fueron en segundos. No cuentan en los números de arriba ni le llegan a SuinBot.</p>' +
+      bots.map(tarjetaVivo).join('') + '</details>' : '');
+  const db = $('vivo-bots'); if (db) db.ontoggle = () => { vivoBotsAbierto = db.open; };
   $('vivo-lista').querySelectorAll('[data-vivo]').forEach(el => el.onclick = (e) => {
     if (e.target.closest('a')) return;
     const bq = e.target.closest('[data-bloquear]');
@@ -2732,7 +2772,8 @@ function pintarFeed(){
   const el = $('vivo-feed'); if (!el) return;
   const ICO_F = { visita: ICO.globo, busqueda: ICO.buscar, ver_producto: ICO.ojo, agregar_carrito: ICO.tienda, cotizar_whatsapp: ICO.whatsapp, pedido_whatsapp: ICO.whatsapp, clic_enlace: ICO.enlace };
   const lugares = {}; feed.forEach(e => { if (e.tipo === 'visita' && e.visita) lugares[e.visita] = e; });
-  const lista = feed.filter(e => Date.now() - new Date(e.creado) < 3600000).slice(0, 60);
+  const esBot = (e) => !e.cliente_email && vivos[e.visitante] && grupoVivo(vivos[e.visitante]) === 'bot';   // bots ya identificados no ensucian el feed
+  const lista = feed.filter(e => Date.now() - new Date(e.creado) < 3600000 && !esBot(e)).slice(0, 60);
   if ($('vivo-res-feed')) $('vivo-res-feed').textContent = lista.length ? lista.length + (lista.length === 1 ? ' movimiento' : ' movimientos') + ' en la última hora' : 'Sin movimiento en la última hora';
   el.innerHTML = !lista.length ? '<li class="vacio">' + ICO.grafica + 'Sin movimiento en la última hora.</li>' : lista.map(e => {
     const r = vivos[e.visitante], v = lugares[e.visita] || r || {};
