@@ -593,6 +593,7 @@
   .vc-der strong{ display:block; color:var(--titulo); font-size:14px; }
   .vc-der small{ display:block; color:var(--texto-3); font-size:11.5px; }
   .vc-der .vc-bloq{ margin-top:6px; display:block; margin-left:auto; }
+  .nota-bots{ margin:-4px 0 14px; font-size:13.5px; color:var(--texto-2); }
   /* En vivo por país: Venezuela primero, otros países aparte, bots al final */
   .vivo-grupo{ margin:4px 0 14px; }
   .vivo-grupo:last-child{ margin-bottom:0; }
@@ -875,6 +876,14 @@ function chipsAna(){ return '<div class="chips">' + DIAS_VIS.map(([d, t]) => '<b
 function cabAnalisis(titulo, sub){
   return '<nav class="subtabs" aria-label="Estadísticas">' + ANALISIS.map(([id, nom, ic]) => '<a href="' + urlDe(id) + '" data-sub="' + id + '" class="' + (tab === id ? 'activa' : '') + '"' + (tab === id ? ' aria-current="page"' : '') + '>' + ic + nom + '</a>').join('') + '</nav>' + cabecera(titulo, sub, chipsAna());
 }
+/* Estadísticas sin bots (32_estadisticas_sin_bots.sql): aviso de cuántas visitas de bots se dejaron fuera
+   y reparto Venezuela / otros países a partir de la lista de países. */
+function notaBots(n, conNumero){
+  if (!n) return '';
+  return '<p class="nota-bots">🤖 Sin contar ' + (conNumero === false ? 'las visitas de bots' : Number(n).toLocaleString('es-VE') + ' visita' + (n === 1 ? '' : 's') + ' de bots') +
+    ' <span class="muted">(fuera de Venezuela, sin cuenta, 1 página y se fueron en segundos)</span></p>';
+}
+const repartoVE = (paises, total) => { const ve = ((paises || []).find(x => x.pais === 'VE') || {}).visitas || 0; return '🇻🇪 ' + Number(ve).toLocaleString('es-VE') + ' de Venezuela · ' + Number(Math.max(0, (total || 0) - ve)).toLocaleString('es-VE') + ' de otros países'; };
 function activarAnalisis(fn){
   document.querySelectorAll('[data-dias-ana]').forEach(b => b.onclick = () => { diasAna = Number(b.dataset.diasAna); try { localStorage.setItem('suin_admin_dias', diasAna); } catch (e) {} fn(); });
   document.querySelectorAll('[data-sub]').forEach(a => a.onclick = (e) => { if (e.ctrlKey || e.metaKey || e.shiftKey || e.button === 1) return; e.preventDefault(); irA(a.dataset.sub); });
@@ -2112,7 +2121,7 @@ async function vistaEstadisticas(){
   $('main').innerHTML = cabAnalisis('Búsquedas y clientes', 'Qué buscan, qué miran y qué cotizan tus clientes. Abajo, cada cliente con cuenta por separado. No se cuenta lo que haces tú como administrador.') + '<div class="cargando">Cargando…</div>';
   activarAnalisis(vistaEstadisticas);
   const [{ data, error }, resCli] = await Promise.all([
-    sb.rpc('resumen_estadisticas', { dias: diasAna }),
+    sb.rpc('resumen_estadisticas', { dias: diasAna, p_sin_bots: true }),
     sb.rpc('clientes_activos', { dias: diasAna }).then(r => r, e => ({ error: e })),
   ]);
   if (tab !== 'estadisticas') return;
@@ -2157,7 +2166,7 @@ async function vistaEstadisticas(){
       kpi(ICO.ojo, 'Productos vistos', t.ver_producto, 'fichas de producto abiertas') +
       kpi(ICO.tienda, 'Agregados al pedido', t.agregar_carrito, 'productos puestos en el carrito') +
       kpi(ICO.pedidos, 'Cotizaciones por WhatsApp', cotiza, (t.pedido_whatsapp || 0) + ' desde el carrito · ' + (t.cotizar_whatsapp || 0) + ' de un producto') +
-    '</div>' +
+    '</div>' + notaBots(data.bots) +
     plegBarra() +
     '<div class="plegables" id="est-plegables">' +
       plegable('est', 'dia', ICO.grafica, 'Actividad por día', Number(t.ver_producto || 0).toLocaleString('es-VE') + ' productos vistos · ' + Number(cotiza).toLocaleString('es-VE') + ' cotizaciones',
@@ -2447,7 +2456,7 @@ function activarPlegables(grupo){
 async function vistaVisitantes(){
   $('main').innerHTML = cabAnalisis('Visitantes', 'Quienes entran sin iniciar sesión: cuántos son, de dónde, cuándo, qué buscan y qué productos ven. Toca una visita para ver todo lo que hizo esa persona. No se cuenta lo que haces tú como administrador.') + '<div class="cargando">Cargando…</div>';
   activarAnalisis(vistaVisitantes);
-  const { data, error } = await sb.rpc('resumen_visitantes', { dias: diasAna });
+  const { data, error } = await sb.rpc('resumen_visitantes', { dias: diasAna, p_sin_bots: true });
   if (tab !== 'visitantes') return;
   const cont = document.querySelector('#main .cargando');
   if (error || !data){ cont.outerHTML = faltaVisitantes(error); return; }
@@ -2510,13 +2519,13 @@ async function vistaVisitantes(){
 
   cont.outerHTML =
     '<div class="kpis">' +
-      kpi(ICO.clientes, 'Visitas', t.visitas, Number(t.visitantes || 0).toLocaleString('es-VE') + ' personas distintas · ' + (t.nuevos || 0) + ' nuevas') +
+      kpi(ICO.clientes, 'Visitas', t.visitas, repartoVE(data.paises, t.visitas) + '<br>' + Number(t.visitantes || 0).toLocaleString('es-VE') + ' personas distintas · ' + (t.nuevos || 0) + ' nuevas') +
       kpi(ICO.ojo, 'En la tienda ahora', data.ahora, 'activos en los últimos 15 minutos', data.ahora ? ' destacado' : '') +
       kpi(ICO.buscar, 'Búsquedas', t.busquedas, 'veces que usaron el buscador') +
       kpi(ICO.tienda, 'Tarjetas vistas', t.tarjetas, (t.fichas || 0) + ' fichas de producto abiertas') +
       kpi(ICO.whatsapp, 'Visitas con interés', t.con_interes, pct(t.con_interes, t.visitas) + ' agregó al pedido o escribió por WhatsApp') +
       kpi(ICO.sync, 'Tiempo promedio', t.duracion_media ? duracion(t.duracion_media) : '—', 'de las visitas que hicieron algo') +
-    '</div>' +
+    '</div>' + notaBots(data.bots) +
     '<div class="pleg-barra"><span class="muted">Toca una ventana para abrirla completa</span><button class="btn chico fantasma" data-pleg-todo="1">Abrir todas</button><button class="btn chico fantasma" data-pleg-todo="0">Cerrar todas</button></div>' +
     '<div class="plegables" id="vis-plegables">' +
       plegable('vis', 'recientes', ICO.clientes, 'Visitas recientes <small>' + (data.visitas || []).length + (t.visitas > (data.visitas || []).length ? ' de ' + t.visitas : '') + '</small>', res.recientes,
@@ -3018,7 +3027,7 @@ const faltaEnlaces = (err) => '<div class="caja"><div class="tarjeta-sync"><div 
 async function vistaEnlaces(){
   $('main').innerHTML = cabAnalisis('Página de enlaces', 'Quién entra a <a href="/links" target="_blank" rel="noopener">suinelectric.com/links</a>, de dónde llega, qué botones toca y si sigue a la tienda. Toca una visita para ver todo lo que hizo esa persona.') + '<div class="cargando">Cargando…</div>';
   activarAnalisis(vistaEnlaces);
-  const { data, error } = await sb.rpc('resumen_links', { dias: diasAna });
+  const { data, error } = await sb.rpc('resumen_links', { dias: diasAna, p_sin_bots: true });
   if (tab !== 'enlaces') return;
   const cont = document.querySelector('#main .cargando');
   if (error || !data){ cont.outerHTML = faltaEnlaces(error); return; }
@@ -3055,12 +3064,12 @@ async function vistaEnlaces(){
 
   cont.outerHTML =
     '<div class="kpis">' +
-      kpi(ICO.clientes, 'Visitas', n(t.visitas), n(t.visitantes) + ' personas · ' + n(t.nuevos) + ' nuevas') +
+      kpi(ICO.clientes, 'Visitas', n(t.visitas), repartoVE(data.paises, t.visitas) + '<br>' + n(t.visitantes) + ' personas · ' + n(t.nuevos) + ' nuevas') +
       kpi(ICO.ojo, 'Ahora mismo', n(data.ahora), 'en los últimos 15 minutos', data.ahora ? ' destacado' : '') +
       kpi(ICO.enlace, 'Clics en botones', n(t.clics), pct(t.con_clic, t.visitas) + ' de las visitas tocó algo') +
       kpi(ICO.whatsapp, 'Fueron a WhatsApp', n(t.whatsapp), pct(t.whatsapp, t.visitas) + ' de las visitas') +
       kpi(ICO.tienda, 'Siguieron a la tienda', n(t.a_tienda), pct(t.a_tienda, t.visitas) + ' de las visitas') +
-    '</div>' +
+    '</div>' + notaBots(data.bots, false) +
     plegBarra() +
     '<div class="plegables" id="lnk-plegables">' +
       plegable('lnk', 'botones', ICO.enlace, 'Botones más tocados', (data.botones || [])[0] ? esc(data.botones[0].texto) + ' · ' + data.botones[0].clics + ' clics' : 'Todavía nadie ha tocado un botón',
