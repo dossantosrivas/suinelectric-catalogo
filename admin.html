@@ -1298,9 +1298,23 @@ function franjaWeb(pd){
   if (pd.oferta_numero) p.push('Oferta <b>' + esc(pd.oferta_numero) + '</b> · ' + money(pd.total_oferta) + (pd.estado === 'cotizado' && pd.vence ? ' · vence ' + esc(new Date(pd.vence + 'T12:00').toLocaleDateString('es-VE', { day: '2-digit', month: 'short' })) : ''));
   if (pd.respondido_por === 'cliente') p.push('<b>' + (pd.estado === 'cancelado' ? 'Rechazó' : 'Aceptó') + ' en línea</b>');
   if (pd.estado === 'cancelado' && pd.motivo) p.push('Motivo: ' + esc(pd.motivo));
+  if (pd.pago_cliente){
+    const pg = pd.pago_cliente;
+    const datos = [pg.metodo, pg.referencia ? 'Ref.: ' + pg.referencia : '', pg.identificacion ? 'ID/RIF: ' + pg.identificacion : '', pg.nota].filter(Boolean).map(esc).join(' · ');
+    if (datos) p.push('<b>Pago:</b> ' + datos);
+    if (pg.archivo_ruta) p.push('<button type="button" class="btn chico" data-ver-pago="' + pd.id + '">📎 Ver recibo' + (pg.archivo_nombre ? ' (' + esc(pg.archivo_nombre) + ')' : '') + '</button>');
+  }
   if (pd.guia) p.push('Envío: ' + esc(pd.guia));
   if (pd.direccion && pd.direccion.direccion) p.push('Entregar en: ' + esc(pd.direccion.direccion));
   return p.length ? '<div class="pd-web">' + p.join(' · ') + '</div>' : '';
+}
+async function verComprobantePago(id){
+  const pd = pedidoPorId(id);
+  const ruta = pd && pd.pago_cliente && pd.pago_cliente.archivo_ruta;
+  if (!ruta) return toast('No hay archivo adjunto');
+  const { data, error } = await sb.storage.from('comprobantes').createSignedUrl(ruta, 3600);
+  if (error || !data || !data.signedUrl) return toast('No se pudo abrir el recibo: ' + (error ? error.message : ''));
+  window.open(data.signedUrl, '_blank', 'noopener');
 }
 const puedeOfertar = (pd) => ['enviado', 'revision', 'vencido'].includes(pd.estado) || (pd.estado === 'cotizado' && !pd.respondido_por);
 /* Lleva la solicitud a Gestión (misma vía que el carrito del administrador): Gestión arma la oferta con costos y
@@ -1360,7 +1374,8 @@ function pintarPedidos(){
     if (!verArch && filtroEstado && pd.estado !== filtroEstado) return false;
     if (!q) return true;
     const c = clienteDe(pd);
-    return ['#' + pd.id, String(pd.id), pd.numero, pd.oferta_numero, pd.cliente_email, c.email, c.telefono, c.nombre, c.empresa, c.rif].concat(itemsDe(pd).map(it => it.modelo)).join(' ').toLowerCase().includes(q);
+    const pg = pd.pago_cliente || {};
+    return ['#' + pd.id, String(pd.id), pd.numero, pd.oferta_numero, pd.cliente_email, c.email, c.telefono, c.nombre, c.empresa, c.rif, pg.referencia, pg.identificacion].concat(itemsDe(pd).map(it => it.modelo)).join(' ').toLowerCase().includes(q);
   });
   if (!lista.length){
     $('p-lista').innerHTML = '<div class="vacio">' + (verArch ? ICO.archivar + 'No hay pedidos archivados.' : ICO.pedidos + (pedidos.length ? 'No hay pedidos con este filtro.' : 'Todavía no hay pedidos.')) + '</div>';
@@ -1402,6 +1417,7 @@ function pintarPedidos(){
   document.querySelectorAll('#p-lista [data-archivar]').forEach(b => b.onclick = () => archivarPedido(b.dataset.archivar));
   document.querySelectorAll('#p-lista [data-borrar]').forEach(b => b.onclick = () => eliminarPedido(b.dataset.borrar));
   document.querySelectorAll('#p-lista [data-ofertar]').forEach(b => b.onclick = () => ofertarEnGestion(b.dataset.ofertar));
+  document.querySelectorAll('#p-lista [data-ver-pago]').forEach(b => b.onclick = () => verComprobantePago(b.dataset.verPago));
 }
 
 /* Acciones sobre un pedido (se usan desde la lista y desde el detalle) */
@@ -1525,6 +1541,7 @@ function abrirPedido(id){
   $('d-borrar').onclick = () => eliminarPedido(pd.id);
   if ($('d-ofertar')) $('d-ofertar').onclick = () => ofertarEnGestion(pd.id);
   if ($('d-enlace')) $('d-enlace').onclick = () => copiarEnlaceCliente(pd.id);
+  document.querySelectorAll('#panel [data-ver-pago]').forEach(b => b.onclick = () => verComprobantePago(b.dataset.verPago));
   $('d-copiar').onclick = async () => {
     const texto = 'Pedido ' + numPedido(pd) + ' · ' + (c.nombre || c.empresa || c.email || '') + (c.telefono ? ' · ' + c.telefono : '') + '\n' +
       items.map(it => it.cantidad + ' × ' + it.modelo + (it.descripcion ? ' — ' + it.descripcion : '') + ' — ' + money(it.precio_unit) + ' c/u').join('\n') +
