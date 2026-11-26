@@ -72,6 +72,16 @@ const REGLAS_NORDIC = [
   { re: /^91[A-Z]/, pagina: null, pdf: 'https://drive.google.com/file/d/1MHV2fXmKvbZVOI-lTJW4loLmhqBqze8i/view', pdfTexto: 'Manual del producto (PDF)' },
 ];
 
+// K-DRIVE (Shenzhen K-Easy Automation): variadores serie KD700
+const REGLAS_KDRIVE = [
+  {
+    re: /^KD700/,
+    pagina: 'https://www.keasyautomation.com/products-details-54-153.html',
+    pdf: 'https://www.manualslib.com/manuals/3579165/K-Easy-Automation-Kd700-4t-0-75gb-1-5pb.html',
+    pdfTexto: 'Manual de usuario',
+  },
+];
+
 const limpiar = (u) => {
   let s = String(u || '').trim().replace(/&amp;/gi, '&').replace(/&;+/g, '&').replace(/[.,;)]+$/, '');
   if (!/^https?:\/\//i.test(s) || /grupo-electricos\.com/i.test(s)) return null;   // nunca al proveedor
@@ -99,6 +109,10 @@ function porReglas(p){
     const s = REGLAS_NORDIC.find(x => x.re.test(modelo));
     return s ? { pagina: s.pagina, manual: s.pdf, manualTexto: s.pdfTexto } : {};
   }
+  if (/K-?DRIVE/.test(marca)){
+    const s = REGLAS_KDRIVE.find(x => x.re.test(modelo));
+    return s ? { pagina: s.pagina, manual: s.pdf, manualTexto: s.pdfTexto } : {};
+  }
   if (/SIEMENS/.test(marca) && /^[0-9][A-Z0-9]{2,}([- ][A-Z0-9]+)*$/.test(modelo))
     return { pagina: urlSiemens(p.modelo) };
   if (/SCHNEIDER|TELEMECANIQUE|SQUARE ?D/.test(marca) && /^[A-Z0-9][A-Z0-9-]{3,}$/.test(modelo))
@@ -116,5 +130,5 @@ function enlacesDe(p){
   };
 }
 
-return { enlacesDe, SERIES_INVT, REGLAS_HYUNDAI, REGLAS_NORDIC };
+return { enlacesDe, SERIES_INVT, REGLAS_HYUNDAI, REGLAS_NORDIC, REGLAS_KDRIVE };
 });
